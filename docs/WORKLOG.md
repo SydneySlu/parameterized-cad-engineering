@@ -33,3 +33,10 @@
 - 验证：文档链接和任务 ID 与 `AGENTS.md`、`docs/TASKS.md` 一致。
 - 下一步：远程仓库配置后，把同一套启动协议提供给每个 Agent 的宿主配置。
 
+### INFRA-005 / Codex / done
+
+- 动作：增加中枢编排协议、复杂任务 checkpoint 规范和 `scripts/check_project_state.py` 仓库体检脚本。
+- 结果：复杂任务可以分阶段同步；Codex 中枢负责生成 Agent 初始化 prompt、检查依赖和审查阶段性结果。
+- 验证：运行 `python3 scripts/check_project_state.py`；结果记录在本次交接中。
+- 下一步：后续每个实现任务按 checkpoint 方式推进，阶段结果先进入 `review`，合并后再标记 `done`。
+

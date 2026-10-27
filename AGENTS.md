@@ -30,6 +30,14 @@
 - 合并前必须说明验证命令、结果和已知限制。
 - 只读研究可以不改代码，但应把结论写入对应论文报告或 `docs/research/`，并在工作日志中留下来源。
 
+## 中途同步和阶段性提交
+
+- 复杂任务必须先拆成可检查的里程碑；不要求一次完成整个 task 才能同步。
+- 任务进行中使用 `in_progress`，每完成一个里程碑就在 `docs/WORKLOG.md` 追加 checkpoint，说明完成比例、已验证内容、剩余范围和风险。
+- 阶段性结果可以提交为 `wip: ... [<task-id>]`，但未经过 Codex 审查和合并的 WIP commit 不代表任务完成。
+- 如果遇到依赖缺失、范围不清或架构冲突，立即记录 `blocked` checkpoint，不要继续扩大修改。
+- 只有最终结果已经验证并合并到 `main` 后，任务才标记为 `done`。
+
 ## 任务状态
 
 统一使用：`planned`、`in_progress`、`blocked`、`review`、`done`、`deferred`。状态变化要同步到 `docs/PROJECT_STATUS.md` 或 `docs/PROJECT_PLAN.md`，不能只在聊天里宣布。
@@ -44,4 +52,3 @@
 [ ] 提交了 commit，或记录了为什么不能提交
 [ ] 标明了下一步和阻塞项
 ```
-

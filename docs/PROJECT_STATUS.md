@@ -17,6 +17,7 @@
 - 形成三个首期候选零件族：工业铝型材框架角码/连接板、机器人末端工具安装转接板、电机安装板/支架。
 - 形成交互汇报 HTML、汇报稿和打印版 PDF。
 - 建立跨 Agent 协作协议、状态页、计划页、决策记录和工作日志。
+- 建立中枢编排协议、复杂任务 checkpoint 规则和仓库体检脚本。
 
 ## 当前进行中
 
@@ -27,6 +28,7 @@
 | CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
 | CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
+| INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | prompt 模板、checkpoint 规则、体检脚本 |
 
 ## 阻塞项
 
