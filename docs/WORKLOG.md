@@ -18,3 +18,11 @@
 - 依据：Profile Pack README 和 `docs/evaluation/decision-layer.md`，其 Project Profile 与决策日志是 local-only MVP，未提供远程多用户同步。
 - 下一步：远程仓库配置后，再决定是否在各 Agent 主机接入 Profile Pack。
 
+### INFRA-003 / Codex / blocked
+
+- 动作：初始化本地 Git 仓库并完成首个可审查提交。
+- 结果：commit `ece00b0`（`docs: establish cross-agent project foundation [INFRA-001]`）；仓库当前分支为 `main`，尚未绑定远程。
+- 验证：`git status --short --branch` 显示工作区干净；已检查暂存内容，未纳入论文原始缓存和生成渲染物。
+- 阻塞：尚未提供 GitHub/GitLab 仓库 URL 或远程访问方式。
+- 下一步：绑定远程后执行首次 `push -u origin main`，并在另一设备做 clone/pull 验证。
+
