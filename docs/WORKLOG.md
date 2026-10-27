@@ -26,3 +26,10 @@
 - 阻塞：尚未提供 GitHub/GitLab 仓库 URL 或远程访问方式。
 - 下一步：绑定远程后执行首次 `push -u origin main`，并在另一设备做 clone/pull 验证。
 
+### INFRA-004 / Codex / done
+
+- 动作：增加 `docs/coordination/agent-bootstrap.md` 和 `CONTRIBUTING.md`，明确 Codex、CC、DSH 的职责、启动提示和交接格式。
+- 结果：新聊天框或新设备只需读取仓库文件即可获得相同协作协议；不依赖某个聊天框保留上下文。
+- 验证：文档链接和任务 ID 与 `AGENTS.md`、`docs/TASKS.md` 一致。
+- 下一步：远程仓库配置后，把同一套启动协议提供给每个 Agent 的宿主配置。
+
