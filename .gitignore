@@ -1,0 +1,46 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets and local agent state
+.env
+.env.*
+!.env.example
+.profile-pack/
+.codex/
+
+# Private or unreviewed source material
+references/private/
+data/private/
+data/raw/
+
+# Generated CAD and presentation artifacts; keep manifests and source files tracked
+artifacts/generated/
+*.step
+*.stp
+*.stl
+*.iges
+*.igs
+*.glb
+*.gltf
+*.mp4
+*.mov
+
+# Python / Node caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+node_modules/
+dist/
+
+# Existing local reading/rendering workspaces; canonical copies live under docs/
+.paper-reading-bin/
+work/
+outputs/
+2505.17702_Seek-CAD_A_Self-refined_Generative_Modeling_for_3D_Parametric_CAD_Using_Local_Inference_via_DeepSeek/
+2603.11831_Towards_High-Fidelity_CAD_Generation_via_LLM-Driven_Program_Generation_and_Text-Based_B-Rep_Primitive_Grounding/
+CAD技术方案汇报/
+CAD项目方案演示稿/
+
