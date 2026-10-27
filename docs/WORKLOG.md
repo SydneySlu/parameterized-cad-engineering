@@ -41,3 +41,10 @@
 - commit：`0e75325`（`docs: add checkpoint orchestration and repo checks [INFRA-005]`）。
 - 下一步：后续每个实现任务按 checkpoint 方式推进，阶段结果先进入 `review`，合并后再标记 `done`。
 
+### INFRA-006 / Codex / done
+
+- 动作：建立仓库外的本地中枢审查台账，并明确私有台账、共享事实源和独立复核对话框的边界。
+- 结果：任务分派、prompt 摘要、checkpoint、审查问题和修正 commit 可集中追踪；项目共享事实仍以 Git 为准。台账路径为本地用户数据目录，不纳入仓库。
+- 验证：确认台账文件权限为仅当前用户读写；运行仓库体检和 `git diff --check`。
+- 下一步：每次分派、checkpoint、审查和修正时更新台账；重要结论按需发起另一个 Codex 对话框的独立复核。
+
