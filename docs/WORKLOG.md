@@ -63,3 +63,11 @@
 - 验证：查阅附件论文第 1、3、4 节及附录 D；核对三个项目的作者 README、BenchCAD 2.0 博客/仓库设计规范和 CADBench Hugging Face 数据卡。未下载完整数据集或运行样本。
 - 许可边界：BenchCAD 2.0 README 区分 MIT 代码/设计与 CC BY 4.0 数据制品；CADBench 按源数据混合许可；Seek-CAD 仓库代码 MIT，但 README 未单列数据许可。
 - 下一步：导师/项目负责人确认主数据源候选与零件族方向后，开展已合并 BenchCAD 家族和候选族覆盖的样本级审查（DATA-002）；再冻结首期零件族。
+
+### DATA-001 / Codex / review / 2026-10-28 checkpoint
+
+- 动作：补充核对 BenchCAD 2.0 GitHub 设计接口、当前状态页、评审规范、官方博客及 Hugging Face Public/Core 数据卡；新增 `docs/research/benchcad-2-deep-dive-2026-10.md`。
+- 结果：明确区分社区参数化零件族与 Public/Core 工程任务评测集；整理 `part.py`、`spec.py`、`family.json` 及 `PARAM_SPEC`、`check()`、`refine()` 的字段语义；核对当前状态页为 4/150 个族已合并；对三个候选零件族给出匹配和延伸估算。
+- 关键风险：Public/Core 当前数据卡明确禁止训练、微调、蒸馏、RL 环境、检索/搜索语料和再发布，因此只能作为外部评测/任务设计参考；不能按原始评估集接入轻量版检索或训练管线。
+- 验证：官方页面与仓库原文核对；`git diff --check` 通过；未下载 gated Public/Core 内容，也未将其文件写入仓库。
+- 下一步：导师确认首期目标族后，执行 DATA-002：选定一个已合并族或仿照其接口新增一个来源可追溯族，建立项目 manifest 与 Typed CAD IR 映射。
