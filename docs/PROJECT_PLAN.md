@@ -2,6 +2,8 @@
 
 本计划用于跨 Agent 和跨设备同步，不替代详细技术方案。每次范围变化必须同步 `docs/DECISIONS.md`。
 
+轻量版首期的 Agent 分工、边界、依赖和阶段性交付见 [`docs/coordination/agent-work-allocation.md`](coordination/agent-work-allocation.md)。当前只完成初步规划，尚未生成初始化 prompt 或正式认领任务。
+
 ## 阶段 0：仓库和协作基础
 
 - [x] 建立 Git 仓库、忽略规则和协作约定（INFRA-001）
@@ -10,6 +12,7 @@
 - [ ] 为 Codex、CC、DSH 建立各自的 Agent 配置入口（INFRA-004）
 - [x] 建立中枢编排、阶段性同步和仓库体检机制（INFRA-005）
 - [x] 建立仓库外中枢私有审查台账和独立复核边界（INFRA-006）
+- [x] 完成轻量版 Agent 分工与依赖初步规划（INFRA-007）
 
 ## 阶段 1：问题冻结和零件族选择
 

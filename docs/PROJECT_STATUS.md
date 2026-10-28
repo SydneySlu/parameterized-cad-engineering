@@ -30,6 +30,7 @@
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | prompt 模板、checkpoint 规则、体检脚本 |
 | INFRA-006 | 中枢私有审查台账与独立复核约定 | Codex | done | 仓库外本地台账；关键结论可由第二对话框复核 |
+| INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | 分工、边界、阶段和接口依赖文档 |
 
 ## 阻塞项
 

@@ -48,3 +48,10 @@
 - 验证：确认台账文件权限为仅当前用户读写；运行仓库体检和 `git diff --check`。
 - 下一步：每次分派、checkpoint、审查和修正时更新台账；重要结论按需发起另一个 Codex 对话框的独立复核。
 
+### INFRA-007 / Codex / done
+
+- 动作：围绕轻量版架构规划数据、LLM、Schema/规则、Typed CAD IR 设计、CAD 执行/验证和集成审查的 Agent 分工与依赖；暂不生成初始化 prompt。
+- 结果：明确 Codex 负责接口、范围、审查和 IR 设计，CC 负责 Schema/规则及 CAD 执行实现，数据 Agent 负责来源和样本，LLM Agent 负责 Prompt/结构化抽取/检索接入；Typed CAD IR 与验证器共用版本化接口。
+- 验证：检查计划、任务看板和协调文档中的任务 ID、依赖和验收条件；待正式认领后再建立具体 Agent prompt。
+- 下一步：确认首期零件族、实际对话框/分支名称和评测阈值，再生成逐 Agent 初始化 prompt。
+
