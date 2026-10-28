@@ -16,6 +16,8 @@
 
 ## 阶段 1：问题冻结和零件族选择
 
+- [x] 初评 BenchCAD 2.0、CADBench、Seek-CAD 的数据适配性与许可边界（DATA-001；结论见 `docs/research/cad-dataset-suitability-2026-10.md`）
+- [ ] 试审 BenchCAD 2.0 已合并族与候选方向覆盖，决定是否按其格式扩展（DATA-002）
 - [ ] 比较三个候选零件族的数据、规则、应用和生成难点（CAD-001）
 - [ ] 冻结一个首期零件族和首期不支持项（CAD-002）
 - [ ] 定义参数 Schema、单位、默认值来源、缺失字段和边界（CAD-003）

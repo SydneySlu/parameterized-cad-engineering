@@ -55,3 +55,11 @@
 - 验证：检查计划、任务看板和协调文档中的任务 ID、依赖和验收条件；待正式认领后再建立具体 Agent prompt。
 - 下一步：确认首期零件族、实际对话框/分支名称和评测阈值，再生成逐 Agent 初始化 prompt。
 
+
+### DATA-001 / Codex / review
+
+- 动作：比较 BenchCAD 2.0 社区族/公开评测集、CADBench（附件论文 arXiv:2605.10873v2）和 Seek-CAD 的目标、数据结构、轻量版适配度、规模与许可边界；新增研究报告 `docs/research/cad-dataset-suitability-2026-10.md`。
+- 结果：建议 BenchCAD 2.0 作为主数据源候选，因为其参数、来源范围、约束和确定性 CadQuery 几何与项目主线接近；CADBench 作为多模态几何重建/外部评测参考；Seek-CAD 作为特征序列及检索方法参考。尚未冻结数据集或零件族。
+- 验证：查阅附件论文第 1、3、4 节及附录 D；核对三个项目的作者 README、BenchCAD 2.0 博客/仓库设计规范和 CADBench Hugging Face 数据卡。未下载完整数据集或运行样本。
+- 许可边界：BenchCAD 2.0 README 区分 MIT 代码/设计与 CC BY 4.0 数据制品；CADBench 按源数据混合许可；Seek-CAD 仓库代码 MIT，但 README 未单列数据许可。
+- 下一步：导师/项目负责人确认主数据源候选与零件族方向后，开展已合并 BenchCAD 家族和候选族覆盖的样本级审查（DATA-002）；再冻结首期零件族。

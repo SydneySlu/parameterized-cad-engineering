@@ -12,6 +12,8 @@
 
 ## 已完成
 
+- 完成 BenchCAD 2.0、CADBench 与 Seek-CAD 数据源的适配性和许可边界初评；建议 BenchCAD 2.0 社区零件族作为主数据源候选，CADBench 用作评测参考，Seek-CAD 用作序列/检索方法参考。尚未冻结数据集或零件族。
+
 - 形成参数化 CAD 生成系统的轻量版技术路线。
 - 完成 SKY-001、Seek-CAD、FutureCAD 以及相关 CAD/DSL 论文的初步对比。
 - 形成三个首期候选零件族：工业铝型材框架角码/连接板、机器人末端工具安装转接板、电机安装板/支架。
@@ -25,6 +27,7 @@
 |---|---|---|---|---|
 | INFRA-001 | 配置远程 Git 仓库并验证跨设备同步 | Codex / 用户 | blocked | remote URL、首次 push 记录 |
 | CAD-001 | 冻结首期零件族与参数 Schema | Codex + 导师 | planned | 零件族决策、Schema 草案 |
+| DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；待导师选择后转化为数据接入任务 |
 | CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
 | CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
@@ -40,7 +43,8 @@
 ## 下一步
 
 1. 配置远程仓库并完成首次 push。
-2. 冻结一个零件族、参数字段、单位和合法范围。
-3. 以一个完整样例定义 Typed CAD IR v0，并让构造器和验证器跑通。
-4. 再建立检索样本 manifest 和最小评测集。
+2. 与导师核对数据源试点建议和三个候选零件族的实际覆盖。
+3. 冻结一个零件族、参数字段、单位和合法范围。
+4. 以一个完整样例定义 Typed CAD IR v0，并让构造器和验证器跑通。
+5. 再建立检索样本 manifest 和最小评测集。
 
