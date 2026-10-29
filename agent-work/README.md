@@ -22,6 +22,7 @@ git rev-parse --show-toplevel
 - `cad-validation/`：CadQuery/OCP 构造器、STEP 回读、几何验证和失败案例。
 - `integration/`：跨模块集成、端到端运行和验收记录。
 - `reviews/`：可共享的审查意见、复核材料和 checkpoint；私有中枢台账仍在仓库外。
+- `project-planning/`：总体推进讨论 Agent 的规划记录、待决问题和阶段 checkpoint。
 - `inbox/`：尚未归类的交接材料，处理后应移动到对应目录。
 
 源代码放 `src/`，测试放 `tests/`，正式研究/决策/状态材料放 `docs/`。大文件、密钥、私有数据和未授权 CAD 文件遵守根目录 `.gitignore`，不要为了提交而强行加入 Git。
