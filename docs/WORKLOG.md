@@ -80,3 +80,10 @@
 - 验证：待运行仓库体检、diff 检查；未下载评测 gated 内容，也未复制外部 CAD 文件。
 - 提交：`29ee4bd`（`docs: plan BenchCAD dataset-first project scope [DATA-002]`）。
 - 下一步：用户/导师确认目标是全部当前可用族，还是阶段一达到两个族即可；之后完成族级来源、版本、许可证和环境审查。
+
+### INFRA-008 / Codex / done / 2026-10-29
+
+- 动作：将整个 Git 仓库（含 `.git` 历史）从旧工作路径迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；建立 `agent-work/` 及数据、LLM、Schema/规则、Typed CAD IR、CAD 验证、集成、审查和待分拣子目录；更新 Agent 启动规则和路径说明。
+- 结果：当前主机有单一共享项目基座；后续 Agent 不应在自己的默认目录创建项目副本。源代码、测试和正式文档仍分别进入 `src/`、`tests/` 和 `docs/`。
+- 验证：迁移后 `git status --short --branch` 显示 `main` 且工作区无迁移丢失；目标目录存在 `.git`；待提交前运行仓库体检和 `git diff --check`。
+- 下一步：后续生成各 Agent prompt 时写入目标根目录和职责子目录；跨设备使用时以当地 clone 的 Git 根目录为准。

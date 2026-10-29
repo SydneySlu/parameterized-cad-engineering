@@ -11,6 +11,7 @@
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | INFRA-001 | 有 prompt 模板、checkpoint 规则和体检脚本 |
 | INFRA-006 | 中枢私有审查台账与独立复核约定 | Codex | done | INFRA-005 | 仓库外台账已建立，事实源与复核边界写入决策记录 |
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | INFRA-006 | 分工、边界、阶段和接口依赖已写入协调文档 |
+| INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | INFRA-007 | 目标目录、职责子目录和路径规则已写入协作协议 |
 | DATA-001 | 开源数据源适配性初评 | Codex | review | - | 对 BenchCAD 2.0、CADBench、Seek-CAD 完成数据结构、适配度与许可边界比较 |
 | DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | DATA-001 | 固定 commit；核验许可/状态；两个结构不同族完成构造、导出和项目适配 smoke test；导师确认扩展范围 |
 | CAD-001 | 候选零件族比较 | Codex | planned | - | 有数据/规则/应用/生成难点对比 |

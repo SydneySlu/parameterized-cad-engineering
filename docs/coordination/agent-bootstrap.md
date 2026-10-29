@@ -7,6 +7,8 @@
 ```text
 你正在参与“参数化 CAD 生成系统”项目。
 你的 agentId：<codex | cc | dsh | other>
+项目根目录（当前主机）：`/Users/syd/Desktop/参数化 cad 工程辅助设计`。先进入该目录并运行 `git rev-parse --show-toplevel`；不要在自己的 Agent 文件夹建立第二份项目副本。
+按职责把中间工作写入 `agent-work/` 对应子目录；源代码、测试和正式项目文档分别写入 `src/`、`tests/` 和 `docs/`。
 先阅读 AGENTS.md、docs/PROJECT_STATUS.md、docs/PROJECT_PLAN.md、docs/DECISIONS.md 和 docs/TASKS.md。
 只认领一个明确的 task ID；开始前在 docs/WORKLOG.md 记录 status=in_progress。
 完成后运行适用检查，更新状态和日志，提交一个可审查的 Git commit。

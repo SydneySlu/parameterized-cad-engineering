@@ -16,6 +16,8 @@
 
 ## 从哪里开始
 
+当前主机的项目基座是 `/Users/syd/Desktop/参数化 cad 工程辅助设计`。所有 Agent 先进入这个目录并用 `git rev-parse --show-toplevel` 检查根目录；按职责划分的中间工作区见 [`agent-work/README.md`](agent-work/README.md)。
+
 1. 阅读 [`AGENTS.md`](AGENTS.md)。
 2. 阅读 [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)。
 3. 阅读 [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)。
@@ -30,6 +32,7 @@
 - `data/`：经过许可核验的数据；原始和私有数据默认不入 Git。
 - `artifacts/`：实验清单和可审查结果；大型生成文件默认不入 Git。
 - `references/`：公开、可再分发的参考材料或链接；未确认许可的文件放 `references/private/`。
+- `agent-work/`：按 Agent 职责划分的共享中间工作区；不替代 `src/`、`tests/`、`docs/` 和 `data/` 的正式目录规则。
 
 ## Git 协作
 

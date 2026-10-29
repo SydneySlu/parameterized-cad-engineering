@@ -7,6 +7,14 @@
 3. `docs/WORKLOG.md`：追加式工作日志；
 4. `docs/DECISIONS.md`：已经确认的架构和范围决策。
 
+## 项目基座与文件位置
+
+- 当前主机的共享项目基座是 `/Users/syd/Desktop/参数化 cad 工程辅助设计`，所有 Agent 必须在这个 Git 根目录内工作。
+- 启动任务时先运行 `cd "/Users/syd/Desktop/参数化 cad 工程辅助设计" && git rev-parse --show-toplevel`，确认没有落到 Agent 自己的默认目录或旧项目副本。
+- 按职责产生的中间材料放入 `agent-work/data`、`agent-work/llm`、`agent-work/schema-rules`、`agent-work/typed-cad-ir`、`agent-work/cad-validation`、`agent-work/integration`、`agent-work/reviews` 或 `agent-work/inbox`；具体约定见 `agent-work/README.md`。
+- 源代码放 `src/`，测试放 `tests/`，正式状态/计划/决策/研究放 `docs/`。原始数据、私有材料、大型生成物和密钥遵守 `.gitignore`，不要为了“集中管理”而提交。
+- 其他设备的绝对路径可能不同；应使用该设备上 clone 后的 Git 根目录，并在交接记录中写明路径。当前设备不得再使用迁移前的 `/Users/syd/Documents/Codex/2026-10-23/new-chat` 副本。
+
 ## 事实源和更新规则
 
 - Git 仓库中的 Markdown、代码、配置和提交历史是项目事实源。
