@@ -43,3 +43,12 @@
 - 影响：决定 Schema、IR、构造器、验证器和 LLM/检索任务的并行边界。
 - 依据：`docs/coordination/agent-work-allocation.md` 第 69–92 行及 `docs/PROJECT_PLAN.md` 阶段 1–3。
 - 下一步：在首期范围明确后比较“先 Schema 后 IR”和“先 IR 公共信封后 Schema”的接口方案。
+
+### PQ-005：数据库资料与实际可运行数据的差距
+
+- 提出日期：2026-10-30
+- 状态：needs-user-confirmation
+- 问题：当前 `database/` 目录保存的是 BenchCAD 选型、许可和接入计划文档，尚未包含实际族源码、固定 commit、manifest、构造/STEP/验证结果。是否将 BenchCAD GitHub 社区仓库作为外部源，先做只读族级核验，再在项目工作区生成最小项目侧 manifest？
+- 影响：决定 DATA-002 是停留在资料审查，还是可以进入一族纵向切片；也决定后续 Schema/IR 设计的输入是否真实可运行。
+- 依据：`find database -maxdepth 2 -type f` 仅发现四份 Markdown；接入计划第 4、6 节要求实施前固定 commit 并核验运行条件。
+- 候选：先外部源核验并记录版本（建议草案）；等完整数据制品发布后再启动（会推迟接口验证）。
