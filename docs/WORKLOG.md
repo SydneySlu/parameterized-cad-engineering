@@ -87,3 +87,11 @@
 - 结果：当前主机有单一共享项目基座；后续 Agent 不应在自己的默认目录创建项目副本。源代码、测试和正式文档仍分别进入 `src/`、`tests/` 和 `docs/`。
 - 验证：迁移后 `git status --short --branch` 显示 `main` 且工作区无迁移丢失；目标目录存在 `.git`；待提交前运行仓库体检和 `git diff --check`。
 - 下一步：后续生成各 Agent prompt 时写入目标根目录和职责子目录；跨设备使用时以当地 clone 的 Git 根目录为准。
+
+### INFRA-003 / 用户 + Codex / review / 2026-10-29 checkpoint
+
+- 动作：配置 GitHub 远程仓库 `https://github.com/SydneySlu/parameterized-cad-engineering.git`，使用 GitHub CLI 的 HTTPS 登录方式完成本机 `main` 首次推送。
+- 结果：本地 `main` 已跟踪 `origin/main`；当前工作区干净，远程 fetch/push 地址一致。
+- 验证：`git remote -v`、`git branch -vv` 和 `git status --short --branch` 显示 `origin/main` 跟踪关系；当前本地 HEAD 与远程跟踪分支均为 `c296387`。
+- 限制：尚未在第二台设备执行实际 clone/pull，因此任务先标记为 `review`，不是完全 `done`。
+- 下一步：在另一设备 clone 仓库并完成一次 pull/branch 检查；通过后将 INFRA-003 标记为 `done`。

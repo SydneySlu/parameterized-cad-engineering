@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | INFRA-001 | Git 初始化与协作协议 | Codex | done | - | 仓库可提交，所有 Agent 有统一入口 |
 | INFRA-002 | 状态、计划、决策、日志骨架 | Codex | done | INFRA-001 | 文件存在且互相链接 |
-| INFRA-003 | 远程仓库与跨设备同步 | 用户 + Codex | blocked | GitHub 仓库 URL | 新设备可 clone，首次 push 成功 |
+| INFRA-003 | 远程仓库与跨设备同步 | 用户 + Codex | review | GitHub 仓库 URL | 本机首次 push 成功；新设备 clone/pull 待验证 |
 | INFRA-004 | Agent 配置入口 | Codex + 用户 | planned | INFRA-003 | Codex/CC/DSH 可找到同一状态和任务 |
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | INFRA-001 | 有 prompt 模板、checkpoint 规则和体检脚本 |
 | INFRA-006 | 中枢私有审查台账与独立复核约定 | Codex | done | INFRA-005 | 仓库外台账已建立，事实源与复核边界写入决策记录 |
