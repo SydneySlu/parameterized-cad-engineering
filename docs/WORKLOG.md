@@ -78,4 +78,5 @@
 - 结果：建议把当前可用的 BenchCAD 社区族作为覆盖目标，先以两个结构不同的族完成 smoke test，随后扩展其余可用族；主要增量工作改为跨族 manifest/Typed CAD IR adapter、自然语言缺失/冲突任务、检索对照和逐族几何验证。没有冻结最终族数或新增垂直领域。
 - 许可/状态边界：GitHub 社区族与 Public/Core 评测集分开；Public/Core 当前条款禁止作为训练、检索语料或 RL 环境。已核验状态页报告 4/150 merged、0 release-qualified（状态页标注 2026-08-02），实施前须再次锁定具体 commit 和族状态。
 - 验证：待运行仓库体检、diff 检查；未下载评测 gated 内容，也未复制外部 CAD 文件。
+- 提交：`29ee4bd`（`docs: plan BenchCAD dataset-first project scope [DATA-002]`）。
 - 下一步：用户/导师确认目标是全部当前可用族，还是阶段一达到两个族即可；之后完成族级来源、版本、许可证和环境审查。
