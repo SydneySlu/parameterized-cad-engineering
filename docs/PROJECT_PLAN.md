@@ -17,11 +17,11 @@
 ## 阶段 1：问题冻结和零件族选择
 
 - [x] 初评 BenchCAD 2.0、CADBench、Seek-CAD 的数据适配性与许可边界（DATA-001；结论见 `docs/research/cad-dataset-suitability-2026-10.md`）
-- [ ] 试审 BenchCAD 2.0 已合并族与候选方向覆盖，决定是否按其格式扩展（DATA-002）
-- [ ] 比较三个候选零件族的数据、规则、应用和生成难点（CAD-001）
-- [ ] 冻结一个首期零件族和首期不支持项（CAD-002）
-- [ ] 定义参数 Schema、单位、默认值来源、缺失字段和边界（CAD-003）
-- [ ] 定义固定评测集的切分方式，避免模板近重复泄漏（CAD-004）
+- [ ] 建立 BenchCAD 多族数据优先试点：锁定具体 commit，检查许可/状态/环境，先用两个结构不同的社区族跑通 smoke test，再决定是否扩展到更多族（DATA-002；建议见 `docs/research/benchcad-dataset-first-plan-2026-10.md`）
+- [ ] 导师确认数据优先路线和首期族数量（CAD-001）
+- [ ] 冻结首期 BenchCAD 社区族集合、支持任务和不支持项（CAD-002）
+- [ ] 定义跨族 manifest/adapter 与参数 Schema 映射、单位、来源和缺失字段（CAD-003）
+- [ ] 按族、目录行和 near-duplicate group 建固定评测切分，避免实例泄漏（CAD-004）
 
 ## 阶段 2：Typed CAD IR 和确定性主线
 

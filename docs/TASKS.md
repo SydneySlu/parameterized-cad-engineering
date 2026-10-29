@@ -12,7 +12,7 @@
 | INFRA-006 | 中枢私有审查台账与独立复核约定 | Codex | done | INFRA-005 | 仓库外台账已建立，事实源与复核边界写入决策记录 |
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | INFRA-006 | 分工、边界、阶段和接口依赖已写入协调文档 |
 | DATA-001 | 开源数据源适配性初评 | Codex | review | - | 对 BenchCAD 2.0、CADBench、Seek-CAD 完成数据结构、适配度与许可边界比较 |
-| DATA-002 | BenchCAD 家族与候选方向覆盖试审 | Codex + 用户/导师 | planned | DATA-001 | 核验已合并族、候选族覆盖、样本可得性和扩展缺口 |
+| DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | DATA-001 | 固定 commit；核验许可/状态；两个结构不同族完成构造、导出和项目适配 smoke test；导师确认扩展范围 |
 | CAD-001 | 候选零件族比较 | Codex | planned | - | 有数据/规则/应用/生成难点对比 |
 | CAD-002 | 冻结首期零件族 | 用户 + 导师 | planned | CAD-001 | 决策记录明确范围和不支持项 |
 | CAD-003 | 参数 Schema v0 | CC（Schema/规则角色） | planned | CAD-002 | 有字段、单位、边界、来源和缺失规则 |

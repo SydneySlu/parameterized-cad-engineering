@@ -7,6 +7,7 @@
 - 项目路线已收敛为轻量版。
 - 首期创新重点是 `Typed CAD IR`、确定性 CAD 构造/验证和小样本检索。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
+- 根据导师建议，当前数据方向调整为优先利用 BenchCAD 2.0 社区参数化零件族，尽量直接复用经审查的族定义与构造器；这一数据优先路线已记录为 ADR-0005 proposed，尚未冻结纳入族数量。
 - Git 仓库基础已建立；远程仓库 URL 尚未配置。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 
@@ -27,7 +28,8 @@
 |---|---|---|---|---|
 | INFRA-001 | 配置远程 Git 仓库并验证跨设备同步 | Codex / 用户 | blocked | remote URL、首次 push 记录 |
 | CAD-001 | 冻结首期零件族与参数 Schema | Codex + 导师 | planned | 零件族决策、Schema 草案 |
-| DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；待导师选择后转化为数据接入任务 |
+| DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；建议优先 BenchCAD 社区族 |
+| DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | 数据优先计划；核对族状态、许可、版本并完成两个族 smoke test |
 | CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
 | CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
@@ -43,8 +45,8 @@
 ## 下一步
 
 1. 配置远程仓库并完成首次 push。
-2. 与导师核对数据源试点建议和三个候选零件族的实际覆盖。
-3. 冻结一个零件族、参数字段、单位和合法范围。
-4. 以一个完整样例定义 Typed CAD IR v0，并让构造器和验证器跑通。
-5. 再建立检索样本 manifest 和最小评测集。
+2. 按数据优先计划核对 BenchCAD 当前可用族的状态、许可、版本和本地运行条件。
+3. 先选两个结构不同的 BenchCAD 族做 smoke test；根据结果与导师确认首期范围。
+4. 建立跨族 manifest/adapter 和 Typed CAD IR v0，再接通原生构造器与验证器。
+5. 建立族级切分的检索样本集、自然语言任务集和 A/B/C 对照评测。
 

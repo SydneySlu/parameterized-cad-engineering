@@ -71,3 +71,11 @@
 - 关键风险：Public/Core 当前数据卡明确禁止训练、微调、蒸馏、RL 环境、检索/搜索语料和再发布，因此只能作为外部评测/任务设计参考；不能按原始评估集接入轻量版检索或训练管线。
 - 验证：官方页面与仓库原文核对；`git diff --check` 通过；未下载 gated Public/Core 内容，也未将其文件写入仓库。
 - 下一步：导师确认首期目标族后，执行 DATA-002：选定一个已合并族或仿照其接口新增一个来源可追溯族，建立项目 manifest 与 Typed CAD IR 映射。
+
+### DATA-002 / Codex / in_progress / 2026-10-29 checkpoint
+
+- 动作：根据用户转述的导师意见，将数据策略调整为 BenchCAD 社区参数化族优先；新增 `docs/research/benchcad-dataset-first-plan-2026-10.md`，并在 `docs/DECISIONS.md` 记录 ADR-0005 proposed；同步更新项目状态、计划和任务看板。
+- 结果：建议把当前可用的 BenchCAD 社区族作为覆盖目标，先以两个结构不同的族完成 smoke test，随后扩展其余可用族；主要增量工作改为跨族 manifest/Typed CAD IR adapter、自然语言缺失/冲突任务、检索对照和逐族几何验证。没有冻结最终族数或新增垂直领域。
+- 许可/状态边界：GitHub 社区族与 Public/Core 评测集分开；Public/Core 当前条款禁止作为训练、检索语料或 RL 环境。已核验状态页报告 4/150 merged、0 release-qualified（状态页标注 2026-08-02），实施前须再次锁定具体 commit 和族状态。
+- 验证：待运行仓库体检、diff 检查；未下载评测 gated 内容，也未复制外部 CAD 文件。
+- 下一步：用户/导师确认目标是全部当前可用族，还是阶段一达到两个族即可；之后完成族级来源、版本、许可证和环境审查。
