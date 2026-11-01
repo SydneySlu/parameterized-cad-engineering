@@ -52,3 +52,20 @@
 - 影响：决定 DATA-002 是停留在资料审查，还是可以进入一族纵向切片；也决定后续 Schema/IR 设计的输入是否真实可运行。
 - 依据：`find database -maxdepth 2 -type f` 仅发现四份 Markdown；接入计划第 4、6 节要求实施前固定 commit 并核验运行条件。
 - 候选：先外部源核验并记录版本（建议草案）；等完整数据制品发布后再启动（会推迟接口验证）。
+
+### PQ-006：首个纵向切片和启动路径
+
+- 提出日期：2026-10-31
+- 状态：needs-user-confirmation
+- 问题：是否以 `set_screw_shaft_collar` 作为首个候选族、`slotted_din_rail` 作为第二族，并把外部 checkout 放在 `/Users/syd/Desktop/参数化 cad 工程辅助设计/work/benchcad-source/benchcad-2`？
+- 影响：决定启动阶段的数据审计对象、机器环境验证和后续 Schema/IR 输入。
+- 依据：`agent-work/project-planning/kickoff-plan-2026-10-31.md`；候选族来自 `database/benchcad-dataset-first-plan-2026-10-29.md`，正式状态仍需重新核验。
+- 候选：接受上述候选；改选 `speaker_pole_mount_socket`；先只做仓库级环境验证，不锁定族。
+
+### PQ-007：Mac 与 Windows 的启动分工
+
+- 提出日期：2026-10-31
+- 状态：needs-user-confirmation
+- 问题：是否先在 MacBook Air M5 上完成 Git checkout、依赖安装判断和单族最小构造；只有 ARM 兼容性或磁盘空间不足时，才切换 Windows + 外置硬盘？
+- 影响：决定首轮环境记录、路径和后续大文件存储方式。
+- 依据：用户提供的硬件信息和启动计划第 5 节；当前没有实际运行结果，兼容性不能预先保证。

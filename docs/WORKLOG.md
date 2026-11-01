@@ -48,6 +48,72 @@
 - 验证：确认台账文件权限为仅当前用户读写；运行仓库体检和 `git diff --check`。
 - 下一步：每次分派、checkpoint、审查和修正时更新台账；重要结论按需发起另一个 Codex 对话框的独立复核。
 
+## 2026-11-01
+
+### CAD-005/006-R1 / CAD 执行 Agent / in_progress
+
+**第一阶段：三层交接检查（完成）**
+
+- 动作：
+  1. 阅读 AGENTS.md、PROJECT_STATUS.md、PROJECT_PLAN.md、TASKS.md、DECISIONS.md、coordination/handoff-review-protocol.md
+  2. 读取前序任务 DATA-003、CAD-003、IR-001 的 checkpoint 和代码
+  3. 执行第二层定向复核：复跑 DATA-003 smoke 命令，验证 4 个案例（合法、边界、约束非法、几何非法）
+  4. 设置开发环境：CadQuery 2.3.0 + OCP 7.9.3.0 + Python 3.10
+  5. 理解 IR v0 结构：节点类型、表达式类型、公式集合、验证指标
+
+- 结果：
+  - ✓ 第二层复核 PASS：spec.check() 和 part.build() 均可调用，所有测试案例行为符合预期
+  - ✓ 前序接口完整：CAD-003 参数规则、约束集合、构造器 API 均冻结
+  - ✓ 环境配置完成：依赖已安装，BenchCAD 源快照（benchcad-2-035f467-raw）存在完整
+  - ✓ IR 结构理解完成：5 节点类型、5 表达式类型、11 公式、错误分层
+
+- 验证：
+  ```bash
+  cd work/benchcad-source/benchcad-2-035f467-raw && \
+    PYTHONPATH=.:./framework python3 /mnt/outputs/test_handoff.py
+  # 输出：✓ 4 个测试 PASS
+  ```
+
+- 交接记录：
+  - `agent-work/cad-validation/CAD-005-006/handoff_successor_check.md`（第二层复核记录）
+  - `agent-work/cad-validation/CAD-005-006/checkpoint.md`（当前 R1 checkpoint）
+
+**第二阶段：编译器架构设计（启动）**
+
+- 动作：
+  1. 分析 IR v0 示例（legal-catalog-row.json 等）
+  2. 设计模块化架构：解析层、验证层、编译层、验证层
+  3. 建立 src/cad_compilation/ 目录和模块框架
+  4. 记录关键发现、决策点和风险
+
+- 关键发现：
+  1. **验证必须分层**（DATA-003 证明）
+     - preflight: 约束检查（绝不能跳过）
+     - build: CadQuery 构造
+     - post_geometry: 实体数、有效性、几何摘要
+     - step_readback: STEP 往返验证
+  2. **多实体风险**：outer_d < bore_d 时 build() 产生 3 solids，STEP 导出成功，但属于非法结果
+  3. **STEP 不稳定**：字节 hash 不同但几何摘要相同 → 必须使用结构化摘要，不用字节 hash 判定
+  4. **螺纹模型限制**：thread_model=revolved_ring_approximation，M3-M8 可能 no-op
+
+- 待确认的决策点（交给中枢）：
+  1. 公式参数的单位推导规则
+  2. 回转轴定义和轮廓绘制方向
+  3. 置放（placement）模型的坐标系统一性
+
+- 已知限制：
+  - 仅支持 set_screw_shaft_collar（首族）
+  - STEP 字节 hash 不稳定，不作重复性标准
+  - 螺纹为环形近似，不是真实螺旋
+  - Source snapshot reproducibility_partial
+
+- 下一步：
+  1. 实现 IR 解析、语义检查、公式求值（4-6 h）
+  2. 实现 CadQuery 操作映射（4 h）
+  3. 实现几何/STEP 验证（2-3 h）
+  4. 编写测试和运行日志（2 h）
+  5. 交接给中枢审查（review 状态）
+
 ### INFRA-007 / Codex / done
 
 - 动作：围绕轻量版架构规划数据、LLM、Schema/规则、Typed CAD IR 设计、CAD 执行/验证和集成审查的 Agent 分工与依赖；暂不生成初始化 prompt。
@@ -58,7 +124,7 @@
 
 ### DATA-001 / Codex / review
 
-- 动作：比较 BenchCAD 2.0 社区族/公开评测集、CADBench（附件论文 arXiv:2605.10873v2）和 Seek-CAD 的目标、数据结构、轻量版适配度、规模与许可边界；新增研究报告 `docs/research/cad-dataset-suitability-2026-10.md`。
+- 动作：比较 BenchCAD 2.0 社区族/公开评测集、CADBench（附件论文 arXiv:2605.10873v2）和 Seek-CAD 的目标、数据结构、轻量版适配度、规模与许可边界；研究报告现位于 `database/cad-dataset-suitability-2026-10.md`。
 - 结果：建议 BenchCAD 2.0 作为主数据源候选，因为其参数、来源范围、约束和确定性 CadQuery 几何与项目主线接近；CADBench 作为多模态几何重建/外部评测参考；Seek-CAD 作为特征序列及检索方法参考。尚未冻结数据集或零件族。
 - 验证：查阅附件论文第 1、3、4 节及附录 D；核对三个项目的作者 README、BenchCAD 2.0 博客/仓库设计规范和 CADBench Hugging Face 数据卡。未下载完整数据集或运行样本。
 - 许可边界：BenchCAD 2.0 README 区分 MIT 代码/设计与 CC BY 4.0 数据制品；CADBench 按源数据混合许可；Seek-CAD 仓库代码 MIT，但 README 未单列数据许可。
@@ -66,7 +132,7 @@
 
 ### DATA-001 / Codex / review / 2026-10-28 checkpoint
 
-- 动作：补充核对 BenchCAD 2.0 GitHub 设计接口、当前状态页、评审规范、官方博客及 Hugging Face Public/Core 数据卡；新增 `docs/research/benchcad-2-deep-dive-2026-10.md`。
+- 动作：补充核对 BenchCAD 2.0 GitHub 设计接口、当前状态页、评审规范、官方博客及 Hugging Face Public/Core 数据卡；研究报告现位于 `database/benchcad-2-deep-dive-2026-10.md`。
 - 结果：明确区分社区参数化零件族与 Public/Core 工程任务评测集；整理 `part.py`、`spec.py`、`family.json` 及 `PARAM_SPEC`、`check()`、`refine()` 的字段语义；核对当前状态页为 4/150 个族已合并；对三个候选零件族给出匹配和延伸估算。
 - 关键风险：Public/Core 当前数据卡明确禁止训练、微调、蒸馏、RL 环境、检索/搜索语料和再发布，因此只能作为外部评测/任务设计参考；不能按原始评估集接入轻量版检索或训练管线。
 - 验证：官方页面与仓库原文核对；`git diff --check` 通过；未下载 gated Public/Core 内容，也未将其文件写入仓库。
@@ -74,7 +140,7 @@
 
 ### DATA-002 / Codex / in_progress / 2026-10-29 checkpoint
 
-- 动作：根据用户转述的导师意见，将数据策略调整为 BenchCAD 社区参数化族优先；新增 `docs/research/benchcad-dataset-first-plan-2026-10.md`，并在 `docs/DECISIONS.md` 记录 ADR-0005 proposed；同步更新项目状态、计划和任务看板。
+- 动作：根据用户转述的导师意见，将数据策略调整为 BenchCAD 社区参数化族优先；计划现位于 `database/benchcad-dataset-first-plan-2026-10.md`，并在 `docs/DECISIONS.md` 记录 ADR-0005 proposed；同步更新项目状态、计划和任务看板。
 - 结果：建议把当前可用的 BenchCAD 社区族作为覆盖目标，先以两个结构不同的族完成 smoke test，随后扩展其余可用族；主要增量工作改为跨族 manifest/Typed CAD IR adapter、自然语言缺失/冲突任务、检索对照和逐族几何验证。没有冻结最终族数或新增垂直领域。
 - 许可/状态边界：GitHub 社区族与 Public/Core 评测集分开；Public/Core 当前条款禁止作为训练、检索语料或 RL 环境。已核验状态页报告 4/150 merged、0 release-qualified（状态页标注 2026-08-02），实施前须再次锁定具体 commit 和族状态。
 - 验证：待运行仓库体检、diff 检查；未下载评测 gated 内容，也未复制外部 CAD 文件。
@@ -95,7 +161,12 @@
 - 验证：`git remote -v`、`git branch -vv` 和 `git status --short --branch` 显示 `origin/main` 跟踪关系；当前本地 HEAD 与远程跟踪分支均为 `c296387`。
 - 限制：尚未在第二台设备执行实际 clone/pull，因此任务先标记为 `review`，不是完全 `done`。
 - 下一步：在另一设备 clone 仓库并完成一次 pull/branch 检查；通过后将 INFRA-003 标记为 `done`。
+### INFRA-009 / Codex / done / 2026-10-29
 
+- 动作：按项目负责人要求，将数据集比较、BenchCAD 深入分析和 BenchCAD 优先计划统一迁入 `database/`；新增目录入口和后续更新约定，更新项目文档链接。
+- 结果：`database/README.md` 成为数据集计划与讨论入口；今后此类结论在该目录更新，项目范围变化仍同步到决策与状态文档。
+- 验证：核对 Git remote 为 `https://github.com/SydneySlu/parameterized-cad-engineering.git`；无需修改 remote；待执行文档体检和 diff 检查。
+- 下一步：继续按 `database/README.md` 约定维护数据集相关计划和讨论。
 ### DATA-003 / Codex / planned / 2026-11-01
 
 - 动作：注册 BenchCAD 单族来源、环境和最小 smoke test 执行任务；建立专用工作区和可复制的 Agent 初始化 Prompt。
@@ -103,6 +174,13 @@
 - 工作区：`agent-work/data/DATA-003-single-family-audit/`；外部 checkout 和临时 CAD 产物放被忽略的 `work/benchcad-source/`、`work/benchcad-output/`。
 - Prompt：`docs/coordination/prompts/DATA-003-single-family-audit-agent.md`。
 - 下一步：项目负责人在新对话框启动 Prompt；执行 Agent 完成 checkpoint 后由 Codex 中枢审查并决定是否进入 Schema/IR 阶段。
+### DATA-003 / Codex / review / 2026-11-01 checkpoint
+
+- 动作：固定 BenchCAD `035f467142888edfd0bd7cd73906f9b155c8f43c`，核对三个候选族、README/pyproject/LICENSE/STATUS、官方 CLI 与原生 API；在 macOS arm64 的 Python 3.11.18 隔离环境安装 CadQuery/OCP 依赖。
+- 结果：`set_screw_shaft_collar`、`slotted_din_rail`、`speaker_pole_mount_socket` 均真实存在且 `bench2 validate --seeds 1` PASS；完成首族合法、边界、非法和重复运行 STEP smoke，并生成来源审计、候选矩阵、环境、运行日志、manifest 草案和 checkpoint。
+- 关键风险：非法参数被 `check()` 拒绝但原生 build 仍可能成功；`outer_d < bore_d` 例产生 3 solids；相同参数的 STEP 字节哈希不同但几何指标稳定；状态仅 MERGED、无 release-qualified，生成资产和第三方参考材料许可证需保留不确定标记。
+- 工作区：`agent-work/data/DATA-003-single-family-audit/`；源码快照和 CAD/venv 均在被忽略的 `work/benchcad-source/`、`work/benchcad-output/`，未下载 Public/Core。
+- 下一步：由 Codex 中枢审查来源/许可证/运行日志，决定是否补做第二族完整 STEP smoke，并决定是否进入 Schema/Typed CAD IR 阶段；本 checkpoint 不冻结族或接口。
 
 ### DATA-003-R1 / Codex / planned / 2026-11-01
 

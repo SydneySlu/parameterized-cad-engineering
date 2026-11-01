@@ -9,6 +9,7 @@
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向调整为优先利用 BenchCAD 2.0 社区参数化零件族，尽量直接复用经审查的族定义与构造器；这一数据优先路线已记录为 ADR-0005 proposed，尚未冻结纳入族数量。
 - GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 已推送并跟踪 `origin/main`。
+- 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。
 
@@ -31,8 +32,8 @@
 | CAD-001 | 冻结首期零件族与参数 Schema | Codex + 导师 | planned | 零件族决策、Schema 草案 |
 | DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；建议优先 BenchCAD 社区族 |
 | DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | 数据优先计划；核对族状态、许可、版本并完成两个族 smoke test |
-| CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
 | DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | DATA-003 Agent + Codex | review | 来源审计、候选矩阵、环境记录和最小核验包；待复现性补充审查 |
+| CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
 | CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | prompt 模板、checkpoint 规则、体检脚本 |
@@ -51,4 +52,3 @@
 3. 先选两个结构不同的 BenchCAD 族做 smoke test；根据结果与导师确认首期范围。
 4. 建立跨族 manifest/adapter 和 Typed CAD IR v0，再接通原生构造器与验证器。
 5. 建立族级切分的检索样本集、自然语言任务集和 A/B/C 对照评测。
-
