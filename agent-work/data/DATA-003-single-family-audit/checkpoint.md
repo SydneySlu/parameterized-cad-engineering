@@ -26,3 +26,12 @@
 1. Codex 中枢审查来源、LICENSE 分层、STATUS 解释和 smoke 风险。
 2. 如需 DATA-002 的“双族端到端”门，沿相同方法补做 `slotted_din_rail` 或 `speaker_pole_mount_socket` 的完整 STEP 表。
 3. 只有中枢审查并决定族范围后，才把草案字段交给 Schema/Typed CAD IR 任务；本任务不冻结接口或族选择。
+
+## DATA-003-R1 补充 checkpoint
+
+- 已确认原有 promisor checkout 不是干净完整工作树，不能用于可复现归档。
+- `git archive` 因缺 blob 生成 0 字节无效结果；GitHub codeload 在当前网络多次截断。
+- 已从固定 commit 的递归 tree/raw blob 建立 217/217 文件的 API/raw 快照，记录每个 blob SHA、文件 SHA-256 和 tar SHA-256；状态明确为 `reproducibility_partial`。
+- 已对 `legal_catalog_row` 和 `legal_hard_boundary` 的两次 STEP 回读计算 solids、shells、faces、edges、vertices、有效性、体积、包围盒、量化排序面面积摘要和边长摘要。
+- 两个案例的 STEP 字节哈希仍不同，但上述几何/实体指标和归一化面/边摘要均一致；结论限定为“几何/实体级指标稳定，拓扑等价尚未完全证明”。
+- 剩余范围：中枢复核 raw 快照是否足以满足复现门；网络恢复后优先建立真正 clean checkout/git archive。未修改正式状态、任务表或 ADR。

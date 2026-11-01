@@ -49,3 +49,20 @@ uv pip install --python work/benchcad-output/venv/bin/python -e work/benchcad-so
 - `set_screw_shaft_collar/NOTES.md` 提到外部标准 PDF/SVG/JPG，但本任务未下载、未复制。
 - 不需要 Public/Core 评测集；本任务未下载。
 - macOS ARM 上官方声明依赖安装可完成；未发现必须替换到非声明版本的失败。
+
+## DATA-003-R1 source snapshot evidence
+
+现有 `work/benchcad-source/benchcad-2/` 不可作为干净快照：HEAD 仍为 `035f467...`，但 `git status --short --branch` 显示大量 staged deletion，且 `README.md`、`pyproject.toml`、`uv.lock`、`framework/bench2/__init__.py` 和三个候选族的关键文件缺失。尝试 `git archive` 时由于 promisor checkout 缺少 blob，生成了 0 字节无效 tar；GitHub codeload 也在本机网络中截断，未将截断文件当作证据。
+
+按用户指定的 API/raw 退路，从固定 commit 的递归 tree 获取完整 blob 清单并下载全部 217 个 blob，快照目录：
+
+- `work/benchcad-source/benchcad-2-035f467-raw/`
+- 清单：`work/benchcad-source/benchcad-2-035f467-raw/SNAPSHOT-MANIFEST.json`
+- 递归 tree 中 217 个 blob，成功下载 217，缺失 0；清单记录每个路径、commit 对应 blob SHA、raw URL、文件大小和下载 SHA-256。
+- 关键文件均存在：`README.md`、`LICENSE`、`pyproject.toml`、`uv.lock`、`framework/bench2/__init__.py`、三个候选族的 `part.py`。
+- 为便于复核生成 ignored tar：`work/benchcad-source/benchcad-2-035f467-raw.tar`
+- tar SHA-256：`b390bc953416cfcf27b94b4ec1f497a0ba0ee5f3afb04c4b8454c411fc3c33ad`
+- tar 字节数：`31177216`
+- tar 条目数：`256`（包含目录项；源文件清单以 `SNAPSHOT-MANIFEST.json` 的 217 个 blob 为准）
+
+由于该快照通过 API/raw 重建而非源 Git 仓库的 `git archive`，DATA-003-R1 的 source snapshot 标记为 **`reproducibility_partial`**，不能写成完整 checkout 或官方 git archive。原始 source commit、每个 blob SHA 和完整清单已保存，后续网络恢复后仍应由中枢优先复核一次真正干净 checkout。

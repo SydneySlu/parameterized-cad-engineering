@@ -1,53 +1,164 @@
 {
-  "manifest_status": "audit_draft_not_frozen_schema",
-  "task": "DATA-003",
-  "source": {
-    "repository": "https://github.com/BenchCAD-org/benchcad-2",
-    "commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
-    "source_path": "designs/set_screw_shaft_collar",
-    "directory_name": "set_screw_shaft_collar",
-    "family_id": "set_screw_shaft_collar",
-    "status": "MERGED",
-    "release_qualified": false,
-    "status_uncertain": "STATUS.md records MERGED and 0 release-qualified; no released family artifact was used"
+  "artifacts": [
+    {
+      "path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run1.step",
+      "sha256": "c3d589c8e7aefabc0f0fb7dd09a553edd1f8afbc929320c625abd52d1ecb1168"
+    },
+    {
+      "path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run2.step",
+      "sha256": "70dfb4789accd7221920a04a7ce62fc0705a28fad95badbbcd89fa24e66a81a3"
+    },
+    {
+      "path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run1.step",
+      "sha256": "f7ebff0ee5b52bcebfa844a190d675f8f407b39c963f6edc4a73a1dd6446676f"
+    },
+    {
+      "path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run2.step",
+      "sha256": "28c9d658134b3fad0b8704fca0f285d51f21041ffd273b197a5958dfe1f97beb"
+    }
+  ],
+  "entrypoints": {
+    "constraint_checker": "designs/set_screw_shaft_collar/spec.py::check(params)",
+    "coupling_refiner": "designs/set_screw_shaft_collar/spec.py::refine(params, difficulty, rng)",
+    "native_builder": "designs/set_screw_shaft_collar/part.py::build(**named_params)",
+    "official_cli": "bench2 validate set_screw_shaft_collar",
+    "official_preview": "bench2 preview set_screw_shaft_collar"
   },
   "license": {
-    "source_code": "MIT per repository LICENSE",
-    "released_dataset_artifacts": "CC-BY-4.0 per repository LICENSE note",
     "generated_step_scope": "license_scope_uncertain",
-    "third_party_reference_materials": "license_scope_uncertain",
-    "public_core_downloaded": false
+    "public_core_downloaded": false,
+    "released_dataset_artifacts": "CC-BY-4.0 per repository LICENSE note",
+    "source_code": "MIT per repository LICENSE",
+    "third_party_reference_materials": "license_scope_uncertain"
   },
-  "entrypoints": {
-    "official_cli": "bench2 validate set_screw_shaft_collar",
-    "official_preview": "bench2 preview set_screw_shaft_collar",
-    "native_builder": "designs/set_screw_shaft_collar/part.py::build(**named_params)",
-    "constraint_checker": "designs/set_screw_shaft_collar/spec.py::check(params)",
-    "coupling_refiner": "designs/set_screw_shaft_collar/spec.py::refine(params, difficulty, rng)"
-  },
+  "manifest_status": "audit_draft_not_frozen_schema",
   "parameters": {
-    "bore_d": {"unit": "mm", "source": "GN 705 d1 H8 catalog row", "kind": "choice", "coverage_count": 15},
-    "outer_d": {"unit": "mm", "source": "GN 705 d2 catalog row", "kind": "derived_by_refine"},
-    "width": {"unit": "mm", "source": "GN 705 b js14 catalog row", "kind": "derived_by_refine"},
-    "screw_d": {"unit": "mm", "source": "GN 705 d3 major diameter", "kind": "derived_by_refine"},
-    "screw_len": {"unit": "mm", "source": "GN 705 d3 length", "kind": "derived_by_refine"},
-    "second_screw": {"unit": "", "source": "GN 705 d1 > 70 note", "kind": "derived_feature", "constraint": "must be 1 iff bore_d > 70"}
+    "bore_d": {
+      "coverage_count": 15,
+      "kind": "choice",
+      "source": "GN 705 d1 H8 catalog row",
+      "unit": "mm"
+    },
+    "outer_d": {
+      "kind": "derived_by_refine",
+      "source": "GN 705 d2 catalog row",
+      "unit": "mm"
+    },
+    "screw_d": {
+      "kind": "derived_by_refine",
+      "source": "GN 705 d3 major diameter",
+      "unit": "mm"
+    },
+    "screw_len": {
+      "kind": "derived_by_refine",
+      "source": "GN 705 d3 length",
+      "unit": "mm"
+    },
+    "second_screw": {
+      "constraint": "must be 1 iff bore_d > 70",
+      "kind": "derived_feature",
+      "source": "GN 705 d1 > 70 note",
+      "unit": ""
+    },
+    "width": {
+      "kind": "derived_by_refine",
+      "source": "GN 705 b js14 catalog row",
+      "unit": "mm"
+    }
+  },
+  "repeatability": {
+    "cases": {
+      "legal_catalog_row": {
+        "core_metrics_equal": true,
+        "edge_length_sha256": "9df4b466603c54bc4f27808762ea02112f6198bc991093a449141675dcfdb5b4",
+        "edge_length_signature_equal": true,
+        "face_area_sha256": "c00c651490027705015c38b01b14600087f3f0168794f6db81cff397a3fb9d0a",
+        "face_area_signature_equal": true,
+        "metrics": {
+          "bbox_size_mm": [
+            32.0,
+            32.0,
+            14.0
+          ],
+          "edges": 59,
+          "faces": 29,
+          "is_valid": true,
+          "shells": 1,
+          "solids": 1,
+          "vertices": 30,
+          "volume_mm3": 6712.645162
+        },
+        "step_sha_equal": false,
+        "topology_counts_equal": true
+      },
+      "legal_hard_boundary": {
+        "core_metrics_equal": true,
+        "edge_length_sha256": "bfc718cd9767f5638f4d1b70920205f1038e7a1bebc2e5f3ffc51e7464147bee",
+        "edge_length_signature_equal": true,
+        "face_area_sha256": "e2cef6073bbcfff46218727e7a0722ad3ab0b48d46efc9f73fc2eaece896de94",
+        "face_area_signature_equal": true,
+        "metrics": {
+          "bbox_size_mm": [
+            110.0,
+            110.0,
+            22.0
+          ],
+          "edges": 149,
+          "faces": 74,
+          "is_valid": true,
+          "shells": 1,
+          "solids": 1,
+          "vertices": 75,
+          "volume_mm3": 95092.318591
+        },
+        "step_sha_equal": false,
+        "topology_counts_equal": true
+      }
+    },
+    "conclusion": "geometry/entity-level metrics stable; normalized face-area and edge-length summaries stable; full B-Rep topological equivalence not claimed",
+    "quantization_decimals": 6,
+    "script": "work/benchcad-output/geometry_signatures.py",
+    "status": "audit_evidence",
+    "summary": "work/benchcad-output/smoke-set-screw/geometry-signatures.json"
   },
   "smoke": {
+    "geometry_metrics_stable": true,
+    "invalid_cases": [
+      "invalid_check_coupling",
+      "invalid_geometry"
+    ],
+    "invalid_input_constructed": true,
+    "legal_cases": [
+      "legal_catalog_row",
+      "legal_hard_boundary"
+    ],
+    "repeat_runs": 2,
     "result_dir": "work/benchcad-output/smoke-set-screw",
     "result_json": "work/benchcad-output/smoke-set-screw/smoke-results.json",
-    "legal_cases": ["legal_catalog_row", "legal_hard_boundary"],
-    "invalid_cases": ["invalid_check_coupling", "invalid_geometry"],
-    "repeat_runs": 2,
     "step_hashes_differ_across_repeats": true,
-    "geometry_metrics_stable": true,
-    "invalid_input_constructed": true,
     "validation_risk": true
   },
-  "artifacts": [
-    {"path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run1.step", "sha256": "c3d589c8e7aefabc0f0fb7dd09a553edd1f8afbc929320c625abd52d1ecb1168"},
-    {"path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run2.step", "sha256": "70dfb4789accd7221920a04a7ce62fc0705a28fad95badbbcd89fa24e66a81a3"},
-    {"path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run1.step", "sha256": "f7ebff0ee5b52bcebfa844a190d675f8f407b39c963f6edc4a73a1dd6446676f"},
-    {"path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run2.step", "sha256": "28c9d658134b3fad0b8704fca0f285d51f21041ffd273b197a5958dfe1f97beb"}
-  ]
+  "source": {
+    "commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+    "directory_name": "set_screw_shaft_collar",
+    "family_id": "set_screw_shaft_collar",
+    "release_qualified": false,
+    "repository": "https://github.com/BenchCAD-org/benchcad-2",
+    "source_path": "designs/set_screw_shaft_collar",
+    "status": "MERGED",
+    "status_uncertain": "STATUS.md records MERGED and 0 release-qualified; no released family artifact was used"
+  },
+  "source_snapshot": {
+    "archive": "work/benchcad-source/benchcad-2-035f467-raw.tar",
+    "archive_sha256": "b390bc953416cfcf27b94b4ec1f497a0ba0ee5f3afb04c4b8454c411fc3c33ad",
+    "directory": "work/benchcad-source/benchcad-2-035f467-raw",
+    "downloaded_blob_count": 217,
+    "manifest": "work/benchcad-source/benchcad-2-035f467-raw/SNAPSHOT-MANIFEST.json",
+    "method": "API recursive tree + raw.githubusercontent.com blobs",
+    "missing_blob_count": 0,
+    "reason": "existing promisor checkout has staged deletions/missing blobs; git archive and codeload were unavailable or truncated",
+    "status": "reproducibility_partial",
+    "tree_blob_count": 217
+  },
+  "task": "DATA-003"
 }

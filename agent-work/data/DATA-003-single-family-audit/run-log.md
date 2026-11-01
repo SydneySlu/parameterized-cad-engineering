@@ -37,3 +37,14 @@ work/benchcad-output/venv/bin/bench2 validate speaker_pole_mount_socket --seeds 
 ## 产物摘要
 
 完整 STEP 和环境留在 ignored `work/benchcad-output/`；仓库只保存此摘要、manifest 草案和相对路径。未下载 Public/Core 或其他受限评测数据。
+
+## DATA-003-R1 几何/拓扑重复性签名
+
+脚本：`work/benchcad-output/geometry_signatures.py`；摘要：`work/benchcad-output/smoke-set-screw/geometry-signatures.json`。输入是既有合法案例两次运行的 STEP，使用同一隔离 venv 的 CadQuery STEP importer 回读。所有长度/面积/体积量化到 6 位小数；面面积和边长分别排序后对固定格式串取 SHA-256。
+
+| 参数案例 | 每次 STEP SHA 不同 | solids / shells / faces / edges / vertices（两次均相同） | valid | 体积 mm³（两次均相同） | 包围盒尺寸 mm | 面面积签名相同 | 边长签名相同 |
+|---|---|---|---|---|---|---|---|
+| `legal_catalog_row` | 是 | `1 / 1 / 29 / 59 / 30` | `True` | `6712.645162` | `[32.0, 32.0, 14.0]` | 是，`c00c651490027705015c38b01b14600087f3f0168794f6db81cff397a3fb9d0a` | 是，`9df4b466603c54bc4f27808762ea02112f6198bc991093a449141675dcfdb5b4` |
+| `legal_hard_boundary` | 是 | `1 / 1 / 74 / 149 / 75` | `True` | `95092.318591` | `[110.0, 110.0, 22.0]` | 是，`e2cef6073bbcfff46218727e7a0722ad3ab0b48d46efc9f73fc2eaece896de94` | 是，`bfc718cd9767f5638f4d1b70920205f1038e7a1bebc2e5f3ffc51e7464147bee` |
+
+比较结论：两个合法案例在实体计数、B-Rep 计数、`isValid()`、体积、包围盒、量化面面积排序摘要和量化边长度排序摘要上均稳定，而 STEP 字节 SHA-256 均不同。因此可写为“几何/实体级指标稳定，归一化面/边摘要稳定；在本次摘要范围内拓扑计数和长度/面积签名一致”，仍不宣称任意 B-Rep 拓扑完全等价。
