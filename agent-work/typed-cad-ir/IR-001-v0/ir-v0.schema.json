@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://parameterized-cad-engineering.invalid/ir/typed-cad-ir.v0.schema.json",
+  "title": "Typed CAD IR v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ir_version",
+    "ir_revision",
+    "status",
+    "family",
+    "source",
+    "parameters",
+    "nodes",
+    "constraints",
+    "execution",
+    "validation_contract"
+  ],
+  "properties": {
+    "ir_version": { "const": "typed-cad-ir.v0" },
+    "ir_revision": { "type": "string", "pattern": "^0\\.\\d+\\.\\d+$" },
+    "status": { "enum": ["accepted", "rejected"] },
+    "family": { "$ref": "#/$defs/family" },
+    "source": { "$ref": "#/$defs/source" },
+    "parameters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameter" },
+      "uniqueItems": true
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" },
+      "uniqueItems": true
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/constraint" },
+      "uniqueItems": true
+    },
+    "execution": { "$ref": "#/$defs/execution" },
+    "validation_contract": { "$ref": "#/$defs/validation_contract" },
+    "errors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/error" }
+    },
+    "validation_result": { "$ref": "#/$defs/validation_result" },
+    "extensions": { "type": "object", "additionalProperties": true }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "accepted" } } },
+      "then": {
+        "required": ["parameters", "nodes"],
+        "properties": {
+          "parameters": { "minItems": 6 },
+          "nodes": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "rejected" } } },
+      "then": {
+        "required": ["errors"],
+        "properties": { "nodes": { "maxItems": 0 } }
+      }
+    }
+  ],
+  "$defs": {
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family_id", "extension_namespace", "family_data"],
+      "properties": {
+        "family_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "directory_id": { "type": "string" },
+        "extension_namespace": { "type": "string", "pattern": "^family\\.[a-z0-9_.-]+$" },
+        "family_data": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_system", "source_commit", "adapter_id", "adapter_version", "snapshot_status"],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "source_system": { "type": "string" },
+        "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "adapter_id": { "type": "string" },
+        "adapter_version": { "type": "string" },
+        "snapshot_status": { "enum": ["reproducibility_partial", "reproducible"] },
+        "software": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "python": { "type": "string" },
+            "cadquery": { "type": "string" },
+            "ocp": { "type": "string" },
+            "platform": { "type": "string" }
+          }
+        }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameter_id", "type", "unit", "value", "source", "source_ref"],
+      "properties": {
+        "parameter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "type": { "enum": ["number", "integer", "boolean", "string"] },
+        "unit": { "enum": ["mm", "1"] },
+        "value": { "type": ["number", "integer"] },
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "unit"],
+          "properties": {
+            "value": { "type": ["number", "integer"] },
+            "unit": { "type": "string" }
+          }
+        },
+        "source": { "enum": ["user_explicit", "catalog_derived", "rule_derived"] },
+        "source_ref": { "type": "string" },
+        "catalog_row_key": { "type": ["string", "number", "integer"] }
+      }
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "parameter_id"],
+          "properties": {
+            "kind": { "const": "parameter_ref" },
+            "parameter_id": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value", "unit"],
+          "properties": {
+            "kind": { "const": "literal" },
+            "value": { "type": "number" },
+            "unit": { "enum": ["mm", "1", "deg"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "output_id"],
+          "properties": {
+            "kind": { "const": "node_output_ref" },
+            "output_id": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "table_id", "key"],
+          "properties": {
+            "kind": { "const": "lookup" },
+            "table_id": { "enum": ["gn705.gn705_metric_v0", "iso261.coarse_pitch_mm"] },
+            "key": { "$ref": "#/$defs/expression" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "formula_id", "args"],
+          "properties": {
+            "kind": { "const": "formula" },
+            "formula_id": {
+              "enum": ["half_difference", "multiply", "add", "subtract", "min", "max", "collar_chamfer", "thread_minor_radius", "thread_countersink_radius", "thread_turn_count"]
+            },
+            "args": { "type": "object", "additionalProperties": { "$ref": "#/$defs/expression" } }
+          }
+        }
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "parameter_id", "equals"],
+      "properties": {
+        "kind": { "const": "parameter_equals" },
+        "parameter_id": { "type": "string" },
+        "equals": { "type": ["number", "integer", "boolean", "string"] }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "node_type", "ordinal", "depends_on", "inputs", "outputs", "refs"],
+      "properties": {
+        "node_id": { "type": "string", "pattern": "^n[0-9]+\\.[a-z][a-z0-9_.-]*$" },
+        "node_type": { "enum": ["catalog.resolve", "shape.revolve_profile", "feature.tapped_hole_cutter", "boolean.cut", "result.single_solid"] },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "enabled_if": { "anyOf": [{ "$ref": "#/$defs/condition" }, { "type": "null" }] },
+        "depends_on": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "inputs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/expression" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/output" }, "minItems": 1 },
+        "refs": { "type": "array", "items": { "$ref": "#/$defs/ref" }, "uniqueItems": true },
+        "properties": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_id", "kind"],
+      "properties": {
+        "output_id": { "type": "string" },
+        "kind": { "enum": ["resolved_parameters", "shape", "cutter", "solid_candidate", "part"] }
+      }
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "enum": ["parameter", "node_output", "constraint", "catalog", "formula"] },
+        "id": { "type": "string" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["constraint_id", "kind", "fields", "expression", "enforced_at", "source_ref"],
+      "properties": {
+        "constraint_id": { "type": "string" },
+        "kind": { "enum": ["equality", "inequality", "iff", "postcondition", "roundtrip"] },
+        "fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "expression": { "type": "string" },
+        "enforced_at": { "enum": ["preflight", "post_geometry", "step_readback"] },
+        "source_ref": { "type": "string" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preflight_required_before_build", "node_order", "unknown_operation_policy"],
+      "properties": {
+        "preflight_required_before_build": { "const": true },
+        "node_order": { "enum": ["ordinal_topological"] },
+        "unknown_operation_policy": { "const": "reject" },
+        "tolerance_profile": { "type": "string" }
+      }
+    },
+    "validation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_solids", "require_valid", "step_roundtrip_required", "byte_hash_policy", "metrics"],
+      "properties": {
+        "expected_solids": { "const": 1 },
+        "require_valid": { "const": true },
+        "step_roundtrip_required": { "const": true },
+        "byte_hash_policy": { "const": "informational_only" },
+        "metrics": { "type": "array", "items": { "enum": ["solid_count", "shell_count", "face_count", "edge_count", "vertex_count", "is_valid", "volume_mm3", "bbox_mm", "face_area_signature", "edge_length_signature"] }, "uniqueItems": true }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "stage", "severity", "fields", "node_ids", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string" },
+        "stage": { "enum": ["ir_parse", "schema", "preflight", "construct", "post_geometry", "step_export", "step_readback"] },
+        "severity": { "enum": ["error", "warning"] },
+        "fields": { "type": "array", "items": { "type": "string" } },
+        "node_ids": { "type": "array", "items": { "type": "string" } },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "validation_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "stage", "errors", "metrics"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "stage": { "enum": ["post_geometry", "step_export", "step_readback"] },
+        "errors": { "type": "array", "items": { "$ref": "#/$defs/error" } },
+        "metrics": { "type": "object", "additionalProperties": true },
+        "step_sha256": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "ir_version": "typed-cad-ir.v0",
+  "ir_revision": "0.1.0",
+  "status": "rejected",
+  "family": {
+    "family_id": "set_screw_shaft_collar",
+    "extension_namespace": "family.set_screw_shaft_collar.v0",
+    "family_data": {}
+  },
+  "source": {
+    "schema_version": "set_screw_shaft_collar.v0",
+    "source_system": "BenchCAD",
+    "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+    "adapter_id": "benchcad.set_screw_shaft_collar",
+    "adapter_version": "0.1.0",
+    "snapshot_status": "reproducibility_partial"
+  },
+  "parameters": [],
+  "nodes": [],
+  "constraints": [],
+  "execution": {
+    "preflight_required_before_build": true,
+    "node_order": "ordinal_topological",
+    "unknown_operation_policy": "reject"
+  },
+  "validation_contract": {
+    "expected_solids": 1,
+    "require_valid": true,
+    "step_roundtrip_required": true,
+    "byte_hash_policy": "informational_only",
+    "metrics": ["solid_count", "is_valid", "volume_mm3", "bbox_mm"]
+  },
+  "errors": [
+    {
+      "code": "MISSING_REQUIRED",
+      "stage": "schema",
+      "severity": "error",
+      "fields": ["bore_d"],
+      "node_ids": [],
+      "message": "bore_d is the required catalog selector; no IR nodes were emitted",
+      "retryable": true
+    }
+  ]
+}

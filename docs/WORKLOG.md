@@ -117,3 +117,11 @@
 - 结果：`bore_d` 是唯一必填目录选择器；其余目录字段缺失时按证据派生，显式冲突拒绝；`second_screw`、壁厚、宽度和 `outer_d > bore_d` 在未来构造前拒绝。未引入 CadQuery/OCP、Typed CAD IR、STEP 或第二族字段。
 - 验证：`python3 -m unittest discover -s tests/schema -p 'test_*.py' -v`（13 项通过）；`python3 -m py_compile src/schema/set_screw_shaft_collar.py src/schema/__init__.py`（通过）；`git diff --check`（通过）。
 - 交接：`agent-work/schema-rules/CAD-003-schema-v0/checkpoint.md`；等待中枢审查字段来源、错误码和 Schema→IR 只读接口后再进入 IR-001。
+
+### IR-001 / Codex / review / 2026-11-01
+
+- 动作：依据 CAD-003 `set_screw_shaft_collar.v0` review 契约和 DATA-003 固定 source commit，设计 Typed CAD IR v0 的版本/来源包络、参数 provenance、节点白名单、声明式引用、依赖顺序、前置约束、后置几何/STEP 验证契约和稳定错误阶段。
+- 结果：新增 `agent-work/typed-cad-ir/IR-001-v0/`，包含规范正文、JSON Schema、Schema→IR 映射和合法/缺失/规则拒绝/验证失败四个 JSON 示例。规范明确要求 `check()`/前置规则先于 `build()`，保留 `second_screw`、目录派生、`screw_len` 非孔深、环形线程近似、`reproducibility_partial` 和 STEP 字节 hash 不稳定等限制；第二族仅保留扩展边界。
+- 验证：`python3 -m json.tool agent-work/typed-cad-ir/IR-001-v0/ir-v0.schema.json` 通过；四个示例均通过 `python3 -m json.tool`；临时结构检查确认 accepted 示例含六个参数和节点、rejected 示例不含可执行节点；`git diff --check` 通过。仓库未安装第三方 `jsonschema`，因此未声称执行完整 JSON Schema 引擎验证。
+- 限制：未修改 `src/`，未实现编译器、CadQuery/OCP 构造器、实体/STEP 验证器；CAD-006 的容差和摘要算法、线程近似是否可接受、第二族扩展注册表和生成资产许可仍待审查。
+- 下一步：Codex 中枢审查 IR v0 后，再交给 CAD-005/006；在此之前 CC 不应按本目录接口开始生产实现。
