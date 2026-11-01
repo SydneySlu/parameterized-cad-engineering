@@ -32,7 +32,7 @@
 | DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；建议优先 BenchCAD 社区族 |
 | DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | 数据优先计划；核对族状态、许可、版本并完成两个族 smoke test |
 | CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
-| DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | 待分配执行 Agent | planned | 来源审计、候选矩阵、环境记录和最小核验包 |
+| DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | DATA-003 Agent + Codex | review | 来源审计、候选矩阵、环境记录和最小核验包；待复现性补充审查 |
 | CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
 | CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | prompt 模板、checkpoint 规则、体检脚本 |

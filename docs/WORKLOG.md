@@ -103,3 +103,10 @@
 - 工作区：`agent-work/data/DATA-003-single-family-audit/`；外部 checkout 和临时 CAD 产物放被忽略的 `work/benchcad-source/`、`work/benchcad-output/`。
 - Prompt：`docs/coordination/prompts/DATA-003-single-family-audit-agent.md`。
 - 下一步：项目负责人在新对话框启动 Prompt；执行 Agent 完成 checkpoint 后由 Codex 中枢审查并决定是否进入 Schema/IR 阶段。
+
+### DATA-003-R1 / Codex / planned / 2026-11-01
+
+- 动作：根据 DATA-003 审查，给原 DATA-003 Agent 分配复现性补充：建立干净 source commit 快照，并为重复 STEP 运行补充几何/拓扑签名。
+- 边界：继续使用 `agent-work/data/DATA-003-single-family-audit/`；不实现 Schema、Typed CAD IR、adapter、生产验证器、LLM 或检索系统；不修改正式状态和 ADR。
+- Prompt：`docs/coordination/prompts/DATA-003-R1-reproducibility-followup.md`。
+- 下一步：项目负责人将该 Prompt 发回原 DATA-003 对话框；完成后由 Codex 审查并决定 DATA-003 是否可转为 done。
