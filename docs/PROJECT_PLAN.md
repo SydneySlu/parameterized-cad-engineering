@@ -20,6 +20,7 @@
 - [x] 初评 BenchCAD 2.0、CADBench、Seek-CAD 的数据适配性与许可边界（DATA-001；结论见 `docs/research/cad-dataset-suitability-2026-10.md`）
 - [ ] 建立 BenchCAD 多族数据优先试点：锁定具体 commit，检查许可/状态/环境，先用两个结构不同的社区族跑通 smoke test，再决定是否扩展到更多族（DATA-002；建议见 `docs/research/benchcad-dataset-first-plan-2026-10.md`）
 - [ ] 导师确认数据优先路线和首期族数量（CAD-001）
+- [ ] 完成第一个单族来源、环境与最小 smoke test 纵向切片（DATA-003；执行说明见 [`DATA-003-single-family-audit-agent.md`](coordination/prompts/DATA-003-single-family-audit-agent.md)）
 - [ ] 冻结首期 BenchCAD 社区族集合、支持任务和不支持项（CAD-002）
 - [ ] 定义跨族 manifest/adapter 与参数 Schema 映射、单位、来源和缺失字段（CAD-003）
 - [ ] 按族、目录行和 near-duplicate group 建固定评测切分，避免实例泄漏（CAD-004）

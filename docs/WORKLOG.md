@@ -95,3 +95,11 @@
 - 验证：`git remote -v`、`git branch -vv` 和 `git status --short --branch` 显示 `origin/main` 跟踪关系；当前本地 HEAD 与远程跟踪分支均为 `c296387`。
 - 限制：尚未在第二台设备执行实际 clone/pull，因此任务先标记为 `review`，不是完全 `done`。
 - 下一步：在另一设备 clone 仓库并完成一次 pull/branch 检查；通过后将 INFRA-003 标记为 `done`。
+
+### DATA-003 / Codex / planned / 2026-11-01
+
+- 动作：注册 BenchCAD 单族来源、环境和最小 smoke test 执行任务；建立专用工作区和可复制的 Agent 初始化 Prompt。
+- 结果：任务边界限定为来源 URL/commit、族路径/状态/许可证、README/依赖/运行入口、候选族矩阵和一个候选族的合法/边界/非法/重复运行核验；不包含 Schema、Typed CAD IR、adapter、LLM 或大规模数据处理。
+- 工作区：`agent-work/data/DATA-003-single-family-audit/`；外部 checkout 和临时 CAD 产物放被忽略的 `work/benchcad-source/`、`work/benchcad-output/`。
+- Prompt：`docs/coordination/prompts/DATA-003-single-family-audit-agent.md`。
+- 下一步：项目负责人在新对话框启动 Prompt；执行 Agent 完成 checkpoint 后由 Codex 中枢审查并决定是否进入 Schema/IR 阶段。

@@ -14,6 +14,7 @@ git rev-parse --show-toplevel
 如果设备路径不同，以 `git rev-parse --show-toplevel` 返回的 Git 根目录为准，并在交接中说明实际路径。
 
 ## 子目录
+- `data/DATA-003-single-family-audit/`：BenchCAD 单族来源、环境和最小 smoke test 的专用工作区。
 
 - `data/`：数据来源调查、清洗记录、样本 manifest 草稿；原始或未授权数据放在仓库规定的私有/忽略位置。
 - `llm/`：模型适配、Prompt、结构化抽取和检索注入实验。

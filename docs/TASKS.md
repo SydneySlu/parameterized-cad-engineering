@@ -15,6 +15,7 @@
 | DATA-001 | 开源数据源适配性初评 | Codex | review | - | 对 BenchCAD 2.0、CADBench、Seek-CAD 完成数据结构、适配度与许可边界比较 |
 | DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | DATA-001 | 固定 commit；核验许可/状态；两个结构不同族完成构造、导出和项目适配 smoke test；导师确认扩展范围 |
 | CAD-001 | 候选零件族比较 | Codex | planned | - | 有数据/规则/应用/生成难点对比 |
+| DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | 待分配执行 Agent | planned | DATA-001 | 固定源 commit；完成候选族/许可证/入口审计；一个候选族完成合法、边界、非法和重复运行核验；输出最小 manifest |
 | CAD-002 | 冻结首期零件族 | 用户 + 导师 | planned | CAD-001 | 决策记录明确范围和不支持项 |
 | CAD-003 | 参数 Schema v0 | CC（Schema/规则角色） | planned | CAD-002 | 有字段、单位、边界、来源和缺失规则 |
 | CAD-004 | 评测集切分 | Codex + CC | planned | CAD-002 | 模板近重复不会跨训练/测试泄漏 |
