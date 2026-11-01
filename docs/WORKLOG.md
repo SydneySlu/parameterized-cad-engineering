@@ -125,3 +125,11 @@
 - 验证：`python3 -m json.tool agent-work/typed-cad-ir/IR-001-v0/ir-v0.schema.json` 通过；四个示例均通过 `python3 -m json.tool`；临时结构检查确认 accepted 示例含六个参数和节点、rejected 示例不含可执行节点；`git diff --check` 通过。仓库未安装第三方 `jsonschema`，因此未声称执行完整 JSON Schema 引擎验证。
 - 限制：未修改 `src/`，未实现编译器、CadQuery/OCP 构造器、实体/STEP 验证器；CAD-006 的容差和摘要算法、线程近似是否可接受、第二族扩展注册表和生成资产许可仍待审查。
 - 下一步：Codex 中枢审查 IR v0 后，再交给 CAD-005/006；在此之前 CC 不应按本目录接口开始生产实现。
+
+### IR-001-R1 / Codex / review / 2026-11-01
+
+- 动作：根据 Codex 中枢审查收紧 Typed CAD IR v0 的状态互斥、首族快照状态、孔节点几何输入、自由字符串边界和反序列化语义检查；未修改生产代码或 CAD-003/DATA-003 文件。
+- 结果：`status=rejected` 现在必须是 errors-only 且 nodes 为空；`status=accepted` 禁止顶层 errors、允许后置 validation_result；当前适配器只接受 `reproducibility_partial`。主孔/第二孔均显式表达 wall、hole_len、z_in、z_out、radial_offset、axial、over、angle 和结构化 placement；新增 semantic-validation.md 记录唯一性、ordinal、依赖、引用、条件和白名单检查。
+- 验证：临时隔离环境 `/tmp/ir001r1-jsonschema-venv` 的 Draft 2020-12 `jsonschema` self-check 和四示例验证通过；`python3 -m json.tool` 通过；临时语义脚本确认 10 个正/反例结果；`git diff --check` 通过。JSON 语法检查未被冒充为完整 Schema 验证。
+- 限制：CAD-005 仍需冻结公式参数/单位/容差注册表；CAD-006 仍需冻结几何摘要容差；环形线程近似、STEP 字节 hash 不稳定、源码/外部资产 `reproducibility_partial` 和许可证不确定性均保留。
+- 下一步：Codex 中枢复核本轮契约后，再交给 CAD-005/006。

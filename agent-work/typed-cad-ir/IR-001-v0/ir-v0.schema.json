@@ -17,51 +17,190 @@
     "validation_contract"
   ],
   "properties": {
-    "ir_version": { "const": "typed-cad-ir.v0" },
-    "ir_revision": { "type": "string", "pattern": "^0\\.\\d+\\.\\d+$" },
-    "status": { "enum": ["accepted", "rejected"] },
-    "family": { "$ref": "#/$defs/family" },
-    "source": { "$ref": "#/$defs/source" },
+    "ir_version": {
+      "const": "typed-cad-ir.v0"
+    },
+    "ir_revision": {
+      "type": "string",
+      "pattern": "^0\\.\\d+\\.\\d+$"
+    },
+    "status": {
+      "enum": [
+        "accepted",
+        "rejected"
+      ]
+    },
+    "family": {
+      "$ref": "#/$defs/family"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
     "parameters": {
       "type": "array",
-      "items": { "$ref": "#/$defs/parameter" },
+      "items": {
+        "$ref": "#/$defs/parameter"
+      },
       "uniqueItems": true
     },
     "nodes": {
       "type": "array",
-      "items": { "$ref": "#/$defs/node" },
+      "items": {
+        "$ref": "#/$defs/node"
+      },
       "uniqueItems": true
     },
     "constraints": {
       "type": "array",
-      "items": { "$ref": "#/$defs/constraint" },
+      "items": {
+        "$ref": "#/$defs/constraint"
+      },
       "uniqueItems": true
     },
-    "execution": { "$ref": "#/$defs/execution" },
-    "validation_contract": { "$ref": "#/$defs/validation_contract" },
+    "execution": {
+      "$ref": "#/$defs/execution"
+    },
+    "validation_contract": {
+      "$ref": "#/$defs/validation_contract"
+    },
     "errors": {
       "type": "array",
-      "items": { "$ref": "#/$defs/error" }
+      "items": {
+        "$ref": "#/$defs/error"
+      }
     },
-    "validation_result": { "$ref": "#/$defs/validation_result" },
-    "extensions": { "type": "object", "additionalProperties": true }
+    "validation_result": {
+      "$ref": "#/$defs/validation_result"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
   },
   "allOf": [
     {
-      "if": { "properties": { "status": { "const": "accepted" } } },
-      "then": {
-        "required": ["parameters", "nodes"],
+      "if": {
         "properties": {
-          "parameters": { "minItems": 6 },
-          "nodes": { "minItems": 1 }
+          "status": {
+            "const": "accepted"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parameters",
+          "nodes"
+        ],
+        "properties": {
+          "parameters": {
+            "minItems": 6,
+            "maxItems": 6,
+            "contains": {
+              "properties": {
+                "parameter_id": {
+                  "const": "bore_d"
+                }
+              },
+              "required": [
+                "parameter_id"
+              ]
+            },
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "parameter_id": {
+                      "const": "outer_d"
+                    }
+                  },
+                  "required": [
+                    "parameter_id"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "parameter_id": {
+                      "const": "width"
+                    }
+                  },
+                  "required": [
+                    "parameter_id"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "parameter_id": {
+                      "const": "screw_d"
+                    }
+                  },
+                  "required": [
+                    "parameter_id"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "parameter_id": {
+                      "const": "screw_len"
+                    }
+                  },
+                  "required": [
+                    "parameter_id"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "parameter_id": {
+                      "const": "second_screw"
+                    }
+                  },
+                  "required": [
+                    "parameter_id"
+                  ]
+                }
+              }
+            ]
+          },
+          "nodes": {
+            "minItems": 1
+          }
+        },
+        "not": {
+          "required": [
+            "errors"
+          ]
         }
       }
     },
     {
-      "if": { "properties": { "status": { "const": "rejected" } } },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "rejected"
+          }
+        }
+      },
       "then": {
-        "required": ["errors"],
-        "properties": { "nodes": { "maxItems": 0 } }
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "nodes": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "required": [
+            "validation_result"
+          ]
+        }
       }
     }
   ],
@@ -69,110 +208,455 @@
     "family": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["family_id", "extension_namespace", "family_data"],
+      "required": [
+        "family_id",
+        "extension_namespace",
+        "family_data"
+      ],
       "properties": {
-        "family_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-        "directory_id": { "type": "string" },
-        "extension_namespace": { "type": "string", "pattern": "^family\\.[a-z0-9_.-]+$" },
-        "family_data": { "type": "object", "additionalProperties": true }
+        "family_id": {
+          "const": "set_screw_shaft_collar"
+        },
+        "directory_id": {
+          "const": "set_screw_shaft_collar"
+        },
+        "extension_namespace": {
+          "const": "family.set_screw_shaft_collar.v0"
+        },
+        "family_data": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "source_system", "source_commit", "adapter_id", "adapter_version", "snapshot_status"],
+      "required": [
+        "schema_version",
+        "source_system",
+        "source_commit",
+        "adapter_id",
+        "adapter_version",
+        "snapshot_status"
+      ],
       "properties": {
-        "schema_version": { "type": "string" },
-        "source_system": { "type": "string" },
-        "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "adapter_id": { "type": "string" },
-        "adapter_version": { "type": "string" },
-        "snapshot_status": { "enum": ["reproducibility_partial", "reproducible"] },
+        "schema_version": {
+          "const": "set_screw_shaft_collar.v0"
+        },
+        "source_system": {
+          "const": "BenchCAD"
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "adapter_id": {
+          "const": "benchcad.set_screw_shaft_collar"
+        },
+        "adapter_version": {
+          "const": "0.1.0"
+        },
+        "snapshot_status": {
+          "const": "reproducibility_partial"
+        },
         "software": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "python": { "type": "string" },
-            "cadquery": { "type": "string" },
-            "ocp": { "type": "string" },
-            "platform": { "type": "string" }
+            "python": {
+              "type": "string"
+            },
+            "cadquery": {
+              "type": "string"
+            },
+            "ocp": {
+              "type": "string"
+            },
+            "platform": {
+              "type": "string"
+            }
           }
         }
       }
     },
     "parameter": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["parameter_id", "type", "unit", "value", "source", "source_ref"],
-      "properties": {
-        "parameter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-        "type": { "enum": ["number", "integer", "boolean", "string"] },
-        "unit": { "enum": ["mm", "1"] },
-        "value": { "type": ["number", "integer"] },
-        "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["value", "unit"],
-          "properties": {
-            "value": { "type": ["number", "integer"] },
-            "unit": { "type": "string" }
-          }
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "bore_d"
+                },
+                "type": {
+                  "const": "number"
+                },
+                "unit": {
+                  "const": "mm"
+                },
+                "value": {
+                  "type": "number",
+                  "enum": [
+                    5,
+                    6,
+                    8,
+                    10,
+                    12,
+                    16,
+                    20,
+                    24,
+                    30,
+                    35,
+                    40,
+                    50,
+                    60,
+                    70,
+                    80
+                  ]
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
         },
-        "source": { "enum": ["user_explicit", "catalog_derived", "rule_derived"] },
-        "source_ref": { "type": "string" },
-        "catalog_row_key": { "type": ["string", "number", "integer"] }
-      }
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "outer_d"
+                },
+                "type": {
+                  "const": "number"
+                },
+                "unit": {
+                  "const": "mm"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "width"
+                },
+                "type": {
+                  "const": "number"
+                },
+                "unit": {
+                  "const": "mm"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "screw_d"
+                },
+                "type": {
+                  "const": "number"
+                },
+                "unit": {
+                  "const": "mm"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "screw_len"
+                },
+                "type": {
+                  "const": "number"
+                },
+                "unit": {
+                  "const": "mm"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/parameter_base"
+            },
+            {
+              "properties": {
+                "parameter_id": {
+                  "const": "second_screw"
+                },
+                "type": {
+                  "const": "integer"
+                },
+                "unit": {
+                  "const": "1"
+                },
+                "value": {
+                  "type": "integer",
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "input": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "unit": {
+                      "const": "1"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
     },
     "expression": {
       "oneOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "parameter_id"],
+          "required": [
+            "kind",
+            "parameter_id"
+          ],
           "properties": {
-            "kind": { "const": "parameter_ref" },
-            "parameter_id": { "type": "string" }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "value", "unit"],
-          "properties": {
-            "kind": { "const": "literal" },
-            "value": { "type": "number" },
-            "unit": { "enum": ["mm", "1", "deg"] }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "output_id"],
-          "properties": {
-            "kind": { "const": "node_output_ref" },
-            "output_id": { "type": "string" }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "table_id", "key"],
-          "properties": {
-            "kind": { "const": "lookup" },
-            "table_id": { "enum": ["gn705.gn705_metric_v0", "iso261.coarse_pitch_mm"] },
-            "key": { "$ref": "#/$defs/expression" }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "formula_id", "args"],
-          "properties": {
-            "kind": { "const": "formula" },
-            "formula_id": {
-              "enum": ["half_difference", "multiply", "add", "subtract", "min", "max", "collar_chamfer", "thread_minor_radius", "thread_countersink_radius", "thread_turn_count"]
+            "kind": {
+              "const": "parameter_ref"
             },
-            "args": { "type": "object", "additionalProperties": { "$ref": "#/$defs/expression" } }
+            "parameter_id": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "literal"
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "enum": [
+                "mm",
+                "1",
+                "deg"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "output_id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "node_output_ref"
+            },
+            "output_id": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "table_id",
+            "key"
+          ],
+          "properties": {
+            "kind": {
+              "const": "lookup"
+            },
+            "table_id": {
+              "enum": [
+                "gn705.gn705_metric_v0",
+                "iso261.coarse_pitch_mm"
+              ]
+            },
+            "key": {
+              "$ref": "#/$defs/expression"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "formula_id",
+            "args"
+          ],
+          "properties": {
+            "kind": {
+              "const": "formula"
+            },
+            "formula_id": {
+              "enum": [
+                "half_difference",
+                "half",
+                "multiply",
+                "add",
+                "subtract",
+                "min",
+                "max",
+                "collar_chamfer",
+                "thread_minor_radius",
+                "thread_countersink_radius",
+                "thread_turn_count"
+              ]
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/expression"
+              }
+            }
           }
         }
       ]
@@ -180,107 +664,538 @@
     "condition": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "parameter_id", "equals"],
+      "required": [
+        "kind",
+        "parameter_id",
+        "equals"
+      ],
       "properties": {
-        "kind": { "const": "parameter_equals" },
-        "parameter_id": { "type": "string" },
-        "equals": { "type": ["number", "integer", "boolean", "string"] }
+        "kind": {
+          "const": "parameter_equals"
+        },
+        "parameter_id": {
+          "type": "string"
+        },
+        "equals": {
+          "type": [
+            "number",
+            "integer",
+            "boolean",
+            "string"
+          ]
+        }
       }
     },
     "node": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["node_id", "node_type", "ordinal", "depends_on", "inputs", "outputs", "refs"],
+      "required": [
+        "node_id",
+        "node_type",
+        "ordinal",
+        "depends_on",
+        "inputs",
+        "outputs",
+        "refs"
+      ],
       "properties": {
-        "node_id": { "type": "string", "pattern": "^n[0-9]+\\.[a-z][a-z0-9_.-]*$" },
-        "node_type": { "enum": ["catalog.resolve", "shape.revolve_profile", "feature.tapped_hole_cutter", "boolean.cut", "result.single_solid"] },
-        "ordinal": { "type": "integer", "minimum": 0 },
-        "enabled_if": { "anyOf": [{ "$ref": "#/$defs/condition" }, { "type": "null" }] },
-        "depends_on": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-        "inputs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/expression" } },
-        "outputs": { "type": "array", "items": { "$ref": "#/$defs/output" }, "minItems": 1 },
-        "refs": { "type": "array", "items": { "$ref": "#/$defs/ref" }, "uniqueItems": true },
-        "properties": { "type": "object", "additionalProperties": true }
+        "node_id": {
+          "type": "string",
+          "pattern": "^n[0-9]+\\.[a-z][a-z0-9_.-]*$"
+        },
+        "node_type": {
+          "enum": [
+            "catalog.resolve",
+            "shape.revolve_profile",
+            "feature.tapped_hole_cutter",
+            "boolean.cut",
+            "result.single_solid"
+          ]
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled_if": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/condition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/expression"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/output"
+          },
+          "minItems": 1
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          },
+          "uniqueItems": true
+        },
+        "properties": {
+          "$ref": "#/$defs/node_properties"
+        }
       }
     },
     "output": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["output_id", "kind"],
+      "required": [
+        "output_id",
+        "kind"
+      ],
       "properties": {
-        "output_id": { "type": "string" },
-        "kind": { "enum": ["resolved_parameters", "shape", "cutter", "solid_candidate", "part"] }
+        "output_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "kind": {
+          "enum": [
+            "resolved_parameters",
+            "shape",
+            "cutter",
+            "solid_candidate",
+            "part"
+          ]
+        }
       }
     },
     "ref": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "id"],
+      "required": [
+        "kind",
+        "id"
+      ],
       "properties": {
-        "kind": { "enum": ["parameter", "node_output", "constraint", "catalog", "formula"] },
-        "id": { "type": "string" }
+        "kind": {
+          "enum": [
+            "parameter",
+            "node_output",
+            "constraint",
+            "catalog",
+            "formula"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
       }
     },
     "constraint": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["constraint_id", "kind", "fields", "expression", "enforced_at", "source_ref"],
+      "required": [
+        "constraint_id",
+        "kind",
+        "fields",
+        "expression",
+        "enforced_at",
+        "source_ref"
+      ],
       "properties": {
-        "constraint_id": { "type": "string" },
-        "kind": { "enum": ["equality", "inequality", "iff", "postcondition", "roundtrip"] },
-        "fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-        "expression": { "type": "string" },
-        "enforced_at": { "enum": ["preflight", "post_geometry", "step_readback"] },
-        "source_ref": { "type": "string" }
+        "constraint_id": {
+          "enum": [
+            "catalog_row_coupling",
+            "second_screw_threshold",
+            "outer_d_gt_bore_d",
+            "wall_thickness",
+            "axial_support",
+            "single_solid_target",
+            "step_roundtrip"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "equality",
+            "inequality",
+            "iff",
+            "postcondition",
+            "roundtrip"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "expression": {
+          "type": "string"
+        },
+        "enforced_at": {
+          "enum": [
+            "preflight",
+            "post_geometry",
+            "step_readback"
+          ]
+        },
+        "source_ref": {
+          "type": "string"
+        }
       }
     },
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["preflight_required_before_build", "node_order", "unknown_operation_policy"],
+      "required": [
+        "preflight_required_before_build",
+        "node_order",
+        "unknown_operation_policy"
+      ],
       "properties": {
-        "preflight_required_before_build": { "const": true },
-        "node_order": { "enum": ["ordinal_topological"] },
-        "unknown_operation_policy": { "const": "reject" },
-        "tolerance_profile": { "type": "string" }
+        "preflight_required_before_build": {
+          "const": true
+        },
+        "node_order": {
+          "enum": [
+            "ordinal_topological"
+          ]
+        },
+        "unknown_operation_policy": {
+          "const": "reject"
+        },
+        "tolerance_profile": {
+          "type": "string"
+        }
       }
     },
     "validation_contract": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["expected_solids", "require_valid", "step_roundtrip_required", "byte_hash_policy", "metrics"],
+      "required": [
+        "expected_solids",
+        "require_valid",
+        "step_roundtrip_required",
+        "byte_hash_policy",
+        "metrics"
+      ],
       "properties": {
-        "expected_solids": { "const": 1 },
-        "require_valid": { "const": true },
-        "step_roundtrip_required": { "const": true },
-        "byte_hash_policy": { "const": "informational_only" },
-        "metrics": { "type": "array", "items": { "enum": ["solid_count", "shell_count", "face_count", "edge_count", "vertex_count", "is_valid", "volume_mm3", "bbox_mm", "face_area_signature", "edge_length_signature"] }, "uniqueItems": true }
+        "expected_solids": {
+          "const": 1
+        },
+        "require_valid": {
+          "const": true
+        },
+        "step_roundtrip_required": {
+          "const": true
+        },
+        "byte_hash_policy": {
+          "const": "informational_only"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "solid_count",
+              "shell_count",
+              "face_count",
+              "edge_count",
+              "vertex_count",
+              "is_valid",
+              "volume_mm3",
+              "bbox_mm",
+              "face_area_signature",
+              "edge_length_signature"
+            ]
+          },
+          "uniqueItems": true
+        }
       }
     },
     "error": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "stage", "severity", "fields", "node_ids", "message", "retryable"],
+      "required": [
+        "code",
+        "stage",
+        "severity",
+        "fields",
+        "node_ids",
+        "message",
+        "retryable"
+      ],
       "properties": {
-        "code": { "type": "string" },
-        "stage": { "enum": ["ir_parse", "schema", "preflight", "construct", "post_geometry", "step_export", "step_readback"] },
-        "severity": { "enum": ["error", "warning"] },
-        "fields": { "type": "array", "items": { "type": "string" } },
-        "node_ids": { "type": "array", "items": { "type": "string" } },
-        "message": { "type": "string" },
-        "retryable": { "type": "boolean" }
+        "code": {
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "ir_parse",
+            "schema",
+            "preflight",
+            "construct",
+            "post_geometry",
+            "step_export",
+            "step_readback"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "node_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
       }
     },
     "validation_result": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ok", "stage", "errors", "metrics"],
+      "required": [
+        "ok",
+        "stage",
+        "errors",
+        "metrics"
+      ],
       "properties": {
-        "ok": { "type": "boolean" },
-        "stage": { "enum": ["post_geometry", "step_export", "step_readback"] },
-        "errors": { "type": "array", "items": { "$ref": "#/$defs/error" } },
-        "metrics": { "type": "object", "additionalProperties": true },
-        "step_sha256": { "type": "string" }
+        "ok": {
+          "type": "boolean"
+        },
+        "stage": {
+          "enum": [
+            "post_geometry",
+            "step_export",
+            "step_readback"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/error"
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "step_sha256": {
+          "type": "string"
+        }
+      }
+    },
+    "parameter_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parameter_id",
+        "type",
+        "unit",
+        "value",
+        "source",
+        "source_ref"
+      ],
+      "properties": {
+        "parameter_id": {
+          "enum": [
+            "bore_d",
+            "outer_d",
+            "width",
+            "screw_d",
+            "screw_len",
+            "second_screw"
+          ]
+        },
+        "type": {
+          "enum": [
+            "number",
+            "integer"
+          ]
+        },
+        "unit": {
+          "enum": [
+            "mm",
+            "1"
+          ]
+        },
+        "value": {},
+        "input": {},
+        "source": {
+          "enum": [
+            "user_explicit",
+            "catalog_derived",
+            "rule_derived"
+          ]
+        },
+        "source_ref": {
+          "type": "string"
+        },
+        "catalog_row_key": {
+          "type": [
+            "string",
+            "number",
+            "integer"
+          ]
+        }
+      }
+    },
+    "node_properties": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "catalog_key": {
+          "const": "bore_d"
+        },
+        "resolved_fields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "outer_d",
+              "width",
+              "screw_d",
+              "screw_len",
+              "second_screw"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "profile_kind": {
+          "const": "chamfered_annulus"
+        },
+        "axis": {
+          "const": "Y"
+        },
+        "revolve_degrees": {
+          "const": 360
+        },
+        "thread_model": {
+          "const": "revolved_ring_approximation"
+        },
+        "helical_thread_supported": {
+          "const": false
+        },
+        "placement_model": {
+          "const": "radial_bore_breakout"
+        },
+        "placement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cutter_local_axis",
+            "initial_rotation",
+            "translation",
+            "final_rotation"
+          ],
+          "properties": {
+            "cutter_local_axis": {
+              "const": "Z"
+            },
+            "initial_rotation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "axis",
+                "degrees"
+              ],
+              "properties": {
+                "axis": {
+                  "const": "Y"
+                },
+                "degrees": {
+                  "const": 90
+                }
+              }
+            },
+            "translation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "radial_offset_ref",
+                "axial_ref",
+                "radial_axis",
+                "axial_axis"
+              ],
+              "properties": {
+                "radial_offset_ref": {
+                  "const": "radial_offset"
+                },
+                "axial_ref": {
+                  "const": "axial"
+                },
+                "radial_axis": {
+                  "const": "X"
+                },
+                "axial_axis": {
+                  "const": "Z"
+                }
+              }
+            },
+            "final_rotation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "axis",
+                "angle_ref"
+              ],
+              "properties": {
+                "axis": {
+                  "const": "Z"
+                },
+                "angle_ref": {
+                  "const": "angle_deg"
+                }
+              }
+            }
+          }
+        },
+        "base_ref": {
+          "type": "string"
+        },
+        "tool_ref": {
+          "type": "string"
+        },
+        "operation": {
+          "const": "difference"
+        },
+        "select_if_zero": {
+          "const": "solid_after_primary"
+        },
+        "select_if_one": {
+          "const": "solid_after_secondary"
+        },
+        "family_extension": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     }
   }

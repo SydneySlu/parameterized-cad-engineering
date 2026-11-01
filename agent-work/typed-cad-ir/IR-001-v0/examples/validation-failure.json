@@ -124,7 +124,8 @@
           "outer_d",
           "width",
           "screw_d",
-          "screw_len"
+          "screw_len",
+          "second_screw"
         ]
       }
     },
@@ -236,6 +237,122 @@
             "kind": "parameter_ref",
             "parameter_id": "screw_d"
           }
+        },
+        "wall": {
+          "kind": "formula",
+          "formula_id": "half_difference",
+          "args": {
+            "outer_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "outer_d"
+            },
+            "bore_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "bore_d"
+            }
+          }
+        },
+        "hole_len": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "wall": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "overshoot": {
+              "kind": "formula",
+              "formula_id": "multiply",
+              "args": {
+                "value": {
+                  "kind": "literal",
+                  "value": 0.5,
+                  "unit": "mm"
+                },
+                "factor": {
+                  "kind": "literal",
+                  "value": 2,
+                  "unit": "1"
+                }
+              }
+            }
+          }
+        },
+        "z_in": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "z_out": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "over": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            },
+            "wall": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            }
+          }
+        },
+        "radial_offset": {
+          "kind": "formula",
+          "formula_id": "subtract",
+          "args": {
+            "radius": {
+              "kind": "formula",
+              "formula_id": "half",
+              "args": {
+                "value": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "inset": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            }
+          }
+        },
+        "axial": {
+          "kind": "formula",
+          "formula_id": "multiply",
+          "args": {
+            "width": {
+              "kind": "parameter_ref",
+              "parameter_id": "width"
+            },
+            "factor": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "1"
+            }
+          }
         }
       },
       "outputs": [
@@ -257,9 +374,23 @@
       "properties": {
         "thread_model": "revolved_ring_approximation",
         "helical_thread_supported": false,
+        "placement_model": "radial_bore_breakout",
         "placement": {
-          "radial_offset": "bore_r - 0.5 mm",
-          "axial": "width / 2"
+          "cutter_local_axis": "Z",
+          "initial_rotation": {
+            "axis": "Y",
+            "degrees": 90
+          },
+          "translation": {
+            "radial_offset_ref": "radial_offset",
+            "axial_ref": "axial",
+            "radial_axis": "X",
+            "axial_axis": "Z"
+          },
+          "final_rotation": {
+            "axis": "Z",
+            "angle_ref": "angle_deg"
+          }
         }
       }
     },
@@ -337,6 +468,122 @@
             "kind": "parameter_ref",
             "parameter_id": "screw_d"
           }
+        },
+        "wall": {
+          "kind": "formula",
+          "formula_id": "half_difference",
+          "args": {
+            "outer_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "outer_d"
+            },
+            "bore_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "bore_d"
+            }
+          }
+        },
+        "hole_len": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "wall": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "overshoot": {
+              "kind": "formula",
+              "formula_id": "multiply",
+              "args": {
+                "value": {
+                  "kind": "literal",
+                  "value": 0.5,
+                  "unit": "mm"
+                },
+                "factor": {
+                  "kind": "literal",
+                  "value": 2,
+                  "unit": "1"
+                }
+              }
+            }
+          }
+        },
+        "z_in": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "z_out": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "over": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            },
+            "wall": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            }
+          }
+        },
+        "radial_offset": {
+          "kind": "formula",
+          "formula_id": "subtract",
+          "args": {
+            "radius": {
+              "kind": "formula",
+              "formula_id": "half",
+              "args": {
+                "value": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "inset": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            }
+          }
+        },
+        "axial": {
+          "kind": "formula",
+          "formula_id": "multiply",
+          "args": {
+            "width": {
+              "kind": "parameter_ref",
+              "parameter_id": "width"
+            },
+            "factor": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "1"
+            }
+          }
         }
       },
       "outputs": [
@@ -361,9 +608,24 @@
       ],
       "properties": {
         "thread_model": "revolved_ring_approximation",
+        "helical_thread_supported": false,
+        "placement_model": "radial_bore_breakout",
         "placement": {
-          "radial_offset": "bore_r - 0.5 mm",
-          "axial": "width / 2"
+          "cutter_local_axis": "Z",
+          "initial_rotation": {
+            "axis": "Y",
+            "degrees": 90
+          },
+          "translation": {
+            "radial_offset_ref": "radial_offset",
+            "axial_ref": "axial",
+            "radial_axis": "X",
+            "axial_axis": "Z"
+          },
+          "final_rotation": {
+            "axis": "Z",
+            "angle_ref": "angle_deg"
+          }
         }
       }
     },

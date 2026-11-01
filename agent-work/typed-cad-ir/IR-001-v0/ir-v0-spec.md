@@ -23,7 +23,7 @@ v0 不表达自由曲面、草图约束求解、任意 Python、任意 CadQuery 
 | `source.schema_version` | `set_screw_shaft_collar.v0`，表示输入契约版本。 |
 | `source.source_commit` | DATA-003 固定 BenchCAD commit `035f467142888edfd0bd7cd73906f9b155c8f43c`。 |
 | `source.adapter_id/version` | 标识 Schema→IR 适配器；本规范建议 `benchcad.set_screw_shaft_collar` / `0.1.0`。 |
-| `source.snapshot_status` | 固定记录 `reproducibility_partial`，不能省略或改写成完全可复现。 |
+| `source.snapshot_status` | 当前首族适配器固定为 `reproducibility_partial`；`reproducible` 不是本适配器可用的 v0 值。 |
 
 `family` 下的 `common` 语义由本规范定义，`family_data` 是族扩展数据。第二族可以使用相同公共包络，但必须使用新的 `family_id`、自己的 `schema_version`、适配器版本和 `family_data` 命名空间。目录名与族 ID 不一致时（例如 DATA-003 记录的 `slotted_din_rail`）必须分别保存 `directory_id` 和 `family_id`，不得静默归一化。
 
@@ -62,7 +62,9 @@ v0 不表达自由曲面、草图约束求解、任意 Python、任意 CadQuery 
 - `lookup`：只允许已登记的表，例如 `iso261.coarse_pitch_mm`；
 - `formula`：只允许注册的算术/几何公式 ID，参数作为结构化 `args` 传入。
 
-实现必须先检查引用存在、单位兼容和公式白名单，再按 `ordinal` 和依赖拓扑顺序执行。`formula_id` 不是 Python 表达式。v0 登记的公式为：`half_difference`、`multiply`、`add`、`subtract`、`min`、`max`、`collar_chamfer`、`thread_minor_radius`、`thread_countersink_radius`、`thread_turn_count`。
+实现必须先检查引用存在、单位兼容和公式白名单，再按 `ordinal` 和依赖拓扑顺序执行。`formula_id` 不是 Python 表达式。v0 登记的公式为：`half_difference`、`half`、`multiply`、`add`、`subtract`、`min`、`max`、`collar_chamfer`、`thread_minor_radius`、`thread_countersink_radius`、`thread_turn_count`。其中 `half(x)=x/2`，`multiply`、`add`、`subtract` 的参数名和单位契约由 CAD-005 注册表冻结。
+
+`constraint.expression` 只是审计和展示文本；实际执行必须按登记的 `constraint_id` 调用白名单解释器，不能对该字符串执行 `eval`、`exec` 或任意代码。节点 `properties` 只允许本 Schema 登记的元数据（例如 `thread_model`、结构化 `placement`）或 `family_extension` 下的族扩展字段。编译器不得把 `properties`、placement 文本或任何其他字符串当作代码。可执行的节点输入只能是上述五种结构化表达式。
 
 ## 5. 节点、ID 和执行顺序
 
@@ -74,11 +76,23 @@ v0 核心节点白名单：
 |---|---|---|
 | `catalog.resolve` | 记录目录行解析和六个最终参数 | `bore_d`；输出 `resolved_parameters` |
 | `shape.revolve_profile` | 回转带内外倒角的环形截面 | `bore_d/outer_d/width`；输出 `collar_base` |
-| `feature.tapped_hole_cutter` | 生成一个径向孔的切削体 | `screw_d`、查表 pitch、`angle_deg`；输出 `hole_cutter` |
+| `feature.tapped_hole_cutter` | 生成一个径向孔的切削体 | `screw_d`、查表 `pitch`、`wall`、`hole_len`、`z_in`、`z_out`、`radial_offset`、`axial`、`angle_deg`、`over`；输出 `hole_cutter` |
 | `boolean.cut` | 从上一个实体中减去一个切削体 | `base`、`tool`；输出 `solid_candidate` |
 | `result.single_solid` | 声明最终结果和后置检查目标 | `solid_candidate`；输出 `part` |
 
-`shape.revolve_profile` 的 `profile_kind` 必须为 `chamfered_annulus`；倒角参数按源构造器的 `min(max(0.25, bore_d*0.012), wall*0.18, width*0.08)` 以注册公式表达。`feature.tapped_hole_cutter` 的 `thread_model` 为 `revolved_ring_approximation`，并记录 `helical_thread_supported: false`。`over=0.5 mm`、径向平移 `bore_r-0.5 mm`、轴向位置 `width/2` 和角度列表属于族扩展数据，不能被编译器悄悄改写。
+`shape.revolve_profile` 的 `profile_kind` 必须为 `chamfered_annulus`；倒角参数按源构造器的 `min(max(0.25, bore_d*0.012), wall*0.18, width*0.08)` 以注册公式表达。两个 `feature.tapped_hole_cutter` 节点必须具有相同的几何输入契约，区别仅为 `enabled_if` 和 `angle_deg`：主孔为 0°，条件第二孔为 135°。它们必须显式提供以下结构化输入：
+
+```text
+wall          = half_difference(outer_d, bore_d)
+over          = literal(0.5, mm)
+hole_len      = add(wall, multiply(over, literal(2, 1)))
+z_in          = over
+z_out         = add(over, wall)
+radial_offset = subtract(half(bore_d), literal(0.5, mm))
+axial         = multiply(width, literal(0.5, 1))
+```
+
+这对应源 `part.py` 的 `hole_len = wall + 2*over`、`z_in=over`、`z_out=over+wall`、`translate((bore_r-0.5, 0, width/2))`。局部 cutter 沿 +Z，先绕 Y 轴旋转 90° 使其沿 +X，再按 `radial_offset` 和 `axial` 平移，最后绕 Z 轴按 `angle_deg` 旋转。`over=0.5 mm`、回转轴和放置关系都必须由节点输入/登记的 placement 元数据表达，不能让编译器猜测。`thread_model` 必须为 `revolved_ring_approximation`，`helical_thread_supported` 必须为 `false`，两个孔节点都要明确记录。`screw_len` 仍是目录/任务字段，严禁作为 `hole_len` 或其他孔深输入。
 
 标准合法案例的节点顺序为：解析目录、回转基体、主孔切削、主孔布尔差；当 `second_screw=1` 时再执行第二孔切削、第二孔布尔差，最后输出 `result.single_solid`。即使节点声明了条件，依赖图仍必须完整可检查。
 
@@ -116,7 +130,9 @@ v0 核心节点白名单：
 
 ## 8. JSON 序列化和兼容策略
 
-规范 JSON 见 [`ir-v0.schema.json`](ir-v0.schema.json)。顶层 `status=accepted` 表示 IR 已通过 IR 结构检查和 CAD-003 前置规则；`status=rejected` 仍可序列化错误和部分输入，但不得有可执行节点。`errors` 和 `validation_result` 是互斥的阶段记录：前置拒绝使用 `errors`，后置失败使用 `validation_result`。
+规范 JSON 见 [`ir-v0.schema.json`](ir-v0.schema.json)。顶层 `status=accepted` 表示 IR 已通过 IR 结构检查和 CAD-003 前置规则；它**不得**带顶层 `errors`，但可以带 `validation_result`。后置几何或 STEP 失败必须保持 `status=accepted` 并写 `validation_result.ok=false`。顶层 `status=rejected` 必须带 `errors`、`nodes` 必须为空且不得带 `validation_result`；前置拒绝不能生成可执行节点。该互斥关系由 JSON Schema 的条件约束表达。
+
+JSON Schema 只能表达形状、常量、枚举、参数类型/值类型和状态字段互斥。反序列化后的语义检查还必须执行：六个参数 ID 和所有节点/输出/约束 ID 唯一；`ordinal` 从 0 连续递增；`depends_on` 只引用更早节点且依赖图无环；节点输出、参数和约束引用目标存在；`enabled_if` 参数存在且比较值类型相同；首族 `family_id`、`extension_namespace`、`source.schema_version` 和 `snapshot_status` 与本契约一致；表达式只使用登记公式和登记输出。语义检查的稳定错误码、责任边界和最小算法见 [`semantic-validation.md`](semantic-validation.md)。
 
 v0 读取策略：
 
@@ -125,6 +141,7 @@ v0 读取策略：
 - major 变化必须使用 `typed-cad-ir.v1`，不得让 v0 读者猜测；
 - `schema_version`、`source_commit`、`adapter_version` 都参与可复现记录，不能因“同一参数”而省略；
 - 反序列化后应按 `parameter_id`、`ordinal` 和引用图重新检查唯一性与拓扑，而非只信任 JSON 顺序。
+- 当前首族适配器只接受 `source.snapshot_status=reproducibility_partial`；收到 `reproducible` 必须返回 `IR_SNAPSHOT_STATUS_UNSUPPORTED`。未来适配器若要引入其他状态，必须新增适配器契约，不能让 v0 读者默默放行。
 
 ## 9. 可复现性边界
 
@@ -144,6 +161,7 @@ STEP 字节 SHA-256 **不稳定**，即使几何摘要相同也可能不同；v0
 - `family_data` 的 JSON Schema URI 和跨族公共节点注册表由谁维护；
 - 生成 STEP/渲染图的许可证和可发布范围仍是 `license_scope_uncertain`；
 - 是否将 `directory_id` 作为所有族的公共来源字段，而不是只在适配器元数据中保留。
+- CAD-005 必须在注册表中冻结 `half`、`multiply`、`add`、`subtract` 的参数名、单位推导和数值容差，并逐项检查上述孔节点输入；不能从 placement 字符串推导几何。
 
 ## 11. 交接
 
