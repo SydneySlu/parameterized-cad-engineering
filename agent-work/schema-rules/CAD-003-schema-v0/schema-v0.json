@@ -160,20 +160,329 @@
     }
   ],
   "input_contract": {
+    "formal_envelope_required": [
+      "schema_version",
+      "family_id",
+      "parameters"
+    ],
     "measurement_encoding": "bare numbers use canonical mm; {value, unit} is normalized to mm",
-    "optional": [
+    "parameter_optional": [
       "outer_d",
       "width",
       "screw_d",
       "screw_len",
       "second_screw"
     ],
-    "required": [
+    "parameter_required": [
       "bore_d"
     ],
+    "python_compatibility": "validate_parameters accepts a flat parameter object and an envelope with omitted metadata; these are not the formal external JSON protocol",
     "unknown_fields": "reject"
   },
   "json_schema": {
+    "$id": "https://parameterized-cad-engineering.invalid/schema/set_screw_shaft_collar.v0.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "family_id": {
+        "const": "set_screw_shaft_collar"
+      },
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "bore_d": {
+            "oneOf": [
+              {
+                "enum": [
+                  5,
+                  6,
+                  8,
+                  10,
+                  12,
+                  16,
+                  20,
+                  24,
+                  30,
+                  35,
+                  40,
+                  50,
+                  60,
+                  70,
+                  80
+                ],
+                "maximum": 80,
+                "minimum": 5,
+                "type": "number",
+                "unit": "mm"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "unit": {
+                    "enum": [
+                      "centimeter",
+                      "centimeters",
+                      "cm",
+                      "in",
+                      "inch",
+                      "inches",
+                      "m",
+                      "meter",
+                      "meters",
+                      "millimeter",
+                      "millimeters",
+                      "mm"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "outer_d": {
+            "oneOf": [
+              {
+                "enum": [
+                  10,
+                  12,
+                  16,
+                  20,
+                  22,
+                  28,
+                  32,
+                  40,
+                  45,
+                  56,
+                  63,
+                  80,
+                  90,
+                  100,
+                  110
+                ],
+                "maximum": 110,
+                "minimum": 10,
+                "type": "number",
+                "unit": "mm"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "unit": {
+                    "enum": [
+                      "centimeter",
+                      "centimeters",
+                      "cm",
+                      "in",
+                      "inch",
+                      "inches",
+                      "m",
+                      "meter",
+                      "meters",
+                      "millimeter",
+                      "millimeters",
+                      "mm"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "screw_d": {
+            "oneOf": [
+              {
+                "enum": [
+                  3,
+                  4,
+                  5,
+                  6,
+                  8,
+                  10,
+                  12
+                ],
+                "maximum": 12,
+                "minimum": 3,
+                "type": "number",
+                "unit": "mm"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "unit": {
+                    "enum": [
+                      "centimeter",
+                      "centimeters",
+                      "cm",
+                      "in",
+                      "inch",
+                      "inches",
+                      "m",
+                      "meter",
+                      "meters",
+                      "millimeter",
+                      "millimeters",
+                      "mm"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "screw_len": {
+            "oneOf": [
+              {
+                "enum": [
+                  4,
+                  5,
+                  6,
+                  8,
+                  10,
+                  12,
+                  16,
+                  20
+                ],
+                "maximum": 20,
+                "minimum": 4,
+                "type": "number",
+                "unit": "mm"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "unit": {
+                    "enum": [
+                      "centimeter",
+                      "centimeters",
+                      "cm",
+                      "in",
+                      "inch",
+                      "inches",
+                      "m",
+                      "meter",
+                      "meters",
+                      "millimeter",
+                      "millimeters",
+                      "mm"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "second_screw": {
+            "enum": [
+              0,
+              1
+            ],
+            "maximum": 1,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "width": {
+            "oneOf": [
+              {
+                "enum": [
+                  6,
+                  8,
+                  10,
+                  12,
+                  14,
+                  16,
+                  18,
+                  20,
+                  22
+                ],
+                "maximum": 22,
+                "minimum": 6,
+                "type": "number",
+                "unit": "mm"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "unit": {
+                    "enum": [
+                      "centimeter",
+                      "centimeters",
+                      "cm",
+                      "in",
+                      "inch",
+                      "inches",
+                      "m",
+                      "meter",
+                      "meters",
+                      "millimeter",
+                      "millimeters",
+                      "mm"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bore_d"
+        ],
+        "type": "object"
+      },
+      "schema_version": {
+        "const": "set_screw_shaft_collar.v0"
+      }
+    },
+    "required": [
+      "schema_version",
+      "family_id",
+      "parameters"
+    ],
+    "title": "set_screw_shaft_collar parameter envelope",
+    "type": "object"
+  },
+  "normalized_json_schema": {
+    "$id": "https://parameterized-cad-engineering.invalid/schema/set_screw_shaft_collar.v0.normalized.json",
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": false,
     "properties": {
@@ -261,8 +570,7 @@
         ],
         "maximum": 1,
         "minimum": 0,
-        "type": "integer",
-        "unit": ""
+        "type": "integer"
       },
       "width": {
         "enum": [
@@ -285,6 +593,7 @@
     "required": [
       "bore_d"
     ],
+    "title": "set_screw_shaft_collar normalized parameter object (internal compatibility)",
     "type": "object"
   },
   "relations": [

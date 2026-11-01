@@ -57,6 +57,64 @@ class SetScrewShaftCollarSchemaTests(unittest.TestCase):
         self.assertTrue(result.ok, result.to_json())
         self.assertTrue(all(value == "user_explicit" for value in result.provenance.values()))
 
+    def test_formal_envelope_with_bare_number_is_valid(self):
+        result = validate_json(
+            json.dumps(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "family_id": FAMILY_ID,
+                    "parameters": {"bore_d": 20},
+                }
+            )
+        )
+        self.assertTrue(result.ok, result.to_json())
+        self.assertEqual(result.normalized["bore_d"], 20)
+
+    def test_formal_envelope_with_measurement_object_is_normalized(self):
+        result = validate_json(
+            json.dumps(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "family_id": FAMILY_ID,
+                    "parameters": {"bore_d": {"value": 2, "unit": "cm"}},
+                }
+            )
+        )
+        self.assertTrue(result.ok, result.to_json())
+        self.assertEqual(result.normalized["bore_d"], 20)
+
+    def test_formal_envelope_metadata_errors_are_structured(self):
+        missing_parameters = validate_parameters(
+            {"schema_version": SCHEMA_VERSION, "family_id": FAMILY_ID}
+        )
+        self.assertFalse(missing_parameters.ok)
+        self.assertEqual(missing_parameters.errors[0].code, "MISSING_PARAMETERS")
+        unknown_envelope = validate_parameters(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "family_id": FAMILY_ID,
+                "parameters": {"bore_d": 20},
+                "extra": True,
+            }
+        )
+        self.assertFalse(unknown_envelope.ok)
+        self.assertIn("UNKNOWN_FIELD", {error.code for error in unknown_envelope.errors})
+        wrong_family = validate_parameters(
+            {"schema_version": SCHEMA_VERSION, "family_id": "other", "parameters": {"bore_d": 20}}
+        )
+        self.assertFalse(wrong_family.ok)
+        self.assertIn("FAMILY_ID_MISMATCH", {error.code for error in wrong_family.errors})
+        wrong_version = validate_parameters(
+            {"schema_version": "other.v0", "family_id": FAMILY_ID, "parameters": {"bore_d": 20}}
+        )
+        self.assertFalse(wrong_version.ok)
+        self.assertIn("SCHEMA_VERSION_MISMATCH", {error.code for error in wrong_version.errors})
+
+    def test_flat_object_remains_python_compatibility_path(self):
+        result = validate_parameters({"bore_d": 20})
+        self.assertTrue(result.ok, result.to_json())
+        self.assertIn("flat parameter object", schema_descriptor()["input_contract"]["python_compatibility"])
+
     def test_boundary_row_with_second_screw_is_valid(self):
         result = validate_parameters(
             {"bore_d": 80, "outer_d": 110, "width": 22, "screw_d": 12, "screw_len": 20, "second_screw": 1}
@@ -110,7 +168,23 @@ class SetScrewShaftCollarSchemaTests(unittest.TestCase):
         encoded = json.dumps(descriptor, ensure_ascii=False, sort_keys=True)
         self.assertEqual(json.loads(encoded)["schema_version"], SCHEMA_VERSION)
         self.assertEqual(descriptor["fields"][0]["name"], "bore_d")
-        self.assertEqual(descriptor["json_schema"]["additionalProperties"], False)
+        formal = descriptor["json_schema"]
+        self.assertEqual(
+            formal["required"], ["schema_version", "family_id", "parameters"]
+        )
+        self.assertEqual(formal["additionalProperties"], False)
+        self.assertEqual(
+            formal["properties"]["parameters"]["required"], ["bore_d"]
+        )
+        parameters = formal["properties"]["parameters"]["properties"]
+        self.assertIn("oneOf", parameters["bore_d"])
+        measurement = parameters["bore_d"]["oneOf"][1]
+        self.assertEqual(measurement["required"], ["value", "unit"])
+        self.assertEqual(parameters["second_screw"]["type"], "integer")
+        self.assertNotIn("oneOf", parameters["second_screw"])
+        normalized = descriptor["normalized_json_schema"]
+        self.assertEqual(normalized["required"], ["bore_d"])
+        self.assertNotIn("parameters", normalized["properties"])
         artifact = json.loads(
             (ROOT / "agent-work/schema-rules/CAD-003-schema-v0/schema-v0.json").read_text()
         )

@@ -238,10 +238,12 @@ def schema_descriptor() -> dict[str, Any]:
         "source_commit": SOURCE_COMMIT,
         "canonical_length_unit": CANONICAL_LENGTH_UNIT,
         "input_contract": {
-            "required": ["bore_d"],
-            "optional": ["outer_d", "width", "screw_d", "screw_len", "second_screw"],
+            "formal_envelope_required": ["schema_version", "family_id", "parameters"],
+            "parameter_required": ["bore_d"],
+            "parameter_optional": ["outer_d", "width", "screw_d", "screw_len", "second_screw"],
             "unknown_fields": "reject",
             "measurement_encoding": "bare numbers use canonical mm; {value, unit} is normalized to mm",
+            "python_compatibility": "validate_parameters accepts a flat parameter object and an envelope with omitted metadata; these are not the formal external JSON protocol",
         },
         "fields": [field.as_dict() for field in FIELD_SPECS],
         "relations": [
@@ -268,11 +270,34 @@ def schema_descriptor() -> dict[str, Any]:
         ],
         "json_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "https://parameterized-cad-engineering.invalid/schema/set_screw_shaft_collar.v0.json",
+            "title": "set_screw_shaft_collar parameter envelope",
             "type": "object",
-            "required": ["bore_d"],
             "additionalProperties": False,
+            "required": ["schema_version", "family_id", "parameters"],
             "properties": {
-                field.name: _json_schema_property(field)
+                "schema_version": {"const": SCHEMA_VERSION},
+                "family_id": {"const": FAMILY_ID},
+                "parameters": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["bore_d"],
+                    "properties": {
+                        field.name: _json_schema_property(field)
+                        for field in FIELD_SPECS
+                    },
+                },
+            },
+        },
+        "normalized_json_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "https://parameterized-cad-engineering.invalid/schema/set_screw_shaft_collar.v0.normalized.json",
+            "title": "set_screw_shaft_collar normalized parameter object (internal compatibility)",
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["bore_d"],
+            "properties": {
+                field.name: _json_schema_property(field, allow_measurement=False)
                 for field in FIELD_SPECS
             },
         },
@@ -283,16 +308,32 @@ def _error(code: str, fields: Sequence[str], message: str) -> RuleViolation:
     return RuleViolation(code=code, fields=tuple(fields), message=message)
 
 
-def _json_schema_property(field: FieldSpec) -> dict[str, Any]:
+def _json_schema_property(field: FieldSpec, *, allow_measurement: bool = True) -> dict[str, Any]:
     value: dict[str, Any] = {
         "type": "integer" if field.type == "integer" else "number",
-        "unit": field.unit,
     }
     if field.allowed_range is not None:
         value["minimum"], value["maximum"] = field.allowed_range
     if field.allowed_values is not None:
         value["enum"] = list(field.allowed_values)
-    return value
+    if field.unit:
+        value["unit"] = field.unit
+    if not allow_measurement or not field.unit:
+        return value
+
+    # The object form deliberately checks only the measurement shape.  Unit
+    # conversion and catalog choices occur in Python, because JSON Schema
+    # cannot express that e.g. 2 cm must become the catalog value 20 mm.
+    measurement = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["value", "unit"],
+        "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "enum": sorted(_UNIT_FACTORS)},
+        },
+    }
+    return {"oneOf": [value, measurement]}
 
 
 def _as_decimal(value: Any, field: str, errors: list[RuleViolation]) -> Decimal | None:
@@ -337,11 +378,15 @@ def _payload_fields(payload: Mapping[str, Any], errors: list[RuleViolation]) -> 
     if not isinstance(payload, Mapping):
         errors.append(_error("PAYLOAD_TYPE_ERROR", ["parameters"], "payload must be a JSON object"))
         return None
-    if "parameters" in payload:
+    envelope_markers = {"schema_version", "family_id", "parameters"}
+    if envelope_markers.intersection(payload):
         envelope_allowed = {"schema_version", "family_id", "parameters"}
         unknown_envelope = sorted(set(payload) - envelope_allowed)
         if unknown_envelope:
             errors.append(_error("UNKNOWN_FIELD", unknown_envelope, "unknown envelope field(s)"))
+        if "parameters" not in payload:
+            errors.append(_error("MISSING_PARAMETERS", ["parameters"], "formal envelope requires parameters"))
+            return None
         version = payload.get("schema_version")
         if version is not None and version != SCHEMA_VERSION:
             errors.append(_error("SCHEMA_VERSION_MISMATCH", ["schema_version"], f"expected {SCHEMA_VERSION}"))

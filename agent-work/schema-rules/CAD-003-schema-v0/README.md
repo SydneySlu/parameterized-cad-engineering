@@ -33,7 +33,9 @@
 }
 ```
 
-实现也接受仅含参数的扁平对象，便于单元测试和后续适配器过渡。`bore_d` 是唯一必填字段；它是关键目录选择器，缺失时拒绝，不用默认尺寸掩盖缺失。其他五个字段缺失时按各自 `FieldSpec.missing_behavior` 派生：四个来自目录行，`second_screw` 来自阈值规则。显式提供的派生字段不会被静默覆盖，冲突返回 `CATALOG_MISMATCH` 或 `SECOND_SCREW_CONSTRAINT`。
+正式外部协议由 `schema-v0.json` 中的 `json_schema` 表达：根对象必须包含 `schema_version`、`family_id` 和 `parameters`，`parameters` 内只允许六个参数名，且 `bore_d` 必填。长度参数在正式 Schema 中支持裸数字或 `{ "value": number, "unit": string }`；单位换算和目录选择仍由 Python 校验器执行。
+
+Python 实现另外接受仅含参数的扁平对象，以及 envelope 中省略 `schema_version`/`family_id` 的对象。这些是内部/过渡兼容路径，不是正式 envelope；兼容路径保留是为了不静默破坏已有调用方。`bore_d` 仍是唯一必填字段；它是关键目录选择器，缺失时拒绝，不用默认尺寸掩盖缺失。其他五个字段缺失时按各自 `FieldSpec.missing_behavior` 派生：四个来自目录行，`second_screw` 来自阈值规则。显式提供的派生字段不会被静默覆盖，冲突返回 `CATALOG_MISMATCH` 或 `SECOND_SCREW_CONSTRAINT`。
 
 长度字段的规范单位是 mm。裸数字按 mm 解释；也可使用 `{ "value": ..., "unit": "mm|cm|m|in" }`，归一化后再做目录匹配。`second_screw` 是无量纲整数，只接受 `0` 或 `1`。
 
@@ -54,7 +56,9 @@
 | `screw_len` | 目录行 `d3` 长度 | mm | `4, 5, 6, 8, 10, 12, 16, 20` | 按 `bore_d` 派生 |
 | `second_screw` | GN 705 大规格说明/规则 | 无量纲整数 | `0` 或 `1` | 按 `bore_d > 70` 派生 |
 
-Schema 层在未来构造前检查：字段类型/单位、未知字段、目录选择、目录耦合、第二螺钉阈值、`outer_d > bore_d`、壁厚严格大于 `0.65*screw_d`、宽度不小于 `1.45*screw_d`。这些检查必须先于 `part.build()`；DATA-003 已证明绕过 `check()` 时非法壁厚仍可能 build 成功并产生 3 solids。
+正式 JSON Schema 只负责 envelope/参数对象形状、必填字段、长度测量值对象和 `second_screw` 的标量类型；它不能表达单位换算后的目录选择、跨字段目录耦合或几何不等式。上述内容由 Python 规则层在未来构造前检查：目录选择、目录耦合、第二螺钉阈值、`outer_d > bore_d`、壁厚严格大于 `0.65*screw_d`、宽度不小于 `1.45*screw_d`。这些检查必须先于 `part.build()`；DATA-003 已证明绕过 `check()` 时非法壁厚仍可能 build 成功并产生 3 solids。
+
+`normalized_json_schema` 是扁平、规范化后的内部兼容描述，不能替代正式 `json_schema`，也不改变 Python 兼容入口的行为。
 
 ## 明确留给后续验证器的内容
 
