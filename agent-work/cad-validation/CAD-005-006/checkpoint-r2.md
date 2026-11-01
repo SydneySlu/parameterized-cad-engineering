@@ -4,7 +4,7 @@
 task=CAD-005/006-R2
 status=review
 changed=src/cad_compilation/__init__.py; tests/cad_compilation/test_handoff.py; agent-work/cad-validation/CAD-005-006/checkpoint-r2.md; agent-work/cad-validation/CAD-005-006/handoff_successor_check-r2.md; agent-work/cad-validation/CAD-005-006/CODEX-REVIEW-REQUEST.md; docs/WORKLOG.md
-commit=see the R2 commit recorded by git log after this checkpoint is committed
+commit=7595fff
 handoff_successor_check=agent-work/cad-validation/CAD-005-006/handoff_successor_check-r2.md
 verified=see command table below; each result records actual execution
 import_status=pass
