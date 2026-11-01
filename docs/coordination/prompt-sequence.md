@@ -2,6 +2,8 @@
 
 本文件描述 DATA-003 审查通过后的任务分配顺序。当前只生成 Prompt，不代表这些任务已经启动或完成。
 
+所有任务交接统一执行 [`handoff-review-protocol.md`](handoff-review-protocol.md)：交接 Agent 自检、续任 Agent 定向复核、Codex 中枢独立审查。CAD-003 → IR-001 → CAD-005/006、数据源 → 数据库以及任何接口/版本/许可证冻结任务属于高风险交接，必须重跑核心命令并检查一个正常案例和一个失败案例。
+
 ## 已有前置成果
 
 - DATA-003 已完成 `set_screw_shaft_collar` 的来源审计、macOS arm64 环境核验、官方 validate、合法/边界/非法参数 smoke、STEP 回读和重复性记录。

@@ -7,6 +7,8 @@
 3. `docs/WORKLOG.md`：追加式工作日志；
 4. `docs/DECISIONS.md`：已经确认的架构和范围决策。
 
+涉及前序 Agent 产物的任务还必须阅读并执行 [`docs/coordination/handoff-review-protocol.md`](docs/coordination/handoff-review-protocol.md)。该协议规定交接 Agent 自检、续任 Agent 定向复核和 Codex 中枢独立审查三层检查。
+
 ## 项目基座与文件位置
 
 - 当前主机的共享项目基座是 `/Users/syd/Desktop/参数化 cad 工程辅助设计`，所有 Agent 必须在这个 Git 根目录内工作。
@@ -60,3 +62,12 @@
 [ ] 提交了 commit，或记录了为什么不能提交
 [ ] 标明了下一步和阻塞项
 ```
+
+## 三层交接检查
+
+- 交接 Agent 必须记录修改内容、实际验证命令、已确认结果、未解决问题和下一 Agent 的关注点。
+- 续任 Agent 开始实现前必须阅读 checkpoint 和交接文档，重跑至少一条核心命令，检查一个正常案例和一个失败案例，确认输入输出接口与已知限制。
+- Schema → Typed CAD IR、Typed CAD IR → CAD 编译器、CAD 编译器 → 几何验证器、数据源 → 训练/检索数据库，以及冻结接口/数据格式/许可证的任务属于高风险交接，强制执行 double check。
+- 低风险批处理可以轻量抽查，但仍要记录抽查结果。
+- 发现交接记录与实际结果不一致时，续任 Agent 必须先标记 `review` 或 `blocked`，不得直接覆盖前一成果。
+- 续任复核不替代 Codex 中枢的独立审查；只有中枢审查通过并合并到 `main` 后才能标记 `done`。

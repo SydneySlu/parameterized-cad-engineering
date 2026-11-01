@@ -86,6 +86,21 @@ git -C <clean-git-repository> archive --format=tar \
 
 可以新增一个仅用于审计的脚本到 `work/benchcad-output/`，不要放入生产 `src/`。将摘要追加到 `agent-work/data/DATA-003-single-family-audit/run-log.md`，并在 `minimal-manifest.json` 增加 `repeatability` 字段，但保持其为审计草案，不升级为冻结 Schema。
 
+## 三层交接检查（高风险任务，必须执行）
+
+本任务涉及接口、数据来源或 CAD 执行链，必须执行 `docs/coordination/handoff-review-protocol.md` 中的 double check。
+
+如果本任务是续任任务，开始实现前必须：
+
+1. 阅读上一个 Agent 的 checkpoint、交接文档和提交；
+2. 复跑至少一条上一个 Agent 声称通过的核心命令；
+3. 检查一个正常案例和一个失败/拒绝案例；
+4. 确认输入输出接口、版本、来源和已知限制与本任务一致。
+
+如果交接记录与实际结果不一致，先记录 `review` 或 `blocked`，不要直接覆盖前一个 Agent 的成果。
+
+完成交接前必须记录：修改内容、实际命令及结果、已确认内容、未解决问题和下一 Agent 的重点。`checkpoint.md` 中必须包含 `handoff_self_check` 和（如有前序任务）`handoff_successor_check`。续任复核是定向复核，不替代 Codex 中枢的最终独立审查。
+
 ## 交接格式
 
 ```text
