@@ -28,14 +28,21 @@
     "require_valid": true,
     "step_roundtrip_required": true,
     "byte_hash_policy": "informational_only",
-    "metrics": ["solid_count", "is_valid", "volume_mm3", "bbox_mm"]
+    "metrics": [
+      "solid_count",
+      "is_valid",
+      "volume_mm3",
+      "bbox_mm"
+    ]
   },
   "errors": [
     {
       "code": "MISSING_REQUIRED",
       "stage": "schema",
       "severity": "error",
-      "fields": ["bore_d"],
+      "fields": [
+        "bore_d"
+      ],
       "node_ids": [],
       "message": "bore_d is the required catalog selector; no IR nodes were emitted",
       "retryable": true

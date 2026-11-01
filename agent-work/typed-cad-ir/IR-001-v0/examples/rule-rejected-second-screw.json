@@ -6,7 +6,9 @@
     "family_id": "set_screw_shaft_collar",
     "directory_id": "set_screw_shaft_collar",
     "extension_namespace": "family.set_screw_shaft_collar.v0",
-    "family_data": {"catalog_table_id": "gn705.gn705_metric_v0"}
+    "family_data": {
+      "catalog_table_id": "gn705.gn705_metric_v0"
+    }
   },
   "source": {
     "schema_version": "set_screw_shaft_collar.v0",
@@ -17,12 +19,62 @@
     "snapshot_status": "reproducibility_partial"
   },
   "parameters": [
-    {"parameter_id": "bore_d", "type": "number", "unit": "mm", "value": 20, "input": {"value": 20, "unit": "mm"}, "source": "user_explicit", "source_ref": "CAD-003.field:bore_d"},
-    {"parameter_id": "outer_d", "type": "number", "unit": "mm", "value": 32, "source": "catalog_derived", "source_ref": "GN705.catalog_row:bore_d=20"},
-    {"parameter_id": "width", "type": "number", "unit": "mm", "value": 14, "source": "catalog_derived", "source_ref": "GN705.catalog_row:bore_d=20"},
-    {"parameter_id": "screw_d", "type": "number", "unit": "mm", "value": 6, "source": "catalog_derived", "source_ref": "GN705.catalog_row:bore_d=20"},
-    {"parameter_id": "screw_len", "type": "number", "unit": "mm", "value": 8, "source": "catalog_derived", "source_ref": "GN705.catalog_row:bore_d=20"},
-    {"parameter_id": "second_screw", "type": "integer", "unit": "1", "value": 1, "input": {"value": 1, "unit": "1"}, "source": "user_explicit", "source_ref": "CAD-003.field:second_screw"}
+    {
+      "parameter_id": "bore_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 20,
+      "input": {
+        "value": 20,
+        "unit": "mm"
+      },
+      "source": "user_explicit",
+      "source_ref": "CAD-003.field:bore_d"
+    },
+    {
+      "parameter_id": "outer_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 32,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=20"
+    },
+    {
+      "parameter_id": "width",
+      "type": "number",
+      "unit": "mm",
+      "value": 14,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=20"
+    },
+    {
+      "parameter_id": "screw_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 6,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=20"
+    },
+    {
+      "parameter_id": "screw_len",
+      "type": "number",
+      "unit": "mm",
+      "value": 8,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=20"
+    },
+    {
+      "parameter_id": "second_screw",
+      "type": "integer",
+      "unit": "1",
+      "value": 1,
+      "input": {
+        "value": 1,
+        "unit": "1"
+      },
+      "source": "user_explicit",
+      "source_ref": "CAD-003.field:second_screw"
+    }
   ],
   "nodes": [],
   "constraints": [],
@@ -36,14 +88,22 @@
     "require_valid": true,
     "step_roundtrip_required": true,
     "byte_hash_policy": "informational_only",
-    "metrics": ["solid_count", "is_valid", "volume_mm3", "bbox_mm"]
+    "metrics": [
+      "solid_count",
+      "is_valid",
+      "volume_mm3",
+      "bbox_mm"
+    ]
   },
   "errors": [
     {
       "code": "SECOND_SCREW_CONSTRAINT",
       "stage": "preflight",
       "severity": "error",
-      "fields": ["second_screw", "bore_d"],
+      "fields": [
+        "second_screw",
+        "bore_d"
+      ],
       "node_ids": [],
       "message": "second_screw must be 0 when bore_d=20; the GN 705 note applies iff bore_d > 70; build() must not be called",
       "retryable": true

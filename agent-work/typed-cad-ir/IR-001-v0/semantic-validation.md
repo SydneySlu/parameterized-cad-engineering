@@ -18,15 +18,23 @@ Draft 2020-12 JSON Schema 负责结构、常量、枚举、参数类型/值类�
 | 公式 | `IR_UNREGISTERED_FORMULA` | `formula_id` 必须来自 v0 注册表；递归检查所有 args。 |
 | 执行入口 | `IR_EXECUTION_STRING_FORBIDDEN` | 不允许把 expression、placement 或 properties 字符串当作代码；节点 inputs 只能是五种结构化表达式。 |
 | 首族包络 | `IR_FAMILY_MISMATCH`、`IR_SCHEMA_VERSION_MISMATCH`、`IR_SNAPSHOT_STATUS_UNSUPPORTED` | v0 首族必须分别为 `set_screw_shaft_collar`、`family.set_screw_shaft_collar.v0`、`set_screw_shaft_collar.v0`、`reproducibility_partial`。 |
+| 来源提交 | `IR_SOURCE_COMMIT_MISMATCH` | `source.source_commit` 必须是 `035f467142888edfd0bd7cd73906f9b155c8f43c`；其他 commit 不能伪装为同一 CAD-003 数据契约。 |
+| 节点输入 | `IR_NODE_INPUT_MISSING`、`IR_NODE_INPUT_KIND_MISMATCH` | 每种 `node_type` 必须满足 Schema 登记的固定输入名和 expression kind；核心输入不能由 `family_extension` 替代。 |
+| 节点输出 | `IR_NODE_OUTPUT_CONTRACT_MISMATCH` | 输出 ID/kind 必须与 node type 契约一致，并且 output ID 全局唯一。 |
+| 节点属性 | `IR_NODE_PROPERTIES_CONTRACT_MISMATCH` | `properties` 必须满足对应 node type 的登记常量和结构；不得依赖任意扩展字段改变核心语义。 |
+| 后置结果 | `IR_VALIDATION_RESULT_ERRORS_INCONSISTENT`、`IR_VALIDATION_STAGE_MISMATCH` | `ok=true` 必须 errors 为空，`ok=false` 必须至少一个 error；每个 error.stage 必须等于 validation_result.stage。 |
+| 参数顺序 | `IR_PARAMETER_ORDER_MISMATCH` | accepted v0 参数数组固定按字典序：`bore_d, outer_d, screw_d, screw_len, second_screw, width`。 |
+| 族规则 | `IR_SECOND_SCREW_CONSTRAINT` | `second_screw=1` 只允许 `bore_d > 70`；首族结构检查应在构造器前拒绝冲突输入。 |
 
 ## 最小算法
 
 1. 先用 `ir-v0.schema.json` Draft 2020-12 校验；Schema 失败不得进入构造器。
-2. 收集参数、节点、输出和约束 ID，按表中错误码检查唯一性。
+2. 收集参数、节点、输出和约束 ID，按表中错误码检查唯一性；accepted 参数顺序必须是 `bore_d, outer_d, screw_d, screw_len, second_screw, width`。
 3. 检查 `ordinal == range(len(nodes))`，再检查每个 dependency 的目标存在、目标 ordinal 更小；对图运行 DFS，发现回边即 `IR_DEPENDENCY_CYCLE`。
-4. 递归遍历每个 node input 和 `enabled_if`：检查 parameter/output 引用目标、lookup/formula 注册表和单位；不解析自由字符串。
-5. 检查 accepted 六参数的名称、类型、单位、`second_screw` 0/1、首族常量和 `snapshot_status`；rejected 只允许错误记录和空节点，不允许 `validation_result`。
-6. 只有上述检查全部通过，适配器才可把 IR 交给 CAD-005；构造结果再由 CAD-006 写入 accepted IR 的 `validation_result`。
+4. 按 `node_type` 检查固定 inputs、outputs 和 properties 契约；缺字段、kind 不匹配、输出不匹配或属性不匹配分别返回 `IR_NODE_INPUT_MISSING`、`IR_NODE_INPUT_KIND_MISMATCH`、`IR_NODE_OUTPUT_CONTRACT_MISMATCH`、`IR_NODE_PROPERTIES_CONTRACT_MISMATCH`。
+5. 递归遍历每个 node input 和 `enabled_if`：检查 parameter/output 引用目标、lookup/formula 注册表和单位；不解析自由字符串。`second_screw=1` 时检查 `bore_d > 70`。
+6. 检查 accepted 六参数的名称、类型、单位、`second_screw` 0/1、首族常量、固定 source commit 和 `snapshot_status`；rejected 只允许错误记录和空节点，不允许 `validation_result`。
+7. 若存在 `validation_result`，检查 `ok` 与 errors 数量一致、每个 error.stage 等于 result.stage；它只能存在于 accepted IR。只有上述检查全部通过，适配器才可把 IR 交给 CAD-005；构造结果再由 CAD-006 写入 accepted IR 的 `validation_result`。
 
 ## 本轮反例结果
 
@@ -40,5 +48,17 @@ Draft 2020-12 JSON Schema 负责结构、常量、枚举、参数类型/值类�
 | 删除 ordinal 1 或让依赖指向未来节点 | 语义检查返回 `IR_ORDINAL_NOT_CONTIGUOUS` 或 `IR_DEPENDENCY_NOT_PREVIOUS`。 |
 | 公式改为 `eval` 或 `formula_id=python_eval` | Schema/语义检查返回 `IR_UNREGISTERED_FORMULA` 或 `IR_EXECUTION_STRING_FORBIDDEN`。 |
 | `snapshot_status=reproducible` | Schema 拒绝；若未来 Schema 为兼容枚举，语义检查必须返回 `IR_SNAPSHOT_STATUS_UNSUPPORTED`。 |
+| `source_commit` 改为其他 40 位哈希 | Schema 拒绝；若未来保留通用哈希形状，语义检查返回 `IR_SOURCE_COMMIT_MISMATCH`。 |
+| 删除 `feature.tapped_hole_cutter.thread_d` | Schema 拒绝或语义检查返回 `IR_NODE_INPUT_MISSING`。 |
+| 删除 `boolean.cut.base`/`tool` | Schema 拒绝或语义检查返回 `IR_NODE_INPUT_MISSING`。 |
+| 删除 `result.single_solid.select_if_one` | Schema 拒绝或语义检查返回 `IR_NODE_PROPERTIES_CONTRACT_MISMATCH`。 |
+| `validation_result.ok=true` 但 errors 非空，或 `ok=false` 但 errors 为空 | Schema 拒绝或返回 `IR_VALIDATION_RESULT_ERRORS_INCONSISTENT`。 |
+| validation error.stage 与 result.stage 不同 | Schema 拒绝或返回 `IR_VALIDATION_STAGE_MISMATCH`。 |
+| accepted 参数数组乱序 | Schema 拒绝或返回 `IR_PARAMETER_ORDER_MISMATCH`。 |
+| `second_screw=1` 且 `bore_d<=70` | Schema 可检查类型，语义检查返回 `IR_SECOND_SCREW_CONSTRAINT`。 |
 
 这些检查不证明 CadQuery/OCP 结果有效，也不证明 STEP 字节哈希稳定；它们只保证 IR 输入图可安全、确定地交给白名单编译器。
+
+## 节点契约责任边界
+
+JSON Schema 负责检查每种 `node_type` 的字段存在性、固定输入名、`expression` 结构、输出 ID/kind 和登记 properties 形状。反序列化语义检查负责确认节点输出引用真实存在、`base_ref`/`tool_ref` 与对应 output ID 一致、主孔/第二孔的 `enabled_if` 与 `second_screw` 条件匹配，以及五种节点的依赖顺序。任何一项失败都必须在 CAD-005 前返回上述稳定 `IR_NODE_*` 错误；不能由编译器隐式补字段。

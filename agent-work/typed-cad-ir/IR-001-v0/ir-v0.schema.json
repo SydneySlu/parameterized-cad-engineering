@@ -166,7 +166,94 @@
                   ]
                 }
               }
-            ]
+            ],
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "bore_d"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "outer_d"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "screw_d"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "screw_len"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "second_screw"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/parameter"
+                  },
+                  {
+                    "properties": {
+                      "parameter_id": {
+                        "const": "width"
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "items": false
           },
           "nodes": {
             "minItems": 1
@@ -248,8 +335,7 @@
           "const": "BenchCAD"
         },
         "source_commit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "const": "035f467142888edfd0bd7cd73906f9b155c8f43c"
         },
         "adapter_id": {
           "const": "benchcad.set_screw_shaft_collar"
@@ -687,76 +773,498 @@
       }
     },
     "node": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "node_id",
-        "node_type",
-        "ordinal",
-        "depends_on",
-        "inputs",
-        "outputs",
-        "refs"
-      ],
-      "properties": {
-        "node_id": {
-          "type": "string",
-          "pattern": "^n[0-9]+\\.[a-z][a-z0-9_.-]*$"
-        },
-        "node_type": {
-          "enum": [
-            "catalog.resolve",
-            "shape.revolve_profile",
-            "feature.tapped_hole_cutter",
-            "boolean.cut",
-            "result.single_solid"
-          ]
-        },
-        "ordinal": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "enabled_if": {
-          "anyOf": [
+      "oneOf": [
+        {
+          "allOf": [
             {
-              "$ref": "#/$defs/condition"
+              "$ref": "#/$defs/node_common"
             },
             {
-              "type": "null"
+              "properties": {
+                "node_type": {
+                  "const": "catalog.resolve"
+                },
+                "inputs": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "bore_d"
+                  ],
+                  "properties": {
+                    "bore_d": {
+                      "$ref": "#/$defs/expression"
+                    }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "output_id",
+                      "kind"
+                    ],
+                    "properties": {
+                      "output_id": {
+                        "const": "resolved_parameters"
+                      },
+                      "kind": {
+                        "const": "resolved_parameters"
+                      }
+                    }
+                  }
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "catalog_key",
+                    "resolved_fields"
+                  ],
+                  "properties": {
+                    "catalog_key": {
+                      "const": "bore_d"
+                    },
+                    "resolved_fields": {
+                      "const": [
+                        "outer_d",
+                        "width",
+                        "screw_d",
+                        "screw_len",
+                        "second_screw"
+                      ]
+                    }
+                  }
+                }
+              },
+              "required": [
+                "node_type",
+                "inputs",
+                "outputs",
+                "properties"
+              ]
             }
           ]
         },
-        "depends_on": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node_common"
+            },
+            {
+              "properties": {
+                "node_type": {
+                  "const": "shape.revolve_profile"
+                },
+                "inputs": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "bore_d",
+                    "outer_d",
+                    "width",
+                    "chamfer"
+                  ],
+                  "properties": {
+                    "bore_d": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "outer_d": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "width": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "chamfer": {
+                      "$ref": "#/$defs/expression"
+                    }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "output_id",
+                      "kind"
+                    ],
+                    "properties": {
+                      "output_id": {
+                        "const": "collar_base"
+                      },
+                      "kind": {
+                        "const": "shape"
+                      }
+                    }
+                  }
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "profile_kind",
+                    "axis",
+                    "revolve_degrees"
+                  ],
+                  "properties": {
+                    "profile_kind": {
+                      "const": "chamfered_annulus"
+                    },
+                    "axis": {
+                      "const": "Y"
+                    },
+                    "revolve_degrees": {
+                      "const": 360
+                    }
+                  }
+                }
+              },
+              "required": [
+                "node_type",
+                "inputs",
+                "outputs",
+                "properties"
+              ]
+            }
+          ]
         },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/expression"
-          }
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node_common"
+            },
+            {
+              "properties": {
+                "node_type": {
+                  "const": "feature.tapped_hole_cutter"
+                },
+                "inputs": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "thread_d",
+                    "pitch",
+                    "angle_deg",
+                    "over",
+                    "wall",
+                    "hole_len",
+                    "z_in",
+                    "z_out",
+                    "radial_offset",
+                    "axial"
+                  ],
+                  "properties": {
+                    "thread_d": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "pitch": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "angle_deg": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "over": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "wall": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "hole_len": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "z_in": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "z_out": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "radial_offset": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "axial": {
+                      "$ref": "#/$defs/expression"
+                    }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "output_id",
+                      "kind"
+                    ],
+                    "properties": {
+                      "output_id": {
+                        "enum": [
+                          "hole_cutter_primary",
+                          "hole_cutter_secondary"
+                        ]
+                      },
+                      "kind": {
+                        "const": "cutter"
+                      }
+                    }
+                  }
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "thread_model",
+                    "helical_thread_supported",
+                    "placement_model",
+                    "placement"
+                  ],
+                  "properties": {
+                    "thread_model": {
+                      "const": "revolved_ring_approximation"
+                    },
+                    "helical_thread_supported": {
+                      "const": false
+                    },
+                    "placement_model": {
+                      "const": "radial_bore_breakout"
+                    },
+                    "placement": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "cutter_local_axis",
+                        "initial_rotation",
+                        "translation",
+                        "final_rotation"
+                      ],
+                      "properties": {
+                        "cutter_local_axis": {
+                          "const": "Z"
+                        },
+                        "initial_rotation": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "axis",
+                            "degrees"
+                          ],
+                          "properties": {
+                            "axis": {
+                              "const": "Y"
+                            },
+                            "degrees": {
+                              "const": 90
+                            }
+                          }
+                        },
+                        "translation": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "radial_offset_ref",
+                            "axial_ref",
+                            "radial_axis",
+                            "axial_axis"
+                          ],
+                          "properties": {
+                            "radial_offset_ref": {
+                              "const": "radial_offset"
+                            },
+                            "axial_ref": {
+                              "const": "axial"
+                            },
+                            "radial_axis": {
+                              "const": "X"
+                            },
+                            "axial_axis": {
+                              "const": "Z"
+                            }
+                          }
+                        },
+                        "final_rotation": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "axis",
+                            "angle_ref"
+                          ],
+                          "properties": {
+                            "axis": {
+                              "const": "Z"
+                            },
+                            "angle_ref": {
+                              "const": "angle_deg"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "node_type",
+                "inputs",
+                "outputs",
+                "properties"
+              ]
+            }
+          ]
         },
-        "outputs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/output"
-          },
-          "minItems": 1
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node_common"
+            },
+            {
+              "properties": {
+                "node_type": {
+                  "const": "boolean.cut"
+                },
+                "inputs": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "base",
+                    "tool"
+                  ],
+                  "properties": {
+                    "base": {
+                      "$ref": "#/$defs/expression"
+                    },
+                    "tool": {
+                      "$ref": "#/$defs/expression"
+                    }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "output_id",
+                      "kind"
+                    ],
+                    "properties": {
+                      "output_id": {
+                        "pattern": "^solid_after_(primary|secondary)$"
+                      },
+                      "kind": {
+                        "const": "solid_candidate"
+                      }
+                    }
+                  }
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "base_ref",
+                    "tool_ref",
+                    "operation"
+                  ],
+                  "properties": {
+                    "operation": {
+                      "const": "difference"
+                    },
+                    "base_ref": {
+                      "type": "string"
+                    },
+                    "tool_ref": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "node_type",
+                "inputs",
+                "outputs",
+                "properties"
+              ]
+            }
+          ]
         },
-        "refs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ref"
-          },
-          "uniqueItems": true
-        },
-        "properties": {
-          "$ref": "#/$defs/node_properties"
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/node_common"
+            },
+            {
+              "properties": {
+                "node_type": {
+                  "const": "result.single_solid"
+                },
+                "inputs": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "second_screw"
+                  ],
+                  "properties": {
+                    "second_screw": {
+                      "$ref": "#/$defs/expression"
+                    }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "output_id",
+                      "kind"
+                    ],
+                    "properties": {
+                      "output_id": {
+                        "const": "part"
+                      },
+                      "kind": {
+                        "const": "part"
+                      }
+                    }
+                  }
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "select_if_zero",
+                    "select_if_one"
+                  ],
+                  "properties": {
+                    "select_if_zero": {
+                      "const": "solid_after_primary"
+                    },
+                    "select_if_one": {
+                      "const": "solid_after_secondary"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "node_type",
+                "inputs",
+                "outputs",
+                "properties"
+              ]
+            }
+          ]
         }
-      }
+      ]
     },
     "output": {
       "type": "object",
@@ -979,39 +1487,272 @@
       }
     },
     "validation_result": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "ok",
-        "stage",
-        "errors",
-        "metrics"
-      ],
-      "properties": {
-        "ok": {
-          "type": "boolean"
-        },
-        "stage": {
-          "enum": [
-            "post_geometry",
-            "step_export",
-            "step_readback"
-          ]
-        },
-        "errors": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/error"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "stage": {
+              "const": "post_geometry"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 0,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "post_geometry"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
           }
         },
-        "metrics": {
+        {
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "stage": {
+              "const": "step_export"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 0,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "step_export"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
+          }
         },
-        "step_sha256": {
-          "type": "string"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "stage": {
+              "const": "step_readback"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 0,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "step_readback"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "stage": {
+              "const": "post_geometry"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 999999,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "post_geometry"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "stage": {
+              "const": "step_export"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 999999,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "step_export"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "stage": {
+              "const": "step_readback"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 999999,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "step_readback"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            }
+          }
         }
-      }
+      ]
     },
     "parameter_base": {
       "type": "object",
@@ -1193,6 +1934,79 @@
           "const": "solid_after_secondary"
         },
         "family_extension": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "node_common": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "node_type",
+        "ordinal",
+        "depends_on",
+        "inputs",
+        "outputs",
+        "refs"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^n[0-9]+\\.[a-z][a-z0-9_.-]*$"
+        },
+        "node_type": {
+          "enum": [
+            "catalog.resolve",
+            "shape.revolve_profile",
+            "feature.tapped_hole_cutter",
+            "boolean.cut",
+            "result.single_solid"
+          ]
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled_if": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/condition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/expression"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/output"
+          },
+          "minItems": 1
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          },
+          "uniqueItems": true
+        },
+        "properties": {
           "type": "object",
           "additionalProperties": true
         }

@@ -50,15 +50,6 @@
       "catalog_row_key": "bore_d=20"
     },
     {
-      "parameter_id": "width",
-      "type": "number",
-      "unit": "mm",
-      "value": 14,
-      "source": "catalog_derived",
-      "source_ref": "GN705.catalog_row:bore_d=20",
-      "catalog_row_key": "bore_d=20"
-    },
-    {
       "parameter_id": "screw_d",
       "type": "number",
       "unit": "mm",
@@ -87,6 +78,15 @@
       },
       "source": "user_explicit",
       "source_ref": "CAD-003.field:second_screw"
+    },
+    {
+      "parameter_id": "width",
+      "type": "number",
+      "unit": "mm",
+      "value": 14,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=20",
+      "catalog_row_key": "bore_d=20"
     }
   ],
   "nodes": [

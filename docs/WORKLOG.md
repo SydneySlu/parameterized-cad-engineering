@@ -133,3 +133,11 @@
 - 验证：临时隔离环境 `/tmp/ir001r1-jsonschema-venv` 的 Draft 2020-12 `jsonschema` self-check 和四示例验证通过；`python3 -m json.tool` 通过；临时语义脚本确认 10 个正/反例结果；`git diff --check` 通过。JSON 语法检查未被冒充为完整 Schema 验证。
 - 限制：CAD-005 仍需冻结公式参数/单位/容差注册表；CAD-006 仍需冻结几何摘要容差；环形线程近似、STEP 字节 hash 不稳定、源码/外部资产 `reproducibility_partial` 和许可证不确定性均保留。
 - 下一步：Codex 中枢复核本轮契约后，再交给 CAD-005/006。
+
+### IR-001-R2 / Codex / review / 2026-11-02
+
+- 动作：根据中枢最终小范围审查，固定 IR v0 的 BenchCAD source commit，按 node type 收紧五类首族节点契约，统一 validation_result 一致性和 accepted 参数序列化顺序；新增 `legal-second-screw.json` 与节点语义责任说明。
+- 结果：Schema 现在拒绝错误 source commit、缺失节点核心输入、错误输出/properties、参数乱序和不一致 validation_result；语义检查补充 `IR_SOURCE_COMMIT_MISMATCH`、`IR_NODE_*`、`IR_VALIDATION_RESULT_ERRORS_INCONSISTENT`、`IR_VALIDATION_STAGE_MISMATCH`、`IR_PARAMETER_ORDER_MISMATCH`、`IR_SECOND_SCREW_CONSTRAINT` 等边界。`second_screw=1` 示例只声明 IR 结构合法，不声称几何运行成功。
+- 验证：临时 `/tmp/ir001r1-jsonschema-venv` 的 Draft 2020-12 `Draft202012Validator.check_schema` 通过；5 个示例全部 Schema+语义通过；12 个指定反例按预期被拒绝；`python3 -m json.tool` 和 `git diff --check` 通过。未运行 CadQuery/STEP 验证。
+- 限制：CAD-005/006 仍需冻结公式参数/单位/容差和几何摘要契约；环形线程近似、STEP 字节 hash 不稳定、`reproducibility_partial`、外部资产和许可证边界均保留。
+- 下一步：Codex 中枢最终复核后再启动 CAD-005/006。
