@@ -110,3 +110,10 @@
 - 边界：继续使用 `agent-work/data/DATA-003-single-family-audit/`；不实现 Schema、Typed CAD IR、adapter、生产验证器、LLM 或检索系统；不修改正式状态和 ADR。
 - Prompt：`docs/coordination/prompts/DATA-003-R1-reproducibility-followup.md`。
 - 下一步：项目负责人将该 Prompt 发回原 DATA-003 对话框；完成后由 Codex 审查并决定 DATA-003 是否可转为 done。
+
+### CAD-003 / Codex / review / 2026-11-01 checkpoint
+
+- 动作：依据 DATA-003 固定 commit 和审计证据，定义 `set_screw_shaft_collar.v0` 的字段元数据、目录行耦合、单位归一化、来源 provenance、缺失行为、前置规则和结构化错误码；实现纯 Python Schema 边界与 JSON 往返接口。
+- 结果：`bore_d` 是唯一必填目录选择器；其余目录字段缺失时按证据派生，显式冲突拒绝；`second_screw`、壁厚、宽度和 `outer_d > bore_d` 在未来构造前拒绝。未引入 CadQuery/OCP、Typed CAD IR、STEP 或第二族字段。
+- 验证：`python3 -m unittest discover -s tests/schema -p 'test_*.py' -v`（13 项通过）；`python3 -m py_compile src/schema/set_screw_shaft_collar.py src/schema/__init__.py`（通过）；`git diff --check`（通过）。
+- 交接：`agent-work/schema-rules/CAD-003-schema-v0/checkpoint.md`；等待中枢审查字段来源、错误码和 Schema→IR 只读接口后再进入 IR-001。

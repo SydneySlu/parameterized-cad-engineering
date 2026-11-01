@@ -1,0 +1,314 @@
+{
+  "canonical_length_unit": "mm",
+  "family_id": "set_screw_shaft_collar",
+  "fields": [
+    {
+      "allowed_range": [
+        5,
+        80
+      ],
+      "allowed_values": [
+        5,
+        6,
+        8,
+        10,
+        12,
+        16,
+        20,
+        24,
+        30,
+        35,
+        40,
+        50,
+        60,
+        70,
+        80
+      ],
+      "derived_from": [],
+      "missing_behavior": "reject: critical catalog selector is absent",
+      "name": "bore_d",
+      "required": true,
+      "source": "JW Winco GN 705 metric table, column d1 H8; DATA-003 source commit",
+      "type": "number",
+      "unit": "mm"
+    },
+    {
+      "allowed_range": [
+        10,
+        110
+      ],
+      "allowed_values": [
+        10,
+        12,
+        16,
+        20,
+        22,
+        28,
+        32,
+        40,
+        45,
+        56,
+        63,
+        80,
+        90,
+        100,
+        110
+      ],
+      "derived_from": [
+        "bore_d"
+      ],
+      "missing_behavior": "derive exact value from the selected bore_d catalog row",
+      "name": "outer_d",
+      "required": false,
+      "source": "JW Winco GN 705 metric table, column d2",
+      "type": "number",
+      "unit": "mm"
+    },
+    {
+      "allowed_range": [
+        6,
+        22
+      ],
+      "allowed_values": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22
+      ],
+      "derived_from": [
+        "bore_d"
+      ],
+      "missing_behavior": "derive exact value from the selected bore_d catalog row",
+      "name": "width",
+      "required": false,
+      "source": "JW Winco GN 705 metric table, column b js14",
+      "type": "number",
+      "unit": "mm"
+    },
+    {
+      "allowed_range": [
+        3,
+        12
+      ],
+      "allowed_values": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        10,
+        12
+      ],
+      "derived_from": [
+        "bore_d"
+      ],
+      "missing_behavior": "derive exact value from the selected bore_d catalog row",
+      "name": "screw_d",
+      "required": false,
+      "source": "JW Winco GN 705 metric table, column d3 major diameter",
+      "type": "number",
+      "unit": "mm"
+    },
+    {
+      "allowed_range": [
+        4,
+        20
+      ],
+      "allowed_values": [
+        4,
+        5,
+        6,
+        8,
+        10,
+        12,
+        16,
+        20
+      ],
+      "derived_from": [
+        "bore_d"
+      ],
+      "missing_behavior": "derive exact value from the selected bore_d catalog row",
+      "name": "screw_len",
+      "required": false,
+      "source": "JW Winco GN 705 metric table, column d3 length after x",
+      "type": "number",
+      "unit": "mm"
+    },
+    {
+      "allowed_range": [
+        0,
+        1
+      ],
+      "allowed_values": [
+        0,
+        1
+      ],
+      "derived_from": [
+        "bore_d"
+      ],
+      "missing_behavior": "derive 1 iff bore_d > 70; otherwise derive 0",
+      "name": "second_screw",
+      "required": false,
+      "source": "JW Winco GN 705 note: second grub screw for d1 > 70 mm",
+      "type": "integer",
+      "unit": ""
+    }
+  ],
+  "input_contract": {
+    "measurement_encoding": "bare numbers use canonical mm; {value, unit} is normalized to mm",
+    "optional": [
+      "outer_d",
+      "width",
+      "screw_d",
+      "screw_len",
+      "second_screw"
+    ],
+    "required": [
+      "bore_d"
+    ],
+    "unknown_fields": "reject"
+  },
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "bore_d": {
+        "enum": [
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24,
+          30,
+          35,
+          40,
+          50,
+          60,
+          70,
+          80
+        ],
+        "maximum": 80,
+        "minimum": 5,
+        "type": "number",
+        "unit": "mm"
+      },
+      "outer_d": {
+        "enum": [
+          10,
+          12,
+          16,
+          20,
+          22,
+          28,
+          32,
+          40,
+          45,
+          56,
+          63,
+          80,
+          90,
+          100,
+          110
+        ],
+        "maximum": 110,
+        "minimum": 10,
+        "type": "number",
+        "unit": "mm"
+      },
+      "screw_d": {
+        "enum": [
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12
+        ],
+        "maximum": 12,
+        "minimum": 3,
+        "type": "number",
+        "unit": "mm"
+      },
+      "screw_len": {
+        "enum": [
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20
+        ],
+        "maximum": 20,
+        "minimum": 4,
+        "type": "number",
+        "unit": "mm"
+      },
+      "second_screw": {
+        "enum": [
+          0,
+          1
+        ],
+        "maximum": 1,
+        "minimum": 0,
+        "type": "integer",
+        "unit": ""
+      },
+      "width": {
+        "enum": [
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22
+        ],
+        "maximum": 22,
+        "minimum": 6,
+        "type": "number",
+        "unit": "mm"
+      }
+    },
+    "required": [
+      "bore_d"
+    ],
+    "type": "object"
+  },
+  "relations": [
+    {
+      "expression": "(outer_d, screw_d, screw_len, width) = catalog_row[bore_d]",
+      "id": "catalog_row_coupling",
+      "source": "DATA-003 audit of spec.py::CATALOG_ROWS/refine"
+    },
+    {
+      "expression": "second_screw == 1 iff bore_d > 70",
+      "id": "second_screw_threshold",
+      "source": "DATA-003 audit of spec.py::check and GN 705 note"
+    },
+    {
+      "expression": "(outer_d - bore_d) / 2 > 0.65 * screw_d",
+      "id": "wall_thickness",
+      "source": "DATA-003 audit of spec.py::check"
+    },
+    {
+      "expression": "width >= 1.45 * screw_d",
+      "id": "axial_support",
+      "source": "DATA-003 audit of spec.py::check"
+    }
+  ],
+  "schema_version": "set_screw_shaft_collar.v0",
+  "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c"
+}
