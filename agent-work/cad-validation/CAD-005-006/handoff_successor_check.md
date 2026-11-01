@@ -1,4 +1,6 @@
-# CAD-005/006 续任 Agent（CAD-005 执行 Agent） 定向复核记录
+# CAD-005/006 续任 Agent（CAD-005 执行 Agent） 定向复核记录（R1 历史记录）
+
+> **历史记录说明（2026-11-02）：** 本文件是 R1 续任复核的原始记录。文中 `/mnt/outputs/test_handoff.py` 和 Python 3.10 是 R1 的历史声明，当前复核证据不使用它们；请改读 `handoff_successor_check-r2.md` 和 `checkpoint-r2.md`。
 
 日期：2026-11-01
 状态：`pass` — 前序任务接口完整、可安全继续实现

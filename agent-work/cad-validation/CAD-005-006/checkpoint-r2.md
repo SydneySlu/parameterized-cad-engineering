@@ -9,9 +9,9 @@ handoff_successor_check=agent-work/cad-validation/CAD-005-006/handoff_successor_
 verified=see command table below; each result records actual execution
 import_status=pass
 script_status=work/benchcad-output/venv/bin/python tests/cad_compilation/test_handoff.py -> status=pass; system python3 tests/cad_compilation/test_handoff.py -> status=blocked because cadquery is unavailable
-scope_check=R2 changes are limited to the allowed paths; pre-existing untracked CODEX-REVIEW-REQUEST.md was preserved and updated in place
+scope_check=R2 changes are limited to the allowed paths; the review request is tracked at agent-work/cad-validation/CAD-005-006/CODEX-REVIEW-REQUEST.md
 known_limits=CAD-005 compiler and CAD-006 geometry/STEP validator are not implemented; no fake compiler/result classes are exported; STEP byte hash remains unstable; thread is a revolved-ring approximation and may be a no-op for M3-M8; outer_d < bore_d can build/read back as 3 solids when preflight is bypassed; source snapshot remains reproducibility_partial; external asset/license scope remains uncertain; Python 3.10 was not run
-next=Codex 中枢审查后，决定是否启动 CAD-005/006 正式实现
+next=Codex 中枢审查已完成；正式 CAD-005/006 实现仍按项目计划待启动
 ```
 
 ## 实际验证命令

@@ -1,4 +1,6 @@
-# CAD-005/006 checkpoint （R1）
+# CAD-005/006 checkpoint （R1 历史记录）
+
+> **历史记录说明（2026-11-02）：** 本文件保留 CAD-005/006-R1 的原始交接记录。文中 Python 3.10、`/mnt/outputs/test_handoff.py` 和“编译器框架搭建中”等内容只代表 R1 当时的声明，不能作为当前环境或当前实现状态。当前事实以同目录的 `checkpoint-r2.md`、`handoff_successor_check-r2.md` 以及 Codex 中枢审查记录为准。
 
 日期：2026-11-01  
 状态：`in_progress` 阶段 1 完成（交接检查），阶段 2 启动（编译器架构）  

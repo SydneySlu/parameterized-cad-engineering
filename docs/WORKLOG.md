@@ -227,3 +227,10 @@
 - 环境事实：Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4；未运行 Python 3.10。历史 `/mnt/outputs/test_handoff.py` 不存在，不能作为当前复现证据。
 - 边界：本轮不实现 Typed CAD IR 编译器、几何/STEP 验证器或正式测试矩阵；保留 STEP 字节 hash 不稳定、`reproducibility_partial`、螺纹环形近似和多实体风险。
 - 下一步：等待 Codex 中枢审查，决定是否启动 CAD-005/006 正式实现。
+
+### CAD-005/006-R2-CODEX-REVIEW / Codex / done / 2026-11-02
+
+- 动作：完成第三层中枢独立审查，并对 R1 历史文件补充历史标记；修正 R2 checkpoint 的提交范围描述，新增 `agent-work/reviews/CAD-005-006-R2-codex-review.md`。
+- 验证：`cad_compilation` 导入通过；项目 Python 3.11.18 环境下交接脚本通过；Schema 17 项测试通过；DATA-003 smoke 通过；系统 Python 因缺少 CadQuery 明确返回 `blocked`；`git diff --check` 通过。
+- 结论：R2 修正已通过，可以交给后续正式实现；CAD-005 编译器和 CAD-006 几何/STEP 验证器尚未实现，相关正式任务继续保持 `planned`。
+- 下一步：用户完成本地 push 后，再生成 CAD-005/006 正式实现 Agent 的初始化 prompt；实现前先冻结公式单位、坐标/placement、几何摘要容差和 STEP 回读失败分类。
