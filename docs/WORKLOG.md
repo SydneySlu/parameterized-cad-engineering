@@ -219,3 +219,11 @@
 - 验证：临时 `/tmp/ir001r1-jsonschema-venv` 的 Draft 2020-12 `Draft202012Validator.check_schema` 通过；5 个示例全部 Schema+语义通过；12 个指定反例按预期被拒绝；`python3 -m json.tool` 和 `git diff --check` 通过。未运行 CadQuery/STEP 验证。
 - 限制：CAD-005/006 仍需冻结公式参数/单位/容差和几何摘要契约；环形线程近似、STEP 字节 hash 不稳定、`reproducibility_partial`、外部资产和许可证边界均保留。
 - 下一步：Codex 中枢最终复核后再启动 CAD-005/006。
+
+### CAD-005/006-R2 / Codex / review / 2026-11-02
+
+- 动作：复核 R1 前序提交 `e3f88f7` 及 DATA-003/CAD-003/IR-001 接口；修复 `src/cad_compilation` 不可导入骨架，新增仓库内 `tests/cad_compilation/test_handoff.py`，补写 R2 续任复核、checkpoint 和中枢审查请求。
+- 结果：项目 venv 下复核脚本检查 `bore_d=20, second_screw=0` 为 1 solid，`bore_d=20, second_screw=1` 被 `spec.check()` 拒绝；系统 Python 运行脚本时因无 CadQuery 明确输出 `blocked`。5 个 IR 示例通过 Draft 2020-12 validator，CAD-003 测试 17 项通过，DATA-003 smoke exit 0。
+- 环境事实：Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4；未运行 Python 3.10。历史 `/mnt/outputs/test_handoff.py` 不存在，不能作为当前复现证据。
+- 边界：本轮不实现 Typed CAD IR 编译器、几何/STEP 验证器或正式测试矩阵；保留 STEP 字节 hash 不稳定、`reproducibility_partial`、螺纹环形近似和多实体风险。
+- 下一步：等待 Codex 中枢审查，决定是否启动 CAD-005/006 正式实现。
