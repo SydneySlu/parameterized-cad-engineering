@@ -1,0 +1,53 @@
+{
+  "manifest_status": "audit_draft_not_frozen_schema",
+  "task": "DATA-003",
+  "source": {
+    "repository": "https://github.com/BenchCAD-org/benchcad-2",
+    "commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+    "source_path": "designs/set_screw_shaft_collar",
+    "directory_name": "set_screw_shaft_collar",
+    "family_id": "set_screw_shaft_collar",
+    "status": "MERGED",
+    "release_qualified": false,
+    "status_uncertain": "STATUS.md records MERGED and 0 release-qualified; no released family artifact was used"
+  },
+  "license": {
+    "source_code": "MIT per repository LICENSE",
+    "released_dataset_artifacts": "CC-BY-4.0 per repository LICENSE note",
+    "generated_step_scope": "license_scope_uncertain",
+    "third_party_reference_materials": "license_scope_uncertain",
+    "public_core_downloaded": false
+  },
+  "entrypoints": {
+    "official_cli": "bench2 validate set_screw_shaft_collar",
+    "official_preview": "bench2 preview set_screw_shaft_collar",
+    "native_builder": "designs/set_screw_shaft_collar/part.py::build(**named_params)",
+    "constraint_checker": "designs/set_screw_shaft_collar/spec.py::check(params)",
+    "coupling_refiner": "designs/set_screw_shaft_collar/spec.py::refine(params, difficulty, rng)"
+  },
+  "parameters": {
+    "bore_d": {"unit": "mm", "source": "GN 705 d1 H8 catalog row", "kind": "choice", "coverage_count": 15},
+    "outer_d": {"unit": "mm", "source": "GN 705 d2 catalog row", "kind": "derived_by_refine"},
+    "width": {"unit": "mm", "source": "GN 705 b js14 catalog row", "kind": "derived_by_refine"},
+    "screw_d": {"unit": "mm", "source": "GN 705 d3 major diameter", "kind": "derived_by_refine"},
+    "screw_len": {"unit": "mm", "source": "GN 705 d3 length", "kind": "derived_by_refine"},
+    "second_screw": {"unit": "", "source": "GN 705 d1 > 70 note", "kind": "derived_feature", "constraint": "must be 1 iff bore_d > 70"}
+  },
+  "smoke": {
+    "result_dir": "work/benchcad-output/smoke-set-screw",
+    "result_json": "work/benchcad-output/smoke-set-screw/smoke-results.json",
+    "legal_cases": ["legal_catalog_row", "legal_hard_boundary"],
+    "invalid_cases": ["invalid_check_coupling", "invalid_geometry"],
+    "repeat_runs": 2,
+    "step_hashes_differ_across_repeats": true,
+    "geometry_metrics_stable": true,
+    "invalid_input_constructed": true,
+    "validation_risk": true
+  },
+  "artifacts": [
+    {"path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run1.step", "sha256": "c3d589c8e7aefabc0f0fb7dd09a553edd1f8afbc929320c625abd52d1ecb1168"},
+    {"path": "work/benchcad-output/smoke-set-screw/legal_catalog_row-run2.step", "sha256": "70dfb4789accd7221920a04a7ce62fc0705a28fad95badbbcd89fa24e66a81a3"},
+    {"path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run1.step", "sha256": "f7ebff0ee5b52bcebfa844a190d675f8f407b39c963f6edc4a73a1dd6446676f"},
+    {"path": "work/benchcad-output/smoke-set-screw/legal_hard_boundary-run2.step", "sha256": "28c9d658134b3fad0b8704fca0f285d51f21041ffd273b197a5958dfe1f97beb"}
+  ]
+}
