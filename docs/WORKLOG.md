@@ -348,3 +348,4 @@
 - 状态：阶段 1 已验收；CAD-005、CAD-006 进入 in_progress。项目负责人 push 本提交后，原 Agent 按更新后的 Prompt 续作。
 - 文件：IR-001 v0 规范第 9.2 节、docs/DECISIONS.md、docs/PROJECT_STATUS.md、docs/PROJECT_PLAN.md、docs/TASKS.md、agent-work/reviews/CAD-005-006-tolerance-codex-review.md、docs/coordination/prompts/CAD-005-006-tolerance-and-implementation-agent.md。
 - 下一步：Agent 用真实 IR 输出完成单族编译、几何和 STEP 集成；超出契约时暂停上报，不得自行放宽阈值。
+- 本地提交：`31cd59a`（未 push；由项目负责人统一 push）。
