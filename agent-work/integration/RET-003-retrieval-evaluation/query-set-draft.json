@@ -1,0 +1,70 @@
+{
+  "query_set_version": "RET-003.query-set.v0-draft",
+  "task": "RET-003",
+  "family_id": "set_screw_shaft_collar",
+  "manifest": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+    "manifest_version": "retrieval-manifest.v0"
+  },
+  "split_status": "provisional_small_n",
+  "primary_queries": [
+    {
+      "query_id": "heldout-bore-012",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-012",
+      "sample_role": "heldout_evaluation",
+      "query_parameters_source": "manifest.parameters.normalized",
+      "truth_sample_id": "set_screw_shaft_collar/catalog-bore-012",
+      "candidate_eligibility": "never"
+    },
+    {
+      "query_id": "heldout-bore-035",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-035",
+      "sample_role": "heldout_evaluation",
+      "query_parameters_source": "manifest.parameters.normalized",
+      "truth_sample_id": "set_screw_shaft_collar/catalog-bore-035",
+      "candidate_eligibility": "never"
+    },
+    {
+      "query_id": "heldout-bore-080",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "sample_role": "heldout_evaluation",
+      "query_parameters_source": "manifest.parameters.normalized",
+      "truth_sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "candidate_eligibility": "never"
+    }
+  ],
+  "diagnostic_queries": [
+    {
+      "query_id": "diagnostic-source-bore-020",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+      "sample_role": "retrieval_source",
+      "query_parameters_source": "manifest.parameters.normalized",
+      "purpose": "normal in-catalog interface replay; excluded from held-out summaries"
+    },
+    {
+      "query_id": "diagnostic-heldout-bore-080-boundary",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "sample_role": "heldout_evaluation",
+      "query_parameters_source": "manifest.parameters.normalized",
+      "purpose": "boundary leakage check; same truth as primary query, excluded from aggregate summaries"
+    }
+  ],
+  "failure_diagnostics": [
+    {
+      "query_id": "diagnostic-missing-field-from-bore-020",
+      "base_sample_id": "set_screw_shaft_collar/catalog-bore-020",
+      "base_sample_role": "retrieval_source",
+      "transformation": "remove normalized.outer_d at runtime",
+      "expected_error": "RETRIEVAL_MISSING_FIELD",
+      "purpose": "structured rejection check; not a new sample or evaluation truth"
+    }
+  ],
+  "candidate_roles": ["retrieval_source"],
+  "excluded_roles": ["development", "heldout_evaluation"],
+  "notes": [
+    "Primary queries reference existing manifest sample IDs only; parameter values are not copied here.",
+    "Held-out records are query truth only and never candidate, prompt example, range fit, or weight-selection data.",
+    "This draft is not a frozen benchmark and cannot support statistical generalization claims."
+  ]
+}

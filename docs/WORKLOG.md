@@ -458,3 +458,13 @@ commit=cce4ce7（fix: enforce frozen retrieval distance ranges [RET-002]）
 边界=单族 15 条真实记录、3 条 retrieval_source、3 条 heldout；`provisional_small_n` 仅作探索性分析。held-out 只能作为查询真值，不能进入候选池、拟合、Prompt 示范或调参。不得读取 STEP/渲染/IR 文件、下载 Public/Core、修改 RET-001/RET-002 冻结产物或声称统计显著收益。
 状态=Prompt 已准备；RET-003 仍为 planned，等待项目负责人分派给执行 Agent。未改源码、评测配置或正式状态看板。
 下一步=项目负责人将 Prompt 交给执行 Agent；里程碑 1 提交后由 Codex 中枢审查协议并决定是否放行正式评测。
+
+[2026-11-03] agent=Codex task=RET-003 status=in_progress
+scope=完成 RET-001/RET-002 高风险交接定向复核；仅新增 RET-003 里程碑 1 协议草案、查询清单草案、checkpoint 和 handoff；不运行未经放行的正式三条件对照，不修改上游冻结产物
+next=重跑规定命令并提交协议供 Codex 中枢审查；等待里程碑 2 放行
+
+[2026-11-03] agent=Codex task=RET-003 status=review
+scope=完成里程碑 1：提交 protocol-draft.md、query-set-draft.json、checkpoint.md、handoff.md；查询集引用 heldout 012/035/080，诊断引用 source 020 与 heldout 080，失败诊断为缺字段拒绝；不运行正式三条件对照
+verified=RET-001 tracked-only 660/660；RET-002 retrieval tests 30/30；smoke 3 正常/边界通过、13/13 失败按预期拒绝、进程内/跨进程确定性通过；正常/heldout/结构化失败案例已抽查；复跑报告时间戳差异已恢复
+result=协议明确 C0 无检索、C1 RET-002、C2 人工模板/规则的输入输出、角色隔离、指标分母、失败处理和 APP-001 端到端 not_measured 边界；当前等待 Codex 中枢书面放行
+next=中枢审阅 C2 规则先验与公平比较、主查询清单及未来敏感性集合；放行前不创建或运行里程碑 2 评测
