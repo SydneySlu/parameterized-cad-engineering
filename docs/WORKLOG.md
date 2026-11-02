@@ -349,3 +349,13 @@
 - 文件：IR-001 v0 规范第 9.2 节、docs/DECISIONS.md、docs/PROJECT_STATUS.md、docs/PROJECT_PLAN.md、docs/TASKS.md、agent-work/reviews/CAD-005-006-tolerance-codex-review.md、docs/coordination/prompts/CAD-005-006-tolerance-and-implementation-agent.md。
 - 下一步：Agent 用真实 IR 输出完成单族编译、几何和 STEP 集成；超出契约时暂停上报，不得自行放宽阈值。
 - 本地提交：`31cd59a`（未 push；由项目负责人统一 push）。
+
+### CAD-005/006 / implementation / review / 2026-11-02
+
+- 动作：完成冻结 IR v0.2.0 到单族白名单 CadQuery 构造、preflight/几何校验、STEP 导出回读和 CAD-006 比较策略；补充语义、失败阶段和几何集成测试。失败报告序列化按 Schema 的 `fields` 形状持久化，未改变 IR Schema。
+- 结果：10 项 `tests/cad_compilation`、17 项 `tests/schema`、handoff smoke、BenchCAD smoke、py_compile 和 diff check 通过。六个 IR 示例均通过项目 Schema/语义验证；规则拒绝在构造前发生；绕过规则的已知几何反例被后置单实体检查拒绝。
+- 几何证据：合法目录行和 second-screw hard boundary 的 IR 编译都通过同进程精确重复摘要与 native→STEP 冻结策略。两例与固定 BenchCAD native `part.build()` 参考逐项比较，拓扑及 bbox/体积/排序面面积/排序边长均完全相同（差值 0）；详见 `agent-work/cad-validation/CAD-005-006/ir-native-comparison.json`。
+- 环境/来源：Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4、macOS arm64；IR `typed-cad-ir.v0/0.2.0`、Schema `set_screw_shaft_collar.v0`、source commit `035f467142888edfd0bd7cd73906f9b155c8f43c`、策略 `CAD-006.geometry-comparison.v1`。
+- 限制：`reproducibility_partial`、`license_scope_uncertain`、`revolved_ring_approximation`、`helical_thread_supported=false` 保留；未验证其他平台、跨进程、第二族或工程强度/安全。任务保持 review，未 push、未标记 done。
+- checkpoint：`agent-work/cad-validation/CAD-005-006/checkpoint-implementation.md`。
+- 下一步：Codex 中枢独立审查实现和逐项原生对照证据。

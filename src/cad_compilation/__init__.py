@@ -1,9 +1,9 @@
-"""CAD-005/006 package boundary.
+"""Typed CAD IR v0 compiler and single-family geometry validator.
 
-The CAD-005/006 compiler and geometry/STEP validator are not implemented in
-this R2 handoff repair.  The package is intentionally importable so that
-future implementation work has a stable module boundary; no compiler,
-validator, or result classes are exported yet.
+The public entry point accepts serialized JSON only. CADQuery is imported lazily
+so schema and semantic validation remain usable without the native CAD runtime.
 """
 
-__all__: list[str] = []
+from .compiler import CompilationResult, compile_ir, validate_ir
+
+__all__ = ["CompilationResult", "compile_ir", "validate_ir"]
