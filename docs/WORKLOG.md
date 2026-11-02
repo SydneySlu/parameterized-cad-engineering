@@ -312,3 +312,12 @@
 - 结论：DATA-003 审计任务完成并放行给单族 manifest、CAD-005/006 和检索样本工作。`reproducibility_partial`、`license_scope_uncertain`、`MERGED`/非 `release-qualified` 仍是下游必须携带的限制。
 - 证据：`agent-work/reviews/DATA-003-R2-codex-review.md`。
 - 下一步：CAD-005/006 Agent 先做几何容差前置测量，再开始编译器/验证器实现。
+
+### CAD-005/006 / Codex 中枢 / planned / 2026-11-02
+
+- 动作：根据 R2 交接修正、首族冻结和 DATA-003-R2 审计结果，为原 CAD-005/006 Agent 生成续任执行 Prompt。
+- 门控：采用两阶段流程；先完成几何容差前置测量并提交 checkpoint，等待 Codex 中枢独立审查后，才能进入正式 CAD-005/006 编译器与验证器实现。
+- Prompt：`docs/coordination/prompts/CAD-005-006-tolerance-and-implementation-agent.md`。
+- 阶段 1 范围：复跑交接 smoke、覆盖合法目录/边界案例、重复构造和 STEP 回读误差、记录多实体反例；候选阈值不得未经审查写入生产验证器。
+- 文件边界：生产代码仅限 `src/cad_compilation/**`，测试仅限 `tests/cad_compilation/**`，审计和 checkpoint 放入 `agent-work/cad-validation/CAD-005-006/`；不修改项目状态、计划、决策、DATA-003、Schema 或 IR 文件。
+- 下一步：项目负责人将 Prompt 发回原 CAD-005/006 Agent；阶段 1 完成后暂停，由 Codex 中枢复核，再决定是否放行阶段 2。
