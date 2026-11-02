@@ -78,3 +78,26 @@ git diff --check: passed
 
 RET-002 的主体实现和验证证据满足任务目标，但在策略可变性修正前保持 `review`。修正完成并通过
 中枢复核后，才能把 RET-002 标记为 `done`，再决定是否启动 RET-003。
+
+## 修正复核与最终决定（2026-11-03）
+
+修正提交：`cce4ce7`；修正日志：`82e9820`。
+
+独立复核结果：
+
+- RET-002 测试 30 项通过（原 24 项全部保留，新增 6 项策略范围/别名回归）；
+- smoke 的 3 个正常/边界案例、13 个失败案例和 70 项检查全部通过；
+- RET-001 `--tracked-only` 为 660 项、0 失败；
+- Schema/IR/CAD 回归分别为 17/5/13 项通过；
+- 自定义 `bore_d` 或其他连续字段范围、非有限值、非数值和近似范围均返回
+  `RETRIEVAL_CONFIG_INVALID`；
+- `DistancePolicy` 会冻结范围副本，构造后修改调用方 mapping/list 不会改变索引语义；
+- 正常 `bore_d=20`、行间 `bore_d=18`、held-out `bore_d=80` 查询结果与修正前一致；
+- canonical JSON SHA-256 仍为 `0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9`；
+- `provisional_small_n`、15 条 manifest、3 个候选、单环境和许可证限制均未改变。
+
+决定：距离策略范围绕过问题已关闭，RET-002 验收通过，状态改为 `done`，允许进入 RET-003。
+
+仍保留的非阻塞限制：权重尚未经过 RET-003 收益评测，split 仍是
+`provisional_small_n`，不能称为正式 benchmark；`weights.total_formula`/`tiebreak` 的文字字段尚未
+逐字校验，但不影响当前冻结数值策略和 RET-002 验收。

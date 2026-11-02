@@ -444,3 +444,9 @@ results=正常 envelope bore_d=20：catalog_validated、top1=catalog-bore-020、
 known_limits=仅修正策略范围/权重入口，未新增 policy id、学习权重或 RET-003 逻辑；weights.total_formula/tiebreak 描述字符串仍未逐字校验（非当前阻塞）；split 未冻结、候选仅 3 个、单 macOS arm64 环境、manifest hash 绑定、reproducibility_partial/MERGED/license_scope_uncertain/revolved_ring_approximation 限制全部保留；未读取或生成 STEP/渲染物，未下载 BenchCAD Public/Core；运行 smoke 与 RET-001 校验改写的报告已恢复到 HEAD
 next=Codex 中枢重新审查策略范围不可绕过性；本任务保持 review，未 push、未标 done；确认后再决定是否放行 RET-003
 commit=cce4ce7（fix: enforce frozen retrieval distance ranges [RET-002]）
+
+[2026-11-03] agent=Codex task=RET-002-fix-review status=done
+动作=独立复核 RET-002 距离策略修正提交 `cce4ce7`；重跑 30 项检索测试、smoke、RET-001 tracked-only、Schema/IR/CAD 回归、py_compile 和 diff check，并恢复运行时报告时间戳噪声。
+结果=30 项检索测试、3 个正常/边界案例、13 个失败案例、70 项 smoke 检查、RET-001 660 项、Schema 17 项、IR 5 项、CAD 13 项全部通过；自定义范围、非有限/非数值/近似范围和构造后别名修改均被拒绝或隔离；正常查询 canonical SHA 仍为 `0fcf84b7...`。
+决定=距离策略范围绕过问题已关闭，RET-002 标记 `done`，放行 RET-003。`provisional_small_n`、15 条记录、3 个候选、单环境、manifest hash、许可证和几何限制继续有效；权重收益尚待 RET-003 评估。
+记录=`agent-work/reviews/RET-002-codex-review.md` 已追加最终验收结论。
