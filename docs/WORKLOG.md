@@ -385,3 +385,8 @@
 动作：中枢基于项目根目录独立复核 `df78f4f`，审阅 canonical binding、错误定位实现和回归测试，并重跑 CAD 编译、Schema、IR Schema/轴向契约测试及 py_compile。
 结果：13 + 17 + 5 项测试及 py_compile 全部通过；三类输入绑定变异在 CAD 初始化前拒绝；容差策略和测量证据未被修正提交改动。源码审查通过，限定固定环境/首族范围；本轮审查记录已本地提交，等待项目负责人 push。
 记录：审查结论追加于 `agent-work/reviews/CAD-005-006-implementation-codex-review.md`；IR 第二孔示例的 CAD/STEP 验证状态已在规范 §11 补充。
+
+[2026-11-02] agent=Codex task=RET-001 status=planned
+动作：在 CAD-005/006 已验收并推送后，生成 RET-001 单族检索样本 manifest 初始化 Prompt。
+范围：覆盖首族 15 个冻结目录行、参数/来源/IR/验证/许可证/hash/split 字段；要求使用现有 Schema、Typed CAD IR 和 CAD 编译验证器，禁止下载 BenchCAD Public/Core、提交大体积 STEP/渲染物或修改冻结接口。
+交付：`docs/coordination/prompts/RET-001-retrieval-manifest-agent.md`。任务尚未由执行 Agent 认领，状态保持 planned。
