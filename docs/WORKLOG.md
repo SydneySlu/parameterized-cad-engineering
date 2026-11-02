@@ -321,3 +321,12 @@
 - 阶段 1 范围：复跑交接 smoke、覆盖合法目录/边界案例、重复构造和 STEP 回读误差、记录多实体反例；候选阈值不得未经审查写入生产验证器。
 - 文件边界：生产代码仅限 `src/cad_compilation/**`，测试仅限 `tests/cad_compilation/**`，审计和 checkpoint 放入 `agent-work/cad-validation/CAD-005-006/`；不修改项目状态、计划、决策、DATA-003、Schema 或 IR 文件。
 - 下一步：项目负责人将 Prompt 发回原 CAD-005/006 Agent；阶段 1 完成后暂停，由 Codex 中枢复核，再决定是否放行阶段 2。
+
+### CAD-005/006-tolerance / CAD-005/006 执行 Agent / review / 2026-11-02
+
+- 动作：完成阶段 1 几何容差前置测量；新增固定 BenchCAD API/raw 快照测量脚本、45 条构造与 STEP 回读结果、测量报告和 `checkpoint-tolerance.md`。覆盖全部 15 个合法 `bore_d` 目录行，每行重复 3 次。
+- 结果：45/45 native build 和 45/45 STEP readback 成功；同一环境 30 次重复比较的体积、包围盒、排序面面积和排序边长差均为 0；native/readback 最大观测误差为 volume `0.0340786283195 mm³`、bbox `3.5527136788e-15 mm`、sorted face area `0.003967669644 mm²`、sorted edge length `2.79570571138e-07 mm`。2×值仅作为审查候选，未写入生产验证器。
+- 验证：项目 venv 测量脚本、Draft 2020-12 + 6 个 IR 示例、schema 17 项测试、`test_handoff.py` 和 DATA-003 smoke 均通过；`py_compile` 与 `git diff --check` 通过。每目录 3 个 STEP hash 均不同，未将 hash 当作确定性判据。
+- 限制：`reproducibility_partial`、`license_scope_uncertain`、螺纹环形近似、多实体绕过风险和跨平台/工程安全未决均保留；阶段 2 语义/preflight 反例尚未实现。
+- 提交：待本阶段提交后补录短哈希。
+- 下一步：保持 `review`，等待 Codex 中枢独立审查并明确放行；未经放行不开始 CAD-005/006 实现。
