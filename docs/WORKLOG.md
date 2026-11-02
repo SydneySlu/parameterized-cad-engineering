@@ -359,3 +359,4 @@
 - 限制：`reproducibility_partial`、`license_scope_uncertain`、`revolved_ring_approximation`、`helical_thread_supported=false` 保留；未验证其他平台、跨进程、第二族或工程强度/安全。任务保持 review，未 push、未标记 done。
 - checkpoint：`agent-work/cad-validation/CAD-005-006/checkpoint-implementation.md`。
 - 下一步：Codex 中枢独立审查实现和逐项原生对照证据。
+- 实现 checkpoint 提交：`5f05e59`（未 push；由项目负责人统一 push）。
