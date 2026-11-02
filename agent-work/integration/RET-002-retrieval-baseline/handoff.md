@@ -1,6 +1,6 @@
 # RET-002 handoff — 单族确定性检索基线
 
-状态：`review`（交接 Agent 自检完成；等待续任 Agent 定向复核与 Codex 中枢独立审查；未 push、未标 done）
+状态：`review`（2026-11-03 已修正策略范围可绕过问题，等待 Codex 中枢重新审查；未 push、未标 done）
 任务：RET-002
 族：`set_screw_shaft_collar`
 交付提交：`feat: add deterministic retrieval baseline [RET-002]`（本任务最终 commit）
@@ -19,7 +19,7 @@ src/retrieval/config.py
 src/retrieval/errors.py
 ```
 
-新增测试：`tests/retrieval/__init__.py`、`tests/retrieval/test_retrieval_baseline.py`（24 项）。
+新增测试：`tests/retrieval/__init__.py`、`tests/retrieval/test_retrieval_baseline.py`（原 24 项；策略修正后 30 项）。
 
 新增集成材料：`agent-work/integration/RET-002-retrieval-baseline/` 下 README、checkpoint、
 handoff、retrieval-config.json、run_smoke.py、replay_query.py、smoke-report.json、examples/×3。
@@ -53,9 +53,9 @@ PROJECT_STATUS、PROJECT_PLAN、TASKS、database。未读取或生成 STEP/渲�
 ```bash
 cd "/Users/syd/Desktop/参数化 cad 工程辅助设计"
 
-# A. 24 项单元测试（约 0.1 秒）
+# A. 30 项单元测试（原 24 + 策略范围回归 6，约 0.1 秒）
 PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval -v
-# 预期：Ran 24 tests ... OK
+# 预期：Ran 30 tests ... OK
 
 # B. smoke（约 2-3 秒，含两个子进程）
 PYTHONPATH=src work/benchcad-output/venv/bin/python \
@@ -85,6 +85,7 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 | 边界（行之间） | `examples/query-between-catalog-rows.json`；bore_d=18 flat | `out_of_catalog_or_unvalidated`；top1 `catalog-bore-020`；total 0.009333；无 same row |
 | 边界（held-out） | smoke 的 `boundary_bore_080_second_screw` | `catalog_validated`；top1 `catalog-bore-050`；**不出现** `catalog-bore-080`；全部候选 role=retrieval_source |
 | 失败（缺字段） | `examples/query-invalid.json` | `RETRIEVAL_MISSING_FIELD`，fields=`["outer_d"]` |
+| 失败（自定义范围） | `DistancePolicy(ranges=catalog_ranges() 篡改 bore_d=(0,1))` + `from_manifest(..., policy=...)` | `RETRIEVAL_CONFIG_INVALID`，stage=config，fields 含 `bore_d`；不产生索引或结果 |
 | 失败（未知族） | smoke inline | `RETRIEVAL_UNKNOWN_FAMILY` |
 | 失败（未知字段） | smoke inline | `RETRIEVAL_UNKNOWN_FIELD` |
 | 失败（非有限数） | smoke inline | `RETRIEVAL_INVALID_PARAMETER` |
@@ -107,10 +108,11 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 
 已确认：
 
-- 24 项检索测试通过；smoke 3 个正常/边界 + 13 个失败 + 70 项检查全部通过；
+- 30 项检索测试通过（原 24 + 策略回归 6）；smoke 3 个正常/边界 + 13 个失败 + 70 项检查全部通过；
 - 进程内与跨进程 canonical JSON 一致；固定环境可复现；
 - RET-001 `--tracked-only` 660 项 0 失败；schema 17 / IR 5 / CAD 13 回归通过；
 - held-out 行（12/35/80）不会进入 `retrieval_source` 候选；
+- 自定义连续范围（含别名修改）被 `RETRIEVAL_CONFIG_INVALID` 拒绝，冻结范围仍保持原排序和距离；
 - manifest hash `b7b6c737…`、candidate roles、`provisional_small_n` 和全部限制在结果/报告中保留；
 - 未读取 STEP/渲染物，未下载 BenchCAD Public/Core，未新增族。
 
@@ -124,7 +126,8 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 6. `docs/TASKS.md` / `PROJECT_STATUS.md` 的 RET-002 状态未同步（超出本任务文件边界）；
 7. 单环境验证；跨平台/跨进程承诺仅限本次记录；
 8. `reproducibility_partial`、`MERGED`、`license_scope_uncertain`、`revolved_ring_approximation`
-   继续有效。
+   继续有效；
+9. 策略范围修正是本轮唯一改动，仍待 Codex 中枢重新审查后才可标记 `done`。
 
 ## 7. 大文件与未提交内容
 
@@ -141,7 +144,7 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 ```text
 handoff_successor_check:
   predecessor=RET-002 checkpoint/handoff（交付 commit 见 git log）
-  files_format=<src/retrieval 5 模块、tests/retrieval 24 项、integration 目录文件是否存在且可解析>
+  files_format=<src/retrieval 5 模块、tests/retrieval 30 项、integration 目录文件是否存在且可解析>
   core_rerun=<tests/retrieval 或 run_smoke.py 的实际命令与结果>
   normal_case=<query-in-catalog 或 boundary_bore_080 的结果>
   failure_case=<query-invalid 或 duplicate_candidate 的结果>
@@ -157,8 +160,76 @@ handoff_successor_check:
 
 1. 读 `README.md` 第 3/4/6/7/9 节与 `smoke-report.json` 的 `cases`、`failure_cases`、
    `determinism`；
-2. 重跑 `tests/retrieval` 与 `run_smoke.py`，确认 24 项和 70 项检查；
+2. 重跑 `tests/retrieval` 与 `run_smoke.py`，确认 30 项和 70 项检查；
 3. 检查 `catalog-bore-080` 是否始终被排除、`query_status` 是否如实标记、失败是否结构化；
-4. 检查距离公式、ranges、0.5 权重与排序 tie-break 是否符合任务规则；
+4. 检查距离公式、ranges、0.5 权重与排序 tie-break 是否符合任务规则，并验证自定义范围（含构造后改 dict/list）仍被拒绝；
 5. 判断接口取舍（envelope 严格 / flat 完整）和 split 问题是否需要返工；
 6. 决定 RET-002 是否转 `done`、是否合并并放行 RET-003；本任务不自行标 done、不 push。
+
+## 10. 策略范围契约修正（2026-11-03）
+
+状态：`review`（修正完成，等待 Codex 中枢重新复核；未 push、未标 done）
+
+### 10.1 修正前/后
+
+修正前：`RetrievalIndex.from_manifest(..., policy=...)` 可传入自定义连续范围（例如把
+`bore_d` 改成 `(0, 1)`），旧 `DistancePolicy.validate()` 只检查字段集合、有限性和权重，
+因此索引可以建立，结果仍输出 `policy_id=RET-002.parametric_distance.v1`，距离语义被静默改变。
+
+修正后：`DistancePolicy.validate()` 要求每个连续字段的 `(min, max)` 与完整目录
+`catalog_ranges()` 精确相等，并显式拒绝 bool、非数值、NaN/Inf 和近似值。自定义范围返回：
+
+```text
+RETRIEVAL_CONFIG_INVALID
+stage=config
+fields=("bore_d",)
+details.expected=[5.0, 80.0]
+details.observed=[0.0, 1.0]
+```
+
+`DistancePolicy` 同时冻结 range 的映射和值，索引建好后再修改调用方 dict/list 也不会改变已建索引。
+`from_manifest(..., policy=...)` 保留，但必须通过校验；`from_config()` 接口不变。
+
+### 10.2 修改文件
+
+- `src/retrieval/distance.py`：范围精确校验 + 不可变 range 副本。
+- `tests/retrieval/test_retrieval_baseline.py`：新增 6 项回归测试，共 30 项。
+- `README.md`、`checkpoint.md`、`handoff.md`、`docs/WORKLOG.md`：文档与日志。
+
+未修改 Schema、IR、CAD 编译器/验证器、RET-001 manifest、DECISIONS/PROJECT_STATUS/
+PROJECT_PLAN/TASKS、database；未读取或生成 STEP/渲染物。
+
+### 10.3 实际运行
+
+```bash
+PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval -v
+# Ran 30 tests ... OK
+
+PYTHONPATH=src work/benchcad-output/venv/bin/python \
+  agent-work/integration/RET-002-retrieval-baseline/run_smoke.py
+# 3 cases PASS; failure cases 13/13; checks=70 failed=0; determinism pass=True
+# sha256=0fcf84b7...
+
+... verify_manifest.py --tracked-only
+# records=15 checks_passed=660 failures=0 / RESULT: PASS
+
+work/benchcad-output/venv/bin/python -m py_compile src/retrieval/*.py
+# PY_COMPILE_OK
+```
+
+正常查询（envelope `bore_d=20`）：`catalog_validated`，top1 `catalog-bore-020`，total 0.0，
+canonical SHA 仍为 `0fcf84b7...`。失败查询（缺字段）：`RETRIEVAL_MISSING_FIELD`。
+自定义范围查询：`RETRIEVAL_CONFIG_INVALID`（stage=config，fields 含 `bore_d`）。
+smoke 和 RET-001 的运行报告已恢复到 HEAD，避免时间戳噪声。
+
+### 10.4 保留限制
+
+manifest SHA-256 `b7b6c737...`、15 条记录、9/3/3、3 个 `retrieval_source` 候选、
+`provisional_small_n`、单环境、`reproducibility_partial`、`MERGED`、
+`license_scope_uncertain`、`revolved_ring_approximation` 均未改变。
+
+### 10.5 未解决
+
+1. 等待 Codex 中枢重新审查，确认策略范围不可绕过后再标记 `done`。
+2. `weights.total_formula` / `tiebreak` 描述字符串仍未逐字校验（后续策略版本化可补，非当前阻塞）。
+3. 其他限制与下一 Agent 关注点同第 6 节和 `checkpoint.md` 第 9 节。

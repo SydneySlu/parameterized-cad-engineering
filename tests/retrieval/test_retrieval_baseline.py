@@ -400,6 +400,113 @@ class RetrievalBaselineTests(unittest.TestCase):
         policy = DistancePolicy(ranges=catalog_ranges(), discrete_weight=1.0)
         self._error(lambda: policy.validate(), "RETRIEVAL_CONFIG_INVALID")
 
+    # ---- frozen distance policy contract --------------------------------------
+
+    def test_distance_policy_rejects_changed_bore_range(self) -> None:
+        ranges = catalog_ranges()
+        ranges["bore_d"] = (0.0, 1.0)
+        error = self._error(
+            lambda: DistancePolicy(ranges=ranges).validate(),
+            "RETRIEVAL_CONFIG_INVALID",
+        )
+        self.assertEqual(error.stage, "config")
+        self.assertEqual(error.fields, ("bore_d",))
+        self.assertEqual(error.details["policy_id"], POLICY_ID)
+        self.assertEqual(error.details["expected"], [5.0, 80.0])
+
+    def test_distance_policy_rejects_changed_other_continuous_ranges(self) -> None:
+        for field in ("outer_d", "screw_d", "screw_len", "width"):
+            with self.subTest(field=field):
+                ranges = catalog_ranges()
+                low, high = ranges[field]
+                ranges[field] = (low, high + 1.0)
+                error = self._error(
+                    lambda: DistancePolicy(ranges=ranges).validate(),
+                    "RETRIEVAL_CONFIG_INVALID",
+                )
+                self.assertEqual(error.stage, "config")
+                self.assertIn(field, error.fields)
+
+    def test_distance_policy_rejects_non_finite_non_numeric_and_approximate_ranges(self) -> None:
+        cases = [
+            (float("nan"), 80.0),
+            (float("inf"), 80.0),
+            (True, 80.0),
+            ("5", 80.0),
+            (5.0, 80.0 + 1e-12),
+            (10**400, 80.0),
+        ]
+        for low, high in cases:
+            with self.subTest(low=repr(low), high=repr(high)):
+                ranges = catalog_ranges()
+                ranges["bore_d"] = (low, high)
+                error = self._error(
+                    lambda: DistancePolicy(ranges=ranges).validate(),
+                    "RETRIEVAL_CONFIG_INVALID",
+                )
+                self.assertEqual(error.stage, "config")
+                self.assertEqual(error.fields, ("bore_d",))
+
+    def test_from_manifest_rejects_custom_policy_range(self) -> None:
+        ranges = catalog_ranges()
+        ranges["bore_d"] = (0.0, 1.0)
+        policy = DistancePolicy(ranges=ranges)
+        error = self._error(
+            lambda: RetrievalIndex.from_manifest(
+                MANIFEST, {"retrieval_source"}, policy=policy
+            ),
+            "RETRIEVAL_CONFIG_INVALID",
+        )
+        self.assertEqual(error.stage, "config")
+        self.assertEqual(error.fields, ("bore_d",))
+        self.assertEqual(error.details["expected"], [5.0, 80.0])
+        self.assertEqual(error.details["observed"], [0.0, 1.0])
+
+    def test_frozen_catalog_ranges_build_index_and_match_default_results(self) -> None:
+        policy = DistancePolicy(ranges=catalog_ranges())
+        policy.validate()
+        index = RetrievalIndex.from_manifest(MANIFEST, {"retrieval_source"}, policy=policy)
+        between = {
+            "bore_d": 18,
+            "outer_d": 30,
+            "screw_d": 6,
+            "screw_len": 8,
+            "second_screw": 0,
+            "width": 14,
+        }
+        baseline = self.index.query(FAMILY_ID, between, top_k=3)
+        explicit = index.query(FAMILY_ID, between, top_k=3)
+        self.assertEqual(explicit.to_canonical_json(), baseline.to_canonical_json())
+        self.assertEqual(explicit.sha256(), baseline.sha256())
+
+    def test_policy_does_not_alias_caller_range_mapping(self) -> None:
+        ranges = catalog_ranges()
+        ranges["bore_d"] = [5.0, 80.0]
+        policy = DistancePolicy(ranges=ranges)
+        index = RetrievalIndex.from_manifest(MANIFEST, {"retrieval_source"}, policy=policy)
+        ranges["bore_d"][0] = 0.0
+        ranges["bore_d"][1] = 1.0
+        ranges["outer_d"] = (0.0, 1.0)
+        policy.validate()
+        between = {
+            "bore_d": 18,
+            "outer_d": 30,
+            "screw_d": 6,
+            "screw_len": 8,
+            "second_screw": 0,
+            "width": 14,
+        }
+        payload = index.query(FAMILY_ID, between, top_k=3).as_dict()
+        self.assertEqual(
+            payload["results"][0]["distance"]["fields"]["bore_d"]["catalog_range_mm"],
+            [5.0, 80.0],
+        )
+        self.assertAlmostEqual(
+            payload["results"][0]["distance"]["total"],
+            0.009333333333333334,
+            places=15,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

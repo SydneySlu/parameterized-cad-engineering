@@ -1,6 +1,6 @@
 # RET-002 单族确定性检索基线
 
-状态：`review`（交接 Agent 自检完成；等待续任 Agent 定向复核与 Codex 中枢独立审查；未标记 done，未 push）
+状态：`review`（2026-11-03 已修正自定义距离范围可绕过问题，等待 Codex 中枢重新审查；未标记 done，未 push）
 任务：RET-002
 族：`set_screw_shaft_collar`（ADR-0007 首期唯一族）
 检索策略：`RET-002.parametric_distance.v1`
@@ -41,7 +41,7 @@ src/retrieval/errors.py       结构化 RetrievalError
 测试：
 
 ```text
-tests/retrieval/test_retrieval_baseline.py   24 项 unittest
+tests/retrieval/test_retrieval_baseline.py   30 项 unittest（原 24 + 策略范围契约回归 6）
 ```
 
 集成与报告：
@@ -149,6 +149,8 @@ total = continuous_mean + discrete_term
 
 - 范围来自**完整 15 行 GN 705 目录**，不是仅 3 个候选行；回归测试核对 `retrieval-config.json` 与 `src/schema` 的 `CATALOG_ROWS` 完全一致。
 - 五个连续字段等权平均；`second_screw` 的 0.5 是预先固定的结构性差异项（单螺钉 vs 双螺钉，等价于半个连续均值的满量程），不是从评测集学习或调参得到。改变权重必须换新的 policy id 并经中枢审查，配置加载会拒绝改动。
+- **策略范围不可覆盖。** `RET-002.parametric_distance.v1` 的五个连续范围与两个权重是冻结契约。`DistancePolicy.validate()` 要求每个连续字段的 `(min, max)` 与完整目录 `catalog_ranges()` 精确相等，并拒绝非数值、布尔、NaN/Inf、近似值和自定义范围；`RetrievalIndex.from_manifest(..., policy=...)` 会调用该校验，因此不能再借自定义 range 改变语义。范围或权重变更必须建立新 policy id 并经中枢审查。
+- `DistancePolicy` 在构造时冻结 range 副本（键和值都不可再由调用方修改），因此索引建好后再改原 dict/list 不会改变已建索引的距离语义。
 - 查询超出目录范围时距离可大于 1；这是有意的，表示查询已远离目录范围，而不是被截断。
 - 排序键是 `(total, sample_id)` 升序；同分时按 `sample_id` 字典序稳定 tie-break。
 - 不使用 STEP/IR hash 计算几何相似度；manifest 中的 hash 只作产物标识。
@@ -172,7 +174,7 @@ total = continuous_mean + discrete_term
 
 | code | stage | 触发 |
 |---|---|---|
-| `RETRIEVAL_CONFIG_NOT_FOUND` / `RETRIEVAL_CONFIG_INVALID` | config | 配置文件缺失、版本/policy/族/ranges/weights 不符 |
+| `RETRIEVAL_CONFIG_NOT_FOUND` / `RETRIEVAL_CONFIG_INVALID` | config | 配置文件缺失、版本/policy/族/ranges/weights 不符，或连续字段范围不等于完整目录范围 |
 | `RETRIEVAL_MANIFEST_NOT_FOUND` / `RETRIEVAL_MANIFEST_PARSE_ERROR` / `RETRIEVAL_MANIFEST_EMPTY` | index | manifest 不可读、非法 JSON/空行、空文件 |
 | `RETRIEVAL_MANIFEST_HASH_MISMATCH` | config/index | manifest 与配置或显式期望 hash 不一致 |
 | `RETRIEVAL_INVALID_RECORD` | index | 记录缺字段、单位不是 mm、参数非有限、split_status 不是 provisional_small_n 等 |
@@ -243,6 +245,8 @@ smoke 共 3 个正常/边界案例、13 个失败案例、70 项检查，全部�
 | 未知角色 | `RETRIEVAL_UNKNOWN_ROLE` | 同 | 是 |
 | 重复候选行 | `RETRIEVAL_DUPLICATE_SAMPLE_ID` | 同 | 是 |
 
+策略范围回归（单元测试）：额外 6 项测试覆盖伪造 `bore_d` 或其他连续字段范围、NaN/Inf/bool/字符串/近似值、`from_manifest(..., policy=...)` 入口、冻结范围的正常构建与结果一致性，以及构造后修改调用方 dict/list 的别名攻击。自定义范围均得到 `RETRIEVAL_CONFIG_INVALID`（stage=`config`，fields 含对应字段）；冻结范围仍得到原排序、原距离和原 canonical SHA。
+
 确定性：
 
 - 同一查询在进程内重复两次，canonical JSON 逐字一致；
@@ -254,7 +258,7 @@ smoke 共 3 个正常/边界案例、13 个失败案例、70 项检查，全部�
 ```bash
 cd "/Users/syd/Desktop/参数化 cad 工程辅助设计"
 
-# 24 项单元测试
+# 30 项单元测试（原 24 + 策略范围契约回归 6）
 PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval -v
 
 # smoke：3 个正常/边界 + 13 个失败 + 跨进程确定性
@@ -289,10 +293,11 @@ work/benchcad-output/venv/bin/python \
 10. **许可与上游状态**：`reproducibility_partial`、`MERGED`（非 release-qualified）和 `license_scope_uncertain` 继续有效；未下载 BenchCAD Public/Core，未增加第二族。
 11. **权重未经 RET-003 验证**：0.2 / 0.5 是预先固定的透明规则，不代表统计最优；RET-003 才能评估是否有检索收益。
 12. **未涉及生成**：不包含 Prompt 注入、LLM、字段修复或 CAD 生成，APP-001/RET-004 未实现。
+13. **策略描述字符串未单独校验**：`weights.total_formula` / `tiebreak` 是说明字段，加载器未逐字校验；当前数值范围与权重已冻结，描述字符串的版本化校验留待新 policy 版本补充。
 
 ## 10. 下一步建议
 
-1. Codex 中枢独立复核接口、排序稳定性、失败路径、数据边界和限制；确认后再放行 RET-003。
+1. Codex 中枢重新复核策略范围不可绕过、接口、排序稳定性、失败路径、数据边界和限制；确认后再放行 RET-003。
 2. RET-003 决定正式切分或明确不切分；在此之前不得把 9/3/3 当 benchmark。
 3. RET-003 设计无检索 / 检索 / 人工模板三条件对照；检索候选只能作为参数与来源参考，不能当目录真值或几何真值。
 4. APP-001/RET-004 注入 Prompt 时，应携带 `query_status`、`sample_id`、`ir.path`、`source_commit`、`split.role` 和限制，并禁止把候选直接当作答案。
