@@ -5,7 +5,7 @@ task=CAD-005/006-tolerance
 status=review
 phase=tolerance-preflight
 changed=agent-work/cad-validation/CAD-005-006/tolerance_measurement.py; agent-work/cad-validation/CAD-005-006/tolerance-results.json; agent-work/cad-validation/CAD-005-006/tolerance-preflight.md; agent-work/cad-validation/CAD-005-006/checkpoint-tolerance.md; docs/WORKLOG.md
-commit=see git log for test: measure cad geometry tolerances [CAD-005/006]
+commit=e5bcacf (`test: measure cad geometry tolerances [CAD-005/006]`)
 verified=45/45 native builds and 45/45 STEP readbacks passed; native repeatability and roundtrip statistics recorded below
 ir_version=typed-cad-ir.v0, revision=0.2.0
 schema_version=set_screw_shaft_collar.v0, sha256=000396c9e26bf592db022baeeb9b9af1e2a0571a7f8a0a8c3c1baed4e431bdc5

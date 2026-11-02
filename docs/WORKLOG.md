@@ -328,5 +328,5 @@
 - 结果：45/45 native build 和 45/45 STEP readback 成功；同一环境 30 次重复比较的体积、包围盒、排序面面积和排序边长差均为 0；native/readback 最大观测误差为 volume `0.0340786283195 mm³`、bbox `3.5527136788e-15 mm`、sorted face area `0.003967669644 mm²`、sorted edge length `2.79570571138e-07 mm`。2×值仅作为审查候选，未写入生产验证器。
 - 验证：项目 venv 测量脚本、Draft 2020-12 + 6 个 IR 示例、schema 17 项测试、`test_handoff.py` 和 DATA-003 smoke 均通过；`py_compile` 与 `git diff --check` 通过。每目录 3 个 STEP hash 均不同，未将 hash 当作确定性判据。
 - 限制：`reproducibility_partial`、`license_scope_uncertain`、螺纹环形近似、多实体绕过风险和跨平台/工程安全未决均保留；阶段 2 语义/preflight 反例尚未实现。
-- 提交：待本阶段提交后补录短哈希。
+- 提交：`e5bcacf`（`test: measure cad geometry tolerances [CAD-005/006]`）。
 - 下一步：保持 `review`，等待 Codex 中枢独立审查并明确放行；未经放行不开始 CAD-005/006 实现。
