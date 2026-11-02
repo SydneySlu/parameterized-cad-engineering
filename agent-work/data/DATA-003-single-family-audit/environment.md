@@ -65,4 +65,14 @@ uv pip install --python work/benchcad-output/venv/bin/python -e work/benchcad-so
 - tar 字节数：`31177216`
 - tar 条目数：`256`（包含目录项；源文件清单以 `SNAPSHOT-MANIFEST.json` 的 217 个 blob 为准）
 
+## DATA-003-R2 固定快照复核
+
+- 固定输入再次核对为仓库 `https://github.com/BenchCAD-org/benchcad-2`、commit `035f467142888edfd0bd7cd73906f9b155c8f43c`、族 ID `set_screw_shaft_collar`、路径 `designs/set_screw_shaft_collar`。快照中的 `family.json` ID 与目录名一致，存在 `part.py::build()`、`spec.py::check()`；固定 commit `docs/STATUS.md:10` 为 `MERGED`，状态页 `:5` 显示 `0 release-qualified`。
+- 本次重查原 promisor checkout：`git -C work/benchcad-source/benchcad-2 rev-parse HEAD` 返回固定 commit，但 `git status --short --branch` 仍含大量 staged deletions；`README.md` 和 `designs/set_screw_shaft_collar/part.py` 不存在。因此它不是干净完整 checkout。该失败情况作为反例保留，没有清理或修改该 checkout。
+- 可用快照类型仍为 `reproducibility_partial`，不是完整 Git checkout，也不是官方 `git archive`。API recursive tree/raw 路径快照记录 tree 中 217 个 blob，下载 217、缺 0；原 tar SHA-256 `b390bc953416cfcf27b94b4ec1f497a0ba0ee5f3afb04c4b8454c411fc3c33ad`，大小 31,177,216 bytes。关键文件包括 README、LICENSE、pyproject、uv.lock、framework/bench2/__init__.py 和族 `family.json/part.py/spec.py/NOTES.md`；逐文件 blob SHA、下载 SHA-256、大小和 raw URL 见 ignored `work/benchcad-source/benchcad-2-035f467-raw/SNAPSHOT-MANIFEST.json`。
+- 归档/目录核验：`shasum -a 256 work/benchcad-source/benchcad-2-035f467-raw.tar` 与上述 SHA 一致；tar 有 256 个条目（含目录项），清单所列源文件 217 个。运行原生 CLI 后快照工作目录中出现额外 Python `__pycache__` 文件；它们不在 217 个 commit blob 清单内，属于运行时缓存，不是上游源文件。项目不得将此 raw 快照写成 clean checkout/archive。
+- 失败原因与补救：原 promisor checkout 缺 blob；旧 `git archive` 结果为 0 字节；此前 codeload 下载截断。因此当前没有真正完整 Git 快照。网络/上游可用后，在新的 ignored 目录完整 clone/fetch 固定 commit，或从已完整仓库生成 archive；核对 HEAD、无工作树改动、tree 文件数和关键文件，再更新 `source_snapshot` 状态。
+- R2 核心复跑从 raw 快照实际运行目录 `work/benchcad-source/benchcad-2-035f467-raw/` 执行 `work/benchcad-output/venv/bin/bench2 validate set_screw_shaft_collar --seeds 1`，结果 PASS。正常用例：固定族 `family.json` 存在且 ID 匹配。失败/不完整用例：原 checkout 缺上述关键文件且有 staged deletions，确认该来源不可运行/归档。
+- 许可证细项见 `license-matrix.md`。源码 MIT、官方 released dataset CC BY 4.0、项目生成 STEP/渲染物以及 NOTES 外链第三方素材分别处理；生成物与第三方材料保持 `license_scope_uncertain`。Public/Core 未下载，不进入训练、检索或再发布语料。
+
 由于该快照通过 API/raw 重建而非源 Git 仓库的 `git archive`，DATA-003-R1 的 source snapshot 标记为 **`reproducibility_partial`**，不能写成完整 checkout 或官方 git archive。原始 source commit、每个 blob SHA 和完整清单已保存，后续网络恢复后仍应由中枢优先复核一次真正干净 checkout。

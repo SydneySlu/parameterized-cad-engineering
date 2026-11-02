@@ -31,3 +31,26 @@ remote：`https://github.com/BenchCAD-org/benchcad-2.git`
 ## 审计结论
 
 三个候选都是真实存在且有 `part.py/spec.py/family.json` 的已合并族，均有可调用 `build()`、参数规格和 `check()`。`set_screw_shaft_collar` 最适合作为当前首族 smoke slice：参数目录耦合清楚且有明确合法边界/第二紧定螺钉规则；但源码注释承认 M3–M8 的螺纹切割布尔可能不移除体积（`part.py:91-98`），需在项目验证中保留风险。`slotted_din_rail` 的目录 family_id 不一致，是适配/manifest 风险；`speaker_pole_mount_socket` 的部分尺寸是 proportion/外部供应商资料，来源解释性较弱。以上是比较结果，不是首族冻结决定。
+
+## DATA-003-R2 固定范围与来源复核
+
+本节是 R2 对固定范围的补充，不删除上述早期候选比较历史。项目状态页现已将首期族记录为 ADR-0007 冻结；本轮遵循该决定，不重新选择族。冻结输入为：
+
+| 字段 | 固定值/证据 |
+|---|---|
+| repository | `https://github.com/BenchCAD-org/benchcad-2` |
+| source_commit | `035f467142888edfd0bd7cd73906f9b155c8f43c` |
+| family_id | `set_screw_shaft_collar` |
+| family_path | `designs/set_screw_shaft_collar` |
+| family.json | `family` 值为 `set_screw_shaft_collar`；raw 快照 blob `00acbd23c930776ece6d56a61b7680ec4b82fdb9` |
+| native builder | `part.py::build(...)`，文件 blob `8a6bc2d997eebef18add43150d4a1666cc5174aa` |
+| checker | `spec.py::check(p)`，文件 blob `4753254a06d5c3302e001c210115c203eb3295b0` |
+| status | 固定 commit 的 `docs/STATUS.md:10` 为 `MERGED`；同页 `:5` 记录 `0 release-qualified`，故不声称已发布或已通过 release qualification |
+
+以上文件来自固定 commit 的 API/raw 快照清单；对应 tree blob、下载 SHA-256、字节数和 raw URL 见 ignored `work/benchcad-source/benchcad-2-035f467-raw/SNAPSHOT-MANIFEST.json`。本次定向复核从快照工作目录运行 `bench2 validate set_screw_shaft_collar --seeds 1`，结果 PASS；源 checkout 本身有大量 staged deletions，且缺少 `README.md` 与该族 `part.py`，不能作为干净 checkout。快照仍只标记 `reproducibility_partial`，不能称为 git archive 或完整 Git checkout。
+
+项目仓库当前 `docs/PROJECT_STATUS.md` 已记录 ADR-0007 冻结首族和该固定 commit。源仓库 status 是 BenchCAD 自身在该 commit 的状态，不替代项目 ADR；两者的作用范围需区分。
+
+### R2 许可证边界交接
+
+逐类许可审计见 [`license-matrix.md`](license-matrix.md)。BenchCAD README/LICENSE 对仓库代码和 designs 声明 MIT，对 HuggingFace released dataset artifacts 单独声明 CC BY 4.0；固定 commit 的 STATUS 仍为 0 release-qualified。项目自己调用构造器导出的 STEP、渲染图或其他派生 CAD 不应自动套用数据集 CC BY 4.0，也没有足够证据据此断言可公开再发布，保持 `license_scope_uncertain`。`NOTES.md` 所列外部图纸、SVG 和照片未随族源码分发，不能从引用关系推导其授权。本任务未下载 Public/Core，且明确排除训练、检索与再发布语料。

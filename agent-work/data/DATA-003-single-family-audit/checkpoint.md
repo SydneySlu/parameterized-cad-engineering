@@ -35,3 +35,43 @@
 - 已对 `legal_catalog_row` 和 `legal_hard_boundary` 的两次 STEP 回读计算 solids、shells、faces、edges、vertices、有效性、体积、包围盒、量化排序面面积摘要和边长摘要。
 - 两个案例的 STEP 字节哈希仍不同，但上述几何/实体指标和归一化面/边摘要均一致；结论限定为“几何/实体级指标稳定，拓扑等价尚未完全证明”。
 - 剩余范围：中枢复核 raw 快照是否足以满足复现门；网络恢复后优先建立真正 clean checkout/git archive。未修改正式状态、任务表或 ADR。
+
+## DATA-003-R2 来源、快照与许可证边界复核
+
+完成日期：2026-11-02。首族按项目 ADR-0007 / 当前 `docs/PROJECT_STATUS.md` 固定为 `set_screw_shaft_collar`；本补充不重新选择族，不修改正式状态、任务表或决策记录。
+
+```text
+task=DATA-003-R2
+status=review
+family_id=set_screw_shaft_collar
+source_commit=035f467142888edfd0bd7cd73906f9b155c8f43c
+source_snapshot=reproducibility_partial
+changed=agent-work/data/DATA-003-single-family-audit/source-audit.md; environment.md; license-matrix.md; minimal-manifest.json; checkpoint.md; docs/WORKLOG.md (append only)
+verified=git rev-parse/status confirmed the existing checkout is incomplete at the fixed HEAD; raw-snapshot `bench2 validate set_screw_shaft_collar --seeds 1` PASS; fixed family.json ID/path and build()/check() present; source blob manifest has 217/217 files; tar SHA-256 b390bc953416cfcf27b94b4ec1f497a0ba0ee5f3afb04c4b8454c411fc3c33ad; JSON parse and diff checks run before commit
+license_scope=source/design code MIT with notice; official released dataset artifacts separately CC BY 4.0; generated STEP/renderings/meshes and third-party NOTES materials license_scope_uncertain; Public/Core not downloaded or used
+confirmed=repository URL, fixed commit, family ID/path, family.json, part.py::build, spec.py::check, source STATUS MERGED and 0 release-qualified; README/LICENSE license split; API/raw snapshot records 217 commit blobs and 0 missing
+unresolved=no complete Git checkout or official git archive; upstream clarification needed on whether generated STEP/renderings are distributable and on permissions for referenced JW Winco drawings/SVG/photo; per-file raw snapshot is replayable but not a clean Git snapshot
+next=Codex 中枢复核来源、快照和许可证边界
+```
+
+### 定向复核与自检
+
+**handoff_successor_check**
+
+- predecessor：DATA-003-R1 checkpoint（本文件上节）；未假定存在 R1 独立 Git commit。
+- files_format：现存 manifest 可解析，raw snapshot manifest 记录固定 commit、217 个文件和逐 blob 证据；本轮增加的族许可矩阵为 Markdown 表。
+- core_rerun：在 `work/benchcad-source/benchcad-2-035f467-raw/` 运行 `work/benchcad-output/venv/bin/bench2 validate set_screw_shaft_collar --seeds 1`，PASS。
+- normal_case：raw snapshot 中 `designs/set_screw_shaft_collar/family.json` 存在且 family 值与固定 ID 一致；`part.py::build()`、`spec.py::check()` 存在。
+- failure_case：`work/benchcad-source/benchcad-2` 的 HEAD 是固定 commit，但 `git status` 有大量 staged deletions，README.md 与族 part.py 缺失；不得作为干净 checkout。
+- interface：固定输入与 ADR-0007 及当前项目状态页一致；输出仍是审计证据/草案，不建立生产 Schema/Typed CAD IR。
+- limits：保留 `reproducibility_partial`、`license_scope_uncertain`、未 release-qualified、Public/Core 未下载的事实。
+- result=review
+- blocking_issue=当前没有完整 Git checkout/archive；生成 STEP/渲染物和外链第三方材料的再发布许可仍缺少上游明确证据。
+
+**handoff_self_check**
+
+- changed：本 checkpoint、source audit、environment、license matrix、manifest；WORKLOG 仅追加 DATA-003-R2 行。
+- commands：核心 validate PASS；固定 commit/status 和不完整 checkout 缺文件复核；raw blob manifest 217/217 检查；tar SHA-256 复核；JSON 与 `git diff --check` 结果以最终提交前检查记录为准。
+- confirmed：仓库 URL、commit、族 ID/path、构造和 check 入口、源状态页记录、许可文字边界及 partial 快照证据。
+- unresolved：完整 Git 快照失败原因仍未解除；输出几何与 NOTES 外链资料授权未获确认。
+- next_agent_focus：Codex 中枢优先审查 API/raw 证据是否够用、MIT/CC BY 范围的解释，以及生成 CAD 和第三方材料的后续允许用途；不得将本任务标记为 release-qualified。

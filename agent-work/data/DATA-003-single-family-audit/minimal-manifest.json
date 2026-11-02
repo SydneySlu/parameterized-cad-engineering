@@ -31,6 +31,20 @@
     "source_code": "MIT per repository LICENSE",
     "third_party_reference_materials": "license_scope_uncertain"
   },
+  "license_scope": {
+    "audit_document": "agent-work/data/DATA-003-single-family-audit/license-matrix.md",
+    "generated_step_rendering_mesh": "license_scope_uncertain; local audit use only pending upstream clarification",
+    "official_released_dataset_artifacts": "CC-BY-4.0 per fixed-commit LICENSE note; no such artifacts used",
+    "public_core": "not_downloaded; excluded from training, retrieval, and redistribution",
+    "source_code_and_designs": "MIT per fixed-commit README.md and LICENSE; preserve notice on source redistribution",
+    "third_party_notes_references": "license_scope_uncertain; referenced files not copied or downloaded"
+  },
+  "family_scope": {
+    "decision": "frozen_by_project_ADR-0007",
+    "family_id": "set_screw_shaft_collar",
+    "family_path": "designs/set_screw_shaft_collar",
+    "note": "This is an audit-scope record, not a schema or typed CAD IR."
+  },
   "manifest_status": "audit_draft_not_frozen_schema",
   "parameters": {
     "bore_d": {
@@ -158,6 +172,11 @@
     "missing_blob_count": 0,
     "reason": "existing promisor checkout has staged deletions/missing blobs; git archive and codeload were unavailable or truncated",
     "status": "reproducibility_partial",
+    "snapshot_type": "api_raw_reconstruction_not_git_checkout_or_git_archive",
+    "runtime_directory": "work/benchcad-source/benchcad-2-035f467-raw",
+    "source_blob_inventory": "217 commit tree blobs downloaded; 0 missing; per-file commit/blob and SHA-256 evidence in SNAPSHOT-MANIFEST.json",
+    "failed_checkout_evidence": "work/benchcad-source/benchcad-2 remains at fixed HEAD but has staged deletions and lacks README.md and designs/set_screw_shaft_collar/part.py",
+    "remediation": "retry a full clone/fetch at the fixed commit or archive from a complete Git checkout; do not relabel the API/raw snapshot as complete",
     "tree_blob_count": 217
   },
   "task": "DATA-003"
