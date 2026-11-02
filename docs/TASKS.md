@@ -14,7 +14,7 @@
 | INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | INFRA-007 | 目标目录、职责子目录和路径规则已写入协作协议 |
 | DATA-001 | 开源数据源适配性初评 | Codex | review | - | 对 BenchCAD 2.0、CADBench、Seek-CAD 完成数据结构、适配度与许可边界比较；报告见 `database/cad-dataset-suitability-2026-10.md` |
 | DATA-002 | BenchCAD 数据优先接入计划与族级试审 | Codex + 用户/导师 | review | DATA-001 | 首期范围收缩为 `set_screw_shaft_collar`；后续扩族另行决策；计划见 `database/benchcad-dataset-first-plan-2026-10.md` |
-| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | in_progress | DATA-002 | 固定源 commit；完成干净快照或如实保留 partial；核对生成 STEP/渲染物和第三方材料许可；输出更新 manifest 与 checkpoint |
+| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | done | DATA-002 | 固定源 commit；完成干净快照或如实保留 partial；核对生成 STEP/渲染物和第三方材料许可；输出更新 manifest 与 checkpoint；Codex 独立复审通过 |
 | CAD-001 | 候选零件族比较 | Codex | done | - | 有数据/规则/应用/生成难点对比 |
 | CAD-002 | 冻结首期零件族 | 项目负责人 + Codex | done | CAD-001 | ADR-0007 明确 `set_screw_shaft_collar`、固定 commit 和不支持项 |
 | CAD-003 | 参数 Schema v0 | CC（Schema/规则角色） | planned | CAD-002 | 有字段、单位、边界、来源和缺失规则 |

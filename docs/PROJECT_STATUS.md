@@ -33,7 +33,7 @@
 | CAD-001 | 候选零件族比较 | Codex | done | 数据、规则、应用和生成难点对比 |
 | DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；建议优先 BenchCAD 社区族 |
 | DATA-002 | BenchCAD 数据优先接入计划与族级试审 | Codex + 用户/导师 | review | 首期范围已收缩为单族；后续扩族不属于首期交付 |
-| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | in_progress | 固定 commit、快照可复现性、生成资产与第三方材料许可证审计 |
+| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | done | 固定 commit、快照可复现性、生成资产与第三方材料许可证审计；审查记录已完成 |
 | CAD-002 | 冻结首期零件族 | 项目负责人 + Codex | done | ADR-0007；`set_screw_shaft_collar` 与固定 commit |
 | CAD-003 | 参数 Schema 与规则校验 | CC | planned | 字段、单位、边界、来源和缺失规则 |
 | IR-001 | Typed CAD IR v0 设计与复核 | Codex + 独立复核 Codex | review | 条件性单族 IR v0.2.0；几何容差仍待测量 |
@@ -45,13 +45,11 @@
 
 ## 阻塞项
 
-- DATA-003 需要完成首族来源快照和生成资产许可证补充审计。
 - CAD-006 需要在验证器正式实现前完成几何容差测量；容差未冻结前不得宣称最终验证阈值。
 
 ## 下一步
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
-2. 由 DATA-003 完成固定 commit 的快照、生成资产和第三方材料许可证补充审计。
-3. 由 CAD-005/006 执行 Agent 先完成几何容差前置测量，再实现编译器和验证器。
-4. 围绕 `set_screw_shaft_collar` 建立 manifest/adapter、Typed CAD IR、原生构造器和验证器闭环。
-5. 建立单族切分的检索样本集、自然语言任务集和 A/B/C 对照评测；第二族扩展另行决策。
+2. 由 CAD-005/006 执行 Agent 先完成几何容差前置测量，再实现编译器和验证器。
+3. 围绕 `set_screw_shaft_collar` 建立 manifest/adapter、Typed CAD IR、原生构造器和验证器闭环。
+4. 建立单族切分的检索样本集、自然语言任务集和 A/B/C 对照评测；第二族扩展另行决策。

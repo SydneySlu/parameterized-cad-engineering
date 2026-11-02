@@ -75,3 +75,9 @@ next=Codex 中枢复核来源、快照和许可证边界
 - confirmed：仓库 URL、commit、族 ID/path、构造和 check 入口、源状态页记录、许可文字边界及 partial 快照证据。
 - unresolved：完整 Git 快照失败原因仍未解除；输出几何与 NOTES 外链资料授权未获确认。
 - next_agent_focus：Codex 中枢优先审查 API/raw 证据是否够用、MIT/CC BY 范围的解释，以及生成 CAD 和第三方材料的后续允许用途；不得将本任务标记为 release-qualified。
+
+## DATA-003-R2 Codex 中枢独立复审
+
+- 状态：`done`（审计交付完成；外部许可和完整 Git 快照限制保留）。
+- 复核：固定族、217/217 raw blob 清单、tar SHA-256、manifest、raw 快照官方 validate 和原 promisor checkout 失败反例均独立复跑；结果见 `agent-work/reviews/DATA-003-R2-codex-review.md`。
+- 放行：可以交给单族 manifest、CAD-005/006 和检索样本工作；下游必须继续携带 `reproducibility_partial`、`license_scope_uncertain`、`MERGED`/非 `release-qualified` 限制。

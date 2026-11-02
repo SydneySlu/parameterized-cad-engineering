@@ -304,3 +304,11 @@
 - 限制：无法获得完整 Git checkout 或有效官方 archive；项目生成 STEP/渲染物和 JW Winco 图纸/SVG/照片再发布许可仍需上游具体确认；Public/Core 未下载。未宣称首族 release-qualified 或生成 CAD 可公开再发布。
 - 提交：DATA-003-R2 主交付提交 `c3ac4c6`；本行是提交后的日志校正。
 - 下一步：Codex 中枢复核来源、快照和许可证边界；如需可复现 Git 快照，应在网络/完整对象可用后重新 clone/fetch 或从完整 checkout archive。
+
+### DATA-003-R2 / Codex 中枢 / done / 2026-11-02
+
+- 动作：独立复核 DATA-003-R2 的固定来源、raw 快照、manifest、许可证矩阵、正常/失败案例和官方 validate 命令。
+- 结果：217/217 commit blob、tar SHA-256、固定族 ID/path、`build()`/`check()` 入口和 raw 快照 validate 均一致；许可证矩阵保守地区分 MIT 源码、CC BY 4.0 官方 released artifacts、生成 CAD 的不确定范围、第三方 NOTES 材料和 Public/Core 排除。
+- 结论：DATA-003 审计任务完成并放行给单族 manifest、CAD-005/006 和检索样本工作。`reproducibility_partial`、`license_scope_uncertain`、`MERGED`/非 `release-qualified` 仍是下游必须携带的限制。
+- 证据：`agent-work/reviews/DATA-003-R2-codex-review.md`。
+- 下一步：CAD-005/006 Agent 先做几何容差前置测量，再开始编译器/验证器实现。
