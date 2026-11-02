@@ -13,15 +13,15 @@
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | INFRA-006 | 分工、边界、阶段和接口依赖已写入协调文档 |
 | INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | INFRA-007 | 目标目录、职责子目录和路径规则已写入协作协议 |
 | DATA-001 | 开源数据源适配性初评 | Codex | review | - | 对 BenchCAD 2.0、CADBench、Seek-CAD 完成数据结构、适配度与许可边界比较；报告见 `database/cad-dataset-suitability-2026-10.md` |
-| DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | DATA-001 | 固定 commit；核验许可/状态；两个结构不同族完成构造、导出和项目适配 smoke test；导师确认扩展范围；计划见 `database/benchcad-dataset-first-plan-2026-10.md` |
-| DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | DATA-003 Agent + Codex | review | DATA-001 | 固定源 commit；完成候选族/许可证/入口审计；一个候选族完成合法、边界、非法和重复运行核验；输出最小 manifest；R1 复现性补充待审查 |
-| CAD-001 | 候选零件族比较 | Codex | planned | - | 有数据/规则/应用/生成难点对比 |
-| CAD-002 | 冻结首期零件族 | 用户 + 导师 | planned | CAD-001 | 决策记录明确范围和不支持项 |
+| DATA-002 | BenchCAD 数据优先接入计划与族级试审 | Codex + 用户/导师 | review | DATA-001 | 首期范围收缩为 `set_screw_shaft_collar`；后续扩族另行决策；计划见 `database/benchcad-dataset-first-plan-2026-10.md` |
+| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | in_progress | DATA-002 | 固定源 commit；完成干净快照或如实保留 partial；核对生成 STEP/渲染物和第三方材料许可；输出更新 manifest 与 checkpoint |
+| CAD-001 | 候选零件族比较 | Codex | done | - | 有数据/规则/应用/生成难点对比 |
+| CAD-002 | 冻结首期零件族 | 项目负责人 + Codex | done | CAD-001 | ADR-0007 明确 `set_screw_shaft_collar`、固定 commit 和不支持项 |
 | CAD-003 | 参数 Schema v0 | CC（Schema/规则角色） | planned | CAD-002 | 有字段、单位、边界、来源和缺失规则 |
 | CAD-004 | 评测集切分 | Codex + CC | planned | CAD-002 | 模板近重复不会跨训练/测试泄漏 |
 | IR-001 | Typed CAD IR v0 设计与复核 | Codex（设计）+ 独立复核 Codex | review | CAD-003 | 有规范、示例、版本和错误码 |
-| CAD-005 | 确定性 CAD 编译器 | CC（CAD 执行角色） | planned | IR-001 | 同一 IR 可复现生成结果 |
-| CAD-006 | 几何与规则验证器 | CC（CAD 执行角色） | planned | CAD-005 | 能报告成功、失败原因和错误字段 |
+| CAD-005 | 确定性 CAD 编译器 | CC（CAD 执行角色） | planned | IR-001, DATA-003 | 同一 IR 可复现生成结果；实现前读取容差前置测量结果 |
+| CAD-006 | 几何与规则验证器 | CC（CAD 执行角色） | planned | CAD-005, DATA-003 | 先完成几何容差前置测量，再报告成功、失败原因和错误字段 |
 | RET-001 | 检索样本 manifest | DSH + CC | planned | CAD-006 | 样本来源和验证结果可追溯 |
 | RET-003 | 检索收益评测 | Codex + CC | planned | RET-001 | 有固定集和三条件对照 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | CAD-003 | 模型、Prompt、追问和失败案例可复现 |

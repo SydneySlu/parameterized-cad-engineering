@@ -281,3 +281,17 @@
 - 验证：Schema/六例 PASS；语义反例 PASS；IR 契约测试 3 项 PASS；坐标/bbox 测试 2 项 PASS；CAD-003 17 项 PASS；项目 venv handoff PASS；JSON 与 diff 检查 PASS。
 - 结论：可以作为条件性单族 IR v0.2.0 接口交给后续准备工作，但 IR-001 保持 `review`。几何容差仍 `pending_measurement`，首族仍 `awaiting_owner_confirmation`，不得标记 CAD-005/006 done。
 - 证据：`agent-work/reviews/IR-001-R3-codex-review.md` 的 R3-FIX 独立复审章节。
+
+### CAD-002 / Codex / done / 2026-11-02
+
+- 动作：根据项目负责人确认，冻结首期 BenchCAD 零件族为 `set_screw_shaft_collar`，并将固定 source commit、族路径、支持边界和当前许可证/复现限制写入 ADR-0007、项目状态、任务看板和数据计划。
+- 结果：首期只承诺该单族的参数目录、轴孔/外径/宽度、紧定螺钉及已记录耦合约束；不把第二族、开放域泛化或任意自由 CAD 特征生成列为首期交付。ADR-0005 的数据优先路线继续有效，首期族范围由 ADR-0007 收敛。
+- 验证：核对 DATA-003 固定 commit `035f467142888edfd0bd7cd73906f9b155c8f43c`、`set_screw_shaft_collar` 的 `part.py/spec.py/family.json`、build/check smoke 证据及现有 `reproducibility_partial`、`license_scope_uncertain` 限制。
+- 下一步：DATA-003 原 Agent 执行来源、快照和许可证边界补充审计；CAD-005/006 执行 Agent 先完成几何容差前置测量。
+
+### DATA-003-R2 / Codex / planned / 2026-11-02
+
+- 动作：为原 DATA-003 Agent 生成首族来源、快照和许可证边界补充 Prompt。
+- 边界：只审计固定 BenchCAD commit、快照可复现性、源码/生成 STEP/第三方材料/Public-Core 的许可证边界；不实现 Schema、Typed CAD IR、编译器、验证器、LLM 或检索系统，也不修改正式状态和 ADR。
+- Prompt：`docs/coordination/prompts/DATA-003-R2-source-license-boundary-agent.md`。
+- 下一步：项目负责人将 Prompt 发回原 DATA-003 对话框；完成后由 Codex 中枢审查并决定 DATA-003 是否可转为 done。

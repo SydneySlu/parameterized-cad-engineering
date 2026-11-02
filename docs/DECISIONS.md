@@ -111,3 +111,35 @@ DATA-002 应先做族级资产清单、许可/状态审查和两个族的 smoke 
 
 统一根目录可以避免不同聊天框把文件写入各自默认目录，降低重复副本和遗漏同步的风险。源代码、测试、正式文档和正式数据仍使用 `src/`、`tests/`、`docs/` 和 `data/`；`agent-work/` 不是绕过 Git 或 `.gitignore` 的入口。其他设备的路径可能不同，Agent 应使用当地 clone 的 Git 根目录并在交接中记录实际路径。
 
+## ADR-0007：冻结首期零件族为 `set_screw_shaft_collar`
+
+- 日期：2026-11-02
+- 状态：accepted
+- 决策人：项目负责人 + Codex
+- 替代：ADR-0005 中“首期族集合待确认”的范围状态；ADR-0005 的 BenchCAD 数据优先路线和许可边界继续有效
+
+### 决策
+
+首期只实现和评测 BenchCAD 社区族 `set_screw_shaft_collar`。数据来源固定为：
+
+```text
+repository: https://github.com/BenchCAD-org/benchcad-2
+source_commit: 035f467142888edfd0bd7cd73906f9b155c8f43c
+family_path: designs/set_screw_shaft_collar
+family_id: set_screw_shaft_collar
+```
+
+首期支持该族当前参数目录、轴孔/外径/宽度、紧定螺钉及其已记录的参数耦合和约束。首期不承诺第二族、开放域零件泛化或任意自由 CAD 特征生成；扩展族必须另行建立来源、许可证、参数和运行证据并追加决策记录。
+
+### 原因
+
+DATA-003 已确认该族在固定 commit 中真实存在，具有 `part.py`、`spec.py`、`family.json`、可调用的 `build()`/`check()` 和明确的目录行耦合；合法、边界、非法输入以及 STEP 导出/回读均已有最小 smoke 证据。单族范围符合轻量版的两三个月交付约束，也能先验证 Typed CAD IR、确定性构造/验证和小样本检索主线。
+
+### 约束与未决事项
+
+- BenchCAD 族状态目前是 `MERGED`，不是 `release-qualified`；不得把它写成官方发布实例集。
+- 源码和 designs 按固定仓库说明适用 MIT；生成 STEP/渲染图是否属于可再发布的授权范围仍需单独确认。
+- 族目录引用的第三方标准图纸、图片和下载文件不自动受 BenchCAD LICENSE 覆盖，不复制进项目交付物。
+- 当前源码快照仍标记 `reproducibility_partial`，直到 DATA-003 补充任务建立或证明无法建立干净归档。
+- 几何数值容差仍需在 CAD-006 验证器前置测量中确定；本决策不冻结容差。
+

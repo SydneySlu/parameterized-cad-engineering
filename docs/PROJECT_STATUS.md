@@ -7,7 +7,7 @@
 - 项目路线已收敛为轻量版。
 - 首期创新重点是 `Typed CAD IR`、确定性 CAD 构造/验证和小样本检索。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
-- 根据导师建议，当前数据方向调整为优先利用 BenchCAD 2.0 社区参数化零件族，尽量直接复用经审查的族定义与构造器；这一数据优先路线已记录为 ADR-0005 proposed，尚未冻结纳入族数量。
+- 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
 - GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 已推送并跟踪 `origin/main`。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
@@ -15,7 +15,8 @@
 
 ## 已完成
 
-- 完成 BenchCAD 2.0、CADBench 与 Seek-CAD 数据源的适配性和许可边界初评；建议 BenchCAD 2.0 社区零件族作为主数据源候选，CADBench 用作评测参考，Seek-CAD 用作序列/检索方法参考。尚未冻结数据集或零件族。
+- 完成 BenchCAD 2.0、CADBench 与 Seek-CAD 数据源的适配性和许可边界初评；BenchCAD 2.0 社区族作为主数据源，CADBench 用作评测参考，Seek-CAD 用作序列/检索方法参考。
+- 已冻结首期零件族 `set_screw_shaft_collar`，固定 BenchCAD commit `035f467142888edfd0bd7cd73906f9b155c8f43c`；来源、快照和许可证补充审计仍在进行。
 
 - 形成参数化 CAD 生成系统的轻量版技术路线。
 - 完成 SKY-001、Seek-CAD、FutureCAD 以及相关 CAD/DSL 论文的初步对比。
@@ -29,13 +30,13 @@
 | ID | 工作 | 负责人 | 状态 | 输出 |
 |---|---|---|---|---|
 | INFRA-003 | 远程 Git 仓库与跨设备同步 | 用户 + Codex | review | 本机 `origin`、`main` 跟踪关系和首次 push；跨设备 clone/pull 待验证 |
-| CAD-001 | 冻结首期零件族与参数 Schema | Codex + 导师 | planned | 零件族决策、Schema 草案 |
+| CAD-001 | 候选零件族比较 | Codex | done | 数据、规则、应用和生成难点对比 |
 | DATA-001 | 评估开源 CAD 数据源与扩展路径 | Codex | review | 三数据源适配性评估；建议优先 BenchCAD 社区族 |
-| DATA-002 | BenchCAD 多族数据优先接入计划与族级试审 | Codex + 用户/导师 | in_progress | 数据优先计划；核对族状态、许可、版本并完成两个族 smoke test |
-| DATA-003 | BenchCAD 单族来源、环境与最小 smoke test | DATA-003 Agent + Codex | review | 来源审计、候选矩阵、环境记录和最小核验包；待复现性补充审查 |
-| CAD-002 | 设计 Typed CAD IR v0 | Codex + CC | planned | IR Schema、示例和编译接口 |
-| CAD-003 | 建立小样本检索数据格式 | CC / DSH | planned | 样本 manifest、检索字段 |
-| CAD-004 | 实现确定性构造器与验证闭环 | CC | planned | 构造器、验证器、测试 |
+| DATA-002 | BenchCAD 数据优先接入计划与族级试审 | Codex + 用户/导师 | review | 首期范围已收缩为单族；后续扩族不属于首期交付 |
+| DATA-003 | BenchCAD 首族来源、环境与许可证边界 | DATA-003 Agent + Codex | in_progress | 固定 commit、快照可复现性、生成资产与第三方材料许可证审计 |
+| CAD-002 | 冻结首期零件族 | 项目负责人 + Codex | done | ADR-0007；`set_screw_shaft_collar` 与固定 commit |
+| CAD-003 | 参数 Schema 与规则校验 | CC | planned | 字段、单位、边界、来源和缺失规则 |
+| IR-001 | Typed CAD IR v0 设计与复核 | Codex + 独立复核 Codex | review | 条件性单族 IR v0.2.0；几何容差仍待测量 |
 | INFRA-005 | 中枢编排、阶段性同步和仓库体检 | Codex | done | prompt 模板、checkpoint 规则、体检脚本 |
 | INFRA-006 | 中枢私有审查台账与独立复核约定 | Codex | done | 仓库外本地台账；关键结论可由第二对话框复核 |
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | 分工、边界、阶段和接口依赖文档 |
@@ -44,12 +45,13 @@
 
 ## 阻塞项
 
-- 首期最终零件族尚未由项目负责人冻结。
+- DATA-003 需要完成首族来源快照和生成资产许可证补充审计。
+- CAD-006 需要在验证器正式实现前完成几何容差测量；容差未冻结前不得宣称最终验证阈值。
 
 ## 下一步
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
-2. 按数据优先计划核对 BenchCAD 当前可用族的状态、许可、版本和本地运行条件。
-3. 先选两个结构不同的 BenchCAD 族做 smoke test；根据结果与导师确认首期范围。
-4. 建立跨族 manifest/adapter 和 Typed CAD IR v0，再接通原生构造器与验证器。
-5. 建立族级切分的检索样本集、自然语言任务集和 A/B/C 对照评测。
+2. 由 DATA-003 完成固定 commit 的快照、生成资产和第三方材料许可证补充审计。
+3. 由 CAD-005/006 执行 Agent 先完成几何容差前置测量，再实现编译器和验证器。
+4. 围绕 `set_screw_shaft_collar` 建立 manifest/adapter、Typed CAD IR、原生构造器和验证器闭环。
+5. 建立单族切分的检索样本集、自然语言任务集和 A/B/C 对照评测；第二族扩展另行决策。
