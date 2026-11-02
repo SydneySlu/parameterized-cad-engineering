@@ -17,3 +17,8 @@ commit=fac9aaf
 ```
 
 状态保持 `review`。系统 Python 没有 CadQuery，CAD 专项检查已在项目隔离的 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境运行。历史 R3 结果见本目录 `review-r3.md`，本任务修正追加段保留前序事实并标注被取代的坐标/结果契约结论。
+
+
+## CAD-006 容差决策追加记录（2026-11-02）
+
+IR-001 原 R3 checkpoint 保留其当时的 pending_measurement 状态作为历史。Codex 中枢后续基于 CAD-005/006 阶段 1 的 45 组测量，在 ADR-0008 和 IR v0 规范 §9.2 中冻结比较策略 CAD-006.geometry-comparison.v1。geometry_tolerance 当前状态为 frozen_for_pinned_environment；策略边界为固定 macOS arm64 / Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 / NumPy 1.26.4 首族路径。跨平台、跨进程及 IR 编译器输出尚待验证。阶段 1 结果不代表 CAD-005/006 实现完成。

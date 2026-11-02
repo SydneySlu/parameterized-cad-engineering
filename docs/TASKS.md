@@ -20,8 +20,8 @@
 | CAD-003 | 参数 Schema v0 | CC（Schema/规则角色） | planned | CAD-002 | 有字段、单位、边界、来源和缺失规则 |
 | CAD-004 | 评测集切分 | Codex + CC | planned | CAD-002 | 模板近重复不会跨训练/测试泄漏 |
 | IR-001 | Typed CAD IR v0 设计与复核 | Codex（设计）+ 独立复核 Codex | review | CAD-003 | 有规范、示例、版本和错误码 |
-| CAD-005 | 确定性 CAD 编译器 | CC（CAD 执行角色） | planned | IR-001, DATA-003 | 同一 IR 可复现生成结果；实现前读取容差前置测量结果 |
-| CAD-006 | 几何与规则验证器 | CC（CAD 执行角色） | planned | CAD-005, DATA-003 | 先完成几何容差前置测量，再报告成功、失败原因和错误字段 |
+| CAD-005 | 确定性 CAD 编译器 | 原 CAD-005/006 Agent（CC） | in_progress | IR-001, DATA-003 | 按冻结策略实现白名单 IR 编译；记录可复现几何与版本 manifest |
+| CAD-006 | 几何与规则验证器 | 原 CAD-005/006 Agent（CC） | in_progress | CAD-005, DATA-003 | 容差阶段 1 已验收并由 ADR-0008 冻结；实现规则/实体/STEP 检查及失败报告 |
 | RET-001 | 检索样本 manifest | DSH + CC | planned | CAD-006 | 样本来源和验证结果可追溯 |
 | RET-003 | 检索收益评测 | Codex + CC | planned | RET-001 | 有固定集和三条件对照 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | CAD-003 | 模型、Prompt、追问和失败案例可复现 |

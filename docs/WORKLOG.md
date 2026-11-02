@@ -338,3 +338,13 @@
 - 阻塞：STEP 往返最大误差超过 IR-001 R3 当前 volume、face-area 候选及 edge-length relative 候选；报告中的 2×经验值尚未成为项目容差契约。CAD-005/006 正式实现门暂不放行，待中枢明确 native repeat 与 STEP roundtrip 的阈值语义、适用环境及比较方式。
 - 复审记录：`agent-work/reviews/CAD-005-006-tolerance-codex-review.md`。
 - 下一步：由 Codex 中枢完成容差策略决策记录，再明确放行 CAD-005/006 实现；本轮不标记 CAD-005/006 done。
+
+
+### CAD-005/006 / Codex 中枢 / in_progress / 2026-11-02
+
+- 动作：根据阶段 1 的 45 组测量与 Codex 审查，冻结首族几何比较策略，并同步 IR 规范、ADR、审查门、任务状态和原 CAD-005/006 Agent Prompt。
+- 决策：ADR-0008 / CAD-006.geometry-comparison.v1；同进程 native 重复摘要精确相等；STEP roundtrip 使用 bbox abs-only 及体积/面面积/边长 abs 与 rel 同时通过的规则；拓扑、有效性和参数规则保持硬失败。
+- 阈值依据：固定 macOS arm64 / Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 / NumPy 1.26.4 环境下，BenchCAD 原生 build 15 个目录值各 3 次的 roundtrip 最大观测误差；跨平台、跨进程及实际 IR 编译结果仍待验证。
+- 状态：阶段 1 已验收；CAD-005、CAD-006 进入 in_progress。项目负责人 push 本提交后，原 Agent 按更新后的 Prompt 续作。
+- 文件：IR-001 v0 规范第 9.2 节、docs/DECISIONS.md、docs/PROJECT_STATUS.md、docs/PROJECT_PLAN.md、docs/TASKS.md、agent-work/reviews/CAD-005-006-tolerance-codex-review.md、docs/coordination/prompts/CAD-005-006-tolerance-and-implementation-agent.md。
+- 下一步：Agent 用真实 IR 输出完成单族编译、几何和 STEP 集成；超出契约时暂停上报，不得自行放宽阈值。

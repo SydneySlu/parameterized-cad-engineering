@@ -1,6 +1,6 @@
-# CAD-005/006 续任执行 Prompt：几何容差前置测量与确定性 CAD 编译/验证
+# CAD-005/006 续任执行 Prompt：确定性 CAD 编译器与几何验证器
 
-将下面内容发给**原 CAD-005/006 Agent**继续执行。不要重新创建第二个 CAD-005/006 任务，也不要跳过阶段 1 直接编写生产实现。
+将下面内容发给**原 CAD-005/006 Agent**继续执行。不要重新创建第二个 CAD-005/006 任务，阶段 1 已验收，直接按冻结契约进行正式实现。
 
 你是“参数化 CAD 工程辅助设计”项目的 CAD-005/006 执行 Agent，负责：
 
@@ -8,11 +8,7 @@
 - CAD-006：建立 preflight、构造后几何检查、STEP 回读和族级规则验证；
 - 首期只支持已经冻结的 `set_screw_shaft_collar`，不扩展第二族。
 
-本任务必须采用“两阶段门控”：
-
-1. **阶段 1：几何容差前置测量**。先测量并记录证据，不能未经审查把候选阈值写死进生产验证器。
-2. **阶段 2：正式 CAD-005/006 实现**。只有阶段 1 的交付物经过 Codex 中枢独立审查后才能开始。
-
+阶段 1 几何容差测量已由 Codex 中枢验收，ADR-0008 已冻结比较策略，CAD-005/006 正式实现已放行。不要重新创建陌生 Agent 任务；原始 45 组测量通常无需重跑。只有环境、构造算法、测量定义变化或发现数据缺陷时，才补测并记录原因。
 ---
 
 ## 一、项目根目录和文件边界
@@ -66,6 +62,8 @@ agent-work/typed-cad-ir/**
 - `agent-work/cad-validation/CAD-005-006/checkpoint-r2.md`
 - `agent-work/cad-validation/CAD-005-006/handoff_successor_check-r2.md`
 - `agent-work/reviews/CAD-005-006-R2-codex-review.md`
+- `agent-work/reviews/CAD-005-006-tolerance-codex-review.md` 的追加放行结论
+- `docs/DECISIONS.md` 中的 ADR-0008 和 IR-001 v0 第 9.2 节冻结策略
 - `agent-work/typed-cad-ir/IR-001-v0/**` 中的全部规范、Schema、示例和语义验证资料
 - `agent-work/data/DATA-003-single-family-audit/**` 中的 checkpoint、run-log、环境和许可证审计
 - `agent-work/schema-rules/CAD-003-schema-v0/**`
@@ -91,110 +89,27 @@ agent-work/typed-cad-ir/**
 
 ---
 
-## 三、阶段 1：几何容差前置测量（本轮第一目标）
+## 三、正式实现与冻结比较契约
 
-阶段 0 通过后，先建立测量脚本和结果，不得直接实现正式验证器阈值。
+CAD-005/006 已由 Codex 中枢放行。实现必须遵循策略 ID CAD-006.geometry-comparison.v1；完整规则见 IR-001 v0 第 9.2 节，决策依据见 ADR-0008。
 
-### 1. 必测案例
+硬性检查独立于数值阈值：preflight 参数、目录行、second_screw 耦合、壁厚及 outer_d < bore_d 规则必须通过；失败时禁止构造。native build 与 STEP readback 都必须非空、isValid、恰好 1 solid 和恰好 1 shell；solid/shell/face/edge/vertex 计数完全一致。缺失、NaN/Inf、空几何、无效 B-Rep 或多实体均失败。绕过 preflight 后 outer_d < bore_d 生成 3 solids 必须在 post-geometry 阶段拒绝。
 
-至少覆盖：
+同一进程内重复 native 构造要求拓扑计数精确相等；体积、bbox 六坐标、升序面面积和升序边长数组逐值精确相等，数组长度也精确相等。该要求仅适用于固定环境同一进程，不代表跨进程或跨平台保证。
 
-```text
-legal_catalog_row:
-  bore_d=20, outer_d=32, width=14,
-  screw_d=6, screw_len=8, second_screw=0
+同一 native 几何与 STEP 回读：
+- bbox 六坐标逐项 abs 差不超过 1e-5 mm；bbox 不使用相对比较。
+- 体积 abs 差不超过 0.0682 mm³ 且 rel 差不超过 3.941e-6。
+- 面面积升序列表数量相同，逐项 abs 差不超过 0.00794 mm² 且 rel 差不超过 1.440e-5。
+- 边长升序列表数量相同，逐项 abs 差不超过 1e-5 mm 且 rel 差不超过 2.956e-8。
+- 体积、面积、边长 rel error 定义为 abs(a-b)/max(abs(a),abs(b))；abs 与 rel 条件必须同时通过，不能改为 OR 或两项相加。
+- 面面积和边长数组元素必须有限、正值；分别排序后按索引比较，任何项超限即失败。不得只比均值、总和、直方图或量化签名。
+- manifest 记录策略 ID、Python/CadQuery/OCP/NumPy/OS、source commit、IR revision、Schema hash 和实际比较结果。
+- 旧 IR-001 R3 数值是早期未验证候选，已被 ADR-0008 和 IR 规范新策略取代，不得混用。
 
-legal_hard_boundary:
-  bore_d=80, outer_d=110, width=22,
-  screw_d=12, screw_len=20, second_screw=1
-```
-
-同时尽量覆盖全部 15 个合法目录 `bore_d` 值。每个案例至少重复 3 次；如果某些目录行无法构造，记录准确原因，不能静默跳过。
-
-每次构造都要记录：
-
-- solids、shells、faces、edges、vertices；
-- `isValid()`；
-- 体积；
-- 包围盒；
-- 排序后的面面积摘要；
-- 排序后的边长摘要；
-- native build 与 STEP readback 的数值差；
-- 构造器、CadQuery/OCP、NumPy、Python 版本；
-- BenchCAD source commit；
-- IR/Schema revision；
-- STEP 字节 hash（只能作为附加信息）。
-
-必须区分并测量：
-
-- 同一环境内重复构造误差；
-- STEP 导出/回读误差；
-- 最大绝对误差、相对误差和建议候选阈值；
-- 结构计数是否稳定。
-
-不要把候选阈值写进生产代码，也不要宣称“确定性”已经证明。阶段 1 的结果必须等待 Codex 中枢审查。
-
-### 2. 反例和对抗测试
-
-必须保留并记录：
-
-- `outer_d < bore_d` 在 preflight 中被拒绝；
-- 绕过 preflight 后的实际结果可能是 3 solids；
-- `second_screw` 约束非法；
-- 壁厚不足或等价几何非法；
-- 缺少关键参数、重复 node id、错误 source commit、未登记公式等至少能被分类为结构/语义/规则错误（若尚未有运行入口，先记录为阶段 2 测试计划）。
-
-### 3. 阶段 1 交付物
-
-放入：
-
-```text
-agent-work/cad-validation/CAD-005-006/tolerance-preflight.md
-agent-work/cad-validation/CAD-005-006/tolerance_measurement.py
-agent-work/cad-validation/CAD-005-006/tolerance-results.json
-agent-work/cad-validation/CAD-005-006/checkpoint-tolerance.md
-```
-
-`checkpoint-tolerance.md` 必须包含：
-
-- `task=CAD-005/006-tolerance`
-- `status=review` 或 `blocked`
-- 修改文件；
-- 实际运行命令和结果；
-- 样本覆盖范围和未覆盖范围；
-- 数值统计与候选阈值（候选，不是冻结值）；
-- 环境与来源信息；
-- 已知许可证/复现限制；
-- 下一步必须由 Codex 中枢审查后才能进入阶段 2。
-
-完成阶段 1 后暂停，不要自行开始阶段 2。提交一个可审查 commit，提交信息使用：
-
-```text
-test: measure cad geometry tolerances [CAD-005/006]
-```
-
-同时只追加一条 `docs/WORKLOG.md` 记录。不要自行 push；由项目负责人统一 push。
-
----
-
-## 四、阶段 2：Codex 审查通过后再实现 CAD-005/006
-
-只有收到 Codex 中枢明确放行后，才能继续。
+策略测量环境为 Python 3.11.18、CadQuery 2.3.0、OCP/cadquery-ocp 7.9.3.0、NumPy 1.26.4、macOS arm64。阶段 1 的 45 组结果来自 BenchCAD 原生 build，不是 IR 编译器输出。Windows/Linux、其他 CPU、其他内核/STEP writer、跨进程重复性及第二族均未验证。若 IR 编译输出对照原生参考超出冻结策略，暂停并报告，不能自行放宽阈值或改变 IR 语义。
 
 必须严格执行：
-
-```text
-parse
-→ JSON Schema / semantic
-→ unit and parameter normalization
-→ preflight
-→ whitelist IR compilation
-→ build
-→ post_geometry
-→ STEP export
-→ STEP readback
-→ structured validation_result and manifest
-```
 
 ### CAD-005 必须实现
 
@@ -243,7 +158,7 @@ parse
 - 声称完成强度、结构安全、碰撞或有限元验证；
 - 把 `reproducibility_partial` 或 `license_scope_uncertain` 隐藏掉。
 
-阶段 2 至少补齐：
+正式实现至少补齐：
 
 - 合法目录行；
 - 合法边界案例；
@@ -252,12 +167,15 @@ parse
 - STEP 导出和回读；
 - 缺少节点输入、重复 ID、未来依赖、未登记公式、错误 `validation_result` 等语义反例；
 - 正常、规则失败、构造失败、回读失败四类验证报告。
+- 使用真实 IR JSON 走项目编译器，不得只调用 BenchCAD `part.build()` 作为项目实现证据。
+- 对合法目录和 hard boundary 的 IR 编译结果执行同进程重复构造与 native→STEP 集成比较。
+- 将这两例 IR 编译几何与固定 BenchCAD 原生参考结果做差异报告；若超出冻结策略，暂停并上报，不得放宽阈值或改 IR 语义。
 
-相同 source commit、环境、IR/Schema 版本和参数至少运行两次，比较结构计数、`isValid()`、体积、包围盒、量化后的面/边摘要和错误阶段。若不稳定，记录具体差异并标记 `needs-review` 或 `blocked`。
+相同 source commit、环境、IR/Schema 版本和参数至少运行两次；重复 native 构造按精确摘要相等比较，native→STEP 按冻结策略的排序数组和绝对/相对阈值比较。若不稳定，记录差异并标记 needs-review 或 blocked。
 
 ---
 
-## 五、交接、自检、提交格式
+## 四、集成验证、文件边界与交接
 
 每个里程碑结束前追加 `docs/WORKLOG.md`，并提交 checkpoint。必须说明：
 
@@ -271,16 +189,17 @@ parse
 
 ```text
 task=CAD-005/006
-phase=tolerance-preflight | implementation
+phase=implementation
 status=review | blocked
 changed=...
 verified=...
-ir_version=...
+ir_version=typed-cad-ir.v0 / 0.2.0
+tolerance_policy=CAD-006.geometry-comparison.v1
 schema_version=...
 geometry_repeatability=...
 known_limits=...
-next=...
+next=Codex 中枢独立审查
 ```
 
-不要将任务标记为 `done`。只有 Codex 中枢独立审查、必要修正完成并合并到 `main` 后，项目状态才可更新为 `done`。
+不要 push，由项目负责人统一 push。不要将任务标记为 `done`。只有 Codex 中枢独立审查、必要修正完成并合并到 `main` 后，项目状态才可更新为 `done`。
 

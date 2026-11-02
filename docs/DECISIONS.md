@@ -143,3 +143,38 @@ DATA-003 已确认该族在固定 commit 中真实存在，具有 `part.py`、`s
 - 当前源码快照仍标记 `reproducibility_partial`，直到 DATA-003 补充任务建立或证明无法建立干净归档。
 - 几何数值容差仍需在 CAD-006 验证器前置测量中确定；本决策不冻结容差。
 
+## ADR-0008：冻结首族 CAD-006 几何比较策略
+
+- 日期：2026-11-02
+- 状态：accepted
+- 决策人：Codex 中枢（基于项目负责人授权推进 CAD-005/006）
+- 策略 ID：CAD-006.geometry-comparison.v1
+- 证据：agent-work/cad-validation/CAD-005-006/tolerance-results.json、tolerance-preflight.md、checkpoint-tolerance.md；Codex 审查见 agent-work/reviews/CAD-005-006-tolerance-codex-review.md。
+
+### 决策
+
+硬性规则和拓扑门槛独立于浮点容差：preflight 参数目录与耦合规则必须通过；构造和 STEP 回读均须为有效的单 solid、单 shell；solid/shell/face/edge/vertex 计数及摘要数组长度必须精确相同；缺失、非有限、空形状、无效实体和多实体均失败。
+
+同一进程、同一固定环境下重复 native 构造要求结构计数和规范排序后的体积、包围盒、面面积及边长摘要精确相等。该判据不代表跨进程或跨平台承诺。
+
+同一次 native 几何与其 STEP 回读使用如下阈值：
+
+| 指标 | abs 约束 | rel 约束 |
+|---|---:|---:|
+| 包围盒六坐标 | abs(a-b) <= 1e-5 mm | 不使用 |
+| 体积 | <= 0.0682 mm³ | <= 3.941e-6 |
+| 升序面面积列表逐项 | <= 0.00794 mm² | <= 1.440e-5 |
+| 升序边长列表逐项 | <= 1e-5 mm | <= 2.956e-8 |
+
+体积、面面积和边长的相对误差定义为 abs(a-b)/max(abs(a),abs(b))；同一比较项的 abs 和 rel 条件均须通过。面面积和边长列表数量必须精确相同，分别升序后逐项比较。bbox 使用 abs-only，避免零坐标附近相对误差失真。STEP 字节 hash 仅作产物标识，不参与几何通过判定。规范全文见 agent-work/typed-cad-ir/IR-001-v0/ir-v0-spec.md 第 9.2 节。
+
+### 阈值依据与适用范围
+
+45 个合法目录 build/readback 样本中，roundtrip 最大观测值为：体积 abs 0.0340786283195 mm³ / rel 1.97024648349e-6；bbox abs 3.5527136788e-15 mm；面面积 abs 0.003967669644 mm² / rel 7.19713167552e-6；边长 abs 2.79570571138e-7 mm / rel 1.47760136545e-8。体积、面积与边长相对阈值取各自最大观测值的向上取整 2 倍；bbox 和边长 abs 下限定为 1e-5 mm。该策略是几何摘要及 STEP 回读的工程验收规则，不是制造公差或计量标准。
+
+测量基线为 Python 3.11.18、CadQuery 2.3.0、OCP/cadquery-ocp 7.9.3.0、NumPy 1.26.4、macOS arm64，固定 BenchCAD source commit 035f467142888edfd0bd7c73906f9b155c8f43c。测量来自 BenchCAD 原生 build()，不是项目 IR 编译器输出。
+
+Windows/Linux、其他 CPU 架构、其他软件/STEP writer 版本、跨进程重复性及第二族均未验证。更改环境、构造算法、测量定义或族范围时须补充代表性测量并经 Codex 审查。CAD-005/006 实现必须对真实 IR 编译输出完成正常案例、hard boundary、STEP 回读和失败案例集成验证；若对照参考几何超出已冻结策略，暂停并报告，不得自行放宽阈值。
+
+IR-001 R3 的 CAD-006.pending.v0 是早期未验证候选，由本 ADR 和 IR 规范中的 CAD-006.geometry-comparison.v1 取代；旧审查记录保留为历史。
+

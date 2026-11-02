@@ -17,7 +17,7 @@ v0 不表达自由曲面、草图约束求解、任意 Python、任意 CadQuery 
 | 字段 | 规则 |
 |---|---|
 | `ir_version` | 固定为 `typed-cad-ir.v0`；表示字段和语义契约。 |
-| `ir_revision` | 当前为 `0.1.0`。同一 v0 内只允许兼容的可选字段和文档修订。 |
+| `ir_revision` | 当前接口修订为 `0.2.0`。几何比较策略独立由 `CAD-006.geometry-comparison.v1` 标识，不改变 IR JSON 字段结构。 |
 | `family.family_id` | 固定为 `set_screw_shaft_collar`；必须与 CAD-003 一致。 |
 | `family.extension_namespace` | 固定为 `family.set_screw_shaft_collar.v0`；族特异内容放在此命名空间下。 |
 | `source.schema_version` | `set_screw_shaft_collar.v0`，表示输入契约版本。 |
@@ -180,6 +180,36 @@ CAD-006 比较策略的硬门槛先冻结：构造后及 STEP 回读后都要求
 
 STEP 字节 SHA-256 **不稳定**，即使几何摘要相同也可能不同；v0 的重复性判定必须使用结构化几何摘要和明确容差，不能要求文件字节相同。CadQuery/OCP、STEP writer、平台或数值容差改变时，只能保证 IR 和参数/依赖层可复现，几何结果需重新验证。`source.snapshot_status=reproducibility_partial` 反映源码快照、外部图纸和生成资产许可/复现边界，不能被编译器改为 `complete`。
 
+### 9.2 当前生效的数值比较策略：CAD-006.geometry-comparison.v1（2026-11-02）
+
+本附录取代本节前文中标为 CAD-006.pending.v0 的数值候选；前文保留为早期审查历史，不再作为生产实现门槛。策略依据 CAD-005/006-tolerance 提交 e5bcacf 的 15 个合法目录值、每值 3 次 native build 和 STEP 回读结果。
+
+硬门槛仍独立于数值容差：构造后及 STEP 回读后都要求恰好 1 solid、恰好 1 shell、isValid=true；solid/shell/face/edge/vertex 计数必须精确相等。缺失、非数、无穷、空形状、无效实体、零实体或多实体均失败。目录/参数耦合、second_screw 规则、outer_d < bore_d preflight 和壁厚规则均须通过；绕过 preflight 后得到 3 solids 仍必须失败。
+
+**同一进程内重复 native 构造：**参数、IR/Schema/adapter/source 和环境相同的重复调用，结构计数必须精确相同；体积、包围盒六坐标、升序面面积和升序边长数组必须逐值精确相等，数组长度精确相同。实测 30 组同进程重复比较均为 0 差异。该规则仅代表本策略固定环境、同一进程中的重复性判据，不构成跨进程或跨平台承诺；STEP 字节不参与判断。
+
+**同一次 native 结果与 STEP 回读：**
+
+- 所有几何摘要必须有限；solid/shell/face/edge/vertex 数量精确相等。
+- 包围盒六坐标逐项使用绝对阈值：abs(a-b) <= 1e-5 mm，不使用相对误差。
+- 体积、面面积、边长使用相对误差 abs(a-b)/max(abs(a),abs(b))。每项的绝对误差和相对误差必须同时通过（AND）；不得采用 OR 或把两阈值相加。
+
+| 指标 | 绝对误差上限 | 相对误差上限 |
+|---|---:|---:|
+| 体积 | 0.0682 mm³ | 3.941e-6 |
+| 面面积列表逐项 | 0.00794 mm² | 1.440e-5 |
+| 边长列表逐项 | 1e-5 mm | 2.956e-8 |
+
+面面积、边长均要求有限正值，native/readback 数量完全一致；双方分别升序排序后按索引逐项比较，任意一项越界即失败。不得只比均值、总和、直方图或量化摘要。包围盒用绝对值比较，避免坐标为零时相对误差失真。硬拓扑门槛不能被数值阈值覆盖。
+
+体积、面积和边长的绝对/相对阈值是对应观测最大误差的向上取整 2 倍；bbox 和边长绝对值采用 1e-5 mm 的数值比较下限。该策略是 CAD 几何摘要与 STEP 回读的工程验收阈值，不是计量规范或制造公差。策略 ID 必须写入运行/验证 manifest；量化摘要只用于日志或辅助签名，STEP SHA-256 只作产物标识，二者均不能取代直接几何比较。
+
+测量环境为 Python 3.11.18、CadQuery 2.3.0、OCP/cadquery-ocp 7.9.3.0、NumPy 1.26.4、macOS arm64；固定 BenchCAD source commit 为 035f467142888edfd0bd7c73906f9b155c8f43c。测量对象是 BenchCAD 原生 build()，不是项目 IR 编译器。
+
+本策略未验证 Windows/Linux、其他 CPU 架构、其他 Python/CadQuery/OCP/STEP writer 版本、跨进程重复性或第二族。改变环境、构造算法、测量定义或零件族时，须先补充代表性测量并由 Codex 审查，再更新策略版本。CAD-005/006 必须用真实 IR 编译输出测试正常目录、合法 hard boundary、STEP roundtrip 和失败案例；对照 BenchCAD 原生参考几何若超出本策略，须暂停并报告实现差异，不得自行放宽阈值。
+
+IR-001 R3 所列 CAD-006.pending.v0（长度/bbox 1e-5 mm / 1e-8，体积 1e-4 mm³ / 1e-8，面积 1e-5 mm² / 1e-8）是早期未验证候选，现被本策略取代，仅保留在历史审查记录中。IR JSON 字段结构未改变，接口修订仍为 0.2.0；比较行为独立通过策略 ID 版本化。
+
 ## 10. 第二族扩展边界和未决问题
 
 公共包络只承诺版本、族标识、来源、参数来源、节点图、约束和错误协议。新族可以在 `family_data` 中声明自己的目录、节点参数、规则和验证摘要；它不能复用本族的 `wall_thickness`、`second_screw` 或线程规则，除非其 Schema 明确声明同一语义。跨族公共节点只有在 v1 冻结前完成兼容性审查后才能加入核心白名单。
@@ -187,7 +217,7 @@ STEP 字节 SHA-256 **不稳定**，即使几何摘要相同也可能不同；v0
 未决问题交给 Codex 审查：
 
 - 是否把 `screw_len` 明确标记为“目录/任务字段”并在所有后续适配器中禁止误作孔深；
-- 面/边量化精度、体积/包围盒容差和摘要算法是否冻结为 CAD-006 契约；
+- 面积/边长数组按升序逐项比较、体积/bbox/面积/边长阈值及摘要策略已由 §9.2 的 CAD-006.geometry-comparison.v1 冻结；跨平台与跨进程行为仍未验证。
 - 当前环形螺纹近似已确认发生布尔切除，但其功能精度/与真实螺纹的等价性未审查；是否把它作为首期功能特征仍待负责人/中枢确认。
 - `family_data` 的 JSON Schema URI 和跨族公共节点注册表由谁维护；
 - 生成 STEP/渲染图的许可证和可发布范围仍是 `license_scope_uncertain`；
