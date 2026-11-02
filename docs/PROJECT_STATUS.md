@@ -46,6 +46,7 @@
 | CAD-005/006-R2 | 修复 CAD 编译交接边界并完成中枢复核 | Codex | done | 可导入包边界、仓库内交接 smoke test、R2 审查记录；当时尚未启动的正式实现由下方 CAD-005/006 任务承接 |
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；本轮审查记录尚未 push |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
+| RET-003 | 无检索/检索/人工模板探索性评测 | Codex | review | 里程碑 1 协议草案和查询清单已提交；等待中枢审阅 C2 规则先验与里程碑 2 放行；正式三条件对照尚未运行 |
 
 ## 阻塞项
 
@@ -55,5 +56,5 @@
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
 2. 将 RET-001 执行提交、中枢修正和审查记录一起推送到远端。
-3. 开始 RET-003：在不把 provisional split 当作正式 benchmark 的前提下，设计无检索/检索/人工模板对照。
+3. 完成 RET-003 里程碑 1 审阅；在不把 provisional split 当作正式 benchmark 的前提下，等待放行后再设计并运行无检索/检索/人工模板对照。
 4. 第二族扩展另行决策。
