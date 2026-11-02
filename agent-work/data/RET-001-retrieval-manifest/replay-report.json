@@ -2,7 +2,7 @@
   "manifest_version": "retrieval-manifest.v0",
   "task": "RET-001",
   "kind": "replay-check",
-  "generated_at": "2026-11-02T23:26:37+08:00",
+  "generated_at": "2026-11-02T23:43:48+08:00",
   "environment": {
     "python": "3.11.18",
     "cadquery": "2.3.0",
@@ -21,7 +21,7 @@
       "validate_ir_errors": [],
       "compile_ok": true,
       "status": "step_readback",
-      "elapsed_seconds": 1.688,
+      "elapsed_seconds": 2.687,
       "policy_id": "CAD-006.geometry-comparison.v1",
       "native_geometry": {
         "solids": 1,
@@ -47,7 +47,7 @@
       "step_readback_pass": true,
       "step_readback_policy": "CAD-006.geometry-comparison.v1",
       "step_bytes": 125922,
-      "step_sha256": "faec310e59685d84e469b65c1bd6a6135b6b998eb6c006f78876ae0a54c1ccc4",
+      "step_sha256": "3a7cb1775946291b15ad0bd8da61c9d1e747cd752879edadbbf1f39c134152c8",
       "step_sha_matches_manifest": false,
       "step_sha_note": "informational only; equality is not required",
       "pass": true
@@ -61,7 +61,7 @@
       "validate_ir_errors": [],
       "compile_ok": true,
       "status": "step_readback",
-      "elapsed_seconds": 0.365,
+      "elapsed_seconds": 0.353,
       "policy_id": "CAD-006.geometry-comparison.v1",
       "native_geometry": {
         "solids": 1,
@@ -87,7 +87,7 @@
       "step_readback_pass": true,
       "step_readback_policy": "CAD-006.geometry-comparison.v1",
       "step_bytes": 364404,
-      "step_sha256": "07a98d76a76d77a6a6c9481c768cdc73f86a3b3bb7ae20901612cc60453d71c9",
+      "step_sha256": "9a8a1e8eccbddf854d7920d584728a0eb09c5c9e023174e19075afba74ea65ca",
       "step_sha_matches_manifest": false,
       "step_sha_note": "informational only; equality is not required",
       "pass": true

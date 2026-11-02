@@ -399,3 +399,10 @@ results=15 个目录行全部成功（无失败样本）；每例单 solid、单
 known_limits=单族、只有 15 个冻结目录行（未扩写、未随机造数）、split_status=provisional_small_n（9/3/3 未冻结）、仅 macOS arm64 + 固定 CadQuery 2.3.0/OCP 7.9.3.0 单环境、snapshot reproducibility_partial、生成 STEP 与渲染 license_scope_uncertain（STEP 放 ignored work/ret-001-output/）、螺纹为环形近似、STEP hash 不参与几何判定；IR 示例仍写历史 tolerance_profile=CAD-006.pending.v0，生成 IR 写现行 v1，待中枢决定是否同步示例；docs/TASKS.md 与 PROJECT_STATUS 未同步（超出文件边界）
 next=Codex 中枢独立审查（重跑 verify_manifest.py / replay_check.py，判断 split 与 tolerance_profile 两项未决问题）；未 push
 commit=71125d2
+
+[2026-11-02] agent=Codex task=RET-001 status=done
+动作：对 RET-001 执行提交进行三层交接后的中枢独立审查；复核 15 个首族目录行、manifest/schema/hash、正常与失败样本、临时 split 和生成物边界；修正冻结 IR 示例中过时的 `CAD-006.pending.v0`，同步生成 manifest/report。
+结果：`verify_manifest.py` 全量 825 项和 `--tracked-only` 660 项均通过；独立进程复跑 `catalog-bore-020`、`catalog-bore-080`、`tampered_radial_offset` 和 `catalog_mismatch` 均通过；CAD compiler 13 项、Schema 17 项通过。中枢确认 15/15 全链路通过，split 保持 `provisional_small_n`，不冻结为正式 benchmark。
+限制：单族 15 行、固定 macOS arm64 环境、`reproducibility_partial`、`license_scope_uncertain`、螺纹环形近似和跨平台/工程强度未验证仍有效。
+记录：`agent-work/reviews/RET-001-codex-review.md`；本地审查提交待项目负责人 push。
+下一步：RET-002/RET-003；不得把当前临时 split 直接当作正式评测集。

@@ -853,7 +853,7 @@
     "preflight_required_before_build": true,
     "node_order": "ordinal_topological",
     "unknown_operation_policy": "reject",
-    "tolerance_profile": "CAD-006.pending.v0"
+    "tolerance_profile": "CAD-006.geometry-comparison.v1"
   },
   "validation_contract": {
     "expected_solids": 1,

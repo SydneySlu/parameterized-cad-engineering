@@ -2,7 +2,7 @@
   "manifest_version": "retrieval-manifest.v0",
   "task": "RET-001",
   "kind": "verification-report",
-  "generated_at": "2026-11-02T23:28:03+08:00",
+  "generated_at": "2026-11-02T23:43:21+08:00",
   "verifier": {
     "path": "agent-work/data/RET-001-retrieval-manifest/generator/verify_manifest.py",
     "sha256": "bd396229924e0e1c74d1c7998eb7e9fbf786dc6c2fff8255987b21e99ea34568",
@@ -11,7 +11,7 @@
   },
   "manifest": {
     "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
-    "sha256": "37818543d6bb9f3622c9f22a9c2b4f3853beb46ad6eecc1da501bf0cd0af64dc",
+    "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
     "records": 15
   },
   "manifest_schema": {

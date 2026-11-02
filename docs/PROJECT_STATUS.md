@@ -17,6 +17,7 @@
 
 - 完成 BenchCAD 2.0、CADBench 与 Seek-CAD 数据源的适配性和许可边界初评；BenchCAD 2.0 社区族作为主数据源，CADBench 用作评测参考，Seek-CAD 用作序列/检索方法参考。
 - 已冻结首期零件族 `set_screw_shaft_collar`，固定 BenchCAD commit `035f467142888edfd0bd7cd73906f9b155c8f43c`；DATA-003 来源、快照和许可证补充审计已由 Codex 中枢复核完成，限制见审查记录。
+- RET-001 单族 manifest 已完成中枢复核：覆盖 15 个冻结目录行，完整记录参数、IR、构造/几何/STEP 验证、来源、hash 和临时 split；split 仍为 `provisional_small_n`，生成 STEP 仍为 `license_scope_uncertain`。
 
 - 形成参数化 CAD 生成系统的轻量版技术路线。
 - 完成 SKY-001、Seek-CAD、FutureCAD 以及相关 CAD/DSL 论文的初步对比。
@@ -43,6 +44,7 @@
 | INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | 目标目录、职责子目录和路径规则 |
 | CAD-005/006-R2 | 修复 CAD 编译交接边界并完成中枢复核 | Codex | done | 可导入包边界、仓库内交接 smoke test、R2 审查记录；当时尚未启动的正式实现由下方 CAD-005/006 任务承接 |
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；本轮审查记录尚未 push |
+| RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 
 ## 阻塞项
 
@@ -51,6 +53,6 @@
 ## 下一步
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
-2. 将本地验收提交和本轮审查记录一起推送到远端后，开始 RET-001 检索样本 manifest 工作。
-3. 围绕 `set_screw_shaft_collar` 建立 manifest/adapter、Typed CAD IR、原生构造器和验证器闭环。
-4. 建立单族切分的检索样本集、自然语言任务集和 A/B/C 对照评测；第二族扩展另行决策。
+2. 将 RET-001 执行提交、中枢修正和审查记录一起推送到远端。
+3. 开始 RET-002/RET-003：在不把 provisional split 当作正式 benchmark 的前提下，设计检索字段、样本注入和无检索/检索/人工模板对照。
+4. 第二族扩展另行决策。
