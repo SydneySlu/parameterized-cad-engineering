@@ -4,7 +4,7 @@
   "status": "review",
   "retrieval_version": "ret-002.retrieval.v1",
   "policy_id": "RET-002.parametric_distance.v1",
-  "generated_at": "2026-11-03T01:38:54+08:00",
+  "generated_at": "2026-11-03T01:40:19+08:00",
   "environment": {
     "python": "3.11.18",
     "python_implementation": "CPython",
@@ -100,6 +100,16 @@
     "reads_external_drawings": false,
     "reads_benchcad_public_core": false
   },
+  "split": {
+    "split_status": "provisional_small_n",
+    "selection_rule": "candidate roles are fixed explicitly in retrieval-config.json; only records whose split.role is listed are scored, and other roles are excluded rather than down-ranked",
+    "group_rule": "group_id = catalog-row-bore-0XX from RET-001; one role per group; the 9/3/3 grouping is provisional_small_n and is not a benchmark split",
+    "role_counts": {
+      "development": 9,
+      "retrieval_source": 3,
+      "heldout_evaluation": 3
+    }
+  },
   "coverage": {
     "in_catalog_bore_020": "examples/query-in-catalog.json (CAD-003 envelope, Schema derives fields)",
     "between_catalog_rows": "examples/query-between-catalog-rows.json (bore_d=18, out_of_catalog_or_unvalidated)",
@@ -141,6 +151,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
           "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 20,
@@ -213,6 +224,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
           "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 20,
@@ -285,6 +297,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
           "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 20,
@@ -400,6 +413,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
           "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 18,
@@ -472,6 +486,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
           "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 18,
@@ -544,6 +559,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
           "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 18,
@@ -658,6 +674,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
           "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 80,
@@ -730,6 +747,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
           "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 80,
@@ -802,6 +820,7 @@
           "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
           "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
           "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
           "field_distances": {
             "bore_d": {
               "query": 80,
@@ -1067,5 +1086,12 @@
     "generated STEP/render artifacts remain license_scope_uncertain and are not read by retrieval",
     "out-of-catalog queries are nearest-neighbour only and are not Schema-confirmed catalog truths",
     "no vector database, embedding model, LLM, training or synthetic sample expansion is used"
+  ],
+  "next_steps": [
+    "Codex hub reviews the interface, stable ordering, failure paths and data boundary before RET-003.",
+    "RET-003 decides whether to freeze a split or explicitly not split; the current 9/3/3 grouping must not be treated as a benchmark.",
+    "RET-003 compares no-retrieval / retrieval / human-template conditions; candidates are references, not catalog or geometry truth.",
+    "APP-001/RET-004 prompt injection must carry query_status, sample_id, ir.path, source_commit, split.role and limitations.",
+    "Any larger candidate pool requires a hub decision on a new family or schema version; do not duplicate, expand randomly, or download Public/Core."
   ]
 }

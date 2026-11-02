@@ -186,6 +186,7 @@ def _run_success(index: RetrievalIndex, case: Mapping[str, Any]) -> dict[str, An
                 "ir_path": entry["ir"]["path"],
                 "ir_sha256": entry["ir"]["sha256"],
                 "source_commit": entry["source"]["source_commit"],
+                "license_scope": entry["source"]["license_scope"],
                 "field_distances": {
                     field: {
                         "query": distance["fields"][field]["query"],
@@ -496,6 +497,18 @@ def main() -> int:
             "reads_external_drawings": False,
             "reads_benchcad_public_core": False,
         },
+        "split": {
+            "split_status": SPLIT_STATUS,
+            "selection_rule": (
+                "candidate roles are fixed explicitly in retrieval-config.json; only records whose "
+                "split.role is listed are scored, and other roles are excluded rather than down-ranked"
+            ),
+            "group_rule": (
+                "group_id = catalog-row-bore-0XX from RET-001; one role per group; the 9/3/3 grouping "
+                "is provisional_small_n and is not a benchmark split"
+            ),
+            "role_counts": index.describe()["manifest"]["role_counts"],
+        },
         "coverage": {
             "in_catalog_bore_020": "examples/query-in-catalog.json (CAD-003 envelope, Schema derives fields)",
             "between_catalog_rows": "examples/query-between-catalog-rows.json (bore_d=18, out_of_catalog_or_unvalidated)",
@@ -527,6 +540,13 @@ def main() -> int:
             "generated STEP/render artifacts remain license_scope_uncertain and are not read by retrieval",
             "out-of-catalog queries are nearest-neighbour only and are not Schema-confirmed catalog truths",
             "no vector database, embedding model, LLM, training or synthetic sample expansion is used",
+        ],
+        "next_steps": [
+            "Codex hub reviews the interface, stable ordering, failure paths and data boundary before RET-003.",
+            "RET-003 decides whether to freeze a split or explicitly not split; the current 9/3/3 grouping must not be treated as a benchmark.",
+            "RET-003 compares no-retrieval / retrieval / human-template conditions; candidates are references, not catalog or geometry truth.",
+            "APP-001/RET-004 prompt injection must carry query_status, sample_id, ir.path, source_commit, split.role and limitations.",
+            "Any larger candidate pool requires a hub decision on a new family or schema version; do not duplicate, expand randomly, or download Public/Core.",
         ],
     }
 
