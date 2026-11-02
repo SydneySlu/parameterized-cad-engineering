@@ -413,3 +413,12 @@ commit=71125d2
 边界：不使用 STEP/渲染物或 BenchCAD Public/Core，不引入 embedding、向量库、LLM、训练或新的零件族；不修改 Schema、IR、CAD 编译器、验证器、容差和 RET-001 manifest。
 交付：`docs/coordination/prompts/RET-002-retrieval-baseline-agent.md`；任务保持 planned，等待执行 Agent 认领。
 下一步：项目负责人将 Prompt 交给 CC/DSH；执行完成后保持 review，由 Codex 中枢独立复核并决定是否放行 RET-003。
+
+[2026-11-03 01:39] agent=RET-002-DSH task=RET-002 status=review
+scope=单族确定性检索基线（新增 src/retrieval/** 5 个模块、tests/retrieval/** 24 项测试、agent-work/integration/RET-002-retrieval-baseline/**；docs/WORKLOG.md 只追加）
+动作=实现 RET-002.parametric_distance.v1：显式 candidate roles（retrieval_source 3 行）；CAD-003 envelope 直接调用现有 Schema 归一化，flat 六字段查询缺项即拒绝；未知族/未知字段/非有限数/非法 top_k/空角色/未知角色/重复候选均返回结构化 RetrievalError；结果按 (total, sample_id) 稳定排序，并携带 sample_id、split.role/group_id/split_status、ir.path/sha256、来源 commit、字段级距离、验证摘要和 limitations。新增 retrieval-config.json、smoke-report.json、examples×3、run_smoke.py、replay_query.py、README、checkpoint、handoff
+verified=启动检查（git root 正确、工作树干净、HEAD d5f01f1）；RET-001 高风险交接续任复核：verify_manifest.py --tracked-only 15 行/660 项 0 失败，抽查 catalog-bore-020/080，replay_check.py 两个负对照仍拒绝且各跑 2 次一致；tests/retrieval 24 项 OK；run_smoke 3 个正常/边界 + 13 个失败 + 70 项检查 0 失败，进程内与两个独立进程 canonical JSON 逐字一致（sha256=0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9）；schema 17 / IR 5 / CAD 13 回归 OK；py_compile、JSON 解析、git diff --cached --check 通过
+results=目录内 bore_d=20（envelope）top1=catalog-bore-020、total 0.0；行间查询 bore_d=18 标记 out_of_catalog_or_unvalidated，top1=catalog-bore-020、total 0.009333；boundary bore_d=80/second_screw=1 时 held-out 080 未进入候选，top1=catalog-bore-050、total 0.784444（含 0.5 离散项）；缺字段、未知字段、未知族、非有限数、非法 top_k、空/缺失/未知候选角色和重复候选均被结构化拒绝
+known_limits=仅 set_screw_shaft_collar 单族 15 行，候选仅 3 个 retrieval_source 行；split_status=provisional_small_n 未冻结，不是 benchmark；距离只是参数近邻度，不代表几何等价/制造/强度/生成质量；weights 0.2 与 0.5 未经 RET-003 验证；envelope 必须通过 Schema，flat 必须完整六字段；retrieval-config.json 固定 manifest sha b7b6c737…，manifest 再生成需显式更新；仅 macOS arm64 + Python 3.11.18 固定环境；未读取或生成 STEP/渲染物，未下载 BenchCAD Public/Core；reproducibility_partial、MERGED、license_scope_uncertain、revolved_ring_approximation 保留；RET-001 复核运行改写的 verification/replay report 已 git checkout 恢复到 HEAD
+next=Codex 中枢独立复核接口、排序稳定性、失败路径、数据边界和限制；本任务保持 review，未 push、未标 done；RET-003 前不得把 provisional split 当作正式评测集
+commit=cc8ad9c（feat: add deterministic retrieval baseline [RET-002]）
