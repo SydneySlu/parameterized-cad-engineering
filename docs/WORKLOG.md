@@ -330,3 +330,11 @@
 - 限制：`reproducibility_partial`、`license_scope_uncertain`、螺纹环形近似、多实体绕过风险和跨平台/工程安全未决均保留；阶段 2 语义/preflight 反例尚未实现。
 - 提交：`e5bcacf`（`test: measure cad geometry tolerances [CAD-005/006]`）。
 - 下一步：保持 `review`，等待 Codex 中枢独立审查并明确放行；未经放行不开始 CAD-005/006 实现。
+
+### CAD-005/006-tolerance / Codex 中枢 / review / 2026-11-02
+
+- 动作：独立重跑容差测量脚本、CAD handoff smoke、BenchCAD smoke 和 schema 测试；核对 45 条结果、Schema hash、IR-001 R3 容差候选及限制说明。
+- 结果：阶段 1 测量证据通过审查：45/45 build、45/45 STEP 回读成功；覆盖 15 个目录值，每值 3 次；17 项 schema 测试通过。记录与复跑一致，且保留单环境、BenchCAD 原生 build 路径的证据边界。
+- 阻塞：STEP 往返最大误差超过 IR-001 R3 当前 volume、face-area 候选及 edge-length relative 候选；报告中的 2×经验值尚未成为项目容差契约。CAD-005/006 正式实现门暂不放行，待中枢明确 native repeat 与 STEP roundtrip 的阈值语义、适用环境及比较方式。
+- 复审记录：`agent-work/reviews/CAD-005-006-tolerance-codex-review.md`。
+- 下一步：由 Codex 中枢完成容差策略决策记录，再明确放行 CAD-005/006 实现；本轮不标记 CAD-005/006 done。
