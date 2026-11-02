@@ -435,3 +435,12 @@ commit=cc8ad9c（feat: add deterministic retrieval baseline [RET-002]）
 范围=仅修正 `DistancePolicy` 自定义范围可绕过冻结 policy id 的问题；要求增加结构化拒绝测试，保持检索接口、候选边界、manifest hash、provisional split 和许可证限制不变。
 交付=`docs/coordination/prompts/RET-002-distance-policy-fix-agent.md`。
 下一步=项目负责人将修正 Prompt 交给原 RET-002 Agent；修正后保持 review，由 Codex 中枢重新复核。
+
+[2026-11-03 02:18] agent=RET-002-DSH task=RET-002 status=review
+scope=修正 RET-002 冻结距离策略范围契约（src/retrieval/distance.py、tests/retrieval/test_retrieval_baseline.py、integration README/checkpoint/handoff；docs/WORKLOG.md 只追加）
+动作=按 Codex 审查要求让 DistancePolicy.validate() 校验五个连续字段范围必须与完整 15 行 catalog_ranges() 精确相等，并显式拒绝 bool、非数值、NaN/Inf、近似值和过大整数；__post_init__ 冻结 range 映射与值，防止构造后改调用方 dict/list 改变已建索引；保留 from_manifest(..., policy=...) 接口但强制校验，from_config() 不变。新增 6 项回归测试（原 24 项保留，共 30 项）
+verified=启动检查（git root 正确、工作树干净、HEAD 3f959f2；审查提交 0461f59 与 prompt 3f959f2 一致）；修正前复现绕过：catalog_ranges() 改 bore_d=(0,1) 后 validate() 通过、from_manifest 建索引、输出 policy_id=RET-002.parametric_distance.v1、field range [0,1]；修正后同一路径返回 RETRIEVAL_CONFIG_INVALID（stage=config，fields=('bore_d',)，expected=[5.0,80.0]，observed=[0.0,1.0]），from_manifest 同样拒绝，from_config 正常；alias 修改调用方 dict/list 后 policy range 仍为 (5.0,80.0)、查询 total 仍为 0.009333333333333334；tests/retrieval 30 项 OK；run_smoke 3 正常/边界 + 13/13 失败 + 70 项检查 0 失败、determinism pass=True sha256=0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9；RET-001 verify_manifest.py --tracked-only 660 项 0 失败；py_compile、git diff --check 通过
+results=正常 envelope bore_d=20：catalog_validated、top1=catalog-bore-020、total 0.0、canonical SHA 仍为 0fcf84b7…；失败查询（缺字段）：RETRIEVAL_MISSING_FIELD；自定义范围：RETRIEVAL_CONFIG_INVALID 且不产生索引；冻结范围新建索引与默认索引 canonical JSON 逐字一致。manifest SHA-256 b7b6c737…、15 行、9/3/3、3 个 retrieval_source 候选、provisional_small_n 均未改变
+known_limits=仅修正策略范围/权重入口，未新增 policy id、学习权重或 RET-003 逻辑；weights.total_formula/tiebreak 描述字符串仍未逐字校验（非当前阻塞）；split 未冻结、候选仅 3 个、单 macOS arm64 环境、manifest hash 绑定、reproducibility_partial/MERGED/license_scope_uncertain/revolved_ring_approximation 限制全部保留；未读取或生成 STEP/渲染物，未下载 BenchCAD Public/Core；运行 smoke 与 RET-001 校验改写的报告已恢复到 HEAD
+next=Codex 中枢重新审查策略范围不可绕过性；本任务保持 review，未 push、未标 done；确认后再决定是否放行 RET-003
+commit=cce4ce7（fix: enforce frozen retrieval distance ranges [RET-002]）
