@@ -909,6 +909,8 @@
                   "additionalProperties": false,
                   "required": [
                     "profile_kind",
+                    "workplane",
+                    "axis_local",
                     "axis",
                     "revolve_degrees"
                   ],
@@ -916,8 +918,18 @@
                     "profile_kind": {
                       "const": "chamfered_annulus"
                     },
+                    "workplane": {
+                      "const": "XZ"
+                    },
+                    "axis_local": {
+                      "const": [
+                        0,
+                        1,
+                        0
+                      ]
+                    },
                     "axis": {
-                      "const": "Y"
+                      "const": "Z"
                     },
                     "revolve_degrees": {
                       "const": 360
@@ -1427,7 +1439,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1461,6 +1474,11 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build"
+              ]
             }
           }
         },
@@ -1471,7 +1489,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1505,6 +1524,12 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build",
+                "post_geometry"
+              ]
             }
           }
         },
@@ -1515,7 +1540,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1549,6 +1575,13 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ]
             }
           }
         },
@@ -1559,7 +1592,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1593,6 +1627,11 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build"
+              ]
             }
           }
         },
@@ -1603,7 +1642,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1637,6 +1677,12 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build",
+                "post_geometry"
+              ]
             }
           }
         },
@@ -1647,7 +1693,8 @@
             "ok",
             "stage",
             "errors",
-            "metrics"
+            "metrics",
+            "completed_stages"
           ],
           "properties": {
             "ok": {
@@ -1681,6 +1728,72 @@
             },
             "step_sha256": {
               "type": "string"
+            },
+            "completed_stages": {
+              "const": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "stage",
+            "errors",
+            "metrics",
+            "completed_stages"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "stage": {
+              "const": "build"
+            },
+            "errors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 999999,
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/error"
+                  },
+                  {
+                    "properties": {
+                      "stage": {
+                        "const": "build"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "code": {
+                        "enum": [
+                          "CAD_BUILD_NODE_ERROR",
+                          "CAD_BUILD_BOOLEAN_ERROR",
+                          "CAD_BUILD_UNSUPPORTED_FEATURE"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "step_sha256": {
+              "type": "string"
+            },
+            "completed_stages": {
+              "const": []
             }
           }
         }
@@ -1765,7 +1878,7 @@
           "const": "chamfered_annulus"
         },
         "axis": {
-          "const": "Y"
+          "const": "Z"
         },
         "revolve_degrees": {
           "const": 360
@@ -1800,6 +1913,16 @@
         "family_extension": {
           "type": "object",
           "additionalProperties": true
+        },
+        "workplane": {
+          "const": "XZ"
+        },
+        "axis_local": {
+          "const": [
+            0,
+            1,
+            0
+          ]
         }
       }
     },

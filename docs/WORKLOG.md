@@ -242,6 +242,20 @@
 - Prompt：`docs/coordination/prompts/IR-001-R3-final-contract-review.md`。
 - 状态：prompt 已准备，等待项目负责人启动独立 Agent；Agent 完成后由 Codex 中枢审查。
 
+### IR-001-R3 / Codex 中枢审查 / needs_revision / 2026-11-02
+
+- 动作：独立检查 R3 提交差异、IR Schema/示例、CadQuery 坐标语义及前序验证；复跑 Schema/示例、12 个反例、CAD-003 测试、项目 handoff smoke、公式/placement/螺纹探针。
+- 结果：大部分检查可复现通过，但发现两个阻塞问题：`Workplane("XZ").revolve` 的局部 `axisEnd=(0,1,0)` 映射到世界 +Z，R3 却把 Schema 和规范定为世界 Y；错误分类支持 `build` 阶段，但 `validation_result` Schema 没有构造失败分支。
+- 独立证据与修正要求：见 `agent-work/reviews/IR-001-R3-codex-review.md`。
+- 验证：Schema 自检及五例通过；`tests/schema` 17 项通过；`test_handoff.py`、公式、placement、线程探针通过；本次未运行 CAD-006 数值容差补测。
+- 下一步：修正上述接口矛盾并复审；首族确认与几何容差测量仍是正式 CAD-005/006 前置条件。
+
+### IR-001-R3-FIX / Codex / in_progress / 2026-11-02
+
+- 动作：认领 R3 两项阻塞契约修正；开始实现前完成交接定向复核。工作区已有中枢审查日志改动及未跟踪审查/prompt 文件，均保留其原始内容。
+- handoff_successor_check：`predecessor=IR-001-R3 (fcb88b7), checkpoint.md + review-r3.md + IR-001-R3-codex-review.md`; `files_format=PASS，Schema 与五个 JSON 文件存在且均可解析`; `core_rerun=PASS，Draft 2020-12 self-check + 五例 Schema + 12 个语义反例`; `normal_case=PASS，legal-catalog-row.json accepted，项目 Python 3.11/CadQuery 2.3 下源案例 check/build 为 1 solid`; `failure_case=PASS，rule-rejected-second-screw.json rejected，源案例 second_screw=1 被 check 拒绝`; `interface=review，build 结果位置确有缺口；R3 把 XZ Workplane 局部 axisEnd 误述为世界 Y，与中枢复核证据不一致`; `limits=PASS，geometry_tolerance=pending_measurement、family_scope=awaiting_owner_confirmation、snapshot_status=reproducibility_partial 均保留`; `result=review`; `blocking_issue=前序坐标语义与实际映射不一致，正是本任务要求修复的阻塞项；实现仅在本任务边界内继续，保留 R3 历史记录并追加修正结果`。
+- 下一步：修正世界轴契约及 accepted IR 的 build-stage validation_result，补齐契约/CAD 回归后提交供 Codex 中枢复审。
+
 ## 2026-11-02 — IR-001-R3 Typed CAD IR v0 契约复核
 
 - Agent：Codex（IR-001-R3）；动作：完成单族条件下公式/单位、坐标 placement、几何摘要容差和错误阶段契约复核；更新 IR spec/Schema/mapping/semantic-validation/示例/checkpoint，新增 `review-r3.md`。
@@ -250,3 +264,11 @@
 - 验证：Draft 2020-12 schema self-check + 五示例、语义反例脚本、CAD-003 17 tests、项目 venv `test_handoff.py`、纯 Python 公式探针、固定 OCP placement 和 ring cutter 体积探针均通过。最终 commit 在 checkpoint 审计后补记。
 - 提交：`fcb88b7` (`docs: finalize typed cad ir v0 contract [IR-001-R3]`)。
 - 下一步：等待 Codex 中枢独立审查；补测确认浮点容差，并由负责人冻结首族后再判断 CAD-005/006 是否启动。
+
+### IR-001-R3-FIX / Codex / review / 2026-11-02
+
+- 动作：修正 IR v0 回转轴坐标契约并扩展 accepted `validation_result` 以序列化 build 阶段失败；保留 R3 历史审查内容并追加修正记录。
+- 结果：Schema/规范统一为 `workplane=XZ`, `axis_local=[0,1,0]`, `axis=Z`（世界轴）；示例升级到 IR revision 0.2.0。build 失败只在 accepted `validation_result` 中使用 `CAD_BUILD_*`，通过 `completed_stages` 明确前置成功阶段；rejected 规则保留。新增 build failure 示例和坐标/阶段回归测试。
+- 验证：Draft 2020-12 self-check + 六示例 + 五个阶段混淆反例 PASS；新 Schema 测试 3 项 PASS；固定源码坐标/bbox 测试 2 项 PASS；CAD-003 测试 17 项 PASS；项目 venv handoff 和 placement 探针 PASS；所有 JSON 语法及 `git diff --check` PASS。系统 Python CadQuery 导入为 blocked，CAD 检查已在项目 Python 3.11.18/CadQuery 2.3.0/OCP 7.9.3.0 环境通过。
+- 限制：`geometry_tolerance=pending_measurement`、`family_scope=awaiting_owner_confirmation`、`snapshot_status=reproducibility_partial`；没有实现 CAD-005/006，也未运行浮点容差补测。
+- 下一步：记录提交并等待 Codex 中枢独立复审；不得标记 CAD-005/006 done。

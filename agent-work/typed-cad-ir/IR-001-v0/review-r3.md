@@ -79,3 +79,27 @@ handoff_successor_check:
   blocking_issue=数值几何容差须补测，首族范围未冻结
 
 下一步：Codex 中枢独立审查此文件及 diff；由其确认补测和最终数值配置，再决定是否启动 CAD-005/006。此 checkpoint 不把 IR-001 标为 done，也不启动编译器或生产验证器。
+
+## IR-001-R3-FIX 修正追加记录
+
+日期：2026-11-02
+状态：`review`，等待 Codex 中枢复审。以下修正不删除或改写上方 R3 原始记录；上方 B 节中“轴向为世界 Y”、旧 validation_result 只有后置/STEP 阶段的表述是 R3 当时的历史结论，现由本追加记录及 v0.2.0 契约取代。
+
+### 修正决定
+
+1. 保留 `shape.revolve_profile.properties.axis` 字段，将其定义为世界轴；新增必需 `workplane="XZ"` 与 `axis_local=[0,1,0]`，世界轴固定 `axis="Z"`。这样将调用参数坐标系和最终几何坐标系同时写入 Schema，避免只改说明造成常量冲突。IR 示例修订为 `0.2.0`；旧 `0.1.0` 数据必须重新适配，字段保留但既有世界 Y 值不兼容。
+2. 选择扩展 accepted IR 的 `validation_result`，因为它代表通过结构及 preflight 后的执行结果，最适合记录白名单 CAD 节点实际构造失败；将构造错误放回顶层 `errors` 会混淆参数拒绝和运行期错误。`build` 只允许失败分支，使用 `CAD_BUILD_*` 码，`completed_stages=[]`；后续失败分支要求精确列出已成功前置阶段。`rejected` 仍不得含 `validation_result`。
+3. `examples/build-failure.json` 给出 Schema 合法的 accepted 构造失败；`examples/validation-failure.json` 仍为独立 `post_geometry/GEOMETRY_MULTI_SOLID` 案例，明确 build 已成功。
+
+### 续任复核及修正验证
+
+- `handoff_successor_check` 已在 `docs/WORKLOG.md` 记录。前序文件/格式、5 个原示例、Draft 2020-12 self-check、12 个原反例、合法 build、规则拒绝案例均已复跑；发现的世界轴错误被记为 `review` 后继续在限定范围内修正。
+- Draft 2020-12 Schema self-check 及 6 个示例（原 5 + build failure）：PASS；语义阶段错误码和 5 个阶段混淆反例：PASS（均按预期拒绝）。
+- `tests/typed_cad_ir/test_schema_contract.py`：项目隔离 jsonschema 环境 3 tests PASS。
+- `tests/typed_cad_ir/test_axis_mapping.py`：项目 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境 2 tests PASS；直接验证 Workplane 局部 y 到世界 +Z，固定目录源 `bore_d=20, outer_d=32, width=14` bbox 为约 `32×32×14 mm`。
+- 固定 OCP `placement_probe`：PASS；零度 +X、135° (-X,+Y)，局部 +Z 经 +Y 90° 指向径向方向。CAD handoff smoke：PASS；合法构造 1 solid，second_screw=1 仍被前置规则拒绝。`tests/schema`：17 tests PASS。
+- 系统 Python 缺 CadQuery，CAD 检查使用上述项目隔离环境；本修正没有运行 STEP 几何容差补测。
+
+### 限制与交接
+
+`geometry_tolerance=pending_measurement`、`family_scope=awaiting_owner_confirmation`、`snapshot_status=reproducibility_partial` 原样保留。生成资产/许可证边界仍有不确定性；没有实现 CAD-005 编译器或 CAD-006 几何/STEP 验证器。本修正将 IR 示例 revision 更新为 0.2.0，但不表示首族批准或完整几何验证就绪。下一步由 Codex 中枢独立审查 Schema、反例、测试和该追加记录；不得把 CAD-005/006 写成 done。

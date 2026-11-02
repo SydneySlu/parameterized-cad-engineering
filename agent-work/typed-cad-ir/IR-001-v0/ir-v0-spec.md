@@ -90,7 +90,7 @@ v0 核心节点白名单及其不可省略的最小契约如下。JSON Schema �
 | `node_type` | 作用 | 关键输入/输出 |
 |---|---|---|
 | `catalog.resolve` | 输入 `bore_d: parameter_ref`；输出 `resolved_parameters: resolved_parameters`；properties 必须为 `catalog_key=bore_d` 和固定集合 `resolved_fields=[outer_d,width,screw_d,screw_len,second_screw]`。 |
-| `shape.revolve_profile` | 输入 `bore_d, outer_d, width, chamfer`；输出 `collar_base: shape`；properties 必须为 `profile_kind=chamfered_annulus`、`axis=Y`、`revolve_degrees=360`。 |
+| `shape.revolve_profile` | 输入 `bore_d, outer_d, width, chamfer`；输出 `collar_base: shape`；properties 必须为 `profile_kind=chamfered_annulus`、`workplane=XZ`、`axis_local=[0,1,0]`、`axis=Z`（世界轴）、`revolve_degrees=360`。 |
 | `feature.tapped_hole_cutter` | 输入 `thread_d, pitch, angle_deg, over, wall, hole_len, z_in, z_out, radial_offset, axial`；输出 `hole_cutter_primary` 或 `hole_cutter_secondary: cutter`；properties 必须登记 `thread_model`、`helical_thread_supported`、`placement_model`、结构化 `placement`。 |
 | `boolean.cut` | 输入 `base: node_output_ref`、`tool: node_output_ref`；输出 `solid_after_primary` 或 `solid_after_secondary: solid_candidate`；properties 必须含 `base_ref`、`tool_ref`、`operation=difference`。 |
 | `result.single_solid` | 输入 `second_screw: parameter_ref`；输出 `part: part`；properties 必须为 `select_if_zero=solid_after_primary`、`select_if_one=solid_after_secondary`。 |
@@ -109,11 +109,11 @@ radial_offset = subtract(half(bore_d), literal(0.5, mm))
 axial         = multiply(width, literal(0.5, 1))
 ```
 
-这对应源 `part.py` 的 `hole_len = wall + 2*over`、`z_in=over`、`z_out=over+wall`、`translate((bore_r-0.5, 0, width/2))`。`Workplane("XZ")` 的局部 x/y 分别映射到世界 +X/+Z，法向 +Y；polyline 第一坐标是径向半径（bore_r 到 od_r），第二坐标是套环轴向高度（0 到 width）。回转 `axisStart=(0,0,0)` 和 `axisEnd=(0,1,0)` 是世界坐标向量，故 collar 实际轴向为世界 Y，轴向范围 `[0,width]`，径向圆柱包络在 XZ 平面。局部 cutter 原点为其旋转实体局部原点，轴沿 +Z，长度从 z=0 到 `hole_len`；+Z 为由内孔向外径的 cutter 正方向。
+这对应源 `part.py` 的 `hole_len = wall + 2*over`、`z_in=over`、`z_out=over+wall`、`translate((bore_r-0.5, 0, width/2))`。`Workplane("XZ")` 的局部 x/y/z 分别映射为世界 +X/+Z/-Y，法向为世界 -Y；polyline 第一坐标是径向半径（bore_r 到 od_r），第二坐标是套环轴向高度（0 到 width）。`revolve` 的 `axisStart`/`axisEnd` 按当前 Workplane 局部坐标解释，因此局部 `axisEnd=(0,1,0)` 映射为世界 +Z；契约显式记录 `workplane=XZ`, `axis_local=[0,1,0]`, `axis=Z`（世界轴）。套环轴向范围为世界 Z `[0,width]`，径向圆柱包络在 XY 平面。固定源码 `bore_d=20, outer_d=32, width=14` 的 bbox 约为 `32.0000002 × 32.0000002 × 14.0 mm`。局部 cutter 原点为其旋转实体局部原点，轴沿 +Z，长度从 z=0 到 `hole_len`；+Z 为由内孔向外径的 cutter 正方向。
 
 placement 必须按 Schema 的有序结构执行，齐次列向量左乘：`p_world = Rz(angle_deg) · T(radial_offset,0,axial) · Ry(90°) · p_local`。第一转绕 cutter-local 原点及局部 +Y 轴，方向按右手规则；平移为世界向量 `(bore_d/2-0.5,0,width/2)`；最终转绕世界原点、世界 +Z 轴。`angle_deg=0` 时入口在 `(+radial_offset,0,width/2)`、径向向量为 +X；135° 时为 `(-radial_offset/√2,+radial_offset/√2,width/2)`，轴向仍 +X 先转为该径向方向。90° 的初转将 +Z 映射到 +X。禁止把 135° 误当局部角或绕 cutter 中心旋转。主孔/第二孔的世界位置与 DATA-003 两合法案例 bbox 对照为 `(32,32,14)` 和 `(110,110,22)` mm；旋转不改变包围盒理论尺寸，STEP 导出实测至多约 2e-7 mm 偏差。`screw_len` 是 GN 705 紧定螺钉目录长度，不能当孔深。
 
-`shape.revolve_profile` 轮廓各点为 `(径向半径, 世界 Y 轴向位置)`；其外/内半径及 8 点折线见源 `part.py`，不要将宽度解释成 Z。`over=0.5 mm`、回转轴和放置关系都必须由输入/登记的 placement 元数据表达，不能让编译器猜测。`thread_model` 必须为 `revolved_ring_approximation`，`helical_thread_supported` 必须为 `false`，两个孔节点都要明确记录。`screw_len` 仍是目录/任务字段，严禁作为 `hole_len` 或其他孔深输入。
+`shape.revolve_profile` 轮廓各点为 `(径向半径, Workplane 局部 y)`，分别映射到世界 X/Z；其外/内半径及 8 点折线见源 `part.py`，宽度沿世界 Z。`over=0.5 mm`、回转轴和放置关系都必须由输入/登记的 placement 元数据表达，不能让编译器猜测。`thread_model` 必须为 `revolved_ring_approximation`，`helical_thread_supported` 必须为 `false`，两个孔节点都要明确记录。`screw_len` 仍是目录/任务字段，严禁作为 `hole_len` 或其他孔深输入。
 
 标准合法案例的节点顺序为：解析目录、回转基体、主孔切削、主孔布尔差；当 `second_screw=1` 时再执行第二孔切削、第二孔布尔差，最后输出 `result.single_solid`。即使节点声明了条件，依赖图仍必须完整可检查。
 
@@ -133,7 +133,7 @@ placement 必须按 Schema 的有序结构执行，齐次列向量左乘：`p_wo
 
 前五项来自 CAD-003，失败时**必须先于 `build()`** 返回规则错误。DATA-003 已证明绕过 `check()` 后非法壁厚仍可能构造成功并产生 3 solids；因此构造成功或 STEP 导出成功都不能覆盖规则拒绝。
 
-参数规则和几何验证结果是两个不同对象：参数错误进入顶层 `errors` 且 `stage=schema/preflight`；构造后的实体计数、`isValid()`、体积、包围盒、面/边摘要进入 `validation_result` 且 `stage=post_geometry`；STEP 导出/回读进入 `stage=step_export/step_readback`。验证结果不得反写为参数来源或约束通过。`validation_result.ok=true` 时 `errors` 必须为空；`ok=false` 时至少有一条 error，且每条 error 的 `stage` 必须与 result stage 一致。`validation_result` 只能出现在 `status=accepted` 的 IR 中。
+参数规则和构造/几何验证结果是不同对象：参数错误进入顶层 `errors` 且 `stage=schema/preflight`；`accepted` IR 的构造失败写入 `validation_result` 且 `stage=build, ok=false`，不得伪装成 `post_geometry` 或顶层参数错误；构造成功后，实体计数、`isValid()`、体积、包围盒、面/边摘要进入 `stage=post_geometry`；STEP 导出/回读依次进入 `stage=step_export/step_readback`。每个结果列出精确的 `completed_stages`：build 失败为 `[]`，post_geometry 为 `[build]`，step_export 为 `[build, post_geometry]`，step_readback 为 `[build, post_geometry, step_export]`。只有前置阶段成功后才能进入下一阶段。验证结果不得反写为参数来源或约束通过。`validation_result.ok=true` 时 `errors` 必须为空；`ok=false` 时至少有一条 error，且每条 error 的 `stage` 必须与 result stage 一致。`validation_result` 只能出现在 `status=accepted` 的 IR 中；`rejected` IR 仍只用顶层 `errors`，不带 `validation_result`。
 
 ## 7. 错误协议
 
@@ -153,7 +153,9 @@ placement 必须按 Schema 的有序结构执行，齐次列向量左乘：`p_wo
 
 ## 8. JSON 序列化和兼容策略
 
-规范 JSON 见 [`ir-v0.schema.json`](ir-v0.schema.json)。顶层 `status=accepted` 表示 IR 已通过 IR 结构检查和 CAD-003 前置规则；它**不得**带顶层 `errors`，但可以带 `validation_result`。后置几何或 STEP 失败必须保持 `status=accepted` 并写 `validation_result.ok=false`。顶层 `status=rejected` 必须带 `errors`、`nodes` 必须为空且不得带 `validation_result`；前置拒绝不能生成可执行节点。该互斥关系由 JSON Schema 的条件约束表达。
+规范 JSON 见 [`ir-v0.schema.json`](ir-v0.schema.json)。顶层 `status=accepted` 表示 IR 已通过 IR 结构检查和 CAD-003 前置规则；它**不得**带顶层 `errors`，但可以带 `validation_result`。build、后置几何或 STEP 失败必须保持 `status=accepted` 并写 `validation_result.ok=false`。顶层 `status=rejected` 必须带 `errors`、`nodes` 必须为空且不得带 `validation_result`；前置拒绝不能生成可执行节点。该互斥关系由 JSON Schema 的条件约束表达。
+
+本修正将 IR 示例修订号提升为 `0.2.0`：回转节点增加必填 `workplane`/`axis_local` 并将既有 `axis` 明确定义为世界轴；`validation_result` 增加 `completed_stages` 并允许 build 失败分支。旧 `0.1.0` 序列化内容不满足本 Schema，必须在上游适配器按 `0.2.0` 重新生成；字段名 `axis` 保留，但其语义纠正为世界轴，已存在的 R3 世界 Y 常量与解释不兼容。
 
 JSON Schema 只能表达形状、常量、枚举、参数类型/值类型和状态字段互斥。反序列化后的语义检查还必须执行：六个参数 ID 和所有节点/输出/约束 ID 唯一；`ordinal` 从 0 连续递增；`depends_on` 只引用更早节点且依赖图无环；节点输出、参数和约束引用目标存在；`enabled_if` 参数存在且比较值类型相同；首族 `family_id`、`extension_namespace`、`source.schema_version` 和 `snapshot_status` 与本契约一致；表达式只使用登记公式和登记输出。语义检查的稳定错误码、责任边界和最小算法见 [`semantic-validation.md`](semantic-validation.md)。
 JSON Schema 还能表达每个核心 `node_type` 的输入/输出/properties 形状以及 `validation_result` 的 errors 数量和 stage。反序列化后的语义检查还必须执行：六个参数 ID 和所有节点/输出/约束 ID 唯一；参数字典序；`ordinal` 从 0 连续递增；`depends_on` 只引用更早节点且依赖图无环；节点输出、参数和约束引用目标存在；`enabled_if` 参数存在且比较值类型相同；首族 `family_id`、`extension_namespace`、`source.schema_version`、固定 `source_commit` 和 `snapshot_status` 与本契约一致；表达式只使用登记公式和登记输出；`second_screw=1` 只允许 `bore_d>70`。语义检查的稳定错误码、责任边界和最小算法见 [`semantic-validation.md`](semantic-validation.md)。

@@ -1,6 +1,6 @@
 {
   "ir_version": "typed-cad-ir.v0",
-  "ir_revision": "0.1.0",
+  "ir_revision": "0.2.0",
   "status": "accepted",
   "family": {
     "family_id": "set_screw_shaft_collar",
@@ -205,8 +205,14 @@
       ],
       "properties": {
         "profile_kind": "chamfered_annulus",
-        "axis": "Y",
-        "revolve_degrees": 360
+        "axis": "Z",
+        "revolve_degrees": 360,
+        "workplane": "XZ",
+        "axis_local": [
+          0,
+          1,
+          0
+        ]
       }
     },
     {

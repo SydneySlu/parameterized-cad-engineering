@@ -1,6 +1,6 @@
 {
   "ir_version": "typed-cad-ir.v0",
-  "ir_revision": "0.1.0",
+  "ir_revision": "0.2.0",
   "status": "rejected",
   "family": {
     "family_id": "set_screw_shaft_collar",

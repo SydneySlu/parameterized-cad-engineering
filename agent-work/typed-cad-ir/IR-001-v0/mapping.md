@@ -10,7 +10,7 @@
 4. 执行 `outer_d > bore_d`、壁厚和宽度规则。任何错误都生成 `status=rejected` 的错误记录，不生成可执行 `nodes`，且不写 `validation_result`。
 5. 只有全部通过时，按本表构造六个参数项、约束项和固定节点图。参数数组固定按字典序 `bore_d, outer_d, screw_d, screw_len, second_screw, width`。
 
-`status=accepted` 表示 IR 和前置规则通过，不保证 CAD 成功；它不得带顶层 `errors`，但可在构造/后置阶段追加 `validation_result`。若几何或 STEP 验证失败，保持 `status=accepted`、写 `validation_result.ok=false`，不得把后置失败转成顶层 `errors`。`ok=true` 必须 errors 为空，`ok=false` 必须至少一条 error，且 error.stage 必须与 validation_result.stage 相同；`validation_result` 不得出现在 rejected IR。
+`status=accepted` 表示 IR 和前置规则通过，不保证 CAD 成功；它不得带顶层 `errors`，但可在构造/后置阶段追加 `validation_result`。构造失败也保持 `status=accepted`，写 `stage=build, ok=false`，不得伪装成 `post_geometry` 或回填顶层参数 `errors`。`ok=true` 必须 errors 为空，`ok=false` 必须至少一条 error，且 error.stage 必须与 validation_result.stage 相同。`completed_stages` 必须准确列出此前成功阶段：build 为 `[]`、post_geometry 为 `[build]`、step_export 为 `[build, post_geometry]`、step_readback 为 `[build, post_geometry, step_export]`；后续阶段只有在前一阶段成功后才可出现。`validation_result` 不得出现在 rejected IR。
 
 ## 2. 参数映射
 
@@ -30,7 +30,7 @@
 | 顺序/ID | `node_type` | 输入绑定 | 输出 | 依赖 |
 |---:|---|---|---|---|
 | 0 / `n0.catalog.resolve` | `catalog.resolve` | 输入仅为 `bore_d: parameter_ref`；properties `catalog_key=bore_d`、`resolved_fields=[outer_d,width,screw_d,screw_len,second_screw]` | `resolved_parameters: resolved_parameters` | — |
-| 1 / `n1.collar.revolve` | `shape.revolve_profile` | 输入 `bore_d, outer_d, width, chamfer`；properties `profile_kind=chamfered_annulus`, `axis=Y`, `revolve_degrees=360` | `collar_base: shape` | n0 |
+| 1 / `n1.collar.revolve` | `shape.revolve_profile` | 输入 `bore_d, outer_d, width, chamfer`；properties `profile_kind=chamfered_annulus`, `workplane=XZ`, `axis_local=[0,1,0]`, `axis=Z`（世界轴）, `revolve_degrees=360` | `collar_base: shape` | n0 |
 | 2 / `n2.hole.primary` | `feature.tapped_hole_cutter` | `thread_d, pitch, angle_deg=0, over, wall, hole_len, z_in, z_out, radial_offset, axial` | `hole_cutter_primary: cutter` | n1 |
 | 3 / `n3.cut.primary` | `boolean.cut` | `base: node_output_ref`, `tool: node_output_ref`; properties `base_ref`, `tool_ref`, `operation=difference` | `solid_after_primary: solid_candidate` | n1,n2 |
 | 4 / `n4.hole.secondary` | `feature.tapped_hole_cutter` | 与主孔完全相同，`angle_deg=135`；仅 `second_screw=1` | `hole_cutter_secondary: cutter` | n3 |
@@ -51,7 +51,7 @@ radial_offset = subtract(half(bore_d), literal(0.5, mm))
 axial         = multiply(width, literal(0.5, 1))
 ```
 
-两节点均须带 `thread_model=revolved_ring_approximation`、`helical_thread_supported=false` 和登记的 placement 元数据：局部 +Z cutter 绕 Y 轴 90° 到 +X，按 `radial_offset`/`axial` 平移，再绕 Z 轴按 `angle_deg` 旋转。CAD-005 必须注册上述公式的参数名、单位传播和容差；placement 元数据只用于白名单解释，不得执行其中的自由字符串。
+两节点均须带 `thread_model=revolved_ring_approximation`、`helical_thread_supported=false` 和登记的 placement 元数据：局部 +Z cutter 绕世界 +Y 轴 90° 后沿世界 +X，平移到 `(radial_offset, 0, width/2)`，再绕世界 +Z 轴按 `angle_deg` 旋转。0° 在 +X，135° 位于 (-X,+Y) 象限。`screw_len` 只保留目录/任务字段，不是孔深。CAD-005 必须注册上述公式的参数名、单位传播和容差；placement 元数据只用于白名单解释，不得执行其中的自由字符串。
 
 缺少上述核心输入、expression kind 错误、输出 ID/kind 错误或 properties 不符合 node type 契约时分别返回 `IR_NODE_INPUT_MISSING`、`IR_NODE_INPUT_KIND_MISMATCH`、`IR_NODE_OUTPUT_CONTRACT_MISMATCH`、`IR_NODE_PROPERTIES_CONTRACT_MISMATCH`；不能由 CAD-005 自行猜测或由 `family_extension` 补齐。
 
@@ -60,6 +60,7 @@ axial         = multiply(width, literal(0.5, 1))
 CAD-003 的四条参数/规则关系直接进入 `constraints`，保留 `source_ref` 和 `enforced_at=preflight`。`single_solid_target` 和 `step_roundtrip` 是新增的后置契约，不改变 Schema 的 `ok` 语义：
 
 - `Schema ok=true`：仅表示可安全调用构造器；
+- `build ok=true`：仅表示声明式节点构造完成，不表示几何有效；build 失败以 `validation_result.stage=build` 持久化；
 - `post_geometry ok=true`：表示实体有效、数量和几何摘要满足 CAD-006 契约；
 - `step_readback ok=true`：表示导出并回读的实体满足相同后置契约。
 
@@ -70,7 +71,7 @@ CAD-003 的四条参数/规则关系直接进入 `constraints`，保留 `source_
 适配器必须把 CAD-003 的 `schema_version`、DATA-003 `source_commit` 和自己的 `adapter_version` 原样写入 `source`。更新目录值或规则时创建新的 Schema/adapter 版本，不能只更新 IR 文件中的数值。适配器不得把 `ValidationResult.errors` 清空后继续生成 IR，也不得从 `build()` 的“成功”推断参数规则通过。
 
 JSON Schema 未覆盖的唯一性、拓扑和引用检查必须由反序列化语义检查完成，使用 [`semantic-validation.md`](semantic-validation.md) 中的稳定错误码：参数/节点/输出/约束 ID 唯一，ordinal 连续，依赖只指向更早节点且无环，所有引用存在，`enabled_if` 参数和值类型匹配，首族固定版本/族/快照状态一致，公式和节点类型在白名单中。
-其中还必须检查固定 source commit、参数顺序、每个 node type 的最小输入/输出/properties 契约、`validation_result` 的 errors/stage 一致性，以及 `second_screw=1` 与 `bore_d>70` 的规则关系。
+其中还必须检查固定 source commit、参数顺序、每个 node type 的最小输入/输出/properties 契约、回转轴 `(workplane=XZ, axis_local=[0,1,0], axis=Z)`、`validation_result` 的 errors/stage/completed_stages 一致性，以及 `second_screw=1` 与 `bore_d>70` 的规则关系。
 
 
 ## IR-001-R3 冻结补充
