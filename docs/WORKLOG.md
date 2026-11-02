@@ -271,4 +271,5 @@
 - 结果：Schema/规范统一为 `workplane=XZ`, `axis_local=[0,1,0]`, `axis=Z`（世界轴）；示例升级到 IR revision 0.2.0。build 失败只在 accepted `validation_result` 中使用 `CAD_BUILD_*`，通过 `completed_stages` 明确前置成功阶段；rejected 规则保留。新增 build failure 示例和坐标/阶段回归测试。
 - 验证：Draft 2020-12 self-check + 六示例 + 五个阶段混淆反例 PASS；新 Schema 测试 3 项 PASS；固定源码坐标/bbox 测试 2 项 PASS；CAD-003 测试 17 项 PASS；项目 venv handoff 和 placement 探针 PASS；所有 JSON 语法及 `git diff --check` PASS。系统 Python CadQuery 导入为 blocked，CAD 检查已在项目 Python 3.11.18/CadQuery 2.3.0/OCP 7.9.3.0 环境通过。
 - 限制：`geometry_tolerance=pending_measurement`、`family_scope=awaiting_owner_confirmation`、`snapshot_status=reproducibility_partial`；没有实现 CAD-005/006，也未运行浮点容差补测。
-- 下一步：记录提交并等待 Codex 中枢独立复审；不得标记 CAD-005/006 done。
+- 提交：`fac9aaf` (`fix: repair IR-001-R3 axis and build failure contract [IR-001-R3-FIX]`)。
+- 下一步：等待 Codex 中枢独立复审；不得标记 CAD-005/006 done。
