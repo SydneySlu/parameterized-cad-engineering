@@ -10,7 +10,7 @@ verified=Draft202012Validator.check_schema + 5 examples PASS; /tmp/ir001r2_valid
 confirmed=source api snapshot part.py/spec.py/pyproject.toml blob hashes match DATA-003 fixed commit manifest; current ring cutters remove volume for probed M6 and M12; `screw_len` is not hole depth; second screw is 135 degrees; STEP byte hashes are unstable
 known_limits=首族未由负责人确认；数值几何容差不能由当前6位摘要冻结，缺构造/回读原始面边序列和更多重复测量；source snapshot remains reproducibility_partial; generated CAD/license scope uncertain; no CAD-005 compiler or CAD-006 production validator implemented
 next=Codex 中枢独立审查 review-r3.md 和 diff；完成数值容差补测并确认首族后，再决定是否启动 CAD-005/006
-commit=pending
+commit=fcb88b7
 ```
 
 ## 自检及状态边界
