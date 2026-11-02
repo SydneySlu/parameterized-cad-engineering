@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import sys
 import tempfile
 import time
@@ -46,13 +47,10 @@ def _cq_runtime():
         import OCP
     except Exception as exc:
         fail("CAD_RUNTIME_UNAVAILABLE", "build", f"CadQuery/OCP runtime unavailable: {type(exc).__name__}: {str(exc)[:300]}", "runtime")
-    # BenchCAD's pinned CQ 2.3/OCP 7.9 environment expects this API method.
-    from OCP.TopoDS import (TopoDS_Compound, TopoDS_CompSolid, TopoDS_Edge, TopoDS_Face,
-                            TopoDS_Shape, TopoDS_Shell, TopoDS_Solid, TopoDS_Vertex, TopoDS_Wire)
-    for cls in (TopoDS_Shape, TopoDS_Face, TopoDS_Edge, TopoDS_Vertex, TopoDS_Wire,
-                TopoDS_Shell, TopoDS_Solid, TopoDS_Compound, TopoDS_CompSolid):
-        if not hasattr(cls, "HashCode"):
-            cls.HashCode = lambda self, ub=2147483647: id(self) % ub
+    # The pinned OCP 7.9 binding lacks legacy TopoDS.HashCode. The previous
+    # global id(self)-based monkey patch was unnecessary for this pipeline's
+    # direct build/export path and changed hash semantics for every TopoDS
+    # object in-process, so leave the native binding untouched.
     return cq, OCP
 
 
@@ -193,6 +191,35 @@ def _runtime_manifest(OCP, cq, input_hash: str) -> dict[str, Any]:
     }
 
 
+def _error_node_ids(document: dict[str, Any], field: str | None) -> list[str]:
+    if not field:
+        return []
+    nodes = document.get("nodes", [])
+    if not isinstance(nodes, list):
+        return []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_id = node.get("node_id")
+        if isinstance(node_id, str) and f"nodes.{node_id}" in field:
+            return [node_id]
+    match = re.search(r"(?:^|\.)nodes(?:\[(\d+)\]|\.(\d+))(?:\.|$)", field)
+    if match:
+        index = int(match.group(1) or match.group(2))
+        if 0 <= index < len(nodes) and isinstance(nodes[index], dict):
+            node_id = nodes[index].get("node_id")
+            if isinstance(node_id, str):
+                return [node_id]
+    return []
+
+
+def _serialize_error(error: CadError, document: dict[str, Any]) -> dict[str, Any]:
+    normalized = {key: value for key, value in error.as_dict().items() if key != "field"}
+    normalized.update({"severity": "error", "fields": [error.field] if error.field else [],
+                       "node_ids": _error_node_ids(document, error.field), "retryable": False})
+    return normalized
+
+
 def _failed_result(document: dict[str, Any], error: CadError, manifest: dict[str, Any] | None = None,
                    completed: list[str] | None = None, log: list[dict[str, Any]] | None = None) -> CompilationResult:
     if error.stage == "build" and error.code not in {"CAD_BUILD_NODE_ERROR", "CAD_BUILD_BOOLEAN_ERROR", "CAD_BUILD_UNSUPPORTED_FEATURE"}:
@@ -200,8 +227,7 @@ def _failed_result(document: dict[str, Any], error: CadError, manifest: dict[str
     # The IR schema intentionally has one stable error shape.  ``field`` is
     # an internal convenience on CadError; serialize its location only as
     # the schema's ``fields`` list.
-    normalized = {key: value for key, value in error.as_dict().items() if key != "field"}
-    normalized.update({"severity": "error", "fields": [error.field] if error.field else [], "node_ids": [], "retryable": False})
+    normalized = _serialize_error(error, document)
     validation = {"stage": error.stage, "ok": False, "completed_stages": completed or [], "errors": [normalized], "metrics": {}}
     error_metrics = dict(manifest.get("native_geometry", {})) if manifest else {}
     validation["metrics"] = error_metrics
@@ -223,8 +249,9 @@ def compile_ir(raw: str | bytes, *, output_dir: str | os.PathLike[str] | None = 
     if validation_errors:
         preflight_errors = [error for error in validation_errors if error.stage == "preflight"]
         if preflight_errors:
-            return CompilationResult(False, "preflight", [item.as_dict() for item in preflight_errors], dict(document))
-        return CompilationResult(False, validation_errors[0].stage, [item.as_dict() for item in validation_errors[:50]], dict(document))
+            return CompilationResult(False, "preflight", [_serialize_error(item, document) for item in preflight_errors[:50]], dict(document))
+        return CompilationResult(False, validation_errors[0].stage,
+                                 [_serialize_error(item, document) for item in validation_errors[:50]], dict(document))
     if document.get("status") != "accepted":
         errors = document.get("errors", []) or [{"code": "CAD_PREFLIGHT_REJECTED", "stage": "preflight", "message": "Rejected IR cannot be compiled."}]
         return CompilationResult(False, "preflight", errors, dict(document))

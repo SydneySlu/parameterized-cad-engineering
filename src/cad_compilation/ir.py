@@ -67,6 +67,128 @@ def _unique(items: list[dict[str, Any]], key: str, code: str, field: str, errors
         seen.add(value)
 
 
+def _ref(parameter_id: str) -> dict[str, Any]:
+    return {"kind": "parameter_ref", "parameter_id": parameter_id}
+
+
+def _literal(value: int | float, unit: str) -> dict[str, Any]:
+    return {"kind": "literal", "value": value, "unit": unit}
+
+
+def _formula(formula_id: str, **args: Any) -> dict[str, Any]:
+    return {"kind": "formula", "formula_id": formula_id, "args": args}
+
+
+def _half_difference() -> dict[str, Any]:
+    return _formula("half_difference", outer_d=_ref("outer_d"), bore_d=_ref("bore_d"))
+
+
+def _canonical_node_contracts() -> list[dict[str, Any]]:
+    """Exact input and graph bindings frozen by mapping.md and IR v0 examples."""
+    wall = _half_difference()
+    over = _literal(0.5, "mm")
+    collar_chamfer = _formula("collar_chamfer", bore_d=_ref("bore_d"), wall=wall, width=_ref("width"))
+    hole_inputs = lambda angle: {
+        "thread_d": _ref("screw_d"),
+        "pitch": {"kind": "lookup", "table_id": "iso261.coarse_pitch_mm", "key": _ref("screw_d")},
+        "angle_deg": _literal(angle, "deg"),
+        "over": over,
+        "wall": wall,
+        "hole_len": _formula("add", left=wall, right=_formula("multiply", value=over, factor=_literal(2, "1"))),
+        "z_in": over,
+        "z_out": _formula("add", left=over, right=wall),
+        "radial_offset": _formula("subtract", left=_formula("half", value=_ref("bore_d")), right=_literal(0.5, "mm")),
+        "axial": _formula("multiply", width=_ref("width"), factor=_literal(0.5, "1")),
+    }
+    placement = {
+        "cutter_local_axis": "Z",
+        "transform_order": "column_vector_left_multiply",
+        "transforms": [
+            {"operation": "rotate", "frame": "cutter_local", "pivot": [0, 0, 0], "axis": [0, 1, 0], "degrees": 90},
+            {"operation": "translate", "frame": "world", "vector": ["radial_offset", 0, "axial"]},
+            {"operation": "rotate", "frame": "world", "pivot": [0, 0, 0], "axis": [0, 0, 1], "angle_ref": "angle_deg"},
+        ],
+    }
+    secondary = {"kind": "parameter_equals", "parameter_id": "second_screw", "equals": 1}
+    return [
+        {"node_id": "n0.catalog.resolve", "inputs": {"bore_d": _ref("bore_d")},
+         "properties": {"catalog_key": "bore_d", "resolved_fields": ["outer_d", "width", "screw_d", "screw_len", "second_screw"]},
+         "depends_on": []},
+        {"node_id": "n1.collar.revolve", "inputs": {"bore_d": _ref("bore_d"), "outer_d": _ref("outer_d"), "width": _ref("width"), "chamfer": collar_chamfer},
+         "properties": {"profile_kind": "chamfered_annulus", "workplane": "XZ", "axis_local": [0, 1, 0], "axis": "Z", "revolve_degrees": 360},
+         "depends_on": ["n0.catalog.resolve"]},
+        {"node_id": "n2.hole.primary", "inputs": hole_inputs(0),
+         "properties": {"thread_model": "revolved_ring_approximation", "helical_thread_supported": False, "placement_model": "radial_bore_breakout", "placement": placement},
+         "depends_on": ["n1.collar.revolve"]},
+        {"node_id": "n3.cut.primary", "inputs": {"base": {"kind": "node_output_ref", "output_id": "collar_base"}, "tool": {"kind": "node_output_ref", "output_id": "hole_cutter_primary"}},
+         "properties": {"base_ref": "collar_base", "tool_ref": "hole_cutter_primary", "operation": "difference"},
+         "depends_on": ["n1.collar.revolve", "n2.hole.primary"]},
+        {"node_id": "n4.hole.secondary", "inputs": hole_inputs(135),
+         "properties": {"thread_model": "revolved_ring_approximation", "helical_thread_supported": False, "placement_model": "radial_bore_breakout", "placement": placement},
+         "depends_on": ["n3.cut.primary"], "enabled_if": secondary},
+        {"node_id": "n5.cut.secondary", "inputs": {"base": {"kind": "node_output_ref", "output_id": "solid_after_primary"}, "tool": {"kind": "node_output_ref", "output_id": "hole_cutter_secondary"}},
+         "properties": {"base_ref": "solid_after_primary", "tool_ref": "hole_cutter_secondary", "operation": "difference"},
+         "depends_on": ["n3.cut.primary", "n4.hole.secondary"], "enabled_if": secondary},
+        {"node_id": "n6.result", "inputs": {"second_screw": _ref("second_screw")},
+         "properties": {"select_if_zero": "solid_after_primary", "select_if_one": "solid_after_secondary"},
+         "depends_on": ["n3.cut.primary", "n5.cut.secondary"]},
+    ]
+
+
+def _canonical_binding_errors(nodes: list[dict[str, Any]]) -> list[CadError]:
+    expected_nodes = _canonical_node_contracts()
+    errors: list[CadError] = []
+    # sort_keys ignores source object key order while preserving JSON type and
+    # numeric spelling, so this is structural comparison, never evaluation.
+    def same_json(left: Any, right: Any) -> bool:
+        try:
+            return json.dumps(left, sort_keys=True, separators=(",", ":"), allow_nan=False) == json.dumps(
+                right, sort_keys=True, separators=(",", ":"), allow_nan=False
+            )
+        except (TypeError, ValueError):
+            return False
+
+    expected_outputs = [
+        ("resolved_parameters", "resolved_parameters"), ("collar_base", "shape"),
+        ("hole_cutter_primary", "cutter"), ("solid_after_primary", "solid_candidate"),
+        ("hole_cutter_secondary", "cutter"), ("solid_after_secondary", "solid_candidate"),
+        ("part", "part"),
+    ]
+    if len(nodes) != len(expected_nodes):
+        errors.append(CadError("IR_NODE_CONTRACT_UNSUPPORTED", "semantic", "Accepted v0 must use the fixed seven-node graph.", "nodes"))
+    for index, expected in enumerate(expected_nodes):
+        if index >= len(nodes):
+            break  # array length and graph shape are diagnosed separately
+        actual = nodes[index]
+        node_id = expected["node_id"]
+        if actual.get("node_id") != node_id:
+            errors.append(CadError("IR_NODE_CONTRACT_UNSUPPORTED", "semantic", f"Expected fixed node {node_id} at ordinal {index}.", f"nodes[{index}].node_id"))
+            continue
+        output_id, output_kind = expected_outputs[index]
+        outputs = actual.get("outputs", [])
+        if len(outputs) != 1 or outputs[0].get("output_id") != output_id or outputs[0].get("kind") != output_kind:
+            errors.append(CadError("IR_NODE_OUTPUT_CONTRACT_MISMATCH", "semantic", f"{node_id} output does not match the frozen graph.", f"nodes.{node_id}.outputs"))
+        expected_inputs = expected["inputs"]
+        actual_inputs = actual.get("inputs", {})
+        for name, binding in expected_inputs.items():
+            field = f"nodes.{node_id}.inputs.{name}"
+            if name not in actual_inputs:
+                errors.append(CadError("IR_NODE_INPUT_MISSING", "semantic", f"{node_id} is missing required input {name}.", field))
+            elif not same_json(actual_inputs[name], binding):
+                errors.append(CadError("IR_NODE_INPUT_KIND_MISMATCH", "semantic", f"{node_id}.{name} does not match its frozen CAD-003-to-IR binding.", field))
+        if set(actual_inputs) != set(expected_inputs):
+            for name in sorted(set(actual_inputs) - set(expected_inputs)):
+                field = f"nodes.{node_id}.inputs.{name}"
+                errors.append(CadError("IR_NODE_INPUT_KIND_MISMATCH", "semantic", f"{node_id} has unsupported input {name}.", field))
+        if not same_json(actual.get("properties", {}), expected["properties"]):
+            errors.append(CadError("IR_NODE_PROPERTIES_CONTRACT_MISMATCH", "semantic", f"{node_id} properties do not match the frozen node contract.", f"nodes.{node_id}.properties"))
+        if not same_json(actual.get("depends_on", []), expected["depends_on"]):
+            errors.append(CadError("IR_DEPENDENCY_NOT_PREVIOUS", "semantic", f"{node_id} dependencies do not match the frozen graph.", f"nodes.{node_id}.depends_on"))
+        if actual.get("enabled_if") != expected.get("enabled_if"):
+            errors.append(CadError("IR_NODE_PROPERTIES_CONTRACT_MISMATCH", "semantic", f"{node_id} enabled condition does not match the frozen graph.", f"nodes.{node_id}.enabled_if"))
+    return errors
+
+
 def _walk_expr(expr: Any, params: set[str], outputs: set[str], errors: list[CadError], field: str) -> None:
     if not isinstance(expr, dict):
         errors.append(CadError("IR_EXECUTION_STRING_FORBIDDEN", "semantic", "Node expressions must be structured objects.", field))
@@ -126,6 +248,7 @@ def semantic_errors(document: dict[str, Any]) -> list[CadError]:
     outputs: list[dict[str, Any]] = [output for node in nodes for output in node.get("outputs", [])]
     _unique(outputs, "output_id", "IR_DUPLICATE_OUTPUT_ID", "nodes.outputs", errors)
     if document.get("status") == "accepted":
+        errors.extend(_canonical_binding_errors(nodes))
         names = [parameter.get("parameter_id") for parameter in parameters]
         if names != PARAMETER_ORDER:
             errors.append(CadError("IR_PARAMETER_ORDER_MISMATCH", "semantic", "Accepted parameters must follow the frozen six-field order.", "parameters"))

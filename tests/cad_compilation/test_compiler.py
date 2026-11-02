@@ -63,6 +63,62 @@ class CadCompilerTests(unittest.TestCase):
                 self.assertEqual(result.manifest["native_geometry"]["solids"], 1)
                 self.assertEqual(result.manifest["native_geometry"]["shells"], 1)
 
+    def test_frozen_input_binding_mutations_are_rejected_before_cad_runtime(self):
+        mutations = (
+            ("radial_offset", lambda doc: doc["nodes"][2]["inputs"].__setitem__(
+                "radial_offset", {"kind": "literal", "value": 100, "unit": "mm"})),
+            ("hole_len", lambda doc: doc["nodes"][2]["inputs"].__setitem__(
+                "hole_len", {"kind": "literal", "value": 999, "unit": "mm"})),
+            ("angle_deg", lambda doc: doc["nodes"][2]["inputs"].__setitem__(
+                "angle_deg", {"kind": "literal", "value": 90, "unit": "deg"})),
+        )
+        for field, mutate in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as output:
+                document = self.load("legal-catalog-row.json")
+                mutate(document)
+                raw = json.dumps(document)
+                errors = validate_ir(raw)
+                self.assertIn("IR_NODE_INPUT_KIND_MISMATCH", {error.code for error in errors})
+                with mock.patch("cad_compilation.compiler._cq_runtime") as runtime, \
+                     mock.patch("cad_compilation.compiler._native_build") as build:
+                    result = compile_ir(raw, output_dir=output)
+                self.assertFalse(result.ok)
+                self.assertEqual(result.status, "semantic")
+                self.assertEqual(result.errors[0]["fields"], [f"nodes.n2.hole.primary.inputs.{field}"])
+                self.assertEqual(result.errors[0]["node_ids"], ["n2.hole.primary"])
+                runtime.assert_not_called()
+                build.assert_not_called()
+                self.assertEqual(list(Path(output).glob("*.step")), [])
+
+    def test_failed_error_node_ids_follow_stable_node_and_global_paths(self):
+        from cad_compilation.errors import CadError, PipelineError
+
+        node_error = PipelineError(CadError("CAD_BUILD_NODE_ERROR", "build", "injected node failure",
+                                             "nodes.n1.collar.revolve.inputs.chamfer"))
+        with mock.patch("cad_compilation.compiler._native_build", side_effect=node_error):
+            result = self.compile("legal-catalog-row.json", "/tmp/cad005006-node-id-failure")
+        self.assertEqual(result.errors[0]["node_ids"], ["n1.collar.revolve"])
+        self.assertEqual(result.ir["validation_result"]["completed_stages"], [])
+
+        global_error = PipelineError(CadError("CAD_BUILD_NODE_ERROR", "build", "injected global failure", "runtime"))
+        with mock.patch("cad_compilation.compiler._native_build", side_effect=global_error):
+            result = self.compile("legal-catalog-row.json", "/tmp/cad005006-global-id-failure")
+        self.assertEqual(result.errors[0]["node_ids"], [])
+
+        document = self.load("legal-catalog-row.json")
+        document["nodes"][0]["node_id"] = "unexpected.catalog.node"
+        result = compile_ir(json.dumps(document))
+        self.assertFalse(result.ok)
+        self.assertEqual(result.errors[0]["fields"], ["nodes.0"])
+        self.assertEqual(result.errors[0]["node_ids"], ["unexpected.catalog.node"])
+
+    def test_schema_error_node_locator_handles_non_object_nodes(self):
+        document = self.load("legal-catalog-row.json")
+        document["nodes"][0] = None
+        result = compile_ir(json.dumps(document))
+        self.assertFalse(result.ok)
+        self.assertEqual(result.errors[0]["node_ids"], [])
+
     def test_catalog_rule_rejected_before_build(self):
         rejected = compile_ir((EXAMPLES / "rule-rejected-second-screw.json").read_text())
         self.assertFalse(rejected.ok)
