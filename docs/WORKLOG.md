@@ -302,5 +302,5 @@
 - 结果：固定输入仍为 BenchCAD `035f467142888edfd0bd7cd73906f9b155c8f43c` / `designs/set_screw_shaft_collar`。raw/API 快照含 217/217 commit blobs，tar SHA-256 `b390bc953416cfcf27b94b4ec1f497a0ba0ee5f3afb04c4b8454c411fc3c33ad`；这不是 Git archive/完整 checkout，状态维持 `reproducibility_partial`。许可结论区分 MIT 源码、CC BY 4.0 官方 released dataset artifacts、项目生成 CAD 的 `license_scope_uncertain`、NOTES 第三方材料不授权和 Public/Core 排除。
 - 验证：raw 快照目录 `bench2 validate set_screw_shaft_collar --seeds 1` PASS；确认 family.json ID、build/check 入口与固定 commit STATUS `MERGED`、`0 release-qualified`；promisor checkout 缺 README/族 part.py 且有 staged deletions；raw manifest 217 文件、tar SHA 复核一致；`python3 -m json.tool agent-work/data/DATA-003-single-family-audit/minimal-manifest.json` 与 `git diff --check` PASS。
 - 限制：无法获得完整 Git checkout 或有效官方 archive；项目生成 STEP/渲染物和 JW Winco 图纸/SVG/照片再发布许可仍需上游具体确认；Public/Core 未下载。未宣称首族 release-qualified 或生成 CAD 可公开再发布。
-- 提交：DATA-003-R2 变更提交 `7e40495`；本次追加的 commit 记录将随当前提交一并保留。
+- 提交：DATA-003-R2 主交付提交 `c3ac4c6`；本行是提交后的日志校正。
 - 下一步：Codex 中枢复核来源、快照和许可证边界；如需可复现 Git 快照，应在网络/完整对象可用后重新 clone/fetch 或从完整 checkout archive。
