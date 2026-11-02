@@ -1,0 +1,801 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://parameterized-cad-engineering.invalid/retrieval/retrieval-manifest.v0.schema.json",
+  "title": "RET-001 retrieval manifest v0 record",
+  "description": "One record per frozen catalog row of set_screw_shaft_collar. Schema validity is a data-integrity check only and is not evidence of CAD geometry correctness; geometry verdicts are carried by the CAD-006.geometry-comparison.v1 fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "sample_id",
+    "family_id",
+    "sample_kind",
+    "source",
+    "parameters",
+    "ir",
+    "artifacts",
+    "validation",
+    "split",
+    "generation",
+    "limitations"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": "retrieval-manifest.v0"
+    },
+    "sample_id": {
+      "type": "string",
+      "pattern": "^set_screw_shaft_collar/catalog-bore-[0-9]{3}$"
+    },
+    "family_id": {
+      "const": "set_screw_shaft_collar"
+    },
+    "sample_kind": {
+      "const": "catalog_row"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "source_commit",
+        "family_path",
+        "family_status",
+        "release_qualified",
+        "snapshot_status",
+        "license_scope",
+        "catalog_row"
+      ],
+      "properties": {
+        "repository": {
+          "const": "https://github.com/BenchCAD-org/benchcad-2"
+        },
+        "source_commit": {
+          "const": "035f467142888edfd0bd7cd73906f9b155c8f43c"
+        },
+        "family_path": {
+          "const": "designs/set_screw_shaft_collar"
+        },
+        "family_status": {
+          "const": "MERGED"
+        },
+        "release_qualified": {
+          "const": false
+        },
+        "snapshot_status": {
+          "const": "reproducibility_partial"
+        },
+        "license_scope": {
+          "const": "source/designs MIT; generated STEP/render scope uncertain"
+        },
+        "catalog_row": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "index",
+            "key",
+            "value",
+            "fields",
+            "row"
+          ],
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 14
+            },
+            "key": {
+              "const": "bore_d"
+            },
+            "value": {
+              "enum": [
+                5,
+                6,
+                8,
+                10,
+                12,
+                16,
+                20,
+                24,
+                30,
+                35,
+                40,
+                50,
+                60,
+                70,
+                80
+              ]
+            },
+            "fields": {
+              "const": [
+                "bore_d",
+                "outer_d",
+                "screw_d",
+                "screw_len",
+                "width"
+              ]
+            },
+            "row": {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 5,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "normalized",
+        "units",
+        "provenance",
+        "catalog_key",
+        "input_payload"
+      ],
+      "properties": {
+        "normalized": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bore_d",
+            "outer_d",
+            "screw_d",
+            "screw_len",
+            "second_screw",
+            "width"
+          ],
+          "properties": {
+            "bore_d": {
+              "enum": [
+                5,
+                6,
+                8,
+                10,
+                12,
+                16,
+                20,
+                24,
+                30,
+                35,
+                40,
+                50,
+                60,
+                70,
+                80
+              ]
+            },
+            "outer_d": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "screw_d": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "screw_len": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "second_screw": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "units": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "length",
+            "second_screw"
+          ],
+          "properties": {
+            "length": {
+              "const": "mm"
+            },
+            "second_screw": {
+              "const": "1 (dimensionless)"
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bore_d",
+            "outer_d",
+            "screw_d",
+            "screw_len",
+            "second_screw",
+            "width"
+          ],
+          "properties": {
+            "bore_d": {
+              "$ref": "#/$defs/provenance_entry"
+            },
+            "outer_d": {
+              "$ref": "#/$defs/provenance_entry"
+            },
+            "screw_d": {
+              "$ref": "#/$defs/provenance_entry"
+            },
+            "screw_len": {
+              "$ref": "#/$defs/provenance_entry"
+            },
+            "second_screw": {
+              "$ref": "#/$defs/provenance_entry"
+            },
+            "width": {
+              "$ref": "#/$defs/provenance_entry"
+            }
+          }
+        },
+        "catalog_key": {
+          "const": "bore_d"
+        },
+        "input_payload": {
+          "$ref": "#/$defs/hashed_path"
+        }
+      }
+    },
+    "ir": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ir_version",
+        "ir_revision",
+        "status",
+        "schema_path",
+        "schema_sha256",
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "ir_version": {
+          "const": "typed-cad-ir.v0"
+        },
+        "ir_revision": {
+          "const": "0.2.0"
+        },
+        "status": {
+          "const": "accepted"
+        },
+        "schema_path": {
+          "const": "agent-work/typed-cad-ir/IR-001-v0/ir-v0.schema.json"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^agent-work/data/RET-001-retrieval-manifest/ir/[a-z0-9-]+\\.json$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step",
+        "render",
+        "validation_result"
+      ],
+      "properties": {
+        "step": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "bytes",
+            "repository_status",
+            "license_status"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^work/ret-001-output/cad/.+\\.step$"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "repository_status": {
+              "const": "ignored_local_artifact"
+            },
+            "license_status": {
+              "const": "license_scope_uncertain"
+            }
+          }
+        },
+        "render": {
+          "type": "null"
+        },
+        "validation_result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "repository_status"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^work/ret-001-output/validation/.+\\.json$"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "repository_status": {
+              "const": "ignored_local_artifact"
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "family_rules",
+        "cad_compile",
+        "completed_stages",
+        "final_stage",
+        "native_geometry",
+        "native_repeatability",
+        "step_readback",
+        "policy_id"
+      ],
+      "properties": {
+        "schema": {
+          "const": "pass"
+        },
+        "family_rules": {
+          "const": "pass"
+        },
+        "cad_compile": {
+          "const": "pass"
+        },
+        "completed_stages": {
+          "const": [
+            "build",
+            "post_geometry",
+            "step_export"
+          ]
+        },
+        "final_stage": {
+          "const": "step_readback"
+        },
+        "native_geometry": {
+          "$ref": "#/$defs/geometry_summary"
+        },
+        "native_repeatability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pass",
+            "exact_equal",
+            "different_fields",
+            "policy_id"
+          ],
+          "properties": {
+            "pass": {
+              "const": true
+            },
+            "exact_equal": {
+              "const": true
+            },
+            "different_fields": {
+              "type": "array",
+              "maxItems": 0,
+              "items": {
+                "type": "string"
+              }
+            },
+            "policy_id": {
+              "const": "CAD-006.geometry-comparison.v1"
+            }
+          }
+        },
+        "step_readback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pass",
+            "policy_id",
+            "hard_mismatches",
+            "bbox_pass",
+            "bbox_max_abs_mm",
+            "volume_abs_mm3",
+            "volume_rel",
+            "face_areas",
+            "edge_lengths",
+            "readback_geometry"
+          ],
+          "properties": {
+            "pass": {
+              "const": true
+            },
+            "policy_id": {
+              "const": "CAD-006.geometry-comparison.v1"
+            },
+            "hard_mismatches": {
+              "type": "array",
+              "maxItems": 0,
+              "items": {
+                "type": "string"
+              }
+            },
+            "bbox_pass": {
+              "const": true
+            },
+            "bbox_max_abs_mm": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.00001
+            },
+            "volume_abs_mm3": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.0682
+            },
+            "volume_rel": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.000003941
+            },
+            "face_areas": {
+              "$ref": "#/$defs/comparison_list",
+              "properties": {
+                "max_abs": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.00794
+                },
+                "max_rel": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.0000144
+                }
+              }
+            },
+            "edge_lengths": {
+              "$ref": "#/$defs/comparison_list",
+              "properties": {
+                "max_abs": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.00001
+                },
+                "max_rel": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2.956e-8
+                }
+              }
+            },
+            "readback_geometry": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "solids",
+                "shells",
+                "faces",
+                "edges",
+                "vertices",
+                "is_valid",
+                "volume_mm3"
+              ],
+              "properties": {
+                "solids": {
+                  "const": 1
+                },
+                "shells": {
+                  "const": 1
+                },
+                "faces": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "edges": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "vertices": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "is_valid": {
+                  "const": true
+                },
+                "volume_mm3": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          }
+        },
+        "policy_id": {
+          "const": "CAD-006.geometry-comparison.v1"
+        }
+      }
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "group_id",
+        "split_rule",
+        "split_status"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "development",
+            "retrieval_source",
+            "heldout_evaluation"
+          ]
+        },
+        "group_id": {
+          "type": "string",
+          "pattern": "^catalog-row-bore-[0-9]{3}$"
+        },
+        "split_rule": {
+          "type": "string",
+          "minLength": 40
+        },
+        "split_status": {
+          "const": "provisional_small_n"
+        }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator",
+        "generator_version",
+        "ir_template",
+        "ir_template_sha256",
+        "seed",
+        "generated_at",
+        "python",
+        "cadquery",
+        "ocp",
+        "numpy",
+        "platform"
+      ],
+      "properties": {
+        "generator": {
+          "const": "agent-work/data/RET-001-retrieval-manifest/generator/generate_manifest.py"
+        },
+        "generator_version": {
+          "const": "retrieval-manifest.v0"
+        },
+        "ir_template": {
+          "const": "agent-work/typed-cad-ir/IR-001-v0/examples/legal-catalog-row.json"
+        },
+        "ir_template_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "seed": {
+          "type": "null"
+        },
+        "generated_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\+08:00$"
+        },
+        "python": {
+          "type": "string",
+          "pattern": "^3\\.11\\."
+        },
+        "cadquery": {
+          "const": "2.3.0"
+        },
+        "ocp": {
+          "const": "7.9.3.0"
+        },
+        "numpy": {
+          "const": "1.26.4"
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 5
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 10
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "hashed_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "provenance_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "source_ref"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "user_explicit",
+            "catalog_derived",
+            "rule_derived"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
+    "geometry_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solids",
+        "shells",
+        "faces",
+        "edges",
+        "vertices",
+        "is_valid",
+        "volume_mm3",
+        "bbox_mm",
+        "face_areas_count",
+        "face_areas_sha256",
+        "edge_lengths_count",
+        "edge_lengths_sha256"
+      ],
+      "properties": {
+        "solids": {
+          "const": 1
+        },
+        "shells": {
+          "const": 1
+        },
+        "faces": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "edges": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vertices": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "is_valid": {
+          "const": true
+        },
+        "volume_mm3": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bbox_mm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xmin",
+            "xmax",
+            "ymin",
+            "ymax",
+            "zmin",
+            "zmax"
+          ],
+          "properties": {
+            "xmin": {
+              "type": "number"
+            },
+            "xmax": {
+              "type": "number"
+            },
+            "ymin": {
+              "type": "number"
+            },
+            "ymax": {
+              "type": "number"
+            },
+            "zmin": {
+              "type": "number"
+            },
+            "zmax": {
+              "type": "number"
+            }
+          }
+        },
+        "face_areas_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "face_areas_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "edge_lengths_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "edge_lengths_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "comparison_list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "pass",
+        "max_abs",
+        "max_rel"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pass": {
+          "const": true
+        },
+        "max_abs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_rel": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

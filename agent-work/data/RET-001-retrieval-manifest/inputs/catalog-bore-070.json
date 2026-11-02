@@ -1,0 +1,7 @@
+{
+  "schema_version": "set_screw_shaft_collar.v0",
+  "family_id": "set_screw_shaft_collar",
+  "parameters": {
+    "bore_d": 70
+  }
+}

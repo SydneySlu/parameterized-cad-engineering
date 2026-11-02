@@ -1,0 +1,847 @@
+{
+  "manifest_version": "retrieval-manifest.v0",
+  "task": "RET-001",
+  "status": "review",
+  "generated_at": "2026-11-02T23:26:22+08:00",
+  "generator": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/generator/generate_manifest.py",
+    "sha256": "1a526a60065884127cf4c1321e675205d9f6ad67a0e332a46e6e953578381c87",
+    "ir_template": "agent-work/typed-cad-ir/IR-001-v0/examples/legal-catalog-row.json",
+    "ir_template_sha256": "4c0d25067206e6a47b9aad4663a288e7f2c8b1141f89569249afe83939f9632b",
+    "ir_schema_path": "agent-work/typed-cad-ir/IR-001-v0/ir-v0.schema.json",
+    "ir_schema_sha256": "000396c9e26bf592db022baeeb9b9af1e2a0571a7f8a0a8c3c1baed4e431bdc5"
+  },
+  "environment": {
+    "python": "3.11.18",
+    "cadquery": "2.3.0",
+    "ocp": "7.9.3.0",
+    "numpy": "1.26.4",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "source": {
+    "repository": "https://github.com/BenchCAD-org/benchcad-2",
+    "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+    "family_path": "designs/set_screw_shaft_collar",
+    "family_id": "set_screw_shaft_collar",
+    "family_status": "MERGED",
+    "release_qualified": false,
+    "snapshot_status": "reproducibility_partial",
+    "license_scope": "source/designs MIT; generated STEP/render scope uncertain"
+  },
+  "catalog_coverage": {
+    "frozen_rows": 15,
+    "samples_generated": 15,
+    "bore_d_values": [
+      5,
+      6,
+      8,
+      10,
+      12,
+      16,
+      20,
+      24,
+      30,
+      35,
+      40,
+      50,
+      60,
+      70,
+      80
+    ],
+    "scope_note": "the frozen family has exactly 15 catalog rows; no additional samples were synthesized"
+  },
+  "split_plan": {
+    "split_status": "provisional_small_n",
+    "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)",
+    "counts": {
+      "development": 9,
+      "retrieval_source": 3,
+      "heldout_evaluation": 3
+    },
+    "groups": [
+      {
+        "group_id": "catalog-row-bore-005",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-005",
+        "role": "development",
+        "bore_d": 5
+      },
+      {
+        "group_id": "catalog-row-bore-006",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+        "role": "retrieval_source",
+        "bore_d": 6
+      },
+      {
+        "group_id": "catalog-row-bore-008",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-008",
+        "role": "development",
+        "bore_d": 8
+      },
+      {
+        "group_id": "catalog-row-bore-010",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-010",
+        "role": "development",
+        "bore_d": 10
+      },
+      {
+        "group_id": "catalog-row-bore-012",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-012",
+        "role": "heldout_evaluation",
+        "bore_d": 12
+      },
+      {
+        "group_id": "catalog-row-bore-016",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-016",
+        "role": "development",
+        "bore_d": 16
+      },
+      {
+        "group_id": "catalog-row-bore-020",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+        "role": "retrieval_source",
+        "bore_d": 20
+      },
+      {
+        "group_id": "catalog-row-bore-024",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-024",
+        "role": "development",
+        "bore_d": 24
+      },
+      {
+        "group_id": "catalog-row-bore-030",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-030",
+        "role": "development",
+        "bore_d": 30
+      },
+      {
+        "group_id": "catalog-row-bore-035",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-035",
+        "role": "heldout_evaluation",
+        "bore_d": 35
+      },
+      {
+        "group_id": "catalog-row-bore-040",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-040",
+        "role": "development",
+        "bore_d": 40
+      },
+      {
+        "group_id": "catalog-row-bore-050",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+        "role": "retrieval_source",
+        "bore_d": 50
+      },
+      {
+        "group_id": "catalog-row-bore-060",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-060",
+        "role": "development",
+        "bore_d": 60
+      },
+      {
+        "group_id": "catalog-row-bore-070",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-070",
+        "role": "development",
+        "bore_d": 70
+      },
+      {
+        "group_id": "catalog-row-bore-080",
+        "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+        "role": "heldout_evaluation",
+        "bore_d": 80
+      }
+    ],
+    "frozen_benchmark": false,
+    "note": "provisional grouping only; RET-003/Codex must freeze any evaluation split"
+  },
+  "results": [
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-005",
+      "bore_d": 5,
+      "catalog_row": [
+        5,
+        10,
+        3,
+        4,
+        6
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-005",
+      "ir_sha256": "f9525ebfdb3de01935cd12e017790eafef4cdefbdfc171b0737a4d392e20e96f",
+      "step_sha256": "70b3f48fac766b16774e042ed8e5b9464b9cc014b3ffff064ebdd9fdcac2c90a",
+      "step_bytes": 128182,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 335.6835120952309,
+      "bbox_mm": {
+        "xmin": -5.0000001,
+        "xmax": 5.0000001,
+        "ymin": -5.0000001,
+        "ymax": 5.0000001,
+        "zmin": 0.0,
+        "zmax": 6.0
+      },
+      "faces": 27,
+      "edges": 57,
+      "vertices": 30,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 1.6305307326547336e-08,
+      "step_volume_rel": 4.85734530861368e-11,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 1.9650499893941742e-08,
+      "step_edge_length_max_abs_mm": 6.66577903984944e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+      "bore_d": 6,
+      "catalog_row": [
+        6,
+        12,
+        4,
+        5,
+        8
+      ],
+      "split_role": "retrieval_source",
+      "group_id": "catalog-row-bore-006",
+      "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
+      "step_sha256": "735b5862bdc413589c3d7f4f2afe38ee87d2db7e2b0015d7294ba7866b1f09d6",
+      "step_bytes": 115614,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 642.7518164460399,
+      "bbox_mm": {
+        "xmin": -6.0000001,
+        "xmax": 6.0000001,
+        "ymin": -6.0000001,
+        "ymax": 6.0000001,
+        "zmin": 0.0,
+        "zmax": 8.0
+      },
+      "faces": 27,
+      "edges": 57,
+      "vertices": 30,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 2.5124791136477143e-11,
+      "step_volume_rel": 3.908941288629626e-14,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 1.6825651982799172e-11,
+      "step_edge_length_max_abs_mm": 1.1235457009206584e-12
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-008",
+      "bore_d": 8,
+      "catalog_row": [
+        8,
+        16,
+        4,
+        6,
+        8
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-008",
+      "ir_sha256": "3196948b7964096fc6ebcae644b74dbc28d76d4fd89e20f6cce98281c3f5b1a1",
+      "step_sha256": "5d9322db812d7c1f9c6fc4c5142bcd71c4159970731449fb465447b6e040fbe3",
+      "step_bytes": 134006,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 1160.1519359146819,
+      "bbox_mm": {
+        "xmin": -8.0000001,
+        "xmax": 8.0000001,
+        "ymin": -8.0000001,
+        "ymax": 8.0000001,
+        "zmin": 0.0,
+        "zmax": 8.0
+      },
+      "faces": 31,
+      "edges": 65,
+      "vertices": 34,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 1.8189894035458565e-12,
+      "step_volume_rel": 1.5678889525032226e-15,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 2.3305801732931286e-12,
+      "step_edge_length_max_abs_mm": 3.204103649068202e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-010",
+      "bore_d": 10,
+      "catalog_row": [
+        10,
+        20,
+        5,
+        8,
+        10
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-010",
+      "ir_sha256": "6342359098fb9ffb30238996eb6429fab5c36b75923a9c1c97e5b075d6b84ea7",
+      "step_sha256": "a7802025a890e011027445b0de594dee2c91798084a1435e4c6235c0fdeaf3e7",
+      "step_bytes": 134038,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 2268.9913893386615,
+      "bbox_mm": {
+        "xmin": -10.0000001,
+        "xmax": 10.0000001,
+        "ymin": -10.0000001,
+        "ymax": 10.0000001,
+        "zmin": 0.0,
+        "zmax": 10.0
+      },
+      "faces": 31,
+      "edges": 65,
+      "vertices": 34,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 2.423803380224854e-10,
+      "step_volume_rel": 1.0682294307565949e-13,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 1.099351720768027e-10,
+      "step_edge_length_max_abs_mm": 9.157119507108291e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-012",
+      "bore_d": 12,
+      "catalog_row": [
+        12,
+        22,
+        6,
+        8,
+        12
+      ],
+      "split_role": "heldout_evaluation",
+      "group_id": "catalog-row-bore-012",
+      "ir_sha256": "62d3c634c532434e5391d84e23e6240f462d383953867b57c12e781bf10b0a8b",
+      "step_sha256": "374ade8af031168f72be895e0030b523d6f3c7e213baabdc98de621f1a28556d",
+      "step_bytes": 122064,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 3081.00891051534,
+      "bbox_mm": {
+        "xmin": -11.0000001,
+        "xmax": 11.0000001,
+        "ymin": -11.0000001,
+        "ymax": 11.0000001,
+        "zmin": 0.0,
+        "zmax": 12.0
+      },
+      "faces": 27,
+      "edges": 57,
+      "vertices": 30,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 3.115019353572279e-10,
+      "step_volume_rel": 1.0110387357014331e-13,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 7.73070496506989e-11,
+      "step_edge_length_max_abs_mm": 6.883382752675971e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-016",
+      "bore_d": 16,
+      "catalog_row": [
+        16,
+        28,
+        6,
+        8,
+        12
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-016",
+      "ir_sha256": "f467cc3381da54658d3c30585b746637e27a3d1a9d21675007e3d94ee4f0b5ad",
+      "step_sha256": "349dac5b3a1fa8532e4b9ebc51bda612a790d715e691c3d28f929c1394973d07",
+      "step_bytes": 137034,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 4828.618023832699,
+      "bbox_mm": {
+        "xmin": -14.0000001,
+        "xmax": 14.0000001,
+        "ymin": -14.0000001,
+        "ymax": 14.0000001,
+        "zmin": 0.0,
+        "zmax": 12.0
+      },
+      "faces": 31,
+      "edges": 65,
+      "vertices": 34,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 1.011803760775365e-07,
+      "step_volume_rel": 2.095431354854301e-11,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 1.1337253376098033e-06,
+      "step_edge_length_max_abs_mm": 8.286704655802168e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+      "bore_d": 20,
+      "catalog_row": [
+        20,
+        32,
+        6,
+        8,
+        14
+      ],
+      "split_role": "retrieval_source",
+      "group_id": "catalog-row-bore-020",
+      "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
+      "step_sha256": "1d3e8b74b6161123d07bc96a2f7b3fe2905ba09a781f29339e8889fbcddcb05b",
+      "step_bytes": 125922,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 6712.63193643346,
+      "bbox_mm": {
+        "xmin": -16.0000001,
+        "xmax": 16.0000001,
+        "ymin": -16.0000001,
+        "ymax": 16.0000001,
+        "zmin": 0.0,
+        "zmax": 14.0
+      },
+      "faces": 29,
+      "edges": 59,
+      "vertices": 30,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 0.013225565525317506,
+      "step_volume_rel": 1.9702464834859546e-06,
+      "step_bbox_max_abs_mm": 3.4179043288309616e-17,
+      "step_face_area_max_abs_mm2": 0.003967669643998306,
+      "step_edge_length_max_abs_mm": 1.032381646837166e-07
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-024",
+      "bore_d": 24,
+      "catalog_row": [
+        24,
+        40,
+        8,
+        12,
+        16
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-024",
+      "ir_sha256": "a5c6eb726d0d10c6dfd97e29f766adba33cef9500b766e99d04fd3741825d3f8",
+      "step_sha256": "048c9d6ac6c6af806e9e57e1b004210c281e2d1bbdc785585db435a5259fef4a",
+      "step_bytes": 148393,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 12513.344684954385,
+      "bbox_mm": {
+        "xmin": -20.0000001,
+        "xmax": 20.0000001,
+        "ymin": -20.0000001,
+        "ymax": 20.0000001,
+        "zmin": 0.0,
+        "zmax": 16.0
+      },
+      "faces": 35,
+      "edges": 73,
+      "vertices": 38,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 1.039552444126457e-08,
+      "step_volume_rel": 8.307550621348895e-13,
+      "step_bbox_max_abs_mm": 1.5942241706439007e-16,
+      "step_face_area_max_abs_mm2": 2.5008830562001094e-09,
+      "step_edge_length_max_abs_mm": 1.3327999326406825e-07
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-030",
+      "bore_d": 30,
+      "catalog_row": [
+        30,
+        45,
+        8,
+        10,
+        16
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-030",
+      "ir_sha256": "dccde4fdcefbf1e8dea84c8862bf3b2c9687a75df8a4b98956af0c351c848885",
+      "step_sha256": "ab6c6ada7122e1e2d2c7f0110bf19c3b87c0e3ea165f316cd87e994e7e4f61bf",
+      "step_bytes": 137187,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 13795.502251795735,
+      "bbox_mm": {
+        "xmin": -22.5000001,
+        "xmax": 22.5000001,
+        "ymin": -22.5000001,
+        "ymax": 22.5000001,
+        "zmin": -2.4157061560778983e-17,
+        "zmax": 16.0
+      },
+      "faces": 31,
+      "edges": 65,
+      "vertices": 34,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 2.0175139070488513e-07,
+      "step_volume_rel": 1.462443244323874e-11,
+      "step_bbox_max_abs_mm": 2.4157061560778983e-17,
+      "step_face_area_max_abs_mm2": 2.4154300390932804e-06,
+      "step_edge_length_max_abs_mm": 1.460008931530865e-07
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-035",
+      "bore_d": 35,
+      "catalog_row": [
+        35,
+        56,
+        8,
+        12,
+        16
+      ],
+      "split_role": "heldout_evaluation",
+      "group_id": "catalog-row-bore-035",
+      "ir_sha256": "68e815b58a999ad4d4b9b6467560a1d46a3fadf8e66dd4b31cde5f796b92d033",
+      "step_sha256": "0951218bdac3dae56739805ad3ddcd6dcbd717914cfb40489ac4b50aa23a8e47",
+      "step_bytes": 161050,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 23523.949993403032,
+      "bbox_mm": {
+        "xmin": -28.0000001,
+        "xmax": 28.0000001,
+        "ymin": -28.0000001,
+        "ymax": 28.0000001,
+        "zmin": -3.112933386197456e-17,
+        "zmax": 16.0
+      },
+      "faces": 41,
+      "edges": 83,
+      "vertices": 42,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 6.1080096202204e-05,
+      "step_volume_rel": 2.5965067967215623e-09,
+      "step_bbox_max_abs_mm": 8.802639541442738e-16,
+      "step_face_area_max_abs_mm2": 2.2913637338639603e-05,
+      "step_edge_length_max_abs_mm": 1.5769904493367903e-07
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-040",
+      "bore_d": 40,
+      "catalog_row": [
+        40,
+        63,
+        10,
+        16,
+        18
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-040",
+      "ir_sha256": "dee445de796fa8b02200f19de9782c3d5bc7c0ed4bce637de911bdf4d33bd2f4",
+      "step_sha256": "a211dabac9c4fd63b4c58a770296d147c5ed68e6e3c7f54654a3e639b78ce1b9",
+      "step_bytes": 155954,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 32660.577636607453,
+      "bbox_mm": {
+        "xmin": -31.5000001,
+        "xmax": 31.5000001,
+        "ymin": -31.5000001,
+        "ymax": 31.5000001,
+        "zmin": -2.5540866493703042e-17,
+        "zmax": 18.0
+      },
+      "faces": 39,
+      "edges": 81,
+      "vertices": 42,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 3.1506897357758135e-06,
+      "step_volume_rel": 9.64676672448205e-11,
+      "step_bbox_max_abs_mm": 2.8707996398168507e-16,
+      "step_face_area_max_abs_mm2": 9.709630273135872e-06,
+      "step_edge_length_max_abs_mm": 7.567280135845067e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+      "bore_d": 50,
+      "catalog_row": [
+        50,
+        80,
+        10,
+        16,
+        18
+      ],
+      "split_role": "retrieval_source",
+      "group_id": "catalog-row-bore-050",
+      "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
+      "step_sha256": "d312982b1ce9c40e83600f19da9f0b76683561f240e48daf09734080f5057e8e",
+      "step_bytes": 178829,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 54010.08803943693,
+      "bbox_mm": {
+        "xmin": -40.0000001,
+        "xmax": 40.0000001,
+        "ymin": -40.0000001,
+        "ymax": 40.0000001,
+        "zmin": -2.6924671426627102e-17,
+        "zmax": 18.0
+      },
+      "faces": 47,
+      "edges": 97,
+      "vertices": 50,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 6.912159733474255e-10,
+      "step_volume_rel": 1.2797904955139407e-14,
+      "step_bbox_max_abs_mm": 8.152529485391934e-16,
+      "step_face_area_max_abs_mm2": 5.184119800105691e-11,
+      "step_edge_length_max_abs_mm": 8.72191208145523e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-060",
+      "bore_d": 60,
+      "catalog_row": [
+        60,
+        90,
+        10,
+        16,
+        20
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-060",
+      "ir_sha256": "17943c68d0993cbe234450194e878a99e83762e30e1085757113194d16bdf7ec",
+      "step_sha256": "954fc2b3dab99ea4485c128633667f0f384b3515a2db0f5356642885c225145a",
+      "step_bytes": 171095,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 69465.07800433256,
+      "bbox_mm": {
+        "xmin": -45.0000001,
+        "xmax": 45.0000001,
+        "ymin": -45.0000001,
+        "ymax": 45.0000001,
+        "zmin": -4.8314123121557965e-17,
+        "zmax": 20.0
+      },
+      "faces": 45,
+      "edges": 91,
+      "vertices": 46,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 1.6266712918877602e-06,
+      "step_volume_rel": 2.3417108835410852e-11,
+      "step_bbox_max_abs_mm": 4.8314123121557965e-17,
+      "step_face_area_max_abs_mm2": 1.626499397389125e-07,
+      "step_edge_length_max_abs_mm": 7.815970093361102e-14
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-070",
+      "bore_d": 70,
+      "catalog_row": [
+        70,
+        100,
+        10,
+        20,
+        20
+      ],
+      "split_role": "development",
+      "group_id": "catalog-row-bore-070",
+      "ir_sha256": "5f3e4400771d2d561cf4b8ab65790eb872cea245af09f3ae8eaeda7c4b20864b",
+      "step_sha256": "8e94eb36cab96bb20298b525a09460a6e86906ad4de0baf080b67ff730c6f5b7",
+      "step_bytes": 174075,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 78758.192427814,
+      "bbox_mm": {
+        "xmin": -50.0000001,
+        "xmax": 50.0000001,
+        "ymin": -50.0000001,
+        "ymax": 50.0000001,
+        "zmin": -6.225866772394912e-17,
+        "zmax": 20.0
+      },
+      "faces": 45,
+      "edges": 91,
+      "vertices": 46,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 3.464243491180241e-06,
+      "step_volume_rel": 4.398581765770464e-11,
+      "step_bbox_max_abs_mm": 3.552713678800501e-15,
+      "step_face_area_max_abs_mm2": 2.9699504011659883e-07,
+      "step_edge_length_max_abs_mm": 1.971756091734278e-13
+    },
+    {
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "bore_d": 80,
+      "catalog_row": [
+        80,
+        110,
+        12,
+        20,
+        22
+      ],
+      "split_role": "heldout_evaluation",
+      "group_id": "catalog-row-bore-080",
+      "ir_sha256": "5ec40078d731410fe61f4b901ba6851ab3b6b4c6d510dd77af2869cc96e96ba0",
+      "step_sha256": "4954b9495e29a6945827ca7bec2aca4a2a875960db3417f6329db96cfabc8d46",
+      "step_bytes": 364406,
+      "cad_compile": "pass",
+      "final_stage": "step_readback",
+      "solids": 1,
+      "shells": 1,
+      "is_valid": true,
+      "volume_mm3": 95092.28451216685,
+      "bbox_mm": {
+        "xmin": -55.0000001,
+        "xmax": 55.0000001,
+        "ymin": -55.0000001,
+        "ymax": 55.0000001,
+        "zmin": -5.1081732987406084e-17,
+        "zmax": 22.0
+      },
+      "faces": 74,
+      "edges": 149,
+      "vertices": 75,
+      "native_repeat_pass": true,
+      "step_readback_pass": true,
+      "step_volume_abs_mm3": 0.03407862831954844,
+      "step_volume_rel": 3.583741444584696e-07,
+      "step_bbox_max_abs_mm": 5.7415992796337015e-16,
+      "step_face_area_max_abs_mm2": 0.0025548746416461654,
+      "step_edge_length_max_abs_mm": 2.795705711378105e-07
+    }
+  ],
+  "summary": {
+    "schema_pass": 15,
+    "ir_schema_pass": 15,
+    "ir_semantic_pass": 15,
+    "cad_compile_pass": 15,
+    "native_repeat_pass": 15,
+    "step_readback_pass": 15,
+    "failed": 0
+  },
+  "negative_controls": {
+    "control_tampered_radial_offset": {
+      "case": "accepted IR for bore_d=20 with nodes[2].inputs.radial_offset replaced by literal 100 mm",
+      "expected": "rejected before CAD runtime",
+      "validate_document_errors": [
+        {
+          "code": "IR_NODE_INPUT_KIND_MISMATCH",
+          "stage": "semantic",
+          "field": "nodes.n2.hole.primary.inputs.radial_offset"
+        }
+      ],
+      "compile": {
+        "ok": false,
+        "status": "semantic",
+        "errors": [
+          {
+            "code": "IR_NODE_INPUT_KIND_MISMATCH",
+            "stage": "semantic",
+            "fields": [
+              "nodes.n2.hole.primary.inputs.radial_offset"
+            ],
+            "node_ids": [
+              "n2.hole.primary"
+            ]
+          }
+        ]
+      },
+      "result": "rejected"
+    },
+    "control_rule_rejection": {
+      "case": "CAD-003 envelope bore_d=20 with explicit outer_d=33",
+      "expected": "CATALOG_MISMATCH at schema stage, no IR generated",
+      "ok": false,
+      "errors": [
+        {
+          "code": "CATALOG_MISMATCH",
+          "fields": [
+            "outer_d",
+            "bore_d"
+          ],
+          "message": "outer_d=33 does not match the catalog row selected by bore_d=20 (expected 32)",
+          "stage": "schema"
+        }
+      ],
+      "result": "rejected"
+    }
+  },
+  "leakage_checks": {
+    "group_key": "family_id + catalog_row (bore_d)",
+    "group_count": 15,
+    "cross_split_group_overlap": 0,
+    "duplicate_parameter_payloads": {},
+    "duplicate_geometry_fingerprints": {},
+    "geometry_fingerprint_definition": "sha256 of rounded volume(6dp)+bbox(6dp)+topology counts",
+    "min_pairwise_relative_volume_gap": 0.09294026005283379,
+    "same_catalog_row_in_two_splits": 0,
+    "retrieval_source_shared_with_evaluation": 0
+  },
+  "manifest": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "37818543d6bb9f3622c9f22a9c2b4f3853beb46ad6eecc1da501bf0cd0af64dc",
+    "records": 15,
+    "bytes": 82996
+  },
+  "checks": {
+    "jsonl_lines": 15,
+    "jsonl_parse": "pass",
+    "manifest_schema": "checked by generator/verify_manifest.py; see verification-report.json",
+    "hash_verification": "checked by generator/verify_manifest.py; see verification-report.json",
+    "replay": "checked by generator/replay_check.py; see replay-report.json"
+  },
+  "limitations": [
+    "single frozen family: set_screw_shaft_collar only",
+    "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+    "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+    "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+    "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+    "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+    "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+  ]
+}

@@ -1,0 +1,872 @@
+{
+  "ir_version": "typed-cad-ir.v0",
+  "ir_revision": "0.2.0",
+  "status": "accepted",
+  "family": {
+    "family_id": "set_screw_shaft_collar",
+    "directory_id": "set_screw_shaft_collar",
+    "extension_namespace": "family.set_screw_shaft_collar.v0",
+    "family_data": {
+      "catalog_table_id": "gn705.gn705_metric_v0",
+      "profile_kind": "chamfered_annulus",
+      "thread_model": "revolved_ring_approximation",
+      "helical_thread_supported": false,
+      "hole_angles_deg": [
+        0,
+        135
+      ],
+      "second_hole_condition": "second_screw == 1"
+    }
+  },
+  "source": {
+    "schema_version": "set_screw_shaft_collar.v0",
+    "source_system": "BenchCAD",
+    "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+    "adapter_id": "benchcad.set_screw_shaft_collar",
+    "adapter_version": "0.1.0",
+    "snapshot_status": "reproducibility_partial"
+  },
+  "parameters": [
+    {
+      "parameter_id": "bore_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 16,
+      "input": {
+        "value": 16,
+        "unit": "mm"
+      },
+      "source": "user_explicit",
+      "source_ref": "CAD-003.field:bore_d",
+      "catalog_row_key": "bore_d=16"
+    },
+    {
+      "parameter_id": "outer_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 28,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=16",
+      "catalog_row_key": "bore_d=16"
+    },
+    {
+      "parameter_id": "screw_d",
+      "type": "number",
+      "unit": "mm",
+      "value": 6,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=16",
+      "catalog_row_key": "bore_d=16"
+    },
+    {
+      "parameter_id": "screw_len",
+      "type": "number",
+      "unit": "mm",
+      "value": 8,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=16",
+      "catalog_row_key": "bore_d=16"
+    },
+    {
+      "parameter_id": "second_screw",
+      "type": "integer",
+      "unit": "1",
+      "value": 0,
+      "source": "rule_derived",
+      "source_ref": "CAD-003.rule:second_screw_threshold"
+    },
+    {
+      "parameter_id": "width",
+      "type": "number",
+      "unit": "mm",
+      "value": 12,
+      "source": "catalog_derived",
+      "source_ref": "GN705.catalog_row:bore_d=16",
+      "catalog_row_key": "bore_d=16"
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "n0.catalog.resolve",
+      "node_type": "catalog.resolve",
+      "ordinal": 0,
+      "enabled_if": null,
+      "depends_on": [],
+      "inputs": {
+        "bore_d": {
+          "kind": "parameter_ref",
+          "parameter_id": "bore_d"
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "resolved_parameters",
+          "kind": "resolved_parameters"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "parameter",
+          "id": "bore_d"
+        },
+        {
+          "kind": "catalog",
+          "id": "gn705.gn705_metric_v0"
+        }
+      ],
+      "properties": {
+        "catalog_key": "bore_d",
+        "resolved_fields": [
+          "outer_d",
+          "width",
+          "screw_d",
+          "screw_len",
+          "second_screw"
+        ]
+      }
+    },
+    {
+      "node_id": "n1.collar.revolve",
+      "node_type": "shape.revolve_profile",
+      "ordinal": 1,
+      "depends_on": [
+        "n0.catalog.resolve"
+      ],
+      "inputs": {
+        "bore_d": {
+          "kind": "parameter_ref",
+          "parameter_id": "bore_d"
+        },
+        "outer_d": {
+          "kind": "parameter_ref",
+          "parameter_id": "outer_d"
+        },
+        "width": {
+          "kind": "parameter_ref",
+          "parameter_id": "width"
+        },
+        "chamfer": {
+          "kind": "formula",
+          "formula_id": "collar_chamfer",
+          "args": {
+            "bore_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "bore_d"
+            },
+            "wall": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "width": {
+              "kind": "parameter_ref",
+              "parameter_id": "width"
+            }
+          }
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "collar_base",
+          "kind": "shape"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "parameter",
+          "id": "bore_d"
+        },
+        {
+          "kind": "parameter",
+          "id": "outer_d"
+        },
+        {
+          "kind": "parameter",
+          "id": "width"
+        },
+        {
+          "kind": "formula",
+          "id": "collar_chamfer"
+        }
+      ],
+      "properties": {
+        "profile_kind": "chamfered_annulus",
+        "axis": "Z",
+        "revolve_degrees": 360,
+        "workplane": "XZ",
+        "axis_local": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "node_id": "n2.hole.primary",
+      "node_type": "feature.tapped_hole_cutter",
+      "ordinal": 2,
+      "depends_on": [
+        "n1.collar.revolve"
+      ],
+      "inputs": {
+        "thread_d": {
+          "kind": "parameter_ref",
+          "parameter_id": "screw_d"
+        },
+        "angle_deg": {
+          "kind": "literal",
+          "value": 0,
+          "unit": "deg"
+        },
+        "over": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "pitch": {
+          "kind": "lookup",
+          "table_id": "iso261.coarse_pitch_mm",
+          "key": {
+            "kind": "parameter_ref",
+            "parameter_id": "screw_d"
+          }
+        },
+        "wall": {
+          "kind": "formula",
+          "formula_id": "half_difference",
+          "args": {
+            "outer_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "outer_d"
+            },
+            "bore_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "bore_d"
+            }
+          }
+        },
+        "hole_len": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "left": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "right": {
+              "kind": "formula",
+              "formula_id": "multiply",
+              "args": {
+                "value": {
+                  "kind": "literal",
+                  "value": 0.5,
+                  "unit": "mm"
+                },
+                "factor": {
+                  "kind": "literal",
+                  "value": 2,
+                  "unit": "1"
+                }
+              }
+            }
+          }
+        },
+        "z_in": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "z_out": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "left": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            },
+            "right": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            }
+          }
+        },
+        "radial_offset": {
+          "kind": "formula",
+          "formula_id": "subtract",
+          "args": {
+            "left": {
+              "kind": "formula",
+              "formula_id": "half",
+              "args": {
+                "value": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "right": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            }
+          }
+        },
+        "axial": {
+          "kind": "formula",
+          "formula_id": "multiply",
+          "args": {
+            "width": {
+              "kind": "parameter_ref",
+              "parameter_id": "width"
+            },
+            "factor": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "1"
+            }
+          }
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "hole_cutter_primary",
+          "kind": "cutter"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "parameter",
+          "id": "screw_d"
+        },
+        {
+          "kind": "catalog",
+          "id": "iso261.coarse_pitch_mm"
+        }
+      ],
+      "properties": {
+        "thread_model": "revolved_ring_approximation",
+        "helical_thread_supported": false,
+        "placement_model": "radial_bore_breakout",
+        "placement": {
+          "cutter_local_axis": "Z",
+          "transform_order": "column_vector_left_multiply",
+          "transforms": [
+            {
+              "operation": "rotate",
+              "frame": "cutter_local",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "degrees": 90
+            },
+            {
+              "operation": "translate",
+              "frame": "world",
+              "vector": [
+                "radial_offset",
+                0,
+                "axial"
+              ]
+            },
+            {
+              "operation": "rotate",
+              "frame": "world",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ],
+              "angle_ref": "angle_deg"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "node_id": "n3.cut.primary",
+      "node_type": "boolean.cut",
+      "ordinal": 3,
+      "depends_on": [
+        "n1.collar.revolve",
+        "n2.hole.primary"
+      ],
+      "inputs": {
+        "base": {
+          "kind": "node_output_ref",
+          "output_id": "collar_base"
+        },
+        "tool": {
+          "kind": "node_output_ref",
+          "output_id": "hole_cutter_primary"
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "solid_after_primary",
+          "kind": "solid_candidate"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "node_output",
+          "id": "collar_base"
+        },
+        {
+          "kind": "node_output",
+          "id": "hole_cutter_primary"
+        }
+      ],
+      "properties": {
+        "base_ref": "collar_base",
+        "tool_ref": "hole_cutter_primary",
+        "operation": "difference"
+      }
+    },
+    {
+      "node_id": "n4.hole.secondary",
+      "node_type": "feature.tapped_hole_cutter",
+      "ordinal": 4,
+      "enabled_if": {
+        "kind": "parameter_equals",
+        "parameter_id": "second_screw",
+        "equals": 1
+      },
+      "depends_on": [
+        "n3.cut.primary"
+      ],
+      "inputs": {
+        "thread_d": {
+          "kind": "parameter_ref",
+          "parameter_id": "screw_d"
+        },
+        "angle_deg": {
+          "kind": "literal",
+          "value": 135,
+          "unit": "deg"
+        },
+        "over": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "pitch": {
+          "kind": "lookup",
+          "table_id": "iso261.coarse_pitch_mm",
+          "key": {
+            "kind": "parameter_ref",
+            "parameter_id": "screw_d"
+          }
+        },
+        "wall": {
+          "kind": "formula",
+          "formula_id": "half_difference",
+          "args": {
+            "outer_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "outer_d"
+            },
+            "bore_d": {
+              "kind": "parameter_ref",
+              "parameter_id": "bore_d"
+            }
+          }
+        },
+        "hole_len": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "left": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "right": {
+              "kind": "formula",
+              "formula_id": "multiply",
+              "args": {
+                "value": {
+                  "kind": "literal",
+                  "value": 0.5,
+                  "unit": "mm"
+                },
+                "factor": {
+                  "kind": "literal",
+                  "value": 2,
+                  "unit": "1"
+                }
+              }
+            }
+          }
+        },
+        "z_in": {
+          "kind": "literal",
+          "value": 0.5,
+          "unit": "mm"
+        },
+        "z_out": {
+          "kind": "formula",
+          "formula_id": "add",
+          "args": {
+            "left": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            },
+            "right": {
+              "kind": "formula",
+              "formula_id": "half_difference",
+              "args": {
+                "outer_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "outer_d"
+                },
+                "bore_d": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            }
+          }
+        },
+        "radial_offset": {
+          "kind": "formula",
+          "formula_id": "subtract",
+          "args": {
+            "left": {
+              "kind": "formula",
+              "formula_id": "half",
+              "args": {
+                "value": {
+                  "kind": "parameter_ref",
+                  "parameter_id": "bore_d"
+                }
+              }
+            },
+            "right": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "mm"
+            }
+          }
+        },
+        "axial": {
+          "kind": "formula",
+          "formula_id": "multiply",
+          "args": {
+            "width": {
+              "kind": "parameter_ref",
+              "parameter_id": "width"
+            },
+            "factor": {
+              "kind": "literal",
+              "value": 0.5,
+              "unit": "1"
+            }
+          }
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "hole_cutter_secondary",
+          "kind": "cutter"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "parameter",
+          "id": "screw_d"
+        },
+        {
+          "kind": "parameter",
+          "id": "second_screw"
+        },
+        {
+          "kind": "catalog",
+          "id": "iso261.coarse_pitch_mm"
+        }
+      ],
+      "properties": {
+        "thread_model": "revolved_ring_approximation",
+        "helical_thread_supported": false,
+        "placement_model": "radial_bore_breakout",
+        "placement": {
+          "cutter_local_axis": "Z",
+          "transform_order": "column_vector_left_multiply",
+          "transforms": [
+            {
+              "operation": "rotate",
+              "frame": "cutter_local",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "degrees": 90
+            },
+            {
+              "operation": "translate",
+              "frame": "world",
+              "vector": [
+                "radial_offset",
+                0,
+                "axial"
+              ]
+            },
+            {
+              "operation": "rotate",
+              "frame": "world",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ],
+              "angle_ref": "angle_deg"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "node_id": "n5.cut.secondary",
+      "node_type": "boolean.cut",
+      "ordinal": 5,
+      "enabled_if": {
+        "kind": "parameter_equals",
+        "parameter_id": "second_screw",
+        "equals": 1
+      },
+      "depends_on": [
+        "n3.cut.primary",
+        "n4.hole.secondary"
+      ],
+      "inputs": {
+        "base": {
+          "kind": "node_output_ref",
+          "output_id": "solid_after_primary"
+        },
+        "tool": {
+          "kind": "node_output_ref",
+          "output_id": "hole_cutter_secondary"
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "solid_after_secondary",
+          "kind": "solid_candidate"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "node_output",
+          "id": "solid_after_primary"
+        },
+        {
+          "kind": "node_output",
+          "id": "hole_cutter_secondary"
+        }
+      ],
+      "properties": {
+        "base_ref": "solid_after_primary",
+        "tool_ref": "hole_cutter_secondary",
+        "operation": "difference"
+      }
+    },
+    {
+      "node_id": "n6.result",
+      "node_type": "result.single_solid",
+      "ordinal": 6,
+      "depends_on": [
+        "n3.cut.primary",
+        "n5.cut.secondary"
+      ],
+      "inputs": {
+        "second_screw": {
+          "kind": "parameter_ref",
+          "parameter_id": "second_screw"
+        }
+      },
+      "outputs": [
+        {
+          "output_id": "part",
+          "kind": "part"
+        }
+      ],
+      "refs": [
+        {
+          "kind": "node_output",
+          "id": "solid_after_primary"
+        },
+        {
+          "kind": "node_output",
+          "id": "solid_after_secondary"
+        }
+      ],
+      "properties": {
+        "select_if_zero": "solid_after_primary",
+        "select_if_one": "solid_after_secondary"
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "constraint_id": "catalog_row_coupling",
+      "kind": "equality",
+      "fields": [
+        "bore_d",
+        "outer_d",
+        "screw_d",
+        "screw_len",
+        "width"
+      ],
+      "expression": "(outer_d, screw_d, screw_len, width) = catalog[bore_d]",
+      "enforced_at": "preflight",
+      "source_ref": "CAD-003.rule:catalog_row_coupling"
+    },
+    {
+      "constraint_id": "second_screw_threshold",
+      "kind": "iff",
+      "fields": [
+        "bore_d",
+        "second_screw"
+      ],
+      "expression": "second_screw == 1 iff bore_d > 70",
+      "enforced_at": "preflight",
+      "source_ref": "CAD-003.rule:second_screw_threshold"
+    },
+    {
+      "constraint_id": "outer_d_gt_bore_d",
+      "kind": "inequality",
+      "fields": [
+        "outer_d",
+        "bore_d"
+      ],
+      "expression": "outer_d > bore_d",
+      "enforced_at": "preflight",
+      "source_ref": "CAD-003.rule:outer_d_gt_bore_d"
+    },
+    {
+      "constraint_id": "wall_thickness",
+      "kind": "inequality",
+      "fields": [
+        "outer_d",
+        "bore_d",
+        "screw_d"
+      ],
+      "expression": "(outer_d - bore_d) / 2 > 0.65 * screw_d",
+      "enforced_at": "preflight",
+      "source_ref": "CAD-003.rule:wall_thickness"
+    },
+    {
+      "constraint_id": "axial_support",
+      "kind": "inequality",
+      "fields": [
+        "width",
+        "screw_d"
+      ],
+      "expression": "width >= 1.45 * screw_d",
+      "enforced_at": "preflight",
+      "source_ref": "CAD-003.rule:axial_support"
+    },
+    {
+      "constraint_id": "single_solid_target",
+      "kind": "postcondition",
+      "fields": [],
+      "expression": "solid_count == 1 and is_valid == true",
+      "enforced_at": "post_geometry",
+      "source_ref": "IR-001.validation_contract"
+    },
+    {
+      "constraint_id": "step_roundtrip",
+      "kind": "roundtrip",
+      "fields": [],
+      "expression": "STEP export and readback succeed with matching normalized metrics",
+      "enforced_at": "step_readback",
+      "source_ref": "IR-001.validation_contract"
+    }
+  ],
+  "execution": {
+    "preflight_required_before_build": true,
+    "node_order": "ordinal_topological",
+    "unknown_operation_policy": "reject",
+    "tolerance_profile": "CAD-006.geometry-comparison.v1"
+  },
+  "validation_contract": {
+    "expected_solids": 1,
+    "require_valid": true,
+    "step_roundtrip_required": true,
+    "byte_hash_policy": "informational_only",
+    "metrics": [
+      "solid_count",
+      "shell_count",
+      "face_count",
+      "edge_count",
+      "vertex_count",
+      "is_valid",
+      "volume_mm3",
+      "bbox_mm",
+      "face_area_signature",
+      "edge_length_signature"
+    ]
+  }
+}

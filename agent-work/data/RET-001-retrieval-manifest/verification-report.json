@@ -1,0 +1,38 @@
+{
+  "manifest_version": "retrieval-manifest.v0",
+  "task": "RET-001",
+  "kind": "verification-report",
+  "generated_at": "2026-11-02T23:28:03+08:00",
+  "verifier": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/generator/verify_manifest.py",
+    "sha256": "bd396229924e0e1c74d1c7998eb7e9fbf786dc6c2fff8255987b21e99ea34568",
+    "python": "3.11.18",
+    "jsonschema": "4.26.0"
+  },
+  "manifest": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "37818543d6bb9f3622c9f22a9c2b4f3853beb46ad6eecc1da501bf0cd0af64dc",
+    "records": 15
+  },
+  "manifest_schema": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest.schema.json",
+    "sha256": "065a8fb6bf4f603e5f6cf79ded7b24f35efb018d1475306da9f37cb4ad179949"
+  },
+  "ir_schema": {
+    "path": "agent-work/typed-cad-ir/IR-001-v0/ir-v0.schema.json",
+    "sha256": "000396c9e26bf592db022baeeb9b9af1e2a0571a7f8a0a8c3c1baed4e431bdc5"
+  },
+  "split_counts": {
+    "development": 9,
+    "retrieval_source": 3,
+    "heldout_evaluation": 3
+  },
+  "checks": {
+    "passed": 825,
+    "failed": 0,
+    "failures": []
+  },
+  "artifacts_checked": "tracked + ignored local artifacts",
+  "scope": "JSONL/schema integrity, provenance, hash, IR re-validation and split isolation. Not a geometry-correctness check.",
+  "result": "pass"
+}
