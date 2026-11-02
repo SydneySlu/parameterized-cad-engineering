@@ -429,3 +429,9 @@ commit=cc8ad9c（feat: add deterministic retrieval baseline [RET-002]）
 发现=`RetrievalIndex.from_manifest(..., policy=...)` 可接受连续字段自定义范围，但仍输出冻结 policy id；`DistancePolicy.validate()` 未强制范围等于完整 15 行目录范围，存在策略语义绕过风险。
 决定=RET-002 主体证据通过，但保持 `review`，不标记 `done`，不放行 RET-003；修正要求和证据见 `agent-work/reviews/RET-002-codex-review.md`。
 下一步=修正并测试距离策略范围契约，再由 Codex 中枢复核。
+
+[2026-11-03] agent=Codex task=RET-002-fix-prompt status=planned
+动作=根据 RET-002 中枢审查结果生成距离策略范围契约修正 Prompt。
+范围=仅修正 `DistancePolicy` 自定义范围可绕过冻结 policy id 的问题；要求增加结构化拒绝测试，保持检索接口、候选边界、manifest hash、provisional split 和许可证限制不变。
+交付=`docs/coordination/prompts/RET-002-distance-policy-fix-agent.md`。
+下一步=项目负责人将修正 Prompt 交给原 RET-002 Agent；修正后保持 review，由 Codex 中枢重新复核。
