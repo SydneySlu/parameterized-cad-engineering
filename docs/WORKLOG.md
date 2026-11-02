@@ -450,3 +450,11 @@ commit=cce4ce7（fix: enforce frozen retrieval distance ranges [RET-002]）
 结果=30 项检索测试、3 个正常/边界案例、13 个失败案例、70 项 smoke 检查、RET-001 660 项、Schema 17 项、IR 5 项、CAD 13 项全部通过；自定义范围、非有限/非数值/近似范围和构造后别名修改均被拒绝或隔离；正常查询 canonical SHA 仍为 `0fcf84b7...`。
 决定=距离策略范围绕过问题已关闭，RET-002 标记 `done`，放行 RET-003。`provisional_small_n`、15 条记录、3 个候选、单环境、manifest hash、许可证和几何限制继续有效；权重收益尚待 RET-003 评估。
 记录=`agent-work/reviews/RET-002-codex-review.md` 已追加最终验收结论。
+
+[2026-11-03] agent=Codex task=RET-003 status=planned
+动作=确认 RET-002 已 push、main 与 origin/main 同步；按项目计划生成 RET-003 小样本检索收益评测初始化 Prompt。
+范围=先要求执行 Agent 完成 RET-001/RET-002 定向复核与评测协议草案；无检索、参数检索、人工模板三条件定义和冻结查询清单经 Codex 中枢放行前，不得运行正式对照或调参。
+交付=`docs/coordination/prompts/RET-003-retrieval-evaluation-agent.md`。
+边界=单族 15 条真实记录、3 条 retrieval_source、3 条 heldout；`provisional_small_n` 仅作探索性分析。held-out 只能作为查询真值，不能进入候选池、拟合、Prompt 示范或调参。不得读取 STEP/渲染/IR 文件、下载 Public/Core、修改 RET-001/RET-002 冻结产物或声称统计显著收益。
+状态=Prompt 已准备；RET-003 仍为 planned，等待项目负责人分派给执行 Agent。未改源码、评测配置或正式状态看板。
+下一步=项目负责人将 Prompt 交给执行 Agent；里程碑 1 提交后由 Codex 中枢审查协议并决定是否放行正式评测。
