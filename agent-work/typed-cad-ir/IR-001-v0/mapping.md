@@ -71,3 +71,10 @@ CAD-003 的四条参数/规则关系直接进入 `constraints`，保留 `source_
 
 JSON Schema 未覆盖的唯一性、拓扑和引用检查必须由反序列化语义检查完成，使用 [`semantic-validation.md`](semantic-validation.md) 中的稳定错误码：参数/节点/输出/约束 ID 唯一，ordinal 连续，依赖只指向更早节点且无环，所有引用存在，`enabled_if` 参数和值类型匹配，首族固定版本/族/快照状态一致，公式和节点类型在白名单中。
 其中还必须检查固定 source commit、参数顺序、每个 node type 的最小输入/输出/properties 契约、`validation_result` 的 errors/stage 一致性，以及 `second_screw=1` 与 `bore_d>70` 的规则关系。
+
+
+## IR-001-R3 冻结补充
+
+- 数值表达式统一采用 IR 规范注册表的具名参数及单位规则；映射时不能按参数位置猜测。`screw_len` 保留目录 provenance，但不映射为孔深。线程 pitch 只从 `iso261.coarse_pitch_mm` 查询 M3/M4/M5/M6/M8/M10/M12 = 0.5/0.7/0.8/1.0/1.25/1.5/1.75 mm。
+- Cutter 的 `placement.transforms` 是唯一可执行 placement 来源；列向量顺序固定 `Rz*T*Ry`，第一步局部原点旋转，第二步世界平移，第三步世界原点旋转。`placement_model` 只用于辨识，不可代替变换序列。
+- IR Schema 结构合法、CAD-003 `check()` 通过、build 成功、STEP 写出成功是独立阶段。后置失败写 `validation_result`，不能回填 CAD-003 参数错误；compare policy 的候选数值阈值在最小补测完成前保持 `pending_measurement`。

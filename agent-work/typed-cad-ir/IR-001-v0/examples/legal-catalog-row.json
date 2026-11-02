@@ -256,7 +256,7 @@
           "kind": "formula",
           "formula_id": "add",
           "args": {
-            "wall": {
+            "left": {
               "kind": "formula",
               "formula_id": "half_difference",
               "args": {
@@ -270,7 +270,7 @@
                 }
               }
             },
-            "overshoot": {
+            "right": {
               "kind": "formula",
               "formula_id": "multiply",
               "args": {
@@ -297,12 +297,12 @@
           "kind": "formula",
           "formula_id": "add",
           "args": {
-            "over": {
+            "left": {
               "kind": "literal",
               "value": 0.5,
               "unit": "mm"
             },
-            "wall": {
+            "right": {
               "kind": "formula",
               "formula_id": "half_difference",
               "args": {
@@ -322,7 +322,7 @@
           "kind": "formula",
           "formula_id": "subtract",
           "args": {
-            "radius": {
+            "left": {
               "kind": "formula",
               "formula_id": "half",
               "args": {
@@ -332,7 +332,7 @@
                 }
               }
             },
-            "inset": {
+            "right": {
               "kind": "literal",
               "value": 0.5,
               "unit": "mm"
@@ -377,20 +377,48 @@
         "placement_model": "radial_bore_breakout",
         "placement": {
           "cutter_local_axis": "Z",
-          "initial_rotation": {
-            "axis": "Y",
-            "degrees": 90
-          },
-          "translation": {
-            "radial_offset_ref": "radial_offset",
-            "axial_ref": "axial",
-            "radial_axis": "X",
-            "axial_axis": "Z"
-          },
-          "final_rotation": {
-            "axis": "Z",
-            "angle_ref": "angle_deg"
-          }
+          "transform_order": "column_vector_left_multiply",
+          "transforms": [
+            {
+              "operation": "rotate",
+              "frame": "cutter_local",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "degrees": 90
+            },
+            {
+              "operation": "translate",
+              "frame": "world",
+              "vector": [
+                "radial_offset",
+                0,
+                "axial"
+              ]
+            },
+            {
+              "operation": "rotate",
+              "frame": "world",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ],
+              "angle_ref": "angle_deg"
+            }
+          ]
         }
       }
     },
@@ -487,7 +515,7 @@
           "kind": "formula",
           "formula_id": "add",
           "args": {
-            "wall": {
+            "left": {
               "kind": "formula",
               "formula_id": "half_difference",
               "args": {
@@ -501,7 +529,7 @@
                 }
               }
             },
-            "overshoot": {
+            "right": {
               "kind": "formula",
               "formula_id": "multiply",
               "args": {
@@ -528,12 +556,12 @@
           "kind": "formula",
           "formula_id": "add",
           "args": {
-            "over": {
+            "left": {
               "kind": "literal",
               "value": 0.5,
               "unit": "mm"
             },
-            "wall": {
+            "right": {
               "kind": "formula",
               "formula_id": "half_difference",
               "args": {
@@ -553,7 +581,7 @@
           "kind": "formula",
           "formula_id": "subtract",
           "args": {
-            "radius": {
+            "left": {
               "kind": "formula",
               "formula_id": "half",
               "args": {
@@ -563,7 +591,7 @@
                 }
               }
             },
-            "inset": {
+            "right": {
               "kind": "literal",
               "value": 0.5,
               "unit": "mm"
@@ -612,20 +640,48 @@
         "placement_model": "radial_bore_breakout",
         "placement": {
           "cutter_local_axis": "Z",
-          "initial_rotation": {
-            "axis": "Y",
-            "degrees": 90
-          },
-          "translation": {
-            "radial_offset_ref": "radial_offset",
-            "axial_ref": "axial",
-            "radial_axis": "X",
-            "axial_axis": "Z"
-          },
-          "final_rotation": {
-            "axis": "Z",
-            "angle_ref": "angle_deg"
-          }
+          "transform_order": "column_vector_left_multiply",
+          "transforms": [
+            {
+              "operation": "rotate",
+              "frame": "cutter_local",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "degrees": 90
+            },
+            {
+              "operation": "translate",
+              "frame": "world",
+              "vector": [
+                "radial_offset",
+                0,
+                "axial"
+              ]
+            },
+            {
+              "operation": "rotate",
+              "frame": "world",
+              "pivot": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ],
+              "angle_ref": "angle_deg"
+            }
+          ]
         }
       }
     },

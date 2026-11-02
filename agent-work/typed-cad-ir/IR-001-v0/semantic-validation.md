@@ -62,3 +62,12 @@ Draft 2020-12 JSON Schema 负责结构、常量、枚举、参数类型/值类�
 ## 节点契约责任边界
 
 JSON Schema 负责检查每种 `node_type` 的字段存在性、固定输入名、`expression` 结构、输出 ID/kind 和登记 properties 形状。反序列化语义检查负责确认节点输出引用真实存在、`base_ref`/`tool_ref` 与对应 output ID 一致、主孔/第二孔的 `enabled_if` 与 `second_screw` 条件匹配，以及五种节点的依赖顺序。任何一项失败都必须在 CAD-005 前返回上述稳定 `IR_NODE_*` 错误；不能由编译器隐式补字段。
+
+
+## R3 公式类型与 placement 语义
+
+递归公式检查除白名单外，必须检查确切 args 名/数量与结果单位。首期单位代数仅包含 `mm`、`deg`、`1`；单位相加减/min/max 必须相同，乘法限长度与标量或两个无量纲值。拒绝长度加无量纲、长度乘长度及任何面积/体积中间量。线程 `thread_turn_count` 要与 `max(1,int((z1-z0)/pitch))` 的向零截断及有效几何域 `z1>=z0,pitch>0` 一致。
+
+placement 校验必须逐项匹配 `placement.transforms` 的三操作签名，并按列向量左乘；不允许缺中心/坐标系/顺序后由实现自行补猜。合法第二孔 135° 世界起点应在 X<0,Y>0 象限、Z=width/2；零角应在 +X 方向。properties/placement 中任何字符串只作枚举或引用字段，永不解释为表达式/代码。
+
+几何后置检查对计数和值缺失、NaN/Inf、空几何与多 solid 必须稳定拒绝。preflight 参数错误留在顶层 `errors`；后置 stage 只放 `validation_result.errors`，stage 必须和 result 相同。DATA-003 仅记录 6 位摘要与 roundtrip 体积误差 0.013–0.034 mm³，故几何比较数值容差标记 `pending_measurement`，不可按候选值声称完成冻结。

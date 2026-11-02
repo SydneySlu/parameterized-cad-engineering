@@ -6,7 +6,7 @@
 
 Typed CAD IR v0 把 CAD-003 的已解析参数、确定的特征顺序、依赖和可验证约束编码为一个可解析的中间表示。它表达“要构造什么”和“构造后必须检查什么”，不携带 Python、CadQuery、OCP 对象或任意可执行代码。编译器只能实现白名单 `node_type` 和白名单声明式表达式；遇到未知节点、引用或扩展必须拒绝，而不是猜测。
 
-v0 只支持 `set_screw_shaft_collar`。其构造过程是：解析 GN 705 目录行，按目录行补全派生字段，建立带倒角的环形回转体，按 `screw_d` 的 ISO 261 粗牙查表构造径向紧定螺钉孔切削体，按 0° 和可选 135° 位置依次做布尔差，输出一个预期的单一 solid。源码中“螺纹切削在 M3–M8 可能 no-op”的事实由 `thread_model` 和验证契约保留；IR 不把环形近似宣称为真实螺旋螺纹。
+v0 只支持 `set_screw_shaft_collar`。其构造过程是：解析 GN 705 目录行，按目录行补全派生字段，建立带倒角的环形回转体，按 `screw_d` 的 ISO 261 粗牙查表构造径向紧定螺钉孔切削体，按 0° 和可选 135° 位置依次做布尔差，输出一个预期的单一 solid。固定源码当前实现是 `revolved_ring_approximation`。源码注释所称 M3–M8 可能 no-op 指先前尝试的 helical sweep 布尔，不是当前环形 cutter；R3 通过无孔基体对照复测当前 M6/M12 环形 cutter 均实际移除体积。IR 不把环形近似宣称为真实螺旋螺纹。
 
 v0 不表达自由曲面、草图约束求解、任意 Python、任意 CadQuery 链式调用、装配、多零件、材料/表面处理、真实螺旋扫描、外部图纸读取、网格修复或自动改参。第二族只通过扩展边界预留，不代表已经支持。
 
@@ -62,7 +62,22 @@ v0 不表达自由曲面、草图约束求解、任意 Python、任意 CadQuery 
 - `lookup`：只允许已登记的表，例如 `iso261.coarse_pitch_mm`；
 - `formula`：只允许注册的算术/几何公式 ID，参数作为结构化 `args` 传入。
 
-实现必须先检查引用存在、单位兼容和公式白名单，再按 `ordinal` 和依赖拓扑顺序执行。`formula_id` 不是 Python 表达式。v0 登记的公式为：`half_difference`、`half`、`multiply`、`add`、`subtract`、`min`、`max`、`collar_chamfer`、`thread_minor_radius`、`thread_countersink_radius`、`thread_turn_count`。其中 `half(x)=x/2`，`multiply`、`add`、`subtract` 的参数名和单位契约由 CAD-005 注册表冻结。
+实现必须先检查引用存在、单位兼容和公式白名单，再按 `ordinal` 和依赖拓扑顺序执行。`formula_id` 不是 Python 表达式。v0 公式注册表如下；所有实数输入必须有限，输出也必须有限。长度单位为 mm、角度为 deg、无量纲为 `1`。不支持面积、体积或单位复合；加减、min/max 必须同单位，`half` 保留单位。乘法仅接受长度×无量纲或无量纲×无量纲，输出分别为长度或无量纲。
+
+| `formula_id` | 固定 args（顺序无关、名字必须精确） | 类型/单位 | 定义域和结果 |
+|---|---|---|---|
+| `half_difference` | `outer_d`, `bore_d` | 两个长度 mm → 长度 mm | `(minuend-subtrahend)/2`；有限实数；负值可计算，但用作壁厚时要求正值。 |
+| `half` | `value` | 长度→长度或 `1`→`1` | `value/2`；有限实数。 |
+| `multiply` | `value`, `factor` | 长度×`1`（任何方向）→长度，或 `1`×`1`→`1` | 普通实数乘法；禁止长度×长度。 |
+| `add` | `left`, `right` | 同单位（mm/mm、deg/deg、1/1）→同单位 | `left+right`。 |
+| `subtract` | `left`, `right` | 同单位→同单位 | `left-right`；负结果可计算，几何域另行拒绝。 |
+| `min` / `max` | `values`（至少 2 个同单位表达式） | 同单位→同单位 | 数值最小/最大值；参数必须有限。 |
+| `collar_chamfer` | `bore_d`, `wall`, `width` | mm, mm, mm → mm | `min(max(0.25, 0.012*bore_d), 0.18*wall, 0.08*width)`；构造前要求 `wall>0, width>0`，结果可因退化输入为 0/负值，必须拒绝而不是绝对值修正。 |
+| `thread_minor_radius` | `thread_d`, `pitch` | mm, mm → mm | `thread_d/2 - 0.5413*pitch`；源代码常量精确为 `0.5413`；要求 `thread_d>0,pitch>0,result>0`，否则 `IR_FORMULA_DOMAIN_ERROR`。 |
+| `thread_countersink_radius` | `thread_d`, `pitch` | mm, mm → mm | `thread_d/2 + 0.1*pitch`；要求 `thread_d>0,pitch>0` 且有限。 |
+| `thread_turn_count` | `z1`, `z0`, `pitch` | mm, mm, mm → 无量纲整数 | 与 Python `max(1, int((z1-z0)/pitch))` 相同：`pitch>0`，先 IEEE 双精度除法，再向 0 截断，最后与 1 取 max。几何有效域另要求 `z1>=z0`；`z1=z0` 返回 1，`0<z1-z0<pitch` 也返回 1。负区间数学上仍返回 1，但属于几何域拒绝。超出有符号 32-bit 整数范围拒绝。 |
+
+实际 IR 示例使用 `half_difference`, `half`, `multiply`, `add`, `subtract` 和 `collar_chamfer`；三个线程公式是被登记、由 cutter 定义消费的契约，不代表当前示例把中间半径/圈数单独作为输入节点。`min/max` 的单一表达结构使用 `args.values` 数组；所有其他函数使用表中具名键。参数缺失/多余键、单位冲突、非有限值和非法运算分别拒绝，稳定码为 `IR_FORMULA_ARGUMENT_ERROR`、`IR_UNIT_MISMATCH`、`IR_FORMULA_DOMAIN_ERROR`。合法案例含长度×无量纲；长度+无量纲、长度×长度、除零、NaN/Inf、`pitch<=0`、非正 minor radius 均是拒绝案例。常量 ISO 261 coarse pitch（mm）按 GN 705 所有 `screw_d` 行固定为：M3 0.5、M4 0.7、M5 0.8、M6 1.0、M8 1.25、M10 1.5、M12 1.75。
 
 `constraint.expression` 只是审计和展示文本；实际执行必须按登记的 `constraint_id` 调用白名单解释器，不能对该字符串执行 `eval`、`exec` 或任意代码。节点 `properties` 只允许本 Schema 登记的元数据（例如 `thread_model`、结构化 `placement`）或 `family_extension` 下的族扩展字段。编译器不得把 `properties`、placement 文本或任何其他字符串当作代码。可执行的节点输入只能是上述五种结构化表达式。
 
@@ -94,7 +109,11 @@ radial_offset = subtract(half(bore_d), literal(0.5, mm))
 axial         = multiply(width, literal(0.5, 1))
 ```
 
-这对应源 `part.py` 的 `hole_len = wall + 2*over`、`z_in=over`、`z_out=over+wall`、`translate((bore_r-0.5, 0, width/2))`。局部 cutter 沿 +Z，先绕 Y 轴旋转 90° 使其沿 +X，再按 `radial_offset` 和 `axial` 平移，最后绕 Z 轴按 `angle_deg` 旋转。`over=0.5 mm`、回转轴和放置关系都必须由节点输入/登记的 placement 元数据表达，不能让编译器猜测。`thread_model` 必须为 `revolved_ring_approximation`，`helical_thread_supported` 必须为 `false`，两个孔节点都要明确记录。`screw_len` 仍是目录/任务字段，严禁作为 `hole_len` 或其他孔深输入。
+这对应源 `part.py` 的 `hole_len = wall + 2*over`、`z_in=over`、`z_out=over+wall`、`translate((bore_r-0.5, 0, width/2))`。`Workplane("XZ")` 的局部 x/y 分别映射到世界 +X/+Z，法向 +Y；polyline 第一坐标是径向半径（bore_r 到 od_r），第二坐标是套环轴向高度（0 到 width）。回转 `axisStart=(0,0,0)` 和 `axisEnd=(0,1,0)` 是世界坐标向量，故 collar 实际轴向为世界 Y，轴向范围 `[0,width]`，径向圆柱包络在 XZ 平面。局部 cutter 原点为其旋转实体局部原点，轴沿 +Z，长度从 z=0 到 `hole_len`；+Z 为由内孔向外径的 cutter 正方向。
+
+placement 必须按 Schema 的有序结构执行，齐次列向量左乘：`p_world = Rz(angle_deg) · T(radial_offset,0,axial) · Ry(90°) · p_local`。第一转绕 cutter-local 原点及局部 +Y 轴，方向按右手规则；平移为世界向量 `(bore_d/2-0.5,0,width/2)`；最终转绕世界原点、世界 +Z 轴。`angle_deg=0` 时入口在 `(+radial_offset,0,width/2)`、径向向量为 +X；135° 时为 `(-radial_offset/√2,+radial_offset/√2,width/2)`，轴向仍 +X 先转为该径向方向。90° 的初转将 +Z 映射到 +X。禁止把 135° 误当局部角或绕 cutter 中心旋转。主孔/第二孔的世界位置与 DATA-003 两合法案例 bbox 对照为 `(32,32,14)` 和 `(110,110,22)` mm；旋转不改变包围盒理论尺寸，STEP 导出实测至多约 2e-7 mm 偏差。`screw_len` 是 GN 705 紧定螺钉目录长度，不能当孔深。
+
+`shape.revolve_profile` 轮廓各点为 `(径向半径, 世界 Y 轴向位置)`；其外/内半径及 8 点折线见源 `part.py`，不要将宽度解释成 Z。`over=0.5 mm`、回转轴和放置关系都必须由输入/登记的 placement 元数据表达，不能让编译器猜测。`thread_model` 必须为 `revolved_ring_approximation`，`helical_thread_supported` 必须为 `false`，两个孔节点都要明确记录。`screw_len` 仍是目录/任务字段，严禁作为 `hole_len` 或其他孔深输入。
 
 标准合法案例的节点顺序为：解析目录、回转基体、主孔切削、主孔布尔差；当 `second_screw=1` 时再执行第二孔切削、第二孔布尔差，最后输出 `result.single_solid`。即使节点声明了条件，依赖图仍必须完整可检查。
 
@@ -118,15 +137,17 @@ axial         = multiply(width, literal(0.5, 1))
 
 ## 7. 错误协议
 
-每个错误至少包含：`code`、`stage`、`severity`、`fields`、`node_ids`、`message`、`retryable`。错误阶段和稳定码如下：
+每个错误至少包含：`code`、`stage`、`severity`、`fields`、`node_ids`、`message`、`retryable`。错误阶段和稳定码如下。schema 阶段包含 IR 语义检查；CAD-003 参数结果进入 preflight；CAD 构造进入 build。
 
-| 阶段 | 代码前缀/示例 | 含义 |
-|---|---|---|
-| IR 解析 | `IR_INVALID_JSON`、`IR_VERSION_UNSUPPORTED`、`IR_UNKNOWN_NODE_TYPE`、`IR_REFERENCE_NOT_FOUND` | IR 文件本身不能解析或不符合 v0。 |
-| Schema/前置规则 | CAD-003 原码 `MISSING_REQUIRED`、`CATALOG_CHOICE`、`CATALOG_MISMATCH`、`SECOND_SCREW_CONSTRAINT`、`WALL_THICKNESS_TOO_SMALL`、`WIDTH_SUPPORT_TOO_SMALL`、`OUTER_DIAMETER_NOT_GREATER`、`UNSUPPORTED_UNIT` | 参数缺失、单位、目录或规则失败；不调用构造器。 |
-| 构造 | `CAD_BUILD_NODE_ERROR`、`CAD_BUILD_BOOLEAN_ERROR`、`CAD_BUILD_UNSUPPORTED_FEATURE` | 白名单节点执行或布尔操作失败。 |
-| 实体/几何 | `GEOMETRY_INVALID`、`GEOMETRY_MULTI_SOLID`、`GEOMETRY_EMPTY`、`GEOMETRY_METRIC_OUT_OF_TOLERANCE` | 构造有结果但实体有效性、单实体或几何摘要不满足契约。 |
-| STEP | `STEP_EXPORT_ERROR`、`STEP_READBACK_ERROR`、`STEP_READBACK_MULTI_SOLID`、`STEP_METRIC_MISMATCH` | STEP 写出或回读失败；不能用字节 hash 稳定性替代这些检查。 |
+| 阶段 | 稳定码 | 自动重试/字段修复 | fields/node_ids 和用户提示 |
+|---|---|---|---|
+| `parse` | `IR_INVALID_JSON`, `IR_ROOT_TYPE_INVALID` | 不重试；只可建议语法修正，不自动改值 | JSON pointer；提示解析位置/期望根对象。 |
+| `schema` | `IR_SCHEMA_INVALID`, `IR_VERSION_UNSUPPORTED`, `IR_FAMILY_MISMATCH`, `IR_SOURCE_COMMIT_MISMATCH`, `IR_UNKNOWN_NODE_TYPE`, `IR_UNREGISTERED_FORMULA`, `IR_REFERENCE_NOT_FOUND`, `IR_UNIT_MISMATCH`, `IR_FORMULA_DOMAIN_ERROR` | 不重试；可以提示字段名/缺项，禁止解释/执行字符串 | 参数名、JSON pointer、node_id；提示具体路径、值和期望契约。 |
+| `preflight` | CAD-003 原码 `MISSING_REQUIRED`, `CATALOG_CHOICE`, `CATALOG_MISMATCH`, `SECOND_SCREW_CONSTRAINT`, `WALL_THICKNESS_TOO_SMALL`, `WIDTH_SUPPORT_TOO_SMALL`, `OUTER_DIAMETER_NOT_GREATER`, `UNSUPPORTED_UNIT` | 不重试；只能按目录补缺失派生项，不覆盖显式冲突 | fields 是参数名、node_ids=[]；说明目录/规则及边界；必须不调用 build。 |
+| `build` | `CAD_BUILD_NODE_ERROR`, `CAD_BUILD_BOOLEAN_ERROR`, `CAD_BUILD_UNSUPPORTED_FEATURE` | 确定性几何错误不重试；进程/资源瞬时错误至多重试一次；不自动改字段 | 相关 node_id、参数 fields；提示节点、白名单操作和异常摘要。 |
+| `post_geometry` | `GEOMETRY_EMPTY`, `GEOMETRY_INVALID`, `GEOMETRY_MULTI_SOLID`, `GEOMETRY_METRIC_MISSING`, `GEOMETRY_METRIC_NONFINITE`, `GEOMETRY_METRIC_OUT_OF_TOLERANCE` | 不重试、不自动字段修复 | 输出/节点和指标字段；给出观察值、期望值、阈值。 |
+| `step_export` | `STEP_EXPORT_ERROR`, `STEP_FILE_MISSING`, `STEP_FILE_EMPTY` | 瞬时 I/O 错误最多重试一次；不自动改字段 | part 输出及路径字段；提示写出异常/文件状态。 |
+| `step_readback` | `STEP_READBACK_ERROR`, `STEP_READBACK_EMPTY`, `STEP_READBACK_MULTI_SOLID`, `STEP_READBACK_METRIC_MISSING`, `STEP_READBACK_METRIC_NONFINITE`, `STEP_METRIC_MISMATCH` | 瞬时 I/O 错误最多重试一次；不自动改字段 | part 输出和比较指标；提示回读实体数、缺失值或几何差值。 |
 
 `fields` 指向参数或验证字段，`node_ids` 指向相关节点；不适用时使用空数组。错误码在 v0 内不得复用为另一语义。
 
@@ -149,6 +170,10 @@ v0 读取策略：
 
 ## 9. 可复现性边界
 
+CAD-006 比较策略的硬门槛先冻结：构造后及 STEP 回读后都要求恰好 1 solid、恰好 1 shell、`isValid=true`；solid/shell/face/edge/vertex 计数必须与同一基准运行完全相等；任一缺失、非数、无穷、空形状或实体数为 0 均失败。STEP 回读的 solid 数必须与构造后完全相同且仍为 1。绝不以容差放过多实体。
+
+数值比较候选配置 `CAD-006.pending.v0`：长度/包围盒各分量采用 `abs_tol=1e-5 mm, rel_tol=1e-8`；体积采用 `abs_tol=1e-4 mm³, rel_tol=1e-8`；面面积和边长列表先分别升序排序，数量必须精确相等，再按逐项上述长度/面积对应单位容差比较（面积候选 `abs_tol=1e-5 mm², rel_tol=1e-8`）。仅在需要生成签名时用 6 位小数量化，签名不替代数值容差比较。重复性比较同参同版本两次几何摘要；STEP 回读比较同一次构造与回读。DATA-003 记录的体积 roundtrip 差约 0.013–0.034 mm³，高于候选的严格绝对阈值，现有数据只保存到 6 位，且没有同一精度下的原始构造后面/边数据。因此全套数值阈值状态为 `pending_measurement`，候选不足以宣称通过；最小补测是两合法案例及 `bore_d=80` hard boundary 的构造前导出 B-Rep 摘要 + 回读摘要至少各 3 次，并包含体积、bbox、排序面面积/边长原始数组，以估计运行内和 STEP 往返误差。`legal-second-screw` 与目录行 80 是同一 hard-boundary 参数案例，不能算额外独立范围点。非法 `outer_d<bore_d` 必须由 preflight 拒绝；绕过 preflight 的对抗后置检查必须仍因 `3 solids != 1` 失败。
+
 同一 IR、同一 source commit、同一 adapter、同一 CadQuery/OCP/操作系统和同一容差配置，目标是得到相同的参数解析、节点图、实体数、`isValid()`、量化体积/包围盒以及登记的面面积/边长摘要。DATA-003 只证明当前环境下这些几何/拓扑指标稳定；它没有证明任意 B-Rep 拓扑完全等价。
 
 STEP 字节 SHA-256 **不稳定**，即使几何摘要相同也可能不同；v0 的重复性判定必须使用结构化几何摘要和明确容差，不能要求文件字节相同。CadQuery/OCP、STEP writer、平台或数值容差改变时，只能保证 IR 和参数/依赖层可复现，几何结果需重新验证。`source.snapshot_status=reproducibility_partial` 反映源码快照、外部图纸和生成资产许可/复现边界，不能被编译器改为 `complete`。
@@ -161,7 +186,7 @@ STEP 字节 SHA-256 **不稳定**，即使几何摘要相同也可能不同；v0
 
 - 是否把 `screw_len` 明确标记为“目录/任务字段”并在所有后续适配器中禁止误作孔深；
 - 面/边量化精度、体积/包围盒容差和摘要算法是否冻结为 CAD-006 契约；
-- `revolved_ring_approximation` 是否在首期被接受为功能性螺纹近似，或需在构造器层明确降级状态；
+- 当前环形螺纹近似已确认发生布尔切除，但其功能精度/与真实螺纹的等价性未审查；是否把它作为首期功能特征仍待负责人/中枢确认。
 - `family_data` 的 JSON Schema URI 和跨族公共节点注册表由谁维护；
 - 生成 STEP/渲染图的许可证和可发布范围仍是 `license_scope_uncertain`；
 - 是否将 `directory_id` 作为所有族的公共来源字段，而不是只在适配器元数据中保留。

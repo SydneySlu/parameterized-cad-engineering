@@ -241,3 +241,11 @@
 - 边界：不由该 Agent 冻结首族范围；以固定 BenchCAD commit 和 `set_screw_shaft_collar` 做条件性契约审查，首族正式确认仍由项目负责人/导师决定。
 - Prompt：`docs/coordination/prompts/IR-001-R3-final-contract-review.md`。
 - 状态：prompt 已准备，等待项目负责人启动独立 Agent；Agent 完成后由 Codex 中枢审查。
+
+## 2026-11-02 — IR-001-R3 Typed CAD IR v0 契约复核
+
+- Agent：Codex（IR-001-R3）；动作：完成单族条件下公式/单位、坐标 placement、几何摘要容差和错误阶段契约复核；更新 IR spec/Schema/mapping/semantic-validation/示例/checkpoint，新增 `review-r3.md`。
+- 结果：公式和坐标契约形成精确定义；placement Schema 改为显式局部旋转、世界平移、世界旋转的有序变换；几何离散硬门槛可冻结，浮点阈值因现有 STEP 体积 roundtrip 差约 0.013–0.034 mm³ 且缺少原始面/边数据，标记 `pending_measurement`。固定源码当前环形 cutter 的 M6/M12 差分实测均有非零体积移除，旧 M3–M8 no-op 仅对应历史 helix 尝试，不套用到当前 ring 实现。
+- 范围：`family_scope=awaiting_owner_confirmation`；未修改生产源码、CAD-003/DATA-003/CAD-005/006 目录或正式项目状态/计划/决策；未实现 compiler/validator。
+- 验证：Draft 2020-12 schema self-check + 五示例、语义反例脚本、CAD-003 17 tests、项目 venv `test_handoff.py`、纯 Python 公式探针、固定 OCP placement 和 ring cutter 体积探针均通过。最终 commit 在 checkpoint 审计后补记。
+- 下一步：等待 Codex 中枢独立审查；补测确认浮点容差，并由负责人冻结首族后再判断 CAD-005/006 是否启动。

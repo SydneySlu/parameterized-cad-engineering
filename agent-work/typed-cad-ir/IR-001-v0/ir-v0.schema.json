@@ -1036,75 +1036,7 @@
                       "const": "radial_bore_breakout"
                     },
                     "placement": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "cutter_local_axis",
-                        "initial_rotation",
-                        "translation",
-                        "final_rotation"
-                      ],
-                      "properties": {
-                        "cutter_local_axis": {
-                          "const": "Z"
-                        },
-                        "initial_rotation": {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "axis",
-                            "degrees"
-                          ],
-                          "properties": {
-                            "axis": {
-                              "const": "Y"
-                            },
-                            "degrees": {
-                              "const": 90
-                            }
-                          }
-                        },
-                        "translation": {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "radial_offset_ref",
-                            "axial_ref",
-                            "radial_axis",
-                            "axial_axis"
-                          ],
-                          "properties": {
-                            "radial_offset_ref": {
-                              "const": "radial_offset"
-                            },
-                            "axial_ref": {
-                              "const": "axial"
-                            },
-                            "radial_axis": {
-                              "const": "X"
-                            },
-                            "axial_axis": {
-                              "const": "Z"
-                            }
-                          }
-                        },
-                        "final_rotation": {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "axis",
-                            "angle_ref"
-                          ],
-                          "properties": {
-                            "axis": {
-                              "const": "Z"
-                            },
-                            "angle_ref": {
-                              "const": "angle_deg"
-                            }
-                          }
-                        }
-                      }
+                      "$ref": "#/$defs/placement"
                     }
                   }
                 }
@@ -1451,10 +1383,10 @@
         },
         "stage": {
           "enum": [
-            "ir_parse",
+            "parse",
             "schema",
             "preflight",
-            "construct",
+            "build",
             "post_geometry",
             "step_export",
             "step_readback"
@@ -1848,75 +1780,7 @@
           "const": "radial_bore_breakout"
         },
         "placement": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "cutter_local_axis",
-            "initial_rotation",
-            "translation",
-            "final_rotation"
-          ],
-          "properties": {
-            "cutter_local_axis": {
-              "const": "Z"
-            },
-            "initial_rotation": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "axis",
-                "degrees"
-              ],
-              "properties": {
-                "axis": {
-                  "const": "Y"
-                },
-                "degrees": {
-                  "const": 90
-                }
-              }
-            },
-            "translation": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "radial_offset_ref",
-                "axial_ref",
-                "radial_axis",
-                "axial_axis"
-              ],
-              "properties": {
-                "radial_offset_ref": {
-                  "const": "radial_offset"
-                },
-                "axial_ref": {
-                  "const": "axial"
-                },
-                "radial_axis": {
-                  "const": "X"
-                },
-                "axial_axis": {
-                  "const": "Z"
-                }
-              }
-            },
-            "final_rotation": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "axis",
-                "angle_ref"
-              ],
-              "properties": {
-                "axis": {
-                  "const": "Z"
-                },
-                "angle_ref": {
-                  "const": "angle_deg"
-                }
-              }
-            }
-          }
+          "$ref": "#/$defs/placement"
         },
         "base_ref": {
           "type": "string"
@@ -2009,6 +1873,137 @@
         "properties": {
           "type": "object",
           "additionalProperties": true
+        }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutter_local_axis",
+        "transform_order",
+        "transforms"
+      ],
+      "properties": {
+        "cutter_local_axis": {
+          "const": "Z"
+        },
+        "transform_order": {
+          "const": "column_vector_left_multiply"
+        },
+        "transforms": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation",
+                "frame",
+                "pivot",
+                "axis",
+                "degrees"
+              ],
+              "properties": {
+                "operation": {
+                  "const": "rotate"
+                },
+                "frame": {
+                  "const": "cutter_local"
+                },
+                "pivot": {
+                  "const": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "axis": {
+                  "const": [
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                "degrees": {
+                  "const": 90
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation",
+                "frame",
+                "vector"
+              ],
+              "properties": {
+                "operation": {
+                  "const": "translate"
+                },
+                "frame": {
+                  "const": "world"
+                },
+                "vector": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "const": "radial_offset"
+                    },
+                    {
+                      "const": 0
+                    },
+                    {
+                      "const": "axial"
+                    }
+                  ],
+                  "items": false,
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation",
+                "frame",
+                "pivot",
+                "axis",
+                "angle_ref"
+              ],
+              "properties": {
+                "operation": {
+                  "const": "rotate"
+                },
+                "frame": {
+                  "const": "world"
+                },
+                "pivot": {
+                  "const": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "axis": {
+                  "const": [
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                "angle_ref": {
+                  "const": "angle_deg"
+                }
+              }
+            }
+          ],
+          "items": false
         }
       }
     }
