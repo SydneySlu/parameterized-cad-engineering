@@ -18,6 +18,7 @@
 - 完成 BenchCAD 2.0、CADBench 与 Seek-CAD 数据源的适配性和许可边界初评；BenchCAD 2.0 社区族作为主数据源，CADBench 用作评测参考，Seek-CAD 用作序列/检索方法参考。
 - 已冻结首期零件族 `set_screw_shaft_collar`，固定 BenchCAD commit `035f467142888edfd0bd7cd73906f9b155c8f43c`；DATA-003 来源、快照和许可证补充审计已由 Codex 中枢复核完成，限制见审查记录。
 - RET-001 单族 manifest 已完成中枢复核：覆盖 15 个冻结目录行，完整记录参数、IR、构造/几何/STEP 验证、来源、hash 和临时 split；split 仍为 `provisional_small_n`，生成 STEP 仍为 `license_scope_uncertain`。
+- RET-002 单族确定性检索基线已完成主体实现和独立复核；当前保持 `review`，待修正自定义距离策略可绕过冻结范围的问题后再标记 `done`。
 
 - 形成参数化 CAD 生成系统的轻量版技术路线。
 - 完成 SKY-001、Seek-CAD、FutureCAD 以及相关 CAD/DSL 论文的初步对比。
@@ -54,5 +55,6 @@
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
 2. 将 RET-001 执行提交、中枢修正和审查记录一起推送到远端。
-3. 开始 RET-002/RET-003：在不把 provisional split 当作正式 benchmark 的前提下，设计检索字段、样本注入和无检索/检索/人工模板对照。
-4. 第二族扩展另行决策。
+3. 完成 RET-002 策略范围契约修正并复核，再决定是否放行 RET-003。
+4. 在不把 provisional split 当作正式 benchmark 的前提下，设计无检索/检索/人工模板对照。
+5. 第二族扩展另行决策。

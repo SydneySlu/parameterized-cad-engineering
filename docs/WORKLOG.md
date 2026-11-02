@@ -422,3 +422,10 @@ results=目录内 bore_d=20（envelope）top1=catalog-bore-020、total 0.0；行
 known_limits=仅 set_screw_shaft_collar 单族 15 行，候选仅 3 个 retrieval_source 行；split_status=provisional_small_n 未冻结，不是 benchmark；距离只是参数近邻度，不代表几何等价/制造/强度/生成质量；weights 0.2 与 0.5 未经 RET-003 验证；envelope 必须通过 Schema，flat 必须完整六字段；retrieval-config.json 固定 manifest sha b7b6c737…，manifest 再生成需显式更新；仅 macOS arm64 + Python 3.11.18 固定环境；未读取或生成 STEP/渲染物，未下载 BenchCAD Public/Core；reproducibility_partial、MERGED、license_scope_uncertain、revolved_ring_approximation 保留；RET-001 复核运行改写的 verification/replay report 已 git checkout 恢复到 HEAD
 next=Codex 中枢独立复核接口、排序稳定性、失败路径、数据边界和限制；本任务保持 review，未 push、未标 done；RET-003 前不得把 provisional split 当作正式评测集
 commit=cc8ad9c（feat: add deterministic retrieval baseline [RET-002]）
+
+[2026-11-03] agent=Codex task=RET-002-codex-review status=review
+动作=按三层交接协议完成 RET-002 中枢独立审查；复跑检索、smoke、RET-001 manifest、Schema、IR、CAD 编译器回归和语法检查，并恢复运行时报告噪声。
+结果=24 项检索测试、3 个正常/边界案例、13 个失败案例、70 项 smoke 检查、RET-001 tracked-only 660 项、Schema 17 项、IR 5 项、CAD 13 项全部通过；held-out 行未越过 candidate role，canonical JSON 进程内和跨进程一致。
+发现=`RetrievalIndex.from_manifest(..., policy=...)` 可接受连续字段自定义范围，但仍输出冻结 policy id；`DistancePolicy.validate()` 未强制范围等于完整 15 行目录范围，存在策略语义绕过风险。
+决定=RET-002 主体证据通过，但保持 `review`，不标记 `done`，不放行 RET-003；修正要求和证据见 `agent-work/reviews/RET-002-codex-review.md`。
+下一步=修正并测试距离策略范围契约，再由 Codex 中枢复核。
