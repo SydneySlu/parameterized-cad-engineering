@@ -273,3 +273,11 @@
 - 限制：`geometry_tolerance=pending_measurement`、`family_scope=awaiting_owner_confirmation`、`snapshot_status=reproducibility_partial`；没有实现 CAD-005/006，也未运行浮点容差补测。
 - 提交：`fac9aaf` (`fix: repair IR-001-R3 axis and build failure contract [IR-001-R3-FIX]`)。
 - 下一步：等待 Codex 中枢独立复审；不得标记 CAD-005/006 done。
+
+### IR-001-R3-FIX / Codex 中枢独立复审 / review / 2026-11-02
+
+- 动作：独立复跑 R3-FIX 的 Draft 2020-12 Schema、六个示例、阶段混淆反例、契约测试、CadQuery/OCP 坐标与 bbox 测试、CAD handoff smoke 和 placement 探针。
+- 结果：R3-FIX 两项阻塞修正通过。回转契约统一为 `workplane=XZ`、`axis_local=[0,1,0]`、世界 `axis=Z`；accepted `validation_result` 现在可以合法表达 build 失败，并由 `completed_stages` 防止阶段伪造或越级。
+- 验证：Schema/六例 PASS；语义反例 PASS；IR 契约测试 3 项 PASS；坐标/bbox 测试 2 项 PASS；CAD-003 17 项 PASS；项目 venv handoff PASS；JSON 与 diff 检查 PASS。
+- 结论：可以作为条件性单族 IR v0.2.0 接口交给后续准备工作，但 IR-001 保持 `review`。几何容差仍 `pending_measurement`，首族仍 `awaiting_owner_confirmation`，不得标记 CAD-005/006 done。
+- 证据：`agent-work/reviews/IR-001-R3-codex-review.md` 的 R3-FIX 独立复审章节。
