@@ -368,3 +368,10 @@
 - 阻塞发现：把主孔 `radial_offset` 改成 100 mm 的 accepted IR 可通过 Schema/semantic validation，并由 `compile_ir` 成功输出 STEP；体积从约 6712.631936 mm³ 变为 6851.028179 mm³。冻结的 `mapping.md` 输入公式未在编译前被语义校验。另 `_failed_result()` 的 `node_ids` 恒为空，丢失节点定位。
 - 决定：CAD-005、CAD-006 状态设为 `review`；不验收，不放行下游检索实现。修正后增加异常 IR 回归用例，再由中枢复核。
 - 审查记录：`agent-work/reviews/CAD-005-006-implementation-codex-review.md`。
+
+### CAD-005/006 / Codex 中枢 / prompt prepared / 2026-11-02
+
+- 动作：根据中枢审查发现，生成原 CAD-005/006 Agent 的修正续作 Prompt，覆盖固定输入绑定校验、拒绝错误孔位 IR、`node_ids` 错误定位、回归测试和交接要求。
+- 边界：保持 IR/Schema、CAD-006.geometry-comparison.v1 数值阈值及首族范围不变；不重跑 45 组测量；Agent 不 push、不改项目正式状态。
+- 文件：`docs/coordination/prompts/CAD-005-006-canonical-binding-fix-agent.md`。
+- 提交：`c2f7340`（Prompt；未 push）。
