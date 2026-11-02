@@ -468,3 +468,9 @@ scope=完成里程碑 1：提交 protocol-draft.md、query-set-draft.json、chec
 verified=RET-001 tracked-only 660/660；RET-002 retrieval tests 30/30；smoke 3 正常/边界通过、13/13 失败按预期拒绝、进程内/跨进程确定性通过；正常/heldout/结构化失败案例已抽查；复跑报告时间戳差异已恢复
 result=协议明确 C0 无检索、C1 RET-002、C2 人工模板/规则的输入输出、角色隔离、指标分母、失败处理和 APP-001 端到端 not_measured 边界；当前等待 Codex 中枢书面放行
 next=中枢审阅 C2 规则先验与公平比较、主查询清单及未来敏感性集合；放行前不创建或运行里程碑 2 评测
+
+[2026-11-03] agent=Codex task=RET-003 status=review
+scope=里程碑 1 协议草案和查询清单已完成提交；提交=810221f
+verified=python3 -m json.tool query-set-draft.json；查询引用校验 6/6；git diff --check 通过
+result=等待 Codex 中枢书面审查和里程碑 2 放行；在放行前不创建或运行正式评测
+next=审阅 C2 规则先验、公平性、主查询集合和未来敏感性范围
