@@ -227,7 +227,7 @@ IR-001 R3 所列 CAD-006.pending.v0（长度/bbox 1e-5 mm / 1e-8，体积 1e-4 m
 
 ## 11. 示例状态
 
-`examples/legal-second-screw.json` 是通过 IR Schema 和反序列化语义检查的 `second_screw=1` 结构合法案例，使用 `bore_d=80, outer_d=110, width=22, screw_d=12, screw_len=20`，并包含条件第二孔和 135° 放置。它不声称已经运行 CadQuery/OCP 构造、实体检查或 STEP 回读；CAD-005/006 尚未对该示例执行几何验证。
+`examples/legal-second-screw.json` 是通过 IR Schema 和反序列化语义检查的 `second_screw=1` 结构合法案例，使用 `bore_d=80, outer_d=110, width=22, screw_d=12, screw_len=20`，并包含条件第二孔和 135° 放置。历史上它最初仅完成结构检查；补充审查结果：CAD-005/006 的实现提交 `df78f4f` 在固定 macOS arm64、Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0 环境中已对该案例完成 native 构造、单实体/有效性检查和 STEP 回读，且通过 `CAD-006.geometry-comparison.v1`。这项补充不扩展到跨平台、跨进程或其他 CAD 软件版本。
 
 ## 12. 交接
 

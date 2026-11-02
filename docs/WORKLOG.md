@@ -380,3 +380,8 @@
 动作：按中枢复核意见补上 Typed CAD IR 首族七节点精确输入/图绑定契约；对 radial_offset、hole_len、angle 变异在 CAD 初始化/构造前拒绝；补充稳定节点路径、数组索引和全局错误 node_ids 定位；移除 CAD 编译器进程级 TopoDS.HashCode 补丁。
 结果：CAD 编译 13 项、Schema 17 项、IR schema/axis 5 项、py_compile 和 diff 检查通过；合法目录/第二孔案例 native 与 STEP 回读、冻结 CAD-006 对照均通过。未重跑 45 组容差测量，策略和阈值保持不变。固定 CadQuery 2.3.0 / OCP 7.9.3.0 探针确认补丁删除前后 HashCode 均缺失；BenchCAD 隔离执行器/editor 仍有独立补丁，其他调用路径兼容性未验证。
 交接：详见 `agent-work/cad-validation/CAD-005-006/checkpoint-canonical-binding-r2.md`；任务保持 review，等待 Codex 中枢独立复核。
+
+[2026-11-02] agent=Codex task=CAD-005/006-review status=done
+动作：中枢基于项目根目录独立复核 `df78f4f`，审阅 canonical binding、错误定位实现和回归测试，并重跑 CAD 编译、Schema、IR Schema/轴向契约测试及 py_compile。
+结果：13 + 17 + 5 项测试及 py_compile 全部通过；三类输入绑定变异在 CAD 初始化前拒绝；容差策略和测量证据未被修正提交改动。源码审查通过，限定固定环境/首族范围；本轮审查记录已本地提交，等待项目负责人 push。
+记录：审查结论追加于 `agent-work/reviews/CAD-005-006-implementation-codex-review.md`；IR 第二孔示例的 CAD/STEP 验证状态已在规范 §11 补充。
