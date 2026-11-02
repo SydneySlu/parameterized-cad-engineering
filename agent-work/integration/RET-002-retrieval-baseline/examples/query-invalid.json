@@ -1,0 +1,17 @@
+{
+  "case": "invalid_missing_outer_d",
+  "notes": "Flat query omits outer_d. Missing fields are rejected rather than defaulted to 0 or guessed.",
+  "family_id": "set_screw_shaft_collar",
+  "parameters": {
+    "bore_d": 20,
+    "screw_d": 6,
+    "screw_len": 8,
+    "second_screw": 0,
+    "width": 14
+  },
+  "top_k": 3,
+  "expected": {
+    "error_code": "RETRIEVAL_MISSING_FIELD",
+    "missing_fields": ["outer_d"]
+  }
+}

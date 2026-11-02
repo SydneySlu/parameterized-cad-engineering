@@ -1,0 +1,1071 @@
+{
+  "task": "RET-002",
+  "kind": "smoke-report",
+  "status": "review",
+  "retrieval_version": "ret-002.retrieval.v1",
+  "policy_id": "RET-002.parametric_distance.v1",
+  "generated_at": "2026-11-03T01:38:54+08:00",
+  "environment": {
+    "python": "3.11.18",
+    "python_implementation": "CPython",
+    "system": "Darwin",
+    "release": "25.6.0",
+    "machine": "arm64",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "config": {
+    "path": "agent-work/integration/RET-002-retrieval-baseline/retrieval-config.json",
+    "sha256": "424322f51da78df2a154043d284d307ae285c7d2a2cb659f5517a6ecb847cfc5",
+    "config_version": "ret-002.retrieval-config.v1",
+    "retrieval_policy": "RET-002.parametric_distance.v1",
+    "family_id": "set_screw_shaft_collar",
+    "manifest": {
+      "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+      "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297"
+    },
+    "candidate_roles": [
+      "retrieval_source"
+    ],
+    "excluded_roles": [
+      "development",
+      "heldout_evaluation"
+    ],
+    "split_status_expected": "provisional_small_n",
+    "normalization_ranges_mm": {
+      "bore_d": {
+        "min": 5.0,
+        "max": 80.0
+      },
+      "outer_d": {
+        "min": 10.0,
+        "max": 110.0
+      },
+      "screw_d": {
+        "min": 3.0,
+        "max": 12.0
+      },
+      "screw_len": {
+        "min": 4.0,
+        "max": 20.0
+      },
+      "width": {
+        "min": 6.0,
+        "max": 22.0
+      }
+    },
+    "weights": {
+      "continuous_field_weight": 0.2,
+      "discrete_second_screw": 0.5,
+      "total_formula": "mean(5 continuous normalized abs diffs) + 0.5 * (second_screw mismatch)",
+      "tiebreak": "total ascending, then sample_id ascending"
+    },
+    "top_k": {
+      "default": 3,
+      "min": 1,
+      "max": "candidate_count"
+    },
+    "units": {
+      "length": "mm",
+      "second_screw": "1 (dimensionless)"
+    }
+  },
+  "manifest": {
+    "manifest_version": "retrieval-manifest.v0",
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+    "records": 15,
+    "role_counts": {
+      "development": 9,
+      "retrieval_source": 3,
+      "heldout_evaluation": 3
+    }
+  },
+  "index": {
+    "family_id": "set_screw_shaft_collar",
+    "candidate_roles": [
+      "retrieval_source"
+    ],
+    "candidate_count": 3,
+    "candidate_sample_ids": [
+      "set_screw_shaft_collar/catalog-bore-006",
+      "set_screw_shaft_collar/catalog-bore-020",
+      "set_screw_shaft_collar/catalog-bore-050"
+    ],
+    "split_status": "provisional_small_n"
+  },
+  "data_boundary": {
+    "reads_step": false,
+    "reads_render": false,
+    "reads_ir_files": false,
+    "reads_external_drawings": false,
+    "reads_benchcad_public_core": false
+  },
+  "coverage": {
+    "in_catalog_bore_020": "examples/query-in-catalog.json (CAD-003 envelope, Schema derives fields)",
+    "between_catalog_rows": "examples/query-between-catalog-rows.json (bore_d=18, out_of_catalog_or_unvalidated)",
+    "boundary_second_screw_bore_080": "inline case; held-out row must not be a candidate",
+    "missing_field": "examples/query-invalid.json",
+    "unknown_field": "inline failure case",
+    "unknown_family": "inline failure case",
+    "non_finite_and_invalid_second_screw": "inline failure cases",
+    "empty_candidate_roles_top_k_out_of_range_duplicate_candidates": "inline failure cases"
+  },
+  "cases": [
+    {
+      "case": "in_catalog_bore_020",
+      "source": "agent-work/integration/RET-002-retrieval-baseline/examples/query-in-catalog.json",
+      "notes": "CAD-003 envelope with only bore_d=20. The existing Schema derives outer_d, screw_d, screw_len, second_screw and width; no rule is re-implemented here.",
+      "input_form": "cad003_envelope",
+      "query_status": "catalog_validated",
+      "query_parameters": {
+        "bore_d": 20,
+        "outer_d": 32,
+        "screw_d": 6,
+        "screw_len": 8,
+        "second_screw": 0,
+        "width": 14
+      },
+      "top_k": 3,
+      "candidates_considered": 3,
+      "schema_error_codes": [],
+      "ranking": [
+        {
+          "rank": 1,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-020",
+          "total": 0.0,
+          "continuous_mean": 0.0,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": true,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+          "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 20,
+              "candidate": 20,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "outer_d": {
+              "query": 32,
+              "candidate": 32,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 6,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 8,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "width": {
+              "query": 14,
+              "candidate": 14,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        },
+        {
+          "rank": 2,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-006",
+          "total": 0.23427777777777775,
+          "continuous_mean": 0.23427777777777775,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+          "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 20,
+              "candidate": 6,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.18666666666666668,
+              "contribution": 0.037333333333333336
+            },
+            "outer_d": {
+              "query": 32,
+              "candidate": 12,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.2,
+              "contribution": 0.04000000000000001
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 4,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.2222222222222222,
+              "contribution": 0.044444444444444446
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 5,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.1875,
+              "contribution": 0.037500000000000006
+            },
+            "width": {
+              "query": 14,
+              "candidate": 8,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.375,
+              "contribution": 0.07500000000000001
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        },
+        {
+          "rank": 3,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-050",
+          "total": 0.4148888888888889,
+          "continuous_mean": 0.4148888888888889,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+          "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 20,
+              "candidate": 50,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.4,
+              "contribution": 0.08000000000000002
+            },
+            "outer_d": {
+              "query": 32,
+              "candidate": 80,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.48,
+              "contribution": 0.096
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 10,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.4444444444444444,
+              "contribution": 0.08888888888888889
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 16,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.5,
+              "contribution": 0.1
+            },
+            "width": {
+              "query": 14,
+              "candidate": 18,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.25,
+              "contribution": 0.05
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        }
+      ],
+      "checks": {
+        "split_status_top_level": true,
+        "manifest_hash_matches": true,
+        "manifest_record_count": true,
+        "result_count": true,
+        "ranks_contiguous": true,
+        "sorted_total_then_sample_id": true,
+        "roles_within_selection": true,
+        "provisional_split_on_each": true,
+        "ir_and_source_present": true,
+        "distance_decomposition": true,
+        "data_boundary_no_step": true,
+        "notes_keep_limits": true,
+        "expected_input_form": true,
+        "expected_query_status": true,
+        "expected_candidate_roles": true,
+        "expected_top1": true,
+        "expected_top1_same_catalog_row": true,
+        "expected_top1_total_is_zero": true
+      },
+      "pass": true
+    },
+    {
+      "case": "between_rows_bore_018",
+      "source": "agent-work/integration/RET-002-retrieval-baseline/examples/query-between-catalog-rows.json",
+      "notes": "bore_d=18 sits between catalog rows 16 and 20. The Schema rejects it with CATALOG_CHOICE, so the query is kept as a nearest-neighbour query and marked out_of_catalog_or_unvalidated; it is not a catalog truth.",
+      "input_form": "flat_parameters",
+      "query_status": "out_of_catalog_or_unvalidated",
+      "query_parameters": {
+        "bore_d": 18,
+        "outer_d": 30,
+        "screw_d": 6,
+        "screw_len": 8,
+        "second_screw": 0,
+        "width": 14
+      },
+      "top_k": 3,
+      "candidates_considered": 3,
+      "schema_error_codes": [
+        "CATALOG_CHOICE"
+      ],
+      "ranking": [
+        {
+          "rank": 1,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-020",
+          "total": 0.009333333333333334,
+          "continuous_mean": 0.009333333333333334,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+          "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 18,
+              "candidate": 20,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.02666666666666667,
+              "contribution": 0.005333333333333334
+            },
+            "outer_d": {
+              "query": 30,
+              "candidate": 32,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.02,
+              "contribution": 0.004
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 6,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 8,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            },
+            "width": {
+              "query": 14,
+              "candidate": 14,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.0,
+              "contribution": 0.0
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        },
+        {
+          "rank": 2,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-006",
+          "total": 0.22494444444444445,
+          "continuous_mean": 0.22494444444444445,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+          "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 18,
+              "candidate": 6,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.16,
+              "contribution": 0.032
+            },
+            "outer_d": {
+              "query": 30,
+              "candidate": 12,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.18,
+              "contribution": 0.036
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 4,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.2222222222222222,
+              "contribution": 0.044444444444444446
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 5,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.1875,
+              "contribution": 0.037500000000000006
+            },
+            "width": {
+              "query": 14,
+              "candidate": 8,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.375,
+              "contribution": 0.07500000000000001
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        },
+        {
+          "rank": 3,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-050",
+          "total": 0.42422222222222217,
+          "continuous_mean": 0.42422222222222217,
+          "discrete_term": 0.0,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+          "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 18,
+              "candidate": 50,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.4266666666666667,
+              "contribution": 0.08533333333333334
+            },
+            "outer_d": {
+              "query": 30,
+              "candidate": 80,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.5,
+              "contribution": 0.1
+            },
+            "screw_d": {
+              "query": 6,
+              "candidate": 10,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.4444444444444444,
+              "contribution": 0.08888888888888889
+            },
+            "screw_len": {
+              "query": 8,
+              "candidate": 16,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.5,
+              "contribution": 0.1
+            },
+            "width": {
+              "query": 14,
+              "candidate": 18,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.25,
+              "contribution": 0.05
+            }
+          },
+          "second_screw": {
+            "query": 0,
+            "candidate": 0,
+            "match": true,
+            "weight": 0.5,
+            "contribution": 0.0
+          }
+        }
+      ],
+      "checks": {
+        "split_status_top_level": true,
+        "manifest_hash_matches": true,
+        "manifest_record_count": true,
+        "result_count": true,
+        "ranks_contiguous": true,
+        "sorted_total_then_sample_id": true,
+        "roles_within_selection": true,
+        "provisional_split_on_each": true,
+        "ir_and_source_present": true,
+        "distance_decomposition": true,
+        "data_boundary_no_step": true,
+        "notes_keep_limits": true,
+        "expected_input_form": true,
+        "expected_query_status": true,
+        "expected_candidate_roles": true,
+        "expected_top1": true,
+        "expected_top1_same_catalog_row": true,
+        "expected_top1_total_is_zero": true,
+        "expected_schema_error_codes": true
+      },
+      "pass": true
+    },
+    {
+      "case": "boundary_bore_080_second_screw",
+      "source": "inline:run_smoke.py",
+      "notes": "bore_d=80 is the unique second_screw=1 hard boundary row and is heldout_evaluation. It must not appear as a candidate under retrieval_source.",
+      "input_form": "flat_parameters",
+      "query_status": "catalog_validated",
+      "query_parameters": {
+        "bore_d": 80,
+        "outer_d": 110,
+        "screw_d": 12,
+        "screw_len": 20,
+        "second_screw": 1,
+        "width": 22
+      },
+      "top_k": 3,
+      "candidates_considered": 3,
+      "schema_error_codes": [],
+      "ranking": [
+        {
+          "rank": 1,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-050",
+          "total": 0.7844444444444445,
+          "continuous_mean": 0.28444444444444444,
+          "discrete_term": 0.5,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+          "ir_sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 80,
+              "candidate": 50,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.4,
+              "contribution": 0.08000000000000002
+            },
+            "outer_d": {
+              "query": 110,
+              "candidate": 80,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.3,
+              "contribution": 0.06
+            },
+            "screw_d": {
+              "query": 12,
+              "candidate": 10,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.2222222222222222,
+              "contribution": 0.044444444444444446
+            },
+            "screw_len": {
+              "query": 20,
+              "candidate": 16,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.25,
+              "contribution": 0.05
+            },
+            "width": {
+              "query": 22,
+              "candidate": 18,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.25,
+              "contribution": 0.05
+            }
+          },
+          "second_screw": {
+            "query": 1,
+            "candidate": 0,
+            "match": false,
+            "weight": 0.5,
+            "contribution": 0.5
+          }
+        },
+        {
+          "rank": 2,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-020",
+          "total": 1.1993333333333334,
+          "continuous_mean": 0.6993333333333334,
+          "discrete_term": 0.5,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+          "ir_sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 80,
+              "candidate": 20,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.8,
+              "contribution": 0.16000000000000003
+            },
+            "outer_d": {
+              "query": 110,
+              "candidate": 32,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.78,
+              "contribution": 0.15600000000000003
+            },
+            "screw_d": {
+              "query": 12,
+              "candidate": 6,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.6666666666666666,
+              "contribution": 0.13333333333333333
+            },
+            "screw_len": {
+              "query": 20,
+              "candidate": 8,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.75,
+              "contribution": 0.15000000000000002
+            },
+            "width": {
+              "query": 22,
+              "candidate": 14,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.5,
+              "contribution": 0.1
+            }
+          },
+          "second_screw": {
+            "query": 1,
+            "candidate": 0,
+            "match": false,
+            "weight": 0.5,
+            "contribution": 0.5
+          }
+        },
+        {
+          "rank": 3,
+          "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+          "role": "retrieval_source",
+          "group_id": "catalog-row-bore-006",
+          "total": 1.433611111111111,
+          "continuous_mean": 0.9336111111111111,
+          "discrete_term": 0.5,
+          "same_catalog_row_as_query": false,
+          "ir_path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+          "ir_sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b",
+          "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+          "field_distances": {
+            "bore_d": {
+              "query": 80,
+              "candidate": 6,
+              "catalog_range_mm": [
+                5.0,
+                80.0
+              ],
+              "normalized_abs_diff": 0.9866666666666667,
+              "contribution": 0.19733333333333336
+            },
+            "outer_d": {
+              "query": 110,
+              "candidate": 12,
+              "catalog_range_mm": [
+                10.0,
+                110.0
+              ],
+              "normalized_abs_diff": 0.98,
+              "contribution": 0.196
+            },
+            "screw_d": {
+              "query": 12,
+              "candidate": 4,
+              "catalog_range_mm": [
+                3.0,
+                12.0
+              ],
+              "normalized_abs_diff": 0.8888888888888888,
+              "contribution": 0.17777777777777778
+            },
+            "screw_len": {
+              "query": 20,
+              "candidate": 5,
+              "catalog_range_mm": [
+                4.0,
+                20.0
+              ],
+              "normalized_abs_diff": 0.9375,
+              "contribution": 0.1875
+            },
+            "width": {
+              "query": 22,
+              "candidate": 8,
+              "catalog_range_mm": [
+                6.0,
+                22.0
+              ],
+              "normalized_abs_diff": 0.875,
+              "contribution": 0.17500000000000002
+            }
+          },
+          "second_screw": {
+            "query": 1,
+            "candidate": 0,
+            "match": false,
+            "weight": 0.5,
+            "contribution": 0.5
+          }
+        }
+      ],
+      "checks": {
+        "split_status_top_level": true,
+        "manifest_hash_matches": true,
+        "manifest_record_count": true,
+        "result_count": true,
+        "ranks_contiguous": true,
+        "sorted_total_then_sample_id": true,
+        "roles_within_selection": true,
+        "provisional_split_on_each": true,
+        "ir_and_source_present": true,
+        "distance_decomposition": true,
+        "data_boundary_no_step": true,
+        "notes_keep_limits": true,
+        "expected_input_form": true,
+        "expected_query_status": true,
+        "expected_candidate_roles": true,
+        "expected_top1": true,
+        "expected_top1_same_catalog_row": true,
+        "expected_top1_total_is_zero": true,
+        "forbidden_candidates_absent": true
+      },
+      "pass": true
+    }
+  ],
+  "failure_cases": [
+    {
+      "case": "missing_field",
+      "notes": "flat query omits outer_d; missing fields are rejected, not defaulted",
+      "expected_code": "RETRIEVAL_MISSING_FIELD",
+      "observed_code": "RETRIEVAL_MISSING_FIELD",
+      "stage": "query",
+      "fields": [
+        "outer_d"
+      ],
+      "pass": true
+    },
+    {
+      "case": "unknown_field",
+      "notes": "",
+      "expected_code": "RETRIEVAL_UNKNOWN_FIELD",
+      "observed_code": "RETRIEVAL_UNKNOWN_FIELD",
+      "stage": "query",
+      "fields": [
+        "flange_d"
+      ],
+      "pass": true
+    },
+    {
+      "case": "unknown_family",
+      "notes": "",
+      "expected_code": "RETRIEVAL_UNKNOWN_FAMILY",
+      "observed_code": "RETRIEVAL_UNKNOWN_FAMILY",
+      "stage": "query",
+      "fields": [
+        "family_id"
+      ],
+      "pass": true
+    },
+    {
+      "case": "non_finite_parameter",
+      "notes": "",
+      "expected_code": "RETRIEVAL_INVALID_PARAMETER",
+      "observed_code": "RETRIEVAL_INVALID_PARAMETER",
+      "stage": "query",
+      "fields": [
+        "bore_d"
+      ],
+      "pass": true
+    },
+    {
+      "case": "invalid_second_screw",
+      "notes": "",
+      "expected_code": "RETRIEVAL_INVALID_PARAMETER",
+      "observed_code": "RETRIEVAL_INVALID_PARAMETER",
+      "stage": "query",
+      "fields": [
+        "second_screw"
+      ],
+      "pass": true
+    },
+    {
+      "case": "top_k_zero",
+      "notes": "",
+      "expected_code": "RETRIEVAL_INVALID_TOP_K",
+      "observed_code": "RETRIEVAL_INVALID_TOP_K",
+      "stage": "query",
+      "fields": [
+        "top_k"
+      ],
+      "pass": true
+    },
+    {
+      "case": "top_k_boolean",
+      "notes": "",
+      "expected_code": "RETRIEVAL_INVALID_TOP_K",
+      "observed_code": "RETRIEVAL_INVALID_TOP_K",
+      "stage": "query",
+      "fields": [
+        "top_k"
+      ],
+      "pass": true
+    },
+    {
+      "case": "top_k_too_large",
+      "notes": "",
+      "expected_code": "RETRIEVAL_TOP_K_OUT_OF_RANGE",
+      "observed_code": "RETRIEVAL_TOP_K_OUT_OF_RANGE",
+      "stage": "query",
+      "fields": [
+        "top_k"
+      ],
+      "pass": true
+    },
+    {
+      "case": "envelope_non_catalog_bore",
+      "notes": "the CAD-003 envelope path requires a Schema-valid catalog query",
+      "expected_code": "RETRIEVAL_SCHEMA_REJECTED",
+      "observed_code": "RETRIEVAL_SCHEMA_REJECTED",
+      "stage": "query",
+      "fields": [
+        "bore_d"
+      ],
+      "pass": true
+    },
+    {
+      "case": "empty_candidate_roles",
+      "notes": "",
+      "expected_code": "RETRIEVAL_EMPTY_CANDIDATE_ROLES",
+      "observed_code": "RETRIEVAL_EMPTY_CANDIDATE_ROLES",
+      "stage": "config",
+      "fields": [],
+      "pass": true
+    },
+    {
+      "case": "candidate_roles_omitted",
+      "notes": "",
+      "expected_code": "RETRIEVAL_CANDIDATE_ROLES_REQUIRED",
+      "observed_code": "RETRIEVAL_CANDIDATE_ROLES_REQUIRED",
+      "stage": "config",
+      "fields": [],
+      "pass": true
+    },
+    {
+      "case": "unknown_role",
+      "notes": "",
+      "expected_code": "RETRIEVAL_UNKNOWN_ROLE",
+      "observed_code": "RETRIEVAL_UNKNOWN_ROLE",
+      "stage": "index",
+      "fields": [
+        "candidate_roles"
+      ],
+      "pass": true
+    },
+    {
+      "case": "duplicate_candidate",
+      "notes": "a manifest line duplicated twice must be rejected, not returned twice",
+      "expected_code": "RETRIEVAL_DUPLICATE_SAMPLE_ID",
+      "observed_code": "RETRIEVAL_DUPLICATE_SAMPLE_ID",
+      "stage": "index",
+      "fields": [
+        "sample_id"
+      ],
+      "pass": true
+    }
+  ],
+  "determinism": {
+    "case": "in_catalog_bore_020",
+    "in_process_identical": true,
+    "in_process_sha256": "0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9",
+    "cross_process_identical": true,
+    "cross_process_sha256": "0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9",
+    "cross_process_matches_in_process": true,
+    "runs": [
+      {
+        "returncode": 0,
+        "stdout": "sha256=0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9\nquery_status=catalog_validated\ntop1=set_screw_shaft_collar/catalog-bore-020\nresults=3\n",
+        "stderr": ""
+      },
+      {
+        "returncode": 0,
+        "stdout": "sha256=0fcf84b752db919d7eb65ba6b4df88080d2e800ec22021bef4e5e52dc172e3b9\nquery_status=catalog_validated\ntop1=set_screw_shaft_collar/catalog-bore-020\nresults=3\n",
+        "stderr": ""
+      }
+    ],
+    "pass": true
+  },
+  "summary": {
+    "success_cases": 3,
+    "failure_cases": 13,
+    "checks": 70,
+    "failed": 0,
+    "failed_cases": [],
+    "failed_failure_cases": [],
+    "result": "pass"
+  },
+  "limitations": [
+    "single frozen family set_screw_shaft_collar with 15 catalog rows; candidates are only the 3 retrieval_source rows",
+    "split_status=provisional_small_n is a provisional grouping, not a benchmark split; no accuracy or generalization claim is made",
+    "distance is parameter proximity only, not CAD geometry equivalence, manufacturability, strength or generation quality",
+    "only the pinned macOS arm64 / Python environment is verified; cross-platform and cross-process guarantee is limited to the recorded determinism check",
+    "manifest snapshot is reproducibility_partial and the family is MERGED, not release-qualified",
+    "generated STEP/render artifacts remain license_scope_uncertain and are not read by retrieval",
+    "out-of-catalog queries are nearest-neighbour only and are not Schema-confirmed catalog truths",
+    "no vector database, embedding model, LLM, training or synthetic sample expansion is used"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "case": "between_rows_bore_018",
+  "notes": "bore_d=18 sits between catalog rows 16 and 20. The Schema rejects it with CATALOG_CHOICE, so the query is kept as a nearest-neighbour query and marked out_of_catalog_or_unvalidated; it is not a catalog truth.",
+  "family_id": "set_screw_shaft_collar",
+  "parameters": {
+    "bore_d": 18,
+    "outer_d": 30,
+    "screw_d": 6,
+    "screw_len": 8,
+    "second_screw": 0,
+    "width": 14
+  },
+  "top_k": 3,
+  "expected": {
+    "input_form": "flat_parameters",
+    "query_status": "out_of_catalog_or_unvalidated",
+    "top1_sample_id": "set_screw_shaft_collar/catalog-bore-020",
+    "top1_same_catalog_row": false,
+    "top1_total_is_zero": false,
+    "schema_error_codes": ["CATALOG_CHOICE"],
+    "candidate_roles": ["retrieval_source"]
+  }
+}

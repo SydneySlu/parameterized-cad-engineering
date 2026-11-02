@@ -1,0 +1,19 @@
+{
+  "case": "in_catalog_bore_020",
+  "notes": "CAD-003 envelope with only bore_d=20. The existing Schema derives outer_d, screw_d, screw_len, second_screw and width; no rule is re-implemented here.",
+  "family_id": "set_screw_shaft_collar",
+  "parameters": {
+    "schema_version": "set_screw_shaft_collar.v0",
+    "family_id": "set_screw_shaft_collar",
+    "parameters": {"bore_d": 20}
+  },
+  "top_k": 3,
+  "expected": {
+    "input_form": "cad003_envelope",
+    "query_status": "catalog_validated",
+    "top1_sample_id": "set_screw_shaft_collar/catalog-bore-020",
+    "top1_same_catalog_row": true,
+    "top1_total_is_zero": true,
+    "candidate_roles": ["retrieval_source"]
+  }
+}

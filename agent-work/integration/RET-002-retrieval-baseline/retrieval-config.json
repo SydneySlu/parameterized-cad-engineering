@@ -1,0 +1,52 @@
+{
+  "config_version": "ret-002.retrieval-config.v1",
+  "task": "RET-002",
+  "retrieval_policy": "RET-002.parametric_distance.v1",
+  "family_id": "set_screw_shaft_collar",
+  "manifest": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+    "manifest_version": "retrieval-manifest.v0"
+  },
+  "candidate_roles": ["retrieval_source"],
+  "excluded_roles": ["development", "heldout_evaluation"],
+  "split_status_expected": "provisional_small_n",
+  "parameter_fields": {
+    "continuous": ["bore_d", "outer_d", "screw_d", "screw_len", "width"],
+    "discrete": ["second_screw"],
+    "canonical_length_unit": "mm"
+  },
+  "normalization_ranges_mm": {
+    "bore_d": {"min": 5, "max": 80, "source": "GN705 full 15-row catalog span"},
+    "outer_d": {"min": 10, "max": 110, "source": "GN705 full 15-row catalog span"},
+    "screw_d": {"min": 3, "max": 12, "source": "GN705 full 15-row catalog span"},
+    "screw_len": {"min": 4, "max": 20, "source": "GN705 full 15-row catalog span"},
+    "width": {"min": 6, "max": 22, "source": "GN705 full 15-row catalog span"}
+  },
+  "weights": {
+    "continuous_field_weight": 0.2,
+    "discrete_second_screw": 0.5,
+    "total_formula": "mean(5 continuous normalized abs diffs) + 0.5 * (second_screw mismatch)",
+    "tiebreak": "total ascending, then sample_id ascending"
+  },
+  "top_k": {
+    "default": 3,
+    "min": 1,
+    "max": "candidate_count"
+  },
+  "units": {
+    "length": "mm",
+    "second_screw": "1 (dimensionless)"
+  },
+  "query_forms": {
+    "cad003_envelope": "normalized by src/schema/set_screw_shaft_collar.py; must pass Schema rules; missing derivable fields are filled by the Schema",
+    "flat_parameters": "all six frozen fields with bare mm numbers; missing or non-finite values are rejected; Schema-rejected values continue as nearest-neighbour search and are marked out_of_catalog_or_unvalidated"
+  },
+  "data_boundary": {
+    "reads_step": false,
+    "reads_render": false,
+    "reads_ir_files": false,
+    "reads_external_drawings": false,
+    "reads_benchcad_public_core": false
+  }
+}
