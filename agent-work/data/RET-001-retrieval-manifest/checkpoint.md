@@ -4,6 +4,7 @@
 任务：RET-001（单族检索样本 manifest 与样本构建）
 目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
 基线 HEAD：`26e860d`（启动时干净，`main` 与 `origin/main` 同步）
+交付提交：`71125d2`（`feat: add retrieval manifest v0 [RET-001]`；含 manifest、schema、报告、生成器与交接文档）
 未 push：按项目约定由负责人确认中枢审查后 push。
 
 ## handoff_self_check

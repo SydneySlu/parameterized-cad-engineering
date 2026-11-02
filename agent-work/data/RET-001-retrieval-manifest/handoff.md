@@ -2,6 +2,7 @@
 
 状态：`review`（交接 Agent 自检完成；等待续任 Agent 定向复核与 Codex 中枢独立审查）
 交接方：RET-001 数据与检索样本 Agent（DSH）
+交付提交：`71125d2`（manifest/schema/报告/生成器/交接文档；WORKLOG 记录见下一提交）
 交付目录：`agent-work/data/RET-001-retrieval-manifest/`
 固定环境：Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 / NumPy 1.26.4 / macOS arm64
 

@@ -390,3 +390,12 @@
 动作：在 CAD-005/006 已验收并推送后，生成 RET-001 单族检索样本 manifest 初始化 Prompt。
 范围：覆盖首族 15 个冻结目录行、参数/来源/IR/验证/许可证/hash/split 字段；要求使用现有 Schema、Typed CAD IR 和 CAD 编译验证器，禁止下载 BenchCAD Public/Core、提交大体积 STEP/渲染物或修改冻结接口。
 交付：`docs/coordination/prompts/RET-001-retrieval-manifest-agent.md`。任务尚未由执行 Agent 认领，状态保持 planned。
+
+[2026-11-02 23:28] agent=RET-001-DSH task=RET-001 status=review
+scope=首期单族 set_screw_shaft_collar 的 retrieval manifest v0 与 15 个目录行样本构建（agent-work/data/RET-001-retrieval-manifest/**；docs/WORKLOG.md 只追加）
+动作=新增 manifest.schema.json、manifest-v0.jsonl（15 条）、inputs/×15、ir/×15、generation-report.json、verification-report.json、replay-report.json、generator/×3、README、checkpoint、handoff；未修改 src/**、IR/Schema/编译器/验证器、DECISIONS、PROJECT_STATUS、PROJECT_PLAN、TASKS、database/**
+verified=启动检查（git root 正确、工作树干净、HEAD 26e860d）；生成前定向复核 legal-catalog-row compile_ir 到 step_readback（单 solid/单 shell/valid、体积 6712.631936 mm³、roundtrip pass），失败案例 radial_offset=100mm 在 semantic 阶段 IR_NODE_INPUT_KIND_MISMATCH 且 node_ids=[n2.hole.primary]，rule-rejected-second-screw 在 preflight 被 SECOND_SCREW_CONSTRAINT 拒绝；generate_manifest.py 15/15 通过 Schema、族规则、IR Schema+语义、compile_ir、native 重复、STEP 回读（failed=0）；verify_manifest.py 825 项检查 0 失败；replay_check.py 复跑 catalog-bore-020 与 catalog-bore-080 均 pass、native 摘要逐值一致，两个失败对照各跑 2 次一致；34 个 JSON 文件可解析，JSONL 15 行；git diff --cached --check 通过
+results=15 个目录行全部成功（无失败样本）；每例单 solid、单 shell、isValid；STEP 回读最坏 体积 abs 0.03408 mm³/rel 1.97e-6、bbox 3.55e-15 mm、面面积 0.003968 mm²、边长 2.80e-7 mm，均在 CAD-006.geometry-comparison.v1 阈值内；15 个参数 JSON 与几何指纹互不相同，跨 split 组重叠 0
+known_limits=单族、只有 15 个冻结目录行（未扩写、未随机造数）、split_status=provisional_small_n（9/3/3 未冻结）、仅 macOS arm64 + 固定 CadQuery 2.3.0/OCP 7.9.3.0 单环境、snapshot reproducibility_partial、生成 STEP 与渲染 license_scope_uncertain（STEP 放 ignored work/ret-001-output/）、螺纹为环形近似、STEP hash 不参与几何判定；IR 示例仍写历史 tolerance_profile=CAD-006.pending.v0，生成 IR 写现行 v1，待中枢决定是否同步示例；docs/TASKS.md 与 PROJECT_STATUS 未同步（超出文件边界）
+next=Codex 中枢独立审查（重跑 verify_manifest.py / replay_check.py，判断 split 与 tolerance_profile 两项未决问题）；未 push
+commit=71125d2
