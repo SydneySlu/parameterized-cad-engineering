@@ -406,3 +406,10 @@ commit=71125d2
 限制：单族 15 行、固定 macOS arm64 环境、`reproducibility_partial`、`license_scope_uncertain`、螺纹环形近似和跨平台/工程强度未验证仍有效。
 记录：`agent-work/reviews/RET-001-codex-review.md`；本地审查提交待项目负责人 push。
 下一步：RET-002/RET-003；不得把当前临时 split 直接当作正式评测集。
+
+[2026-11-03] agent=Codex task=RET-002 status=planned
+动作：根据 RET-001 已验收结果，生成单族确定性检索基线 Prompt。
+范围：只消费 RET-001 manifest 的结构化参数、来源、IR 路径、验证摘要和 split 元数据；实现可解释参数距离、显式 candidate roles、稳定排序、结构化错误和可复跑报告。
+边界：不使用 STEP/渲染物或 BenchCAD Public/Core，不引入 embedding、向量库、LLM、训练或新的零件族；不修改 Schema、IR、CAD 编译器、验证器、容差和 RET-001 manifest。
+交付：`docs/coordination/prompts/RET-002-retrieval-baseline-agent.md`；任务保持 planned，等待执行 Agent 认领。
+下一步：项目负责人将 Prompt 交给 CC/DSH；执行完成后保持 review，由 Codex 中枢独立复核并决定是否放行 RET-003。

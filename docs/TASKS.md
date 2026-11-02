@@ -23,6 +23,7 @@
 | CAD-005 | 确定性 CAD 编译器 | 原 CAD-005/006 Agent（CC）+ Codex | done | IR-001, DATA-003 | `df78f4f` 固定七节点输入/图绑定；13 项 CAD 编译测试及独立中枢复核通过 |
 | CAD-006 | 几何与规则验证器 | 原 CAD-005/006 Agent（CC）+ Codex | done | CAD-005, DATA-003 | CAD-006.geometry-comparison.v1 未变；标准/边界/native/STEP 与失败路径测试通过；跨平台仍未验证 |
 | RET-001 | 检索样本 manifest | DSH + CC + Codex | done | CAD-006 | 15 个首族目录行的 manifest、IR、构造、验证、来源和 hash 可追溯；中枢复核通过，限制见 `agent-work/reviews/RET-001-codex-review.md` |
+| RET-002 | 单族确定性检索基线 | CC + DSH + Codex | planned | RET-001 | 明确候选角色、参数距离、稳定排序、失败路径和运行报告；不引入向量模型或训练 |
 | RET-003 | 检索收益评测 | Codex + CC | planned | RET-001 | 有固定集和三条件对照 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | CAD-003 | 模型、Prompt、追问和失败案例可复现 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
