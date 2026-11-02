@@ -234,3 +234,10 @@
 - 验证：`cad_compilation` 导入通过；项目 Python 3.11.18 环境下交接脚本通过；Schema 17 项测试通过；DATA-003 smoke 通过；系统 Python 因缺少 CadQuery 明确返回 `blocked`；`git diff --check` 通过。
 - 结论：R2 修正已通过，可以交给后续正式实现；CAD-005 编译器和 CAD-006 几何/STEP 验证器尚未实现，相关正式任务继续保持 `planned`。
 - 下一步：用户完成本地 push 后，再生成 CAD-005/006 正式实现 Agent 的初始化 prompt；实现前先冻结公式单位、坐标/placement、几何摘要容差和 STEP 回读失败分类。
+
+### IR-001-R3 / Codex / planned / 2026-11-02
+
+- 动作：生成 IR v0 最终契约审查与冻结 Agent prompt，要求独立 Agent 核对公式/量纲、坐标与 placement、几何容差、STEP 失败分类；不实现 CAD-005/006。
+- 边界：不由该 Agent 冻结首族范围；以固定 BenchCAD commit 和 `set_screw_shaft_collar` 做条件性契约审查，首族正式确认仍由项目负责人/导师决定。
+- Prompt：`docs/coordination/prompts/IR-001-R3-final-contract-review.md`。
+- 状态：prompt 已准备，等待项目负责人启动独立 Agent；Agent 完成后由 Codex 中枢审查。
