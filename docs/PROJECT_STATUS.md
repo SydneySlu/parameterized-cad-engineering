@@ -42,15 +42,15 @@
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | 分工、边界、阶段和接口依赖文档 |
 | INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | 目标目录、职责子目录和路径规则 |
 | CAD-005/006-R2 | 修复 CAD 编译交接边界并完成中枢复核 | Codex | done | 可导入包边界、仓库内交接 smoke test、R2 审查记录；当时尚未启动的正式实现由下方 CAD-005/006 任务承接 |
-| CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | in_progress | 阶段 1 已验收；ADR-0008 与 IR v0 第 9.2 节冻结策略；等待项目负责人 push 后 Agent 续作 |
+| CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | review | 主实现已提交并通过基础测试；中枢复核发现 accepted IR 可用不符合固定映射的孔位输入仍成功生成，另有错误 node_ids 缺失；见实现审查记录 |
 
 ## 阻塞项
 
-- 无当前外部阻塞。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；本轮仅放行固定软件基线下的首族实现。
+- CAD-005/006 中枢验收暂缓：必须先冻结首族节点输入绑定，拒绝能够生成缺孔/错孔有效实体的 accepted IR，并补全错误 node_ids。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线。
 
 ## 下一步
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
-2. 项目负责人 push 容差契约和实现 Prompt；原 CAD-005/006 Agent 续作，完成 IR 编译器、几何验证器和真实 IR 输出集成验证。
+2. 修正 CAD-005/006 accepted IR 的 canonical input 语义校验和错误 node_ids；复核通过后再交接检索任务。
 3. 围绕 `set_screw_shaft_collar` 建立 manifest/adapter、Typed CAD IR、原生构造器和验证器闭环。
 4. 建立单族切分的检索样本集、自然语言任务集和 A/B/C 对照评测；第二族扩展另行决策。

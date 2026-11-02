@@ -360,3 +360,11 @@
 - checkpoint：`agent-work/cad-validation/CAD-005-006/checkpoint-implementation.md`。
 - 下一步：Codex 中枢独立审查实现和逐项原生对照证据。
 - 实现 checkpoint 提交：`5f05e59`（未 push；由项目负责人统一 push）。
+
+### CAD-005/006 / Codex 中枢 / review / 2026-11-02
+
+- 动作：独立复核实现提交 `5f05e59` 和 checkpoint `fea112c`，重跑 CAD、Schema、IR 测试并针对冻结输入绑定做恶意变异。
+- 通过：CAD compiler 10 项、Schema 17 项、IR 契约/axis 5 项全部通过；标准目录和 hard-boundary IR 几何对照、STEP roundtrip 符合证据记录。
+- 阻塞发现：把主孔 `radial_offset` 改成 100 mm 的 accepted IR 可通过 Schema/semantic validation，并由 `compile_ir` 成功输出 STEP；体积从约 6712.631936 mm³ 变为 6851.028179 mm³。冻结的 `mapping.md` 输入公式未在编译前被语义校验。另 `_failed_result()` 的 `node_ids` 恒为空，丢失节点定位。
+- 决定：CAD-005、CAD-006 状态设为 `review`；不验收，不放行下游检索实现。修正后增加异常 IR 回归用例，再由中枢复核。
+- 审查记录：`agent-work/reviews/CAD-005-006-implementation-codex-review.md`。
