@@ -611,3 +611,9 @@ verified=逐例检查正式 JSON 与报告：3 个 held-out 主查询、2 个接
 result=C1 检索级诊断验收通过，无阻塞项；不能将逐例小样本近邻诊断解释为正式 benchmark、统计显著性或端到端 CAD 收益
 next=如需测量检索对字段抽取、Schema、CAD/STEP 的下游影响，先完成 APP-001 并另行冻结比较协议；公平 C2 仍未定义
 commit=待提交本轮 C1 正式结果与状态记录
+
+[2026-11-04] agent=Codex task=RET-003-cleanup-and-pause status=review
+动作=整理 RET-003 C1 历史未跟踪材料；保留 CC 的环境门记录、v2 脚本和 v2 交接文件并移入 agent-work/reviews/archive/RET-003-C1-legacy-2026-11-04；保留两个历史修正 Prompt 并移入 docs/coordination/prompts/archive/RET-003-C1-2026-11-04；删除测试生成的未跟踪 pycache；新增工作区 README，明确正式入口与历史材料边界
+结果=当前正式 C1 JSON、报告、脚本、checkpoint、handoff、协议、查询集和中枢审查记录均保留在正式路径；历史执行过程未删除；状态页和计划页已修正过时的“尚未 push/等待审查”表述，RET-003 C1 标记为验收完成，RET-003 整体仍 in_progress
+verified=git 工作树只剩本次归档与状态文档改动；main 与 origin/main 在整理前同步；正式 C1 结果提交 dc73e6d 已存在；归档 README 标明历史材料不可作为当前依据；未发现未记录的正式结果缺口
+next=休整后启动 APP-001。先冻结统一 LLM 输入输出契约、云端/本地基线模型、结构化样例集和失败处理边界，再生成执行 Prompt；不在 APP-001 前调 RET-002 权重或启动公平 C2

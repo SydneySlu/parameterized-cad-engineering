@@ -2,7 +2,7 @@
 
 本计划用于跨 Agent 和跨设备同步，不替代详细技术方案。每次范围变化必须同步 `docs/DECISIONS.md`。
 
-轻量版首期的 Agent 分工、边界、依赖和阶段性交付见 [`docs/coordination/agent-work-allocation.md`](coordination/agent-work-allocation.md)。当前只完成初步规划，尚未生成初始化 prompt 或正式认领任务。
+轻量版首期的 Agent 分工、边界、依赖和阶段性交付见 [`docs/coordination/agent-work-allocation.md`](coordination/agent-work-allocation.md)。各阶段 Prompt 和交接记录按任务保存在 `docs/coordination/prompts/` 及其历史归档目录中。
 
 ## 阶段 0：仓库和协作基础
 
@@ -37,7 +37,7 @@
 
 - [x] 定义样本 manifest：参数 JSON、IR、STEP、验证结果和来源（RET-001；单族 15 行，split 仍为 provisional_small_n）
 - [x] 实现按零件类型、特征、孔位/接口和归一化尺寸的检索（RET-002；单族确定性参数距离基线已验收，split 仍为 provisional_small_n）
-- [ ] 评估 C1 检索级诊断及未来公平条件下的下游收益（RET-003；正式 C1 已在固定环境运行并通过结果/报告交叉核对，等待中枢独立审查；公平 C2 尚未定义，端到端收益需等 APP-001）
+- [x] 完成 C1 检索级诊断（RET-003；固定环境运行、上游回归、结果/报告交叉核对和中枢验收均通过；公平 C2 尚未定义，端到端收益仍需等 APP-001）
 - [ ] 规定检索示例如何进入 Prompt，并防止把示例直接当作真值（RET-004）
 
 ## 阶段 4：轻量版交付

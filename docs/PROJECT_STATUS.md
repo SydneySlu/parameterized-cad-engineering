@@ -44,7 +44,7 @@
 | INFRA-007 | 轻量版 Agent 分工与依赖初步规划 | Codex | done | 分工、边界、阶段和接口依赖文档 |
 | INFRA-008 | 迁移共享项目基座并建立 Agent 工作区 | Codex | done | 目标目录、职责子目录和路径规则 |
 | CAD-005/006-R2 | 修复 CAD 编译交接边界并完成中枢复核 | Codex | done | 可导入包边界、仓库内交接 smoke test、R2 审查记录；当时尚未启动的正式实现由下方 CAD-005/006 任务承接 |
-| CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；本轮审查记录尚未 push |
+| CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
 
@@ -54,7 +54,7 @@
 
 ## 下一步
 
-1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
-2. 将 RET-001 执行提交、中枢修正和审查记录一起推送到远端。
-3. RET-003 C1 检索级诊断已验收；端到端 C0/C1 比较须等 APP-001，公平 C2 另行定义并经审查后才能纳入。
-4. 第二族扩展另行决策。
+1. 休整并保留当前验证基线；如近期需要跨设备协作，再执行一次 clone/pull 验证。
+2. 启动 APP-001 前，先冻结 LLM 输入输出契约、云端/本地基线边界和小型验收集。
+3. APP-001 完成后，再设计端到端 C0/C1 比较；公平 C2 另行定义并经审查后才能纳入。
+4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
