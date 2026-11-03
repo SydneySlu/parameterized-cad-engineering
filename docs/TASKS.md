@@ -24,7 +24,7 @@
 | CAD-006 | 几何与规则验证器 | 原 CAD-005/006 Agent（CC）+ Codex | done | CAD-005, DATA-003 | CAD-006.geometry-comparison.v1 未变；标准/边界/native/STEP 与失败路径测试通过；跨平台仍未验证 |
 | RET-001 | 检索样本 manifest | DSH + CC + Codex | done | CAD-006 | 15 个首族目录行的 manifest、IR、构造、验证、来源和 hash 可追溯；中枢复核通过，限制见 `agent-work/reviews/RET-001-codex-review.md` |
 | RET-002 | 单族确定性检索基线 | CC + DSH + Codex | done | RET-001 | 单族参数距离、候选角色、稳定排序和结构化失败路径通过中枢复核；策略范围修正已验收，限制见 `agent-work/reviews/RET-002-codex-review.md` |
-| RET-003 | 检索收益评测 | Codex + CC | planned | RET-001 | 有固定集和三条件对照 |
+| RET-003 | 检索收益评测 | Codex + CC | review | RET-001 | 里程碑 1 协议和查询集已提交；C2 公平性与三条件输入契约修正后才放行正式对照 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | CAD-003 | 模型、Prompt、追问和失败案例可复现 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
 

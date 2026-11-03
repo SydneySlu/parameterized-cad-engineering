@@ -480,3 +480,10 @@ scope=中枢独立复核补齐状态事实源；PROJECT_STATUS/PROJECT_PLAN 标�
 verified=状态页、计划页与协议/交接材料一致；未改变评测范围、上游冻结产物或运行门槛
 result=RET-003 继续保持 review，不创建或运行里程碑 2 评测
 next=等待中枢书面审阅 C2 先验、公平性、主查询集合和敏感性范围
+
+[2026-11-03] agent=Codex task=RET-003-codex-review status=review
+动作=独立复核里程碑 1 协议、查询集和 RET-001/RET-002 高风险交接；重跑 manifest 660 项校验、RET-002 30 项测试、smoke、查询引用审计和 JSON/差异检查。
+结果=上游交接、文件格式、角色隔离和小样本限制通过；发现 C2 当前使用完整 CAD-003 `CATALOG_ROWS`，间接包含 held-out 真值，不能与 C0/C1 并列作为公平人工模板基线。
+决定=RET-003 保持 review；要求把现有 C2 明确改成目录规则 oracle/上界诊断，或定义不读取 held-out/完整目录真值的公平 C2；同时冻结三条件相同输入契约。里程碑 2 暂不放行。
+记录=`agent-work/reviews/RET-003-codex-review.md`。
+下一步=为原 RET-003 Agent 生成协议修正 Prompt；修正后重新审查，未获放行前不得创建或运行正式三条件对照。
