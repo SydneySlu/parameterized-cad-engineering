@@ -1,6 +1,7 @@
 # RET-002 checkpoint — 单族确定性检索基线
 
-状态：`review`（交接 Agent 自检完成；等待续任 Agent 定向复核与 Codex 中枢独立审查；未标记 done，未 push）
+状态：`done`（Codex 中枢于 2026-11-03 完成独立复核；原始自检与续任复核记录保留为历史）
+说明：第 2–9 节包含执行 Agent 提交时的历史状态与待办；如与本文件顶部或第 10 节冲突，以 Codex 中枢最终复核结论为准。
 修正记录：2026-11-03 已修复自定义距离范围可绕过冻结 policy id 的问题，见第 9 节；当前检索测试 30 项。
 任务：RET-002
 目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
@@ -283,10 +284,17 @@ alias:    policy range remains (5.0, 80.0); query total 0.009333333333333334
 `provisional_small_n`、单环境与全部许可证/几何限制均未改变。运行 smoke 和 RET-001 校验会重写带
 时间字段的报告，已恢复到 HEAD；RET-001 目录净改动为 0。
 
-### 9.6 未解决 / 下一 Agent 关注
+### 9.6 复核前的待办记录（历史）
 
-1. 本次修正只关闭策略范围/权重入口；仍等待 Codex 中枢重新审查后决定是否标记 `done`。
+1. 以下为提交修正时的待办；Codex 中枢已于 2026-11-03 完成审查，最终状态见第 10 节。
 2. `weights.total_formula` / `tiebreak` 说明字符串未单独校验（审查记录已列为后续可补项，非当前阻塞）。
 3. 其余限制（split 未冻结、3 个候选、单环境、manifest hash 绑定、许可边界）保持原样。
 4. 下一 Agent 应重跑 30 项测试、smoke、自定义范围拒绝案例，并确认正常/边界查询结果与
    `0fcf84b7...` 一致。
+
+## 10. Codex 中枢最终复核（2026-11-03）
+
+修正提交 `cce4ce7` 已独立复核通过，RET-002 验收通过并标记为 `done`；审查证据见
+`agent-work/reviews/RET-002-codex-review.md`。`weights.total_formula` / `tiebreak` 描述字符串
+未逐字校验属于非阻塞后续项。RET-003 目前只批准 C1 检索级诊断，其他已记录的数据与许可限制
+继续有效。

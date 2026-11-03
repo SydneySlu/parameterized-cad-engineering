@@ -1,12 +1,12 @@
 # RET-003 handoff：里程碑 1 协议修正版
 
-状态：`review`（C2 公平性修正后等待 Codex 中枢复审；未运行正式对照）
+状态：里程碑 1 `accepted`；RET-003 `in_progress`（仅 C1 检索级诊断获准）
 任务：RET-003
 交接方：Codex / RET-003 原执行 Agent
 工作根目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
-当前状态补记（2026-11-03）：中枢已通过里程碑 1 协议，并仅放行 C1 检索级诊断；公平 C2
-仍未定义，APP-001 前端到端比较未放行。详见
+当前状态（2026-11-03）：中枢已通过里程碑 1 协议，并仅放行 C1 检索级诊断；公平 C2
+仍未定义，APP-001 前端到端比较未放行。不得运行 C0/C2O/公平 C2 或调权重。详见
 [`RET-003-codex-review.md`](../../reviews/RET-003-codex-review.md)。
 
 ## 交付内容
@@ -37,7 +37,7 @@ RET-002 replay_query.py (catalog-bore-020): catalog_validated, top1 catalog-bore
 `catalog-bore-050`，结果没有 `catalog-bore-080` 且候选角色全为 `retrieval_source`；
 缺少 flat 字段返回 `RETRIEVAL_MISSING_FIELD`。复跑产生的时间戳报告已恢复到 HEAD。
 
-## 续任/中枢关注点
+## 当前执行与交接边界
 
 ```text
 predecessor=RET-002（已由中枢放行至 RET-003；manifest/config hash 见 checkpoint）
@@ -48,12 +48,12 @@ normal_case=source catalog-bore-020；top1 同行、distance 0、3 候选
 failure_case=缺少 outer_d 等字段；RETRIEVAL_MISSING_FIELD，结构化拒绝
 interface=manifest.parameters.normalized -> RET-002 query；输出保留 role、policy_id、hash
 limits=15 行单族、3 候选、provisional_small_n、单固定环境和许可证/几何限制均保留
-result=review
-blocking_issue=完整 CATALOG_ROWS 包含 held-out 对应行；原 C2 已降级为 C2O
-               catalog_rule_oracle_v0，不进入公平主表；当前没有公平 C2，APP-001 尚未完成，
-               C0/C1 端到端比较不能在本里程碑自行执行
+result=milestone_1_accepted; RET-003=in_progress
+authorized=C1 检索级诊断（3 个主查询 + 2 个分开报告的接口诊断 + 1 个失败诊断）
+not_authorized=C0/C2O/fair-C2 comparison; sensitivity analysis; endpoint-level claims
+blocking_issue=APP-001 未完成、fair C2 未定义；端到端字段/Schema/CAD/STEP/成本均 not_measured
 ```
 
-续任 Agent 若收到放行，应先保持主查询和角色隔离不变，再按协议创建里程碑 2 运行文件；
-任何查询、条件、权重、依赖或模型变化必须先追加 checkpoint 并重新请求审查。若放行被拒，
-只保留当前 C1 检索级诊断建议，不把参数近邻结果写成语言抽取、CAD 成功率或用户效用收益。
+执行 Agent 按独立 C1 Prompt 运行已获准的诊断，保持查询、候选角色和 RET-002 policy 不变；
+任何查询、条件、权重、依赖或模型变化必须先追加 checkpoint 并重新请求审查。不得把参数
+近邻结果写成语言抽取、CAD 成功率或用户效用收益。

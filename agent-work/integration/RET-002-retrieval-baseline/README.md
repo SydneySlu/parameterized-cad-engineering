@@ -1,6 +1,6 @@
 # RET-002 单族确定性检索基线
 
-状态：`review`（2026-11-03 已修正自定义距离范围可绕过问题，等待 Codex 中枢重新审查；未标记 done，未 push）
+状态：`done`（2026-11-03 经 Codex 中枢独立复核验收；C1 的使用边界与限制见 RET-003 协议）
 任务：RET-002
 族：`set_screw_shaft_collar`（ADR-0007 首期唯一族）
 检索策略：`RET-002.parametric_distance.v1`
@@ -295,10 +295,9 @@ work/benchcad-output/venv/bin/python \
 12. **未涉及生成**：不包含 Prompt 注入、LLM、字段修复或 CAD 生成，APP-001/RET-004 未实现。
 13. **策略描述字符串未单独校验**：`weights.total_formula` / `tiebreak` 是说明字段，加载器未逐字校验；当前数值范围与权重已冻结，描述字符串的版本化校验留待新 policy 版本补充。
 
-## 10. 下一步建议
+## 10. 后续使用边界
 
-1. Codex 中枢重新复核策略范围不可绕过、接口、排序稳定性、失败路径、数据边界和限制；确认后再放行 RET-003。
-2. RET-003 决定正式切分或明确不切分；在此之前不得把 9/3/3 当 benchmark。
-3. RET-003 设计无检索 / 检索 / 人工模板三条件对照；检索候选只能作为参数与来源参考，不能当目录真值或几何真值。
-4. APP-001/RET-004 注入 Prompt 时，应携带 `query_status`、`sample_id`、`ir.path`、`source_commit`、`split.role` 和限制，并禁止把候选直接当作答案。
-5. 若后续需要更多候选，先由中枢决定新增族或新 Schema 版本；不要复制、随机扩写或下载 Public/Core 来填量。
+1. RET-002 已通过 Codex 中枢审查；RET-003 目前只批准 C1 检索级诊断。不得把检索排序解释为端到端收益。
+2. 9/3/3 仍为 `provisional_small_n`，不是 benchmark；任何结果不得声称统计显著性或泛化能力。
+3. 检索候选只能作为参数与来源参考，不能当目录真值或几何真值；APP-001/RET-004 注入 Prompt 时，应携带 `query_status`、`sample_id`、`ir.path`、`source_commit`、`split.role` 和限制。
+4. 若后续需要更多候选，先由中枢决定新增族或新 Schema 版本；不要复制、随机扩写或下载 Public/Core 来填量。

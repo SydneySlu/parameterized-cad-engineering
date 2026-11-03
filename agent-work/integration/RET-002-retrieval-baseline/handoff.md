@@ -1,6 +1,6 @@
 # RET-002 handoff — 单族确定性检索基线
 
-状态：`review`（2026-11-03 已修正策略范围可绕过问题，等待 Codex 中枢重新审查；未 push、未标 done）
+状态：`done`（2026-11-03 Codex 中枢复核通过；可供 RET-003 在已批准边界内使用）
 任务：RET-002
 族：`set_screw_shaft_collar`
 交付提交：`feat: add deterministic retrieval baseline [RET-002]`（本任务最终 commit）
@@ -104,7 +104,7 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 - 未新增/修改任何冻结接口；检索是 manifest 的只读消费者。
 - `split.role` 只用于候选过滤和结果标注；不参与距离计算。
 
-## 6. 已确认 / 未解决
+## 6. 已确认事实与仍有效的限制
 
 已确认：
 
@@ -116,18 +116,17 @@ PYTHONPATH=src work/benchcad-output/venv/bin/python \
 - manifest hash `b7b6c737…`、candidate roles、`provisional_small_n` 和全部限制在结果/报告中保留；
 - 未读取 STEP/渲染物，未下载 BenchCAD Public/Core，未新增族。
 
-未解决（须中枢判断，不要擅自"修好"）：
+仍有效的限制（不阻塞 RET-002 验收）：
 
 1. split 是否冻结仍待 RET-003；当前只是 `provisional_small_n`；
 2. 候选只有 3 个 `retrieval_source` 行，`top_k` 上限 3；数据稀疏是事实，不得扩写；
 3. envelope 严格过 Schema、flat 必须完整六字段是接口取舍；若要在 flat 形式派生字段，需新决策；
 4. `second_screw` 的 0.5 权重是预先固定的工程选择，未做敏感性/收益验证；
 5. `retrieval-config.json` 固定 manifest hash，manifest 再生成时需负责人显式更新；
-6. `docs/TASKS.md` / `PROJECT_STATUS.md` 的 RET-002 状态未同步（超出本任务文件边界）；
-7. 单环境验证；跨平台/跨进程承诺仅限本次记录；
-8. `reproducibility_partial`、`MERGED`、`license_scope_uncertain`、`revolved_ring_approximation`
+6. 单环境验证；跨平台/跨进程承诺仅限本次记录；
+7. `reproducibility_partial`、`MERGED`、`license_scope_uncertain`、`revolved_ring_approximation`
    继续有效；
-9. 策略范围修正是本轮唯一改动，仍待 Codex 中枢重新审查后才可标记 `done`。
+8. 策略范围修正已通过 Codex 中枢独立复核；`weights.total_formula` / `tiebreak` 描述字符串未单独校验，已列为非阻塞后续项。
 
 ## 7. 大文件与未提交内容
 
@@ -156,19 +155,18 @@ handoff_successor_check:
 
 发现交接记录与实际结果不一致时，先写 `review`/`blocked`，不要覆盖已有成果。
 
-## 9. 中枢审查建议顺序
+## 9. 中枢审查结论
 
-1. 读 `README.md` 第 3/4/6/7/9 节与 `smoke-report.json` 的 `cases`、`failure_cases`、
-   `determinism`；
-2. 重跑 `tests/retrieval` 与 `run_smoke.py`，确认 30 项和 70 项检查；
-3. 检查 `catalog-bore-080` 是否始终被排除、`query_status` 是否如实标记、失败是否结构化；
-4. 检查距离公式、ranges、0.5 权重与排序 tie-break 是否符合任务规则，并验证自定义范围（含构造后改 dict/list）仍被拒绝；
-5. 判断接口取舍（envelope 严格 / flat 完整）和 split 问题是否需要返工；
-6. 决定 RET-002 是否转 `done`、是否合并并放行 RET-003；本任务不自行标 done、不 push。
+中枢已按审查记录完成独立验证：30 项检索测试、smoke 70 项检查、RET-001 tracked-only 660 项及
+Schema/IR/CAD 回归均通过；策略范围越界和别名修改均被拒绝。RET-002 已验收为 `done`，并允许进入
+RET-003。
+
+RET-003 当前仅批准 C1 检索级诊断。`provisional_small_n`、单族、3 个候选、单环境、manifest hash、
+许可证与几何限制继续有效；这些限制不因 RET-002 验收而解除。
 
 ## 10. 策略范围契约修正（2026-11-03）
 
-状态：`review`（修正完成，等待 Codex 中枢重新复核；未 push、未标 done）
+状态：`done`（修正已由 Codex 中枢独立复核并验收）
 
 ### 10.1 修正前/后
 
@@ -228,8 +226,8 @@ manifest SHA-256 `b7b6c737...`、15 条记录、9/3/3、3 个 `retrieval_source`
 `provisional_small_n`、单环境、`reproducibility_partial`、`MERGED`、
 `license_scope_uncertain`、`revolved_ring_approximation` 均未改变。
 
-### 10.5 未解决
+### 10.5 仍有效的限制与后续项
 
-1. 等待 Codex 中枢重新审查，确认策略范围不可绕过后再标记 `done`。
+1. 策略范围绕过已关闭并通过中枢复核。
 2. `weights.total_formula` / `tiebreak` 描述字符串仍未逐字校验（后续策略版本化可补，非当前阻塞）。
 3. 其他限制与下一 Agent 关注点同第 6 节和 `checkpoint.md` 第 9 节。

@@ -1,6 +1,6 @@
 # RET-003 checkpoint：里程碑 1 协议草案
 
-状态：`review`  
+状态：里程碑 1 `accepted`；RET-003 `in_progress`（仅 C1 检索级诊断获准）
 任务：RET-003  
 日期：2026-11-03  
 工作根目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
@@ -16,8 +16,8 @@ APP-001 前不得报告端到端收益。完整复审记录见
   不再把它当公平人工模板；补充共同输入 payload、条件额外上下文和公平性边界。
 - 沿用原有 `query-set-draft.json`：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
   诊断；本轮未修改查询集，只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
-- 保持 `query-set-draft.json` 不变：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
-  诊断仍只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
+- 查询集未变：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败诊断仍只引用现有
+  manifest `sample_id`/role，不复制参数值或扩写样本。
 - 追加 `docs/WORKLOG.md` 认领记录；未修改 `src/**`、`tests/**`、RET-001/RET-002
   冻结产物、正式状态看板或决策记录。
 - 未创建评测脚本、正式配置、结果或收益报告；没有运行未经批准的三条件正式对照。
@@ -81,16 +81,15 @@ agent-work/integration/RET-002-retrieval-baseline/replay_query.py \
   读取评测真值；修订后它只作为 C2O oracle/上界诊断。当前没有公平 C2，RET-003 仅保留
   C1 检索级诊断，公平 C0/C1 端到端比较待 APP-001 和中枢放行。
 
-## 未决事项和放行请求
+## 中枢复审决议（2026-11-03）
 
-1. Codex 中枢是否接受 C2O `catalog_rule_oracle_v0` 的降级身份，以及未来公平 C2 暂
-   为空缺；C2O 不得进入公平主表、调权重或 Prompt 示例。
-2. 是否批准仅运行 C1 的检索级诊断，还是等待 APP-001 后再进入公平 C0/C1 对照。
-3. 是否接受 `{0.0, 0.5, 1.0}` 作为未来敏感性分析的预注册候选集合；当前未运行、未改
-   RET-002 配置。
-4. split 仍未冻结，结果不得写成正式 benchmark 或统计泛化结论。
+- 接受 C2O 为隔离的 oracle/上界诊断；不进入公平主比较、不用于调权重或 Prompt 示例，
+  本轮不运行 C2O。
+- 批准仅执行 C1 检索级诊断；不批准权重敏感性分析或 C0/C2O/公平 C2 对照。
+- 公平 C2 仍未定义；APP-001 前的端到端指标保持 `not_measured`，正式多条件比较待单独放行。
+- `split_status=provisional_small_n` 继续有效；不得声称正式 benchmark、统计显著性或泛化率。
 
-## handoff_self_check
+## handoff_self_check（执行 Agent 初次提交时的历史记录）
 
 ```text
 task=RET-003 milestone=1
@@ -102,8 +101,8 @@ commands=PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discove
 confirmed=manifest hash/15 rows/9-3-3; candidate role boundary; normal/heldout/failed
          query behavior; RET-002 policy and weight facts; query set unchanged; no timestamp
          report noise from the test rerun
-unresolved=APP-001 absent; no endpoint-level comparison; no fair C2 defined; C2O oracle identity
-          awaits Codex review; split provisional; no sensitivity run
-next_agent_focus=复核 C2O 身份、共同输入 payload、信息边界和公平主表排除规则；未书面放行前
-                  不得运行里程碑 2
+unresolved=APP-001 absent; no endpoint-level comparison; no fair C2 defined; split provisional;
+          no sensitivity analysis approved
+next_agent_focus=按已批准范围实施 C1 检索级诊断；不得运行 C0/C2O/公平 C2、调权重或报告
+                  端到端收益；交付后等待 Codex 中枢独立审查
 ```
