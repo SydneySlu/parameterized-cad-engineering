@@ -87,3 +87,30 @@ RET-003 里程碑 1 文档质量和交接证据通过，但任务保持 `review`
 - 文档修整：checkpoint 的“新增 query-set”与“查询集不变”表述冲突。根据提交差异确认查询集未改，已将该句改为“沿用原有 query-set”；不改变查询清单内容。
 - 结论：RET-003 里程碑 1 协议通过；RET-003 总任务继续进行，状态转为 `in_progress`，下一步可按已冻结协议运行 C1 检索级诊断。正式端到端比较须等 APP-001 和新的中枢放行。`provisional_small_n` 等数据限制继续有效。
 
+
+## C1 诊断复核（2026-11-03）
+
+- 状态：不通过验收，RET-003-C1 保持 review；C1 结果暂不可用于项目结论。
+- 已确认问题：脚本读取 candidates 而非 RET-002 实际返回的 results，query_status 层级错误，导致候选展示和字段误差结果不可信；独立进程复跑未覆盖五个合法查询；失败时没有可靠 fail-closed；报告中的 bore-012、bore-035 top-1/距离与机器结果不一致，且报告内部距离与字段误差矛盾。
+- 环境：交付 JSON 来自 Python 3.10.12/Linux，不符合固定 Python 3.11.18/macOS arm64 基线。只读复验中 RET-001 tracked-only 660 项、RET-002 30 项测试和 70 项 smoke 均通过；JSON 解析、py_compile、git diff --check 通过，但这些不能弥补结果正确性缺陷。
+- 决定：要求原 CC Agent 修正脚本、机器结果、报告、checkpoint/handoff；修正后在固定环境重跑并重新提交中枢审查。修正 Prompt：docs/coordination/prompts/RET-003-C1-correction-agent.md。
+- Git 状态：复核时发现 .git/index.lock 存在，未删除、未暂存、未提交。
+
+
+## C1 修正任务 M0 复核（2026-11-03）
+
+- 结论：接受 M0 阻塞 checkpoint；不代表接受 C1 修正或首轮诊断结果。CC 在 Python 3.10.12/Linux aarch64 环境按已写明的环境门停止，没有生成新的正式 JSON/报告，也没有改动脚本。
+- 独立环境核验：本机工作区为 Darwin arm64；系统 Python 3.11.18 可用，work/benchcad-output/venv/bin/python 为 3.11.18；已导入 CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4、jsonschema 4.26.0。故阻塞是 CC 执行会话落在 Linux 环境，而非项目缺少可用的基线环境。
+- 范围偏差：CC 额外创建 ENVIRONMENT_MISMATCH.md，超出修正 Prompt 的允许文件清单。文件仅为环境说明，未改冻结产物；作为非阻塞文档偏差保留并记录。
+- 报告质量：环境门结论正确；但“不同 OS 必然造成浮点差异”及“JSON 序列化顺序因此变化”等表述证据不足。后续只需说明环境未满足冻结基线，不应把这些可能性写成已验证事实。
+- 下一步：在本机共享项目基座、使用已验证 venv 继续修正；不要选择探索性 Linux 输出，也不需要重定义环境或重跑上游基线。任务继续保持 in_progress；C1 初始交付仍未验收。
+
+
+## C1 交叉核对器边界修正复核（2026-11-04）
+
+- 范围：只读审查 `cross_check.py` 与 `test_cross_check_fixture.py`，并独立复跑代码级验证；CC 另提交 `BOUNDARY_FIX_REPORT.md` 自检报告。
+- 结果：接受代码级修正。固定环境 fixture 19/19 通过，覆盖合法输入、failure_diagnostic 为 null/字符串/列表、字段缺失、类型/空值错误、字段值不一致和报告篡改；`py_compile` 与 `git diff --check` 通过。
+- 限制：正式 C1 未运行，现有 JSON/报告仍为旧结果；RET-001/RET-002 全量回归未运行。因此只验收本轮交叉核对器代码，不验收 C1 实验结果，不将 RET-003 标为 done。
+- 文档状态：checkpoint/handoff 顶部已增加当前状态说明；旧环境门记录保留为历史；SUMMARY 已标为过期历史记录；PROJECT_STATUS 和 WORKLOG 同步更新。
+- 下一步：Codex 在固定 macOS arm64 / Python 3.11.18 环境运行正式 C1，检查结果与报告，再执行必要上游回归并独立审查。
+

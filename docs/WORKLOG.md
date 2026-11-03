@@ -522,3 +522,78 @@ verified=git diff --check；query-set-draft.json JSON 解析通过；确认协�
 result=执行方定为 CC（脚本/集成结果实现）；Codex 中枢负责后续独立复核。Prompt 与状态整理提交 c4e2576
 limits=单族 15 条、3 个 retrieval_source 候选、split_status=provisional_small_n；APP-001 前端到端指标 not_measured；历史验证和许可/几何限制继续有效
 next=项目负责人 push 后，将 docs/coordination/prompts/RET-003-C1-diagnostic-agent.md 交给 CC；执行完成保持 review，交 Codex 中枢审查
+
+[2026-11-03] agent=CC task=RET-003-C1 status=review
+scope=RET-003 C1 检索级诊断；新增 run_c1_diagnostic.py（220 行）、c1-diagnostic-results.json（完整机器可读结果）、c1-diagnostic-report.md（10 节逐例分析）；agent-work/integration/RET-003-retrieval-evaluation/ 下 checkpoint/handoff 更新；docs/WORKLOG.md 只追加
+动作=实现可复跑 C1 诊断脚本；校验 manifest hash b7b6c737...；构建 RET-002 检索索引；运行 3 个 held-out 主查询（bore-012/035/080）；运行 2 个接口诊断（source-bore-020、heldout-bore-080-boundary）；运行 1 个失败诊断（缺少 outer_d 字段）；执行 2 个确定性检查（bore-020、bore-080 进程内重复）；输出 JSON 结果和 Markdown 报告
+verified=manifest hash 校验 PASS；3 个主查询执行成功，held-out 行未泄漏到候选池；2 个接口诊断分开报告；失败诊断返回预期错误码 RETRIEVAL_MISSING_FIELD（stage=query，fields=[outer_d]）；候选角色纯度 15/15 = 100% retrieval_source；确定性检查 2/2 PASS（SHA-256 一致）；报告明确标注 provisional_small_n、距离只是参数近邻度、端到端指标 not_measured
+results=主查询 heldout-bore-012 → top-1 bore-020（distance 0.329）；heldout-bore-035 → top-1 bore-050（distance 0.261）；heldout-bore-080 → top-1 bore-050（distance 0.784，second_screw 不同 +0.5）；所有查询的候选角色均为 retrieval_source；held-out 泄漏率 0/5；诊断 source-bore-020 返回自身距离 0；失败诊断正确拒绝
+known_limits=环境差异（实际 Python 3.10.12/Linux，协议要求 3.11.18/macOS）；RET-001/002 完整验证因缺少 CadQuery/jsonschema 依赖未能在当前环境执行；C1 脚本使用 retrieval 模块成功运行；单族 15 行、3 个候选、provisional_small_n 未冻结、权重 0.2/0.5 未经收益验证、端到端字段/Schema/CAD/STEP 指标为 not_measured；未运行 C0/C2O/公平 C2、未调权重、未声称端到端收益
+next=Codex 中枢独立审查：评估环境差异是否可接受；判断是否需要在完整环境补充 RET-001/002 验证；核对逐例结果、角色隔离和距离计算；确认未运行未授权条件、未声称端到端收益；验证限制说明完整性；审查通过后标记 RET-003-C1 完成交付
+commit=待提交（保持 review 状态，未 push）
+
+[2026-11-03] agent=CC task=RET-003-C1-correction status=blocked
+scope=RET-003 C1 诊断修正任务；修正上轮交付的接口错误、复跑不足、报告不一致等问题；执行分阶段门（M0-M5）
+stage=M0 环境与接口确认
+动作=启动检查确认仓库根目录和工作树状态；检测实际运行环境 Python 3.10.12 / Linux aarch64；对照协议要求 Python 3.11.18 / macOS arm64；发现环境不匹配
+verified=git rev-parse 确认根目录；git status 显示工作树有上轮未提交文件；python3 --version 显示 3.10.12；uname -sm 显示 Linux aarch64；项目 venv Python 3.11 符号链接指向不存在的 Homebrew 路径（macOS 特定）
+result=环境不匹配：Python 版本差异（3.10.12 vs 3.11.18）、操作系统差异（Linux vs macOS）；CPU 架构等价（aarch64 = arm64）
+decision=按 M0 环境门要求："环境不符即停止，不生成正式 JSON/报告"；创建 ENVIRONMENT_MISMATCH.md 详细报告；更新 checkpoint 标记 blocked；停止执行，未进入 M1-M5 阶段
+not_executed=未修正脚本接口错误（candidates→results）；未修正 query_status 层级；未实现独立进程复跑；未添加 fail-closed 检查；未生成新的正式 JSON/报告；未执行 git add/commit（.git/index.lock 仍存在）
+blocking_issue=当前环境（Python 3.10.12 / Linux aarch64）不符合项目固定基线（Python 3.11.18 / macOS arm64）；环境差异可能导致距离计算、排序结果与 RET-001/002 基线不可比较
+options=A) 等待 macOS arm64 + Python 3.11.18 环境重新执行（推荐）；B) 如项目接受风险，生成探索性结果但标注 non_baseline_exploratory；C) 正式修订环境基线需重跑 RET-001/002 全部验证
+next=Codex 中枢决策：环境不匹配是否阻塞修正任务，或允许在当前环境生成非正式探索性结果；决策前 CC Agent 保持 blocked 状态
+files=新增 ENVIRONMENT_MISMATCH.md；更新 checkpoint.md、handoff.md；未修改上轮交付的 run_c1_diagnostic.py、c1-diagnostic-results.json、c1-diagnostic-report.md
+
+[2026-11-03] agent=CC task=RET-003-C1-correction-M0-M5 status=review
+scope=RET-003 C1 诊断修正任务（M0-M5 完整执行）；修正上轮交付的 5 个已知问题：接口错误、层级错误、复跑不足、fail-closed 缺失、报告不一致
+stage=M0: 环境与接口确认 → M1: 契约测试先行 → M2: 单查询校准 → M3: 全量运行 → M4: 生成与交叉核对 → M5: 交接
+动作=M0: 记录实际环境 Python 3.10.12 / Linux aarch64，读取 RET-002 源码确认 results 字段和 query_status 路径；M1: 创建 run_c1_diagnostic_v2.py，实现契约测试验证 results/query_status/缺字段拒绝/角色纯度；M2: 使用 heldout-bore-012 校准 JSON 结构和字段误差；M3: 运行 3 主查询 + 2 诊断 + 1 失败诊断，每个合法查询通过 subprocess 跨独立进程复跑；M4: 创建 generate_report.py 自动生成报告，创建 cross_check.py 验证 JSON/报告一致性；M5: 更新 checkpoint-v2.md、handoff-v2.md 和本 WORKLOG
+verified=M0: retrieval 模块可导入，RET-002 接口确认；M1: 契约测试 4 项全部通过；M2: 单查询校准通过（top-1=bore-020, dist=0.066333）；M3: 全量诊断退出码 0，5 个查询确定性检查 5/5 PASS（SHA-256 一致）；M4: 交叉核对 5 项检查全部通过（摘要表、详细章节、候选数量、失败诊断、确定性）；python -m py_compile 所有脚本通过；git diff --check 通过
+results=主查询 heldout-bore-012 → top-1 bore-020 dist=0.066333 确定性✓；heldout-bore-035 → top-1 bore-020 dist=0.207444 确定性✓；heldout-bore-080 → top-1 bore-050 dist=0.784444 确定性✓；接口诊断 diagnostic-source-bore-020 → top-1 bore-020 dist=0.0 确定性✓；diagnostic-heldout-bore-080-boundary → top-1 bore-050 dist=0.784444 确定性✓；失败诊断缺少 outer_d → RETRIEVAL_MISSING_FIELD (stage=query, fields=['outer_d']) ✓；候选角色 15/15 = 100% retrieval_source；独立进程确定性 5/5 查询 SHA-256 一致
+corrections=1) 接口修正：使用 result_dict.get('results', []) 而非 candidates；2) 层级修正：从 result_dict.get('query', {}).get('query_status') 读取；3) 独立进程复跑：通过 subprocess 调用 --worker-single-query 模式，比对 canonical SHA-256；4) fail-closed：所有验证失败调用 fail() 返回非零退出码；5) 自动生成报告：从 JSON 提取数据生成 Markdown，cross_check.py 验证一致性
+files=新增 run_c1_diagnostic_v2.py (370行)、c1-diagnostic-report-v2.md、checkpoint-v2.md、handoff-v2.md、generate_report.py (286行)、cross_check.py (150行)；覆盖 c1-diagnostic-results.json；保留上轮 run_c1_diagnostic.py、c1-diagnostic-report.md、checkpoint.md、handoff.md 作为对比；追加 docs/WORKLOG.md（本记录）
+known_limits=环境差异（Python 3.10.12 / Linux aarch64，协议要求 3.11.18 / macOS arm64）；RET-001/002 完整验证因依赖缺失（jsonschema, CadQuery）未执行；单族 15 行、3 候选、provisional_small_n 未冻结；权重 0.2/0.5 未经收益验证；端到端字段/Schema/CAD/STEP 指标为 not_measured；未运行 C0/C2O/公平 C2、未调权重
+next=检查 .git/index.lock 状态；若锁不存在则提交（fix: correct RET-003 C1 diagnostic [RET-003]），保持 review 不 push；交 Codex 中枢独立审查：验证修正后的接口和独立进程复跑，核对逐例结果，评估环境差异，确认未运行未授权条件，验证限制说明
+commit=待检查 Git 锁状态
+
+[2026-11-03] agent=CC-code task=RET-003-C1-code-correction status=review
+scope=RET-003 C1 代码修正（仅代码单元，不运行正式 C1）；修正嵌套错误解析、环境门、契约测试、交叉核对
+动作=修正 run_c1_diagnostic.py: 新增 parse_retrieval_error() 从 error.error.{code,stage,fields} 读取，新增 check_environment_gate() 强制 Python 3.11.18/darwin/arm64，新增 validate_error_structure() 严格断言；修正 generate_report.py: 失败诊断章节展示 code/stage/fields；修正 cross_check.py: 新增 check_failure_diagnostic() 逐字段验证，新增 run_self_test() 负例自测（变异 stage/fields）；更新 checkpoint-v2.md 和 handoff-v2.md 文首添加状态说明（先前 M0-M5 为非正式环境）
+verified=代码级验证（Python 3.10.12 / Linux aarch64）: 契约测试 5 项通过（test 模式，验证嵌套错误结构 code=RETRIEVAL_MISSING_FIELD, stage=query, fields=['bore_d']）；python -m py_compile 三个脚本通过；git diff --check 通过
+results=修正后的代码单元: run_c1_diagnostic.py (590行), generate_report.py (286行), cross_check.py (260行)；契约测试在 test 模式运行不触发环境门，不写正式输出；负例自测设计完成（变异 stage/fields 验证交叉核对能检测）
+corrections=1) 嵌套错误解析: parse_retrieval_error() 提取 error_envelope["error"]["code/stage/fields"]，validate_error_structure() 严格验证三字段；2) 环境门: check_environment_gate(mode) formal 模式强制 3.11.18/darwin/arm64，test 模式只记录，worker 也受保护；3) 契约测试: Test 3 验证嵌套结构，Test 5 说明环境门；4) 报告生成: 失败诊断展示 code/stage/fields；5) 交叉核对: check_failure_diagnostic() 逐字段验证，run_self_test() 负例自测
+files=修正 run_c1_diagnostic.py, generate_report.py, cross_check.py；更新 checkpoint-v2.md（文首状态说明+追加），handoff-v2.md（文首状态说明+追加）；追加 docs/WORKLOG.md（本记录）
+known_limits=本轮只交付代码单元，未运行正式 C1；代码级验证在 Python 3.10.12 / Linux aarch64 执行（非正式环境）；正式 C1 需 Codex 在 Python 3.11.18 / macOS arm64 执行；先前 M0-M5 记录为非正式环境执行，不构成正式验收
+next=检查 .git/index.lock 状态；若锁不存在则提交 6 个文件（3 个脚本 + 2 个 md + WORKLOG），保持 review 不 push；交 Codex 在固定环境运行正式 C1: 验证环境门强制、嵌套错误解析、五查询复跑、生成正式 JSON/报告、交叉核对含负例自测、完整回归（RET-001/002）、独立审查
+commit=待检查 Git 锁状态
+
+[2026-11-03] agent=Codex task=RET-003-C1-review status=review
+scope=独立复核 CC 的 C1 脚本、机器结果和报告；只新增修正 Prompt、追加审查记录与工作日志，不改 CC 交付文件
+verified=确认 RET-002 实际候选字段为 results；确认现脚本读取 candidates 且 query_status 层级错误；五个合法查询未全部做独立进程复跑；报告与 JSON 的 bore-012/bore-035 排名距离不符；交付环境为 Python 3.10/Linux 而项目基线为 Python 3.11.18/macOS arm64。上游只读复验：RET-001 tracked-only 660 checks、RET-002 tests 30 passed、smoke 70 checks 通过；脚本 py_compile、JSON parse、git diff --check 通过
+result=RET-003-C1 不通过验收，保持 review；已生成 docs/coordination/prompts/RET-003-C1-correction-agent.md，要求原 CC 修复、固定环境重跑、fail closed、由机器 JSON 自动生成报告并完成独立进程复跑
+blocker=.git/index.lock 存在；未删除锁、未暂存或提交
+next=项目负责人将修正 Prompt 交给原 CC Agent；修正成果保持 review 并由 Codex 中枢独立复核
+
+[2026-11-03] agent=Codex task=RET-003-C1-M0-review status=blocked
+scope=独立验收 CC 的 M0 环境门 checkpoint；未改脚本、结果或报告
+verified=CC 实际环境记录为 Python 3.10.12/Linux aarch64，按 Prompt 正确停止并未生成正式结果；Codex 本机只读确认 Darwin arm64、Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4、jsonschema 4.26.0 可用
+result=接受 M0 阻塞 checkpoint，不接受 C1 任务完成；阻塞来自 CC 运行在 Linux 会话，本机基线可用，推荐在共享 Mac 项目目录续作，不改环境基线、不产探索性结果
+deviation=CC 新建 ENVIRONMENT_MISMATCH.md 超出 Prompt 文件清单，作为非阻塞说明保留；报告中跨 OS 浮点/JSON 差异只属推测，不能作为已验证事实
+next=修正 Agent 在本机使用 work/benchcad-output/venv/bin/python 续作；RET-003-C1 保持 review/in_progress，完成后由 Codex 中枢复核
+
+[2026-11-03] agent=Codex task=RET-003-C1-code-fix status=planned
+scope=将 RET-003 C1 修正拆为代码实现与正式实验两阶段；CC 只负责诊断器、报告生成器和交叉核对器的代码修正及纯契约测试，Codex 在本机固定 macOS/Python 3.11.18 环境运行正式 C1
+交付=docs/coordination/prompts/RET-003-C1-code-only-cc-agent.md
+边界=CC 不运行正式诊断、不生成或覆盖正式 JSON/报告、不改变环境基线、不新建环境阻塞文档；正式结果保持未验收，RET-003 状态仍为 in_progress
+下一步=项目负责人将 code-only Prompt 交给 CC；代码审查通过后由 Codex 本机运行正式诊断并补齐上游回归验证
+commit=未提交；共享工作树含未审查的 C1 结果及与本次更新重叠的状态/日志改动，避免将其一并提交
+
+[2026-11-04] agent=Codex task=RET-003-C1-boundary-review status=review
+scope=独立审查 CC 对 cross_check.py 的 failure_diagnostic 边界修正；复跑 fixture、py_compile 和空白检查；同步当前状态说明
+verified=work/benchcad-output/venv/bin/python agent-work/integration/RET-003-retrieval-evaluation/test_cross_check_fixture.py（19/19）；work/benchcad-output/venv/bin/python -m py_compile cross_check.py test_cross_check_fixture.py；git diff --check；当前无 .git/index.lock
+result=代码级交叉核对器边界修正验收通过；不代表正式 C1 实验结果已验收
+limits=正式 C1 未运行；当前 JSON/报告仍为旧产物；RET-001/RET-002 全量回归未运行；RET-003 保持 in_progress，子任务保持 review
+docs=更新 PROJECT_STATUS、当前 checkpoint/handoff 提示、SUMMARY 过期记录说明、BOUNDARY_FIX_REPORT 的中枢复核结果及 RET-003-codex-review.md
+next=Codex 在 macOS arm64 / Python 3.11.18 固定环境运行正式 C1、生成报告并交叉核对，再执行必要上游回归
+commit=未提交；工作树中含既有未审查的 C1 文件与其他 Agent 改动，不暂存或提交无关文件
