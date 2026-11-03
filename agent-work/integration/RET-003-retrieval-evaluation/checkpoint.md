@@ -14,7 +14,7 @@
 
 ---
 
-**此前代码级 checkpoint：RET-003-C1 交叉核对器边界修正，验收通过。**
+**历史 checkpoint：RET-003-C1 交叉核对器边界修正，代码级验收通过；下文当时“正式 C1 尚未运行”的状态已被本文件顶部正式 C1 checkpoint 取代。**
 
 - 中枢在本机固定环境 Python 3.11.18 / macOS arm64 独立运行 `test_cross_check_fixture.py`：19/19 通过；`py_compile` 与 `git diff --check` 通过。
 - 覆盖 `failure_diagnostic` 非对象、字段缺失/类型错误/空值、JSON 与报告不一致及报告篡改；失败以清楚消息和非零退出码结束。
