@@ -1,6 +1,20 @@
 # 当前状态（2026-11-04，中枢复核）
 
-**RET-003-C1 交叉核对器边界修正：代码级验收通过，任务仍为 `review`。**
+**2026-11-04 中枢 checkpoint：正式 C1 检索级诊断验收通过；RET-003 整体保持 `in_progress`。**
+
+- 固定环境：Python 3.11.18 / macOS arm64 / CadQuery 2.3.0 / OCP 7.9.3.0 / NumPy 1.26.4。
+- 上游回归：RET-001 tracked-only 660 项通过；RET-002 单元测试 30 项通过；smoke 的正常/边界案例、13 项失败路径和确定性检查通过。
+- 正式 C1：3 个 held-out 主查询、2 个独立接口诊断和 1 个缺字段失败诊断均完成；5/5 合法查询跨进程 canonical JSON 一致；失败诊断为 `RETRIEVAL_MISSING_FIELD` / `query` / `outer_d`。
+- 报告生成器重生成 `c1-diagnostic-report.md`；交叉核对器检查摘要、逐例结果、候选数、失败字段和确定性，并通过 stage/fields 变异负例自测。
+- 结果仍是单族 15 行、3 个 retrieval_source 候选和 `provisional_small_n` 的检索级诊断；不代表正式 benchmark、端到端 CAD 收益或统计显著性。C0/C2O/公平 C2 未运行，权重未调整。
+- 验收：中枢已逐例核对 JSON、报告、候选角色、失败结构及限制说明；未发现阻塞项，C1 检索级诊断里程碑接受。
+- 下一步：RET-003 的端到端下游收益仍等待 APP-001 和新的评测放行；本 checkpoint 后续历史记录仍保留，不覆盖。
+
+本次正式命令和详细结果见下方追加式交接记录及 `c1-diagnostic-report.md`。
+
+---
+
+**此前代码级 checkpoint：RET-003-C1 交叉核对器边界修正，验收通过。**
 
 - 中枢在本机固定环境 Python 3.11.18 / macOS arm64 独立运行 `test_cross_check_fixture.py`：19/19 通过；`py_compile` 与 `git diff --check` 通过。
 - 覆盖 `failure_diagnostic` 非对象、字段缺失/类型错误/空值、JSON 与报告不一致及报告篡改；失败以清楚消息和非零退出码结束。

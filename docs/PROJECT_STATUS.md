@@ -46,7 +46,7 @@
 | CAD-005/006-R2 | 修复 CAD 编译交接边界并完成中枢复核 | Codex | done | 可导入包边界、仓库内交接 smoke test、R2 审查记录；当时尚未启动的正式实现由下方 CAD-005/006 任务承接 |
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；本轮审查记录尚未 push |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
-| RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 交叉核对器边界修正已通过代码级中枢复核；正式 C1 尚未运行，旧 JSON/报告仍不可作为结果；下一步由 Codex 在固定 macOS arm64/Python 3.11.18 环境运行正式 C1 并做上游回归；公平 C2 未定义，端到端指标 not_measured |
+| RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
 
 ## 阻塞项
 
@@ -56,5 +56,5 @@
 
 1. 在另一台设备执行一次 clone/pull 验证，确认跨设备同步链路。
 2. 将 RET-001 执行提交、中枢修正和审查记录一起推送到远端。
-3. 在固定环境运行 RET-003 C1 正式诊断、生成并交叉核对结果，同时重跑 RET-001/RET-002 所需回归；在此之前不得引用现有旧 JSON/报告作为正式结果。端到端 C0/C1 比较须等 APP-001，公平 C2 另行定义并经审查后才能纳入。
+3. RET-003 C1 检索级诊断已验收；端到端 C0/C1 比较须等 APP-001，公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策。

@@ -1,4 +1,16 @@
-# 当前交接状态（2026-11-04，中枢复核）
+# 当前交接状态（2026-11-04，C1 检索级诊断已验收）
+
+本机已完成正式 C1 诊断和上游回归。正式环境为 Python 3.11.18 / macOS arm64，CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4。RET-001 tracked-only 校验 660 项通过；RET-002 单元测试 30 项通过；smoke 正常/边界、13 项失败路径和确定性检查通过。
+
+正式结果位于 `c1-diagnostic-results.json`，报告由 `generate_report.py` 生成，`cross_check.py` 一致性核对和 stage/fields 负例自测通过。3 个 held-out 主查询和 2 个接口诊断均只从 3 个 `retrieval_source` 候选检索，5/5 合法查询跨进程结果一致；缺少 `outer_d` 的失败诊断返回 `RETRIEVAL_MISSING_FIELD`，stage=`query`，fields=`["outer_d"]`。
+
+**中枢验收**：已逐项核对 JSON/报告数值、查询角色隔离、失败结构、结果生成路径和限制说明，没有发现阻塞项。C1 检索级诊断里程碑已接受；RET-003 整体仍为 `in_progress`，因为端到端下游收益依赖 APP-001 与后续单独放行。
+
+限制继续有效：只有一个零件族、15 条 manifest 行和 3 个检索候选；split 为 `provisional_small_n`，不是正式 benchmark；参数距离不代表几何等价；没有运行 C0、C2O 或公平 C2，没有调权重；端到端字段、Schema、CAD、STEP 指标仍为 `not_measured`，等待 APP-001。
+
+---
+
+# 历史交接状态（2026-11-04，代码级修正审查前）
 
 当前代码单元为 **RET-003-C1 交叉核对器边界修正**，代码级验收通过，保持 `review`。CC 的自检报告见 `BOUNDARY_FIX_REPORT.md`；Codex 独立复核确认 fixture 19/19 通过，编译和空白检查通过。下方 M0 环境阻塞记录属于 2026-11-03 的历史交接，不是当前阻塞状态。
 

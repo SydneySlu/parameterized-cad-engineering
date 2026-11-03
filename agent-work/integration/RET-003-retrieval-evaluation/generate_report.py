@@ -10,6 +10,7 @@
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
 
@@ -22,11 +23,11 @@ def generate_report(json_path: Path, output_path: Path) -> None:
     report = []
 
     # 标题和元数据
-    report.append("# RET-003 C1 检索级诊断报告 v2（修正版）")
+    report.append("# RET-003 C1 检索级诊断报告")
     report.append("")
     report.append("状态：`review`（等待 Codex 中枢独立审查）")
     report.append("任务：RET-003 里程碑 C1")
-    report.append("日期：2026-11-03")
+    report.append(f"日期：{date.today().isoformat()}")
     report.append(f"协议版本：`{data['protocol_version']}`")
     report.append(f"查询集版本：`{data['query_set_version']}`")
     report.append("")
@@ -226,15 +227,12 @@ def generate_report(json_path: Path, output_path: Path) -> None:
     report.append("")
 
     # 8. 修正项
-    report.append("## 8. 相比上轮的修正项")
+    report.append("## 8. 执行与审查说明")
     report.append("")
-    report.append("本 v2 版本修正了上轮 C1 交付的以下问题：")
+    report.append("本报告由正式 C1 机器结果 JSON 自动生成。诊断脚本在正式运行前已完成接口、错误结构、独立进程复跑和 fail-closed 修正；早期 JSON/报告属于历史无效产物，不作为本次结果依据。")
     report.append("")
-    report.append("1. **接口错误修正**: 使用正确的 `results` 字段（原脚本错误使用 `candidates`）")
-    report.append("2. **层级错误修正**: 从 `result.query.query_status` 读取（原脚本从顶层读取导致 null）")
-    report.append("3. **独立进程复跑**: 5 个合法查询各自通过 subprocess 跨独立进程验证（原脚本只做同进程重复）")
-    report.append("4. **Fail-closed**: 任何验证失败返回非零退出码（原脚本可能静默失败）")
-    report.append("5. **自动生成报告**: 从 JSON 机器结果自动生成本报告（原报告手工转录导致不一致）")
+    report.append("- 正式结果仅来自 Python 3.11.18 / macOS arm64 固定环境运行。")
+    report.append("- 本报告的逐例数值、结构化失败诊断和确定性结果均从同目录 JSON 读取；交叉核对器已对两者一致性及 stage/fields 负例变异进行验证。")
     report.append("")
 
     # 9. 结论
@@ -243,7 +241,7 @@ def generate_report(json_path: Path, output_path: Path) -> None:
     report.append("### 9.1 通过的检查")
     report.append("")
     report.append("- ✓ Manifest hash 校验通过")
-    report.append("- ✓ M1 契约测试通过（results 字段、query_status 层级、缺字段拒绝、角色纯度）")
+    report.append("- ✓ 契约测试通过（results 字段、query_status 层级、缺字段拒绝、角色纯度及环境门）")
     report.append("- ✓ 3 个主查询成功执行，held-out 行未泄漏到候选池")
     report.append("- ✓ 2 个接口诊断分开记录，行为符合预期")
     report.append("- ✓ 结构化失败诊断返回预期错误码 `RETRIEVAL_MISSING_FIELD`")

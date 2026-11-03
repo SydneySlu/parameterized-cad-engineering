@@ -597,3 +597,17 @@ limits=正式 C1 未运行；当前 JSON/报告仍为旧产物；RET-001/RET-002
 docs=更新 PROJECT_STATUS、当前 checkpoint/handoff 提示、SUMMARY 过期记录说明、BOUNDARY_FIX_REPORT 的中枢复核结果及 RET-003-codex-review.md
 next=Codex 在 macOS arm64 / Python 3.11.18 固定环境运行正式 C1、生成报告并交叉核对，再执行必要上游回归
 commit=未提交；工作树中含既有未审查的 C1 文件与其他 Agent 改动，不暂存或提交无关文件
+
+[2026-11-04] agent=Codex task=RET-003-C1-formal-run status=review
+scope=用户 push RET-003 C1 代码级修正后，在固定环境完成 RET-001/RET-002 上游回归、正式 C1 诊断和结果/报告交叉核对；更新报告生成器元数据、checkpoint/handoff、项目状态与中枢审查记录
+verified=Python 3.11.18 / Darwin arm64 / CadQuery 2.3.0 / OCP 7.9.3.0 / NumPy 1.26.4 / jsonschema 4.26.0；RET-001 tracked-only 660 checks、RET-002 tests 30/30、smoke 70 项检查与 13/13 失败路径均通过；C1 manifest hash 匹配，3 主查询+2 接口诊断+1 失败诊断完成，5/5 合法查询跨进程 canonical SHA 一致；failure diagnostic=RETRIEVAL_MISSING_FIELD, stage=query, fields=[outer_d]；报告生成和 cross_check（含 stage/fields 变异负例）通过
+result=heldout-bore-012 top1=bore-020 distance=0.066333；heldout-bore-035 top1=bore-020 distance=0.207444；heldout-bore-080 top1=bore-050 distance=0.784444；15/15 候选结果角色均为 retrieval_source。RET-003 C1 正式结果已生成，但任务保持 review，等待中枢最终逐项验收
+limits=单族15条、3个检索候选、provisional_small_n 非正式 benchmark；未运行 C0/C2O/公平 C2，未调权重；端到端字段/Schema/CAD/STEP 为 not_measured，跨平台未验证；旧 v1/v2 JSON/报告仍是历史无效产物
+next=中枢完成 JSON/报告逐例和限制说明复核；验收通过后更新里程碑状态。C0/C1端到端比较等待 APP-001
+
+[2026-11-04] agent=Codex task=RET-003-C1-formal-review status=done
+动作=完成正式 C1 结果中枢独立复核，验收检索级诊断里程碑；RET-003 整体仍 in_progress，端到端下游收益等待 APP-001 和新的评测放行
+verified=逐例检查正式 JSON 与报告：3 个 held-out 主查询、2 个接口诊断、1 个失败诊断；5 个合法查询仅返回 retrieval_source 候选且跨进程结果一致；失败诊断 code/stage/fields 正确；报告摘要、逐例距离、角色说明、候选计数和限制相符；cross_check 与 stage/fields 负例均通过
+result=C1 检索级诊断验收通过，无阻塞项；不能将逐例小样本近邻诊断解释为正式 benchmark、统计显著性或端到端 CAD 收益
+next=如需测量检索对字段抽取、Schema、CAD/STEP 的下游影响，先完成 APP-001 并另行冻结比较协议；公平 C2 仍未定义
+commit=待提交本轮 C1 正式结果与状态记录

@@ -1,0 +1,3679 @@
+{
+  "protocol_version": "RET-003.protocol.v0.1-draft",
+  "query_set_version": "RET-003.query-set.v0-draft",
+  "manifest_sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+  "policy_id": "RET-002.parametric_distance.v1",
+  "split_status": "provisional_small_n",
+  "environment": {
+    "python_version": "3.11.18",
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "primary_queries": [
+    {
+      "query_id": "heldout-bore-012",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-012",
+      "split_role": "heldout_evaluation",
+      "query_status": "catalog_validated",
+      "result": {
+        "retrieval_version": "ret-002.retrieval.v1",
+        "policy_id": "RET-002.parametric_distance.v1",
+        "task": "RET-002",
+        "family_id": "set_screw_shaft_collar",
+        "manifest": {
+          "manifest_version": "retrieval-manifest.v0",
+          "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+          "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+          "records": 15,
+          "candidate_records": 3,
+          "role_counts": {
+            "development": 9,
+            "retrieval_source": 3,
+            "heldout_evaluation": 3
+          }
+        },
+        "candidate_roles": [
+          "retrieval_source"
+        ],
+        "split_status": "provisional_small_n",
+        "top_k": 3,
+        "candidates_considered": 3,
+        "query": {
+          "input_form": "flat_parameters",
+          "parameters": {
+            "bore_d": 12,
+            "outer_d": 22,
+            "screw_d": 6,
+            "screw_len": 8,
+            "second_screw": 0,
+            "width": 12
+          },
+          "units": {
+            "length": "mm",
+            "second_screw": "1 (dimensionless)"
+          },
+          "query_status": "catalog_validated",
+          "schema_check": {
+            "ok": true,
+            "schema_version": "set_screw_shaft_collar.v0",
+            "errors": [],
+            "provenance": {
+              "bore_d": "user_explicit",
+              "outer_d": "user_explicit",
+              "width": "user_explicit",
+              "screw_d": "user_explicit",
+              "screw_len": "user_explicit",
+              "second_screw": "user_explicit"
+            }
+          }
+        },
+        "results": [
+          {
+            "rank": 1,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-020",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 6,
+                "key": "bore_d",
+                "value": 20,
+                "row": [
+                  20,
+                  32,
+                  6,
+                  8,
+                  14
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+              "sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 20,
+                "outer_d": 32,
+                "screw_d": 6,
+                "screw_len": 8,
+                "second_screw": 0,
+                "width": 14
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-020.json",
+                "sha256": "b42b97deac8bbf0cbcdaf59f0e7f14f8f900ffc5813f7ea61dfd373d8b7ea366"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.06633333333333333,
+              "continuous_mean": 0.06633333333333333,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 12,
+                  "candidate": 20,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.10666666666666667,
+                  "weight": 0.2,
+                  "contribution": 0.021333333333333336
+                },
+                "outer_d": {
+                  "query": 22,
+                  "candidate": 32,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.1,
+                  "weight": 0.2,
+                  "contribution": 0.020000000000000004
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "width": {
+                  "query": 12,
+                  "candidate": 14,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.125,
+                  "weight": 0.2,
+                  "contribution": 0.025
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 29,
+                "edges": 59,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 6712.63193643346,
+                "bbox_mm": {
+                  "xmin": -16.0000001,
+                  "xmax": 16.0000001,
+                  "ymin": -16.0000001,
+                  "ymax": 16.0000001,
+                  "zmin": 0.0,
+                  "zmax": 14.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 0.013225565525317506,
+                "volume_rel": 1.9702464834859546e-06,
+                "readback_solids": 1,
+                "readback_volume_mm3": 6712.645161998986
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 8,
+              "outer_d": 10,
+              "screw_d": 0,
+              "screw_len": 0,
+              "width": 2,
+              "second_screw": 0
+            }
+          },
+          {
+            "rank": 2,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-006",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 1,
+                "key": "bore_d",
+                "value": 6,
+                "row": [
+                  6,
+                  12,
+                  4,
+                  5,
+                  8
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+              "sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 6,
+                "outer_d": 12,
+                "screw_d": 4,
+                "screw_len": 5,
+                "second_screw": 0,
+                "width": 8
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-006.json",
+                "sha256": "3c3e43e2755a2c18f9242b41ee24a3290b0ab3d69138df0c6f99893dc31344e9"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.16794444444444445,
+              "continuous_mean": 0.16794444444444445,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 12,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.08,
+                  "weight": 0.2,
+                  "contribution": 0.016
+                },
+                "outer_d": {
+                  "query": 22,
+                  "candidate": 12,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.1,
+                  "weight": 0.2,
+                  "contribution": 0.020000000000000004
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 4,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 5,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.1875,
+                  "weight": 0.2,
+                  "contribution": 0.037500000000000006
+                },
+                "width": {
+                  "query": 12,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 27,
+                "edges": 57,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 642.7518164460399,
+                "bbox_mm": {
+                  "xmin": -6.0000001,
+                  "xmax": 6.0000001,
+                  "ymin": -6.0000001,
+                  "ymax": 6.0000001,
+                  "zmin": 0.0,
+                  "zmax": 8.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 2.5124791136477143e-11,
+                "volume_rel": 3.908941288629626e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 642.751816446065
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 6,
+              "outer_d": 10,
+              "screw_d": 2,
+              "screw_len": 3,
+              "width": 4,
+              "second_screw": 0
+            }
+          },
+          {
+            "rank": 3,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-050",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 11,
+                "key": "bore_d",
+                "value": 50,
+                "row": [
+                  50,
+                  80,
+                  10,
+                  16,
+                  18
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+              "sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 50,
+                "outer_d": 80,
+                "screw_d": 10,
+                "screw_len": 16,
+                "second_screw": 0,
+                "width": 18
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-050.json",
+                "sha256": "08f33e1fa1635653c8968d8c57cfb0697afb61c3f4d56ee9b5dccb464bb6222b"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.4812222222222222,
+              "continuous_mean": 0.4812222222222222,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 12,
+                  "candidate": 50,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.5066666666666667,
+                  "weight": 0.2,
+                  "contribution": 0.10133333333333334
+                },
+                "outer_d": {
+                  "query": 22,
+                  "candidate": 80,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.58,
+                  "weight": 0.2,
+                  "contribution": 0.11599999999999999
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 10,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.4444444444444444,
+                  "weight": 0.2,
+                  "contribution": 0.08888888888888889
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 16,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.5,
+                  "weight": 0.2,
+                  "contribution": 0.1
+                },
+                "width": {
+                  "query": 12,
+                  "candidate": 18,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.375,
+                  "weight": 0.2,
+                  "contribution": 0.07500000000000001
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 47,
+                "edges": 97,
+                "vertices": 50,
+                "is_valid": true,
+                "volume_mm3": 54010.08803943693,
+                "bbox_mm": {
+                  "xmin": -40.0000001,
+                  "xmax": 40.0000001,
+                  "ymin": -40.0000001,
+                  "ymax": 40.0000001,
+                  "zmin": -2.6924671426627102e-17,
+                  "zmax": 18.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 8.152529485391934e-16,
+                "volume_abs_mm3": 6.912159733474255e-10,
+                "volume_rel": 1.2797904955139407e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 54010.08803943624
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 38,
+              "outer_d": 58,
+              "screw_d": 4,
+              "screw_len": 8,
+              "width": 6,
+              "second_screw": 0
+            }
+          }
+        ],
+        "notes": [
+          "distance is normalized parameter proximity only; it is not CAD geometry equivalence, manufacturability, strength or generation-quality evidence",
+          "split_status=provisional_small_n: candidates come from a provisional small-n grouping, not a benchmark split and not an accuracy estimate",
+          "only manifest v0 structured fields were read; STEP, render images and third-party drawings were not read",
+          "candidate_roles were fixed when the index was built: retrieval_source; rows with other roles are excluded, not scored"
+        ],
+        "data_boundary": {
+          "reads_manifest": true,
+          "reads_step": false,
+          "reads_render": false,
+          "reads_ir_files": false,
+          "reads_external_drawings": false
+        }
+      },
+      "determinism": {
+        "run1_sha256": "f639132d727364ab6430e8c13468b6bdc509e17a577147040dc0facc42713a10",
+        "run2_sha256": "f639132d727364ab6430e8c13468b6bdc509e17a577147040dc0facc42713a10",
+        "cross_process_deterministic": true
+      }
+    },
+    {
+      "query_id": "heldout-bore-035",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-035",
+      "split_role": "heldout_evaluation",
+      "query_status": "catalog_validated",
+      "result": {
+        "retrieval_version": "ret-002.retrieval.v1",
+        "policy_id": "RET-002.parametric_distance.v1",
+        "task": "RET-002",
+        "family_id": "set_screw_shaft_collar",
+        "manifest": {
+          "manifest_version": "retrieval-manifest.v0",
+          "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+          "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+          "records": 15,
+          "candidate_records": 3,
+          "role_counts": {
+            "development": 9,
+            "retrieval_source": 3,
+            "heldout_evaluation": 3
+          }
+        },
+        "candidate_roles": [
+          "retrieval_source"
+        ],
+        "split_status": "provisional_small_n",
+        "top_k": 3,
+        "candidates_considered": 3,
+        "query": {
+          "input_form": "flat_parameters",
+          "parameters": {
+            "bore_d": 35,
+            "outer_d": 56,
+            "screw_d": 8,
+            "screw_len": 12,
+            "second_screw": 0,
+            "width": 16
+          },
+          "units": {
+            "length": "mm",
+            "second_screw": "1 (dimensionless)"
+          },
+          "query_status": "catalog_validated",
+          "schema_check": {
+            "ok": true,
+            "schema_version": "set_screw_shaft_collar.v0",
+            "errors": [],
+            "provenance": {
+              "bore_d": "user_explicit",
+              "outer_d": "user_explicit",
+              "width": "user_explicit",
+              "screw_d": "user_explicit",
+              "screw_len": "user_explicit",
+              "second_screw": "user_explicit"
+            }
+          }
+        },
+        "results": [
+          {
+            "rank": 1,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-020",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 6,
+                "key": "bore_d",
+                "value": 20,
+                "row": [
+                  20,
+                  32,
+                  6,
+                  8,
+                  14
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+              "sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 20,
+                "outer_d": 32,
+                "screw_d": 6,
+                "screw_len": 8,
+                "second_screw": 0,
+                "width": 14
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-020.json",
+                "sha256": "b42b97deac8bbf0cbcdaf59f0e7f14f8f900ffc5813f7ea61dfd373d8b7ea366"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.20744444444444446,
+              "continuous_mean": 0.20744444444444446,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 35,
+                  "candidate": 20,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.2,
+                  "weight": 0.2,
+                  "contribution": 0.04000000000000001
+                },
+                "outer_d": {
+                  "query": 56,
+                  "candidate": 32,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.24,
+                  "weight": 0.2,
+                  "contribution": 0.048
+                },
+                "screw_d": {
+                  "query": 8,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 12,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                },
+                "width": {
+                  "query": 16,
+                  "candidate": 14,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.125,
+                  "weight": 0.2,
+                  "contribution": 0.025
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 29,
+                "edges": 59,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 6712.63193643346,
+                "bbox_mm": {
+                  "xmin": -16.0000001,
+                  "xmax": 16.0000001,
+                  "ymin": -16.0000001,
+                  "ymax": 16.0000001,
+                  "zmin": 0.0,
+                  "zmax": 14.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 0.013225565525317506,
+                "volume_rel": 1.9702464834859546e-06,
+                "readback_solids": 1,
+                "readback_volume_mm3": 6712.645161998986
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 15,
+              "outer_d": 24,
+              "screw_d": 2,
+              "screw_len": 4,
+              "width": 2,
+              "second_screw": 0
+            }
+          },
+          {
+            "rank": 2,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-050",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 11,
+                "key": "bore_d",
+                "value": 50,
+                "row": [
+                  50,
+                  80,
+                  10,
+                  16,
+                  18
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+              "sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 50,
+                "outer_d": 80,
+                "screw_d": 10,
+                "screw_len": 16,
+                "second_screw": 0,
+                "width": 18
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-050.json",
+                "sha256": "08f33e1fa1635653c8968d8c57cfb0697afb61c3f4d56ee9b5dccb464bb6222b"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.20744444444444446,
+              "continuous_mean": 0.20744444444444446,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 35,
+                  "candidate": 50,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.2,
+                  "weight": 0.2,
+                  "contribution": 0.04000000000000001
+                },
+                "outer_d": {
+                  "query": 56,
+                  "candidate": 80,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.24,
+                  "weight": 0.2,
+                  "contribution": 0.048
+                },
+                "screw_d": {
+                  "query": 8,
+                  "candidate": 10,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 12,
+                  "candidate": 16,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                },
+                "width": {
+                  "query": 16,
+                  "candidate": 18,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.125,
+                  "weight": 0.2,
+                  "contribution": 0.025
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 47,
+                "edges": 97,
+                "vertices": 50,
+                "is_valid": true,
+                "volume_mm3": 54010.08803943693,
+                "bbox_mm": {
+                  "xmin": -40.0000001,
+                  "xmax": 40.0000001,
+                  "ymin": -40.0000001,
+                  "ymax": 40.0000001,
+                  "zmin": -2.6924671426627102e-17,
+                  "zmax": 18.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 8.152529485391934e-16,
+                "volume_abs_mm3": 6.912159733474255e-10,
+                "volume_rel": 1.2797904955139407e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 54010.08803943624
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 15,
+              "outer_d": 24,
+              "screw_d": 2,
+              "screw_len": 4,
+              "width": 2,
+              "second_screw": 0
+            }
+          },
+          {
+            "rank": 3,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-006",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 1,
+                "key": "bore_d",
+                "value": 6,
+                "row": [
+                  6,
+                  12,
+                  4,
+                  5,
+                  8
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+              "sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 6,
+                "outer_d": 12,
+                "screw_d": 4,
+                "screw_len": 5,
+                "second_screw": 0,
+                "width": 8
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-006.json",
+                "sha256": "3c3e43e2755a2c18f9242b41ee24a3290b0ab3d69138df0c6f99893dc31344e9"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.4417222222222222,
+              "continuous_mean": 0.4417222222222222,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 35,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.38666666666666666,
+                  "weight": 0.2,
+                  "contribution": 0.07733333333333334
+                },
+                "outer_d": {
+                  "query": 56,
+                  "candidate": 12,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.44,
+                  "weight": 0.2,
+                  "contribution": 0.08800000000000001
+                },
+                "screw_d": {
+                  "query": 8,
+                  "candidate": 4,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.4444444444444444,
+                  "weight": 0.2,
+                  "contribution": 0.08888888888888889
+                },
+                "screw_len": {
+                  "query": 12,
+                  "candidate": 5,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.4375,
+                  "weight": 0.2,
+                  "contribution": 0.08750000000000001
+                },
+                "width": {
+                  "query": 16,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.5,
+                  "weight": 0.2,
+                  "contribution": 0.1
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 27,
+                "edges": 57,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 642.7518164460399,
+                "bbox_mm": {
+                  "xmin": -6.0000001,
+                  "xmax": 6.0000001,
+                  "ymin": -6.0000001,
+                  "ymax": 6.0000001,
+                  "zmin": 0.0,
+                  "zmax": 8.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 2.5124791136477143e-11,
+                "volume_rel": 3.908941288629626e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 642.751816446065
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 29,
+              "outer_d": 44,
+              "screw_d": 4,
+              "screw_len": 7,
+              "width": 8,
+              "second_screw": 0
+            }
+          }
+        ],
+        "notes": [
+          "distance is normalized parameter proximity only; it is not CAD geometry equivalence, manufacturability, strength or generation-quality evidence",
+          "split_status=provisional_small_n: candidates come from a provisional small-n grouping, not a benchmark split and not an accuracy estimate",
+          "only manifest v0 structured fields were read; STEP, render images and third-party drawings were not read",
+          "candidate_roles were fixed when the index was built: retrieval_source; rows with other roles are excluded, not scored"
+        ],
+        "data_boundary": {
+          "reads_manifest": true,
+          "reads_step": false,
+          "reads_render": false,
+          "reads_ir_files": false,
+          "reads_external_drawings": false
+        }
+      },
+      "determinism": {
+        "run1_sha256": "eeaa0730643741c0c93453db6116c54ee0f90d200cb853be9dc2a98b1fcbe027",
+        "run2_sha256": "eeaa0730643741c0c93453db6116c54ee0f90d200cb853be9dc2a98b1fcbe027",
+        "cross_process_deterministic": true
+      }
+    },
+    {
+      "query_id": "heldout-bore-080",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "split_role": "heldout_evaluation",
+      "query_status": "catalog_validated",
+      "result": {
+        "retrieval_version": "ret-002.retrieval.v1",
+        "policy_id": "RET-002.parametric_distance.v1",
+        "task": "RET-002",
+        "family_id": "set_screw_shaft_collar",
+        "manifest": {
+          "manifest_version": "retrieval-manifest.v0",
+          "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+          "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+          "records": 15,
+          "candidate_records": 3,
+          "role_counts": {
+            "development": 9,
+            "retrieval_source": 3,
+            "heldout_evaluation": 3
+          }
+        },
+        "candidate_roles": [
+          "retrieval_source"
+        ],
+        "split_status": "provisional_small_n",
+        "top_k": 3,
+        "candidates_considered": 3,
+        "query": {
+          "input_form": "flat_parameters",
+          "parameters": {
+            "bore_d": 80,
+            "outer_d": 110,
+            "screw_d": 12,
+            "screw_len": 20,
+            "second_screw": 1,
+            "width": 22
+          },
+          "units": {
+            "length": "mm",
+            "second_screw": "1 (dimensionless)"
+          },
+          "query_status": "catalog_validated",
+          "schema_check": {
+            "ok": true,
+            "schema_version": "set_screw_shaft_collar.v0",
+            "errors": [],
+            "provenance": {
+              "bore_d": "user_explicit",
+              "outer_d": "user_explicit",
+              "width": "user_explicit",
+              "screw_d": "user_explicit",
+              "screw_len": "user_explicit",
+              "second_screw": "user_explicit"
+            }
+          }
+        },
+        "results": [
+          {
+            "rank": 1,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-050",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 11,
+                "key": "bore_d",
+                "value": 50,
+                "row": [
+                  50,
+                  80,
+                  10,
+                  16,
+                  18
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+              "sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 50,
+                "outer_d": 80,
+                "screw_d": 10,
+                "screw_len": 16,
+                "second_screw": 0,
+                "width": 18
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-050.json",
+                "sha256": "08f33e1fa1635653c8968d8c57cfb0697afb61c3f4d56ee9b5dccb464bb6222b"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.7844444444444445,
+              "continuous_mean": 0.28444444444444444,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 50,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.4,
+                  "weight": 0.2,
+                  "contribution": 0.08000000000000002
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 80,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.3,
+                  "weight": 0.2,
+                  "contribution": 0.06
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 10,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 16,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 18,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 47,
+                "edges": 97,
+                "vertices": 50,
+                "is_valid": true,
+                "volume_mm3": 54010.08803943693,
+                "bbox_mm": {
+                  "xmin": -40.0000001,
+                  "xmax": 40.0000001,
+                  "ymin": -40.0000001,
+                  "ymax": 40.0000001,
+                  "zmin": -2.6924671426627102e-17,
+                  "zmax": 18.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 8.152529485391934e-16,
+                "volume_abs_mm3": 6.912159733474255e-10,
+                "volume_rel": 1.2797904955139407e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 54010.08803943624
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 30,
+              "outer_d": 30,
+              "screw_d": 2,
+              "screw_len": 4,
+              "width": 4,
+              "second_screw": 1
+            }
+          },
+          {
+            "rank": 2,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-020",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 6,
+                "key": "bore_d",
+                "value": 20,
+                "row": [
+                  20,
+                  32,
+                  6,
+                  8,
+                  14
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+              "sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 20,
+                "outer_d": 32,
+                "screw_d": 6,
+                "screw_len": 8,
+                "second_screw": 0,
+                "width": 14
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-020.json",
+                "sha256": "b42b97deac8bbf0cbcdaf59f0e7f14f8f900ffc5813f7ea61dfd373d8b7ea366"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 1.1993333333333334,
+              "continuous_mean": 0.6993333333333334,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 20,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.8,
+                  "weight": 0.2,
+                  "contribution": 0.16000000000000003
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 32,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.78,
+                  "weight": 0.2,
+                  "contribution": 0.15600000000000003
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.6666666666666666,
+                  "weight": 0.2,
+                  "contribution": 0.13333333333333333
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.75,
+                  "weight": 0.2,
+                  "contribution": 0.15000000000000002
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 14,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.5,
+                  "weight": 0.2,
+                  "contribution": 0.1
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 29,
+                "edges": 59,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 6712.63193643346,
+                "bbox_mm": {
+                  "xmin": -16.0000001,
+                  "xmax": 16.0000001,
+                  "ymin": -16.0000001,
+                  "ymax": 16.0000001,
+                  "zmin": 0.0,
+                  "zmax": 14.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 0.013225565525317506,
+                "volume_rel": 1.9702464834859546e-06,
+                "readback_solids": 1,
+                "readback_volume_mm3": 6712.645161998986
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 60,
+              "outer_d": 78,
+              "screw_d": 6,
+              "screw_len": 12,
+              "width": 8,
+              "second_screw": 1
+            }
+          },
+          {
+            "rank": 3,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-006",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 1,
+                "key": "bore_d",
+                "value": 6,
+                "row": [
+                  6,
+                  12,
+                  4,
+                  5,
+                  8
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+              "sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 6,
+                "outer_d": 12,
+                "screw_d": 4,
+                "screw_len": 5,
+                "second_screw": 0,
+                "width": 8
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-006.json",
+                "sha256": "3c3e43e2755a2c18f9242b41ee24a3290b0ab3d69138df0c6f99893dc31344e9"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 1.433611111111111,
+              "continuous_mean": 0.9336111111111111,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.9866666666666667,
+                  "weight": 0.2,
+                  "contribution": 0.19733333333333336
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 12,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.98,
+                  "weight": 0.2,
+                  "contribution": 0.196
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 4,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.8888888888888888,
+                  "weight": 0.2,
+                  "contribution": 0.17777777777777778
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 5,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.9375,
+                  "weight": 0.2,
+                  "contribution": 0.1875
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.875,
+                  "weight": 0.2,
+                  "contribution": 0.17500000000000002
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 27,
+                "edges": 57,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 642.7518164460399,
+                "bbox_mm": {
+                  "xmin": -6.0000001,
+                  "xmax": 6.0000001,
+                  "ymin": -6.0000001,
+                  "ymax": 6.0000001,
+                  "zmin": 0.0,
+                  "zmax": 8.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 2.5124791136477143e-11,
+                "volume_rel": 3.908941288629626e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 642.751816446065
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 74,
+              "outer_d": 98,
+              "screw_d": 8,
+              "screw_len": 15,
+              "width": 14,
+              "second_screw": 1
+            }
+          }
+        ],
+        "notes": [
+          "distance is normalized parameter proximity only; it is not CAD geometry equivalence, manufacturability, strength or generation-quality evidence",
+          "split_status=provisional_small_n: candidates come from a provisional small-n grouping, not a benchmark split and not an accuracy estimate",
+          "only manifest v0 structured fields were read; STEP, render images and third-party drawings were not read",
+          "candidate_roles were fixed when the index was built: retrieval_source; rows with other roles are excluded, not scored"
+        ],
+        "data_boundary": {
+          "reads_manifest": true,
+          "reads_step": false,
+          "reads_render": false,
+          "reads_ir_files": false,
+          "reads_external_drawings": false
+        }
+      },
+      "determinism": {
+        "run1_sha256": "4f05ecce10ecceaa3be90bb1cb17b6441b3cc7b94dd43f69ebaecc7e2b68ef96",
+        "run2_sha256": "4f05ecce10ecceaa3be90bb1cb17b6441b3cc7b94dd43f69ebaecc7e2b68ef96",
+        "cross_process_deterministic": true
+      }
+    }
+  ],
+  "diagnostic_queries": [
+    {
+      "query_id": "diagnostic-source-bore-020",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+      "split_role": "retrieval_source",
+      "query_status": "catalog_validated",
+      "result": {
+        "retrieval_version": "ret-002.retrieval.v1",
+        "policy_id": "RET-002.parametric_distance.v1",
+        "task": "RET-002",
+        "family_id": "set_screw_shaft_collar",
+        "manifest": {
+          "manifest_version": "retrieval-manifest.v0",
+          "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+          "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+          "records": 15,
+          "candidate_records": 3,
+          "role_counts": {
+            "development": 9,
+            "retrieval_source": 3,
+            "heldout_evaluation": 3
+          }
+        },
+        "candidate_roles": [
+          "retrieval_source"
+        ],
+        "split_status": "provisional_small_n",
+        "top_k": 3,
+        "candidates_considered": 3,
+        "query": {
+          "input_form": "flat_parameters",
+          "parameters": {
+            "bore_d": 20,
+            "outer_d": 32,
+            "screw_d": 6,
+            "screw_len": 8,
+            "second_screw": 0,
+            "width": 14
+          },
+          "units": {
+            "length": "mm",
+            "second_screw": "1 (dimensionless)"
+          },
+          "query_status": "catalog_validated",
+          "schema_check": {
+            "ok": true,
+            "schema_version": "set_screw_shaft_collar.v0",
+            "errors": [],
+            "provenance": {
+              "bore_d": "user_explicit",
+              "outer_d": "user_explicit",
+              "width": "user_explicit",
+              "screw_d": "user_explicit",
+              "screw_len": "user_explicit",
+              "second_screw": "user_explicit"
+            }
+          }
+        },
+        "results": [
+          {
+            "rank": 1,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": true,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-020",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 6,
+                "key": "bore_d",
+                "value": 20,
+                "row": [
+                  20,
+                  32,
+                  6,
+                  8,
+                  14
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+              "sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 20,
+                "outer_d": 32,
+                "screw_d": 6,
+                "screw_len": 8,
+                "second_screw": 0,
+                "width": 14
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-020.json",
+                "sha256": "b42b97deac8bbf0cbcdaf59f0e7f14f8f900ffc5813f7ea61dfd373d8b7ea366"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.0,
+              "continuous_mean": 0.0,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 20,
+                  "candidate": 20,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "outer_d": {
+                  "query": 32,
+                  "candidate": 32,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                },
+                "width": {
+                  "query": 14,
+                  "candidate": 14,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.0,
+                  "weight": 0.2,
+                  "contribution": 0.0
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 29,
+                "edges": 59,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 6712.63193643346,
+                "bbox_mm": {
+                  "xmin": -16.0000001,
+                  "xmax": 16.0000001,
+                  "ymin": -16.0000001,
+                  "ymax": 16.0000001,
+                  "zmin": 0.0,
+                  "zmax": 14.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 0.013225565525317506,
+                "volume_rel": 1.9702464834859546e-06,
+                "readback_solids": 1,
+                "readback_volume_mm3": 6712.645161998986
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ]
+          },
+          {
+            "rank": 2,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-006",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 1,
+                "key": "bore_d",
+                "value": 6,
+                "row": [
+                  6,
+                  12,
+                  4,
+                  5,
+                  8
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+              "sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 6,
+                "outer_d": 12,
+                "screw_d": 4,
+                "screw_len": 5,
+                "second_screw": 0,
+                "width": 8
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-006.json",
+                "sha256": "3c3e43e2755a2c18f9242b41ee24a3290b0ab3d69138df0c6f99893dc31344e9"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.23427777777777775,
+              "continuous_mean": 0.23427777777777775,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 20,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.18666666666666668,
+                  "weight": 0.2,
+                  "contribution": 0.037333333333333336
+                },
+                "outer_d": {
+                  "query": 32,
+                  "candidate": 12,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.2,
+                  "weight": 0.2,
+                  "contribution": 0.04000000000000001
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 4,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 5,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.1875,
+                  "weight": 0.2,
+                  "contribution": 0.037500000000000006
+                },
+                "width": {
+                  "query": 14,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.375,
+                  "weight": 0.2,
+                  "contribution": 0.07500000000000001
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 27,
+                "edges": 57,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 642.7518164460399,
+                "bbox_mm": {
+                  "xmin": -6.0000001,
+                  "xmax": 6.0000001,
+                  "ymin": -6.0000001,
+                  "ymax": 6.0000001,
+                  "zmin": 0.0,
+                  "zmax": 8.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 2.5124791136477143e-11,
+                "volume_rel": 3.908941288629626e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 642.751816446065
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ]
+          },
+          {
+            "rank": 3,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-050",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 11,
+                "key": "bore_d",
+                "value": 50,
+                "row": [
+                  50,
+                  80,
+                  10,
+                  16,
+                  18
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+              "sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 50,
+                "outer_d": 80,
+                "screw_d": 10,
+                "screw_len": 16,
+                "second_screw": 0,
+                "width": 18
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-050.json",
+                "sha256": "08f33e1fa1635653c8968d8c57cfb0697afb61c3f4d56ee9b5dccb464bb6222b"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.4148888888888889,
+              "continuous_mean": 0.4148888888888889,
+              "discrete_term": 0.0,
+              "second_screw": {
+                "query": 0,
+                "candidate": 0,
+                "match": true,
+                "weight": 0.5,
+                "contribution": 0.0
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 20,
+                  "candidate": 50,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.4,
+                  "weight": 0.2,
+                  "contribution": 0.08000000000000002
+                },
+                "outer_d": {
+                  "query": 32,
+                  "candidate": 80,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.48,
+                  "weight": 0.2,
+                  "contribution": 0.096
+                },
+                "screw_d": {
+                  "query": 6,
+                  "candidate": 10,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.4444444444444444,
+                  "weight": 0.2,
+                  "contribution": 0.08888888888888889
+                },
+                "screw_len": {
+                  "query": 8,
+                  "candidate": 16,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.5,
+                  "weight": 0.2,
+                  "contribution": 0.1
+                },
+                "width": {
+                  "query": 14,
+                  "candidate": 18,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 47,
+                "edges": 97,
+                "vertices": 50,
+                "is_valid": true,
+                "volume_mm3": 54010.08803943693,
+                "bbox_mm": {
+                  "xmin": -40.0000001,
+                  "xmax": 40.0000001,
+                  "ymin": -40.0000001,
+                  "ymax": 40.0000001,
+                  "zmin": -2.6924671426627102e-17,
+                  "zmax": 18.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 8.152529485391934e-16,
+                "volume_abs_mm3": 6.912159733474255e-10,
+                "volume_rel": 1.2797904955139407e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 54010.08803943624
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ]
+          }
+        ],
+        "notes": [
+          "distance is normalized parameter proximity only; it is not CAD geometry equivalence, manufacturability, strength or generation-quality evidence",
+          "split_status=provisional_small_n: candidates come from a provisional small-n grouping, not a benchmark split and not an accuracy estimate",
+          "only manifest v0 structured fields were read; STEP, render images and third-party drawings were not read",
+          "candidate_roles were fixed when the index was built: retrieval_source; rows with other roles are excluded, not scored"
+        ],
+        "data_boundary": {
+          "reads_manifest": true,
+          "reads_step": false,
+          "reads_render": false,
+          "reads_ir_files": false,
+          "reads_external_drawings": false
+        }
+      },
+      "determinism": {
+        "run1_sha256": "c31eb9ba7c7074f024fac39f1657fada6947848063d21d42e906bbd3498b50fa",
+        "run2_sha256": "c31eb9ba7c7074f024fac39f1657fada6947848063d21d42e906bbd3498b50fa",
+        "cross_process_deterministic": true
+      }
+    },
+    {
+      "query_id": "diagnostic-heldout-bore-080-boundary",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "split_role": "heldout_evaluation",
+      "query_status": "catalog_validated",
+      "result": {
+        "retrieval_version": "ret-002.retrieval.v1",
+        "policy_id": "RET-002.parametric_distance.v1",
+        "task": "RET-002",
+        "family_id": "set_screw_shaft_collar",
+        "manifest": {
+          "manifest_version": "retrieval-manifest.v0",
+          "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+          "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297",
+          "records": 15,
+          "candidate_records": 3,
+          "role_counts": {
+            "development": 9,
+            "retrieval_source": 3,
+            "heldout_evaluation": 3
+          }
+        },
+        "candidate_roles": [
+          "retrieval_source"
+        ],
+        "split_status": "provisional_small_n",
+        "top_k": 3,
+        "candidates_considered": 3,
+        "query": {
+          "input_form": "flat_parameters",
+          "parameters": {
+            "bore_d": 80,
+            "outer_d": 110,
+            "screw_d": 12,
+            "screw_len": 20,
+            "second_screw": 1,
+            "width": 22
+          },
+          "units": {
+            "length": "mm",
+            "second_screw": "1 (dimensionless)"
+          },
+          "query_status": "catalog_validated",
+          "schema_check": {
+            "ok": true,
+            "schema_version": "set_screw_shaft_collar.v0",
+            "errors": [],
+            "provenance": {
+              "bore_d": "user_explicit",
+              "outer_d": "user_explicit",
+              "width": "user_explicit",
+              "screw_d": "user_explicit",
+              "screw_len": "user_explicit",
+              "second_screw": "user_explicit"
+            }
+          }
+        },
+        "results": [
+          {
+            "rank": 1,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-050",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-050",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 11,
+                "key": "bore_d",
+                "value": 50,
+                "row": [
+                  50,
+                  80,
+                  10,
+                  16,
+                  18
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-050.json",
+              "sha256": "04e73a3bd19288ff08bb9bd73e1bf634e8954022aed648ef08fb41e8f6c92b86"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 50,
+                "outer_d": 80,
+                "screw_d": 10,
+                "screw_len": 16,
+                "second_screw": 0,
+                "width": 18
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=50"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-050.json",
+                "sha256": "08f33e1fa1635653c8968d8c57cfb0697afb61c3f4d56ee9b5dccb464bb6222b"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 0.7844444444444445,
+              "continuous_mean": 0.28444444444444444,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 50,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.4,
+                  "weight": 0.2,
+                  "contribution": 0.08000000000000002
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 80,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.3,
+                  "weight": 0.2,
+                  "contribution": 0.06
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 10,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.2222222222222222,
+                  "weight": 0.2,
+                  "contribution": 0.044444444444444446
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 16,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 18,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.25,
+                  "weight": 0.2,
+                  "contribution": 0.05
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 47,
+                "edges": 97,
+                "vertices": 50,
+                "is_valid": true,
+                "volume_mm3": 54010.08803943693,
+                "bbox_mm": {
+                  "xmin": -40.0000001,
+                  "xmax": 40.0000001,
+                  "ymin": -40.0000001,
+                  "ymax": 40.0000001,
+                  "zmin": -2.6924671426627102e-17,
+                  "zmax": 18.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 8.152529485391934e-16,
+                "volume_abs_mm3": 6.912159733474255e-10,
+                "volume_rel": 1.2797904955139407e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 54010.08803943624
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 30,
+              "outer_d": 30,
+              "screw_d": 2,
+              "screw_len": 4,
+              "width": 4,
+              "second_screw": 1
+            }
+          },
+          {
+            "rank": 2,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-020",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-020",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 6,
+                "key": "bore_d",
+                "value": 20,
+                "row": [
+                  20,
+                  32,
+                  6,
+                  8,
+                  14
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-020.json",
+              "sha256": "caddcb126d37881de799a962214abc40ed5d753edc94a4dbddfec3b2b42da772"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 20,
+                "outer_d": 32,
+                "screw_d": 6,
+                "screw_len": 8,
+                "second_screw": 0,
+                "width": 14
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=20"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-020.json",
+                "sha256": "b42b97deac8bbf0cbcdaf59f0e7f14f8f900ffc5813f7ea61dfd373d8b7ea366"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 1.1993333333333334,
+              "continuous_mean": 0.6993333333333334,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 20,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.8,
+                  "weight": 0.2,
+                  "contribution": 0.16000000000000003
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 32,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.78,
+                  "weight": 0.2,
+                  "contribution": 0.15600000000000003
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.6666666666666666,
+                  "weight": 0.2,
+                  "contribution": 0.13333333333333333
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.75,
+                  "weight": 0.2,
+                  "contribution": 0.15000000000000002
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 14,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.5,
+                  "weight": 0.2,
+                  "contribution": 0.1
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 29,
+                "edges": 59,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 6712.63193643346,
+                "bbox_mm": {
+                  "xmin": -16.0000001,
+                  "xmax": 16.0000001,
+                  "ymin": -16.0000001,
+                  "ymax": 16.0000001,
+                  "zmin": 0.0,
+                  "zmax": 14.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 0.013225565525317506,
+                "volume_rel": 1.9702464834859546e-06,
+                "readback_solids": 1,
+                "readback_volume_mm3": 6712.645161998986
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 60,
+              "outer_d": 78,
+              "screw_d": 6,
+              "screw_len": 12,
+              "width": 8,
+              "second_screw": 1
+            }
+          },
+          {
+            "rank": 3,
+            "sample_id": "set_screw_shaft_collar/catalog-bore-006",
+            "family_id": "set_screw_shaft_collar",
+            "sample_kind": "catalog_row",
+            "same_catalog_row_as_query": false,
+            "split": {
+              "role": "retrieval_source",
+              "group_id": "catalog-row-bore-006",
+              "split_status": "provisional_small_n",
+              "split_rule": "catalog-row-grouped: rows ordered by bore_d ascending; index%5==1 -> retrieval_source, index%5==4 -> heldout_evaluation, otherwise development; one role per group; provisional_small_n and not a frozen benchmark split (needs RET-003/Codex review)"
+            },
+            "source": {
+              "repository": "https://github.com/BenchCAD-org/benchcad-2",
+              "source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+              "family_path": "designs/set_screw_shaft_collar",
+              "family_status": "MERGED",
+              "release_qualified": false,
+              "snapshot_status": "reproducibility_partial",
+              "license_scope": "source/designs MIT; generated STEP/render scope uncertain",
+              "catalog_row": {
+                "index": 1,
+                "key": "bore_d",
+                "value": 6,
+                "row": [
+                  6,
+                  12,
+                  4,
+                  5,
+                  8
+                ]
+              }
+            },
+            "ir": {
+              "ir_version": "typed-cad-ir.v0",
+              "ir_revision": "0.2.0",
+              "status": "accepted",
+              "path": "agent-work/data/RET-001-retrieval-manifest/ir/catalog-bore-006.json",
+              "sha256": "cda8a4b83ba2afd1ee1363fc5c9411ac24ef40ecdfc5acad39555e0f670bb87b"
+            },
+            "parameters": {
+              "normalized": {
+                "bore_d": 6,
+                "outer_d": 12,
+                "screw_d": 4,
+                "screw_len": 5,
+                "second_screw": 0,
+                "width": 8
+              },
+              "units": {
+                "length": "mm",
+                "second_screw": "1 (dimensionless)"
+              },
+              "provenance": {
+                "bore_d": {
+                  "source": "user_explicit",
+                  "source_ref": "CAD-003.field:bore_d"
+                },
+                "outer_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_d": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "screw_len": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                },
+                "second_screw": {
+                  "source": "rule_derived",
+                  "source_ref": "CAD-003.rule:second_screw_threshold"
+                },
+                "width": {
+                  "source": "catalog_derived",
+                  "source_ref": "GN705.catalog_row:bore_d=6"
+                }
+              },
+              "input_payload": {
+                "path": "agent-work/data/RET-001-retrieval-manifest/inputs/catalog-bore-006.json",
+                "sha256": "3c3e43e2755a2c18f9242b41ee24a3290b0ab3d69138df0c6f99893dc31344e9"
+              }
+            },
+            "distance": {
+              "policy_id": "RET-002.parametric_distance.v1",
+              "total": 1.433611111111111,
+              "continuous_mean": 0.9336111111111111,
+              "discrete_term": 0.5,
+              "second_screw": {
+                "query": 1,
+                "candidate": 0,
+                "match": false,
+                "weight": 0.5,
+                "contribution": 0.5
+              },
+              "fields": {
+                "bore_d": {
+                  "query": 80,
+                  "candidate": 6,
+                  "catalog_range_mm": [
+                    5.0,
+                    80.0
+                  ],
+                  "normalized_abs_diff": 0.9866666666666667,
+                  "weight": 0.2,
+                  "contribution": 0.19733333333333336
+                },
+                "outer_d": {
+                  "query": 110,
+                  "candidate": 12,
+                  "catalog_range_mm": [
+                    10.0,
+                    110.0
+                  ],
+                  "normalized_abs_diff": 0.98,
+                  "weight": 0.2,
+                  "contribution": 0.196
+                },
+                "screw_d": {
+                  "query": 12,
+                  "candidate": 4,
+                  "catalog_range_mm": [
+                    3.0,
+                    12.0
+                  ],
+                  "normalized_abs_diff": 0.8888888888888888,
+                  "weight": 0.2,
+                  "contribution": 0.17777777777777778
+                },
+                "screw_len": {
+                  "query": 20,
+                  "candidate": 5,
+                  "catalog_range_mm": [
+                    4.0,
+                    20.0
+                  ],
+                  "normalized_abs_diff": 0.9375,
+                  "weight": 0.2,
+                  "contribution": 0.1875
+                },
+                "width": {
+                  "query": 22,
+                  "candidate": 8,
+                  "catalog_range_mm": [
+                    6.0,
+                    22.0
+                  ],
+                  "normalized_abs_diff": 0.875,
+                  "weight": 0.2,
+                  "contribution": 0.17500000000000002
+                }
+              }
+            },
+            "validation_summary": {
+              "schema": "pass",
+              "family_rules": "pass",
+              "cad_compile": "pass",
+              "completed_stages": [
+                "build",
+                "post_geometry",
+                "step_export"
+              ],
+              "final_stage": "step_readback",
+              "policy_id": "CAD-006.geometry-comparison.v1",
+              "native_geometry": {
+                "solids": 1,
+                "shells": 1,
+                "faces": 27,
+                "edges": 57,
+                "vertices": 30,
+                "is_valid": true,
+                "volume_mm3": 642.7518164460399,
+                "bbox_mm": {
+                  "xmin": -6.0000001,
+                  "xmax": 6.0000001,
+                  "ymin": -6.0000001,
+                  "ymax": 6.0000001,
+                  "zmin": 0.0,
+                  "zmax": 8.0
+                }
+              },
+              "native_repeatability": {
+                "pass": true,
+                "exact_equal": true,
+                "policy_id": "CAD-006.geometry-comparison.v1"
+              },
+              "step_readback": {
+                "pass": true,
+                "policy_id": "CAD-006.geometry-comparison.v1",
+                "hard_mismatches": [],
+                "bbox_pass": true,
+                "bbox_max_abs_mm": 3.4179043288309616e-17,
+                "volume_abs_mm3": 2.5124791136477143e-11,
+                "volume_rel": 3.908941288629626e-14,
+                "readback_solids": 1,
+                "readback_volume_mm3": 642.751816446065
+              }
+            },
+            "limitations": [
+              "single frozen family: set_screw_shaft_collar only",
+              "only the 15 frozen GN 705 catalog rows; no synthetic or random parameter expansion",
+              "source snapshot status is reproducibility_partial (api/raw reconstruction, not a git archive)",
+              "generated STEP/render license scope uncertain; project-internal use only, not for redistribution",
+              "STEP sha256 is an artifact identifier only, not evidence of geometry equality",
+              "geometry verdict follows CAD-006.geometry-comparison.v1 in one pinned environment; cross-platform and cross-process unverified",
+              "split_status=provisional_small_n: 15 groups are too few for a statistical benchmark split"
+            ],
+            "absolute_error_vs_query_truth": {
+              "bore_d": 74,
+              "outer_d": 98,
+              "screw_d": 8,
+              "screw_len": 15,
+              "width": 14,
+              "second_screw": 1
+            }
+          }
+        ],
+        "notes": [
+          "distance is normalized parameter proximity only; it is not CAD geometry equivalence, manufacturability, strength or generation-quality evidence",
+          "split_status=provisional_small_n: candidates come from a provisional small-n grouping, not a benchmark split and not an accuracy estimate",
+          "only manifest v0 structured fields were read; STEP, render images and third-party drawings were not read",
+          "candidate_roles were fixed when the index was built: retrieval_source; rows with other roles are excluded, not scored"
+        ],
+        "data_boundary": {
+          "reads_manifest": true,
+          "reads_step": false,
+          "reads_render": false,
+          "reads_ir_files": false,
+          "reads_external_drawings": false
+        }
+      },
+      "determinism": {
+        "run1_sha256": "4f05ecce10ecceaa3be90bb1cb17b6441b3cc7b94dd43f69ebaecc7e2b68ef96",
+        "run2_sha256": "4f05ecce10ecceaa3be90bb1cb17b6441b3cc7b94dd43f69ebaecc7e2b68ef96",
+        "cross_process_deterministic": true
+      }
+    }
+  ],
+  "failure_diagnostic": {
+    "query_id": "diagnostic-missing-field-from-bore-020",
+    "base_sample_id": "set_screw_shaft_collar/catalog-bore-020",
+    "transformation": "remove normalized.outer_d at runtime",
+    "expected_error": "RETRIEVAL_MISSING_FIELD",
+    "actual_error": "RETRIEVAL_MISSING_FIELD",
+    "error_details": {
+      "ok": false,
+      "error": {
+        "code": "RETRIEVAL_MISSING_FIELD",
+        "stage": "query",
+        "fields": [
+          "outer_d"
+        ],
+        "message": "flat query must provide all six frozen fields; missing values are not defaulted",
+        "details": {
+          "missing": [
+            "outer_d"
+          ],
+          "hint": "use a CAD-003 envelope to let the Schema derive catalog fields from bore_d"
+        }
+      }
+    },
+    "code": "RETRIEVAL_MISSING_FIELD",
+    "stage": "query",
+    "fields": [
+      "outer_d"
+    ]
+  },
+  "notes": [
+    "This is C1 retrieval-level diagnostic only.",
+    "Distance represents parameter proximity, not geometric equivalence.",
+    "split_status=provisional_small_n is not a frozen benchmark.",
+    "Endpoint-level metrics (Schema/CAD/STEP) are not_measured until APP-001.",
+    "Each legal query executed with cross-process determinism check.",
+    "Failure diagnostic validates nested error.error.{code,stage,fields}."
+  ]
+}

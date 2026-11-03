@@ -114,3 +114,30 @@ RET-003 里程碑 1 文档质量和交接证据通过，但任务保持 `review`
 - 文档状态：checkpoint/handoff 顶部已增加当前状态说明；旧环境门记录保留为历史；SUMMARY 已标为过期历史记录；PROJECT_STATUS 和 WORKLOG 同步更新。
 - 下一步：Codex 在固定 macOS arm64 / Python 3.11.18 环境运行正式 C1，检查结果与报告，再执行必要上游回归并独立审查。
 
+# 2026-11-04 正式 C1 中枢复核（检索级诊断验收通过）
+
+## 执行环境与回归
+
+- 固定环境核验：Python 3.11.18、Darwin arm64、CadQuery 2.3.0、OCP 7.9.3.0、NumPy 1.26.4、jsonschema 4.26.0。
+- `work/benchcad-output/venv/bin/python agent-work/data/RET-001-retrieval-manifest/generator/verify_manifest.py --tracked-only`：15 条记录、660 项检查、0 失败；manifest SHA-256 为 `b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297`。
+- `PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval -v`：30 项通过。
+- `PYTHONPATH=src work/benchcad-output/venv/bin/python agent-work/integration/RET-002-retrieval-baseline/run_smoke.py`：正常/边界案例通过、13/13 失败案例按预期拒绝，确定性检查通过；报告中共 70 项检查 0 失败。
+
+## 正式 C1 执行和结果
+
+- 使用固定环境运行 `PYTHONPATH=src work/benchcad-output/venv/bin/python agent-work/integration/RET-003-retrieval-evaluation/run_c1_diagnostic.py`，成功通过环境门和 manifest hash 校验。
+- 运行 3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败诊断。5 个合法查询各自跨独立进程重跑，canonical JSON SHA-256 全部一致。
+- 失败诊断确认为 `RETRIEVAL_MISSING_FIELD`，stage=`query`，fields=`["outer_d"]`。
+- 主查询 Top-1：bore-012 → bore-020（0.066333）；bore-035 → bore-020（0.207444，并列距离由 sample_id 稳定排序）；bore-080 → bore-050（0.784444）。所有返回候选均为 `retrieval_source`。
+- `generate_report.py` 从正式 JSON 生成报告；`cross_check.py` 的摘要、逐例章节、候选数量（15）、失败字段和确定性检查均通过，stage/fields 篡改负例自测通过。
+
+## 审查结论与限制
+
+正式 C1 的运行和机器结果/报告一致性检查通过。中枢已逐例核对完整 JSON/报告、样本角色隔离、失败诊断和指标解释，未发现阻塞性问题，接受 C1 检索级诊断里程碑。报告生成器的标题与日期元数据已同步修正，结果报告已重新生成。RET-003 整体仍保持 `in_progress`，端到端下游收益待 APP-001 和新的评测放行。
+
+结果只能作为单族小样本检索级逐例诊断：15 条 manifest、3 条候选、split=`provisional_small_n`，不构成正式 benchmark；距离是参数近邻度，不代表几何等价。没有运行 C0、C2O、公平 C2，没有调权重；端到端字段、Schema、CAD、STEP 指标仍 `not_measured`。跨平台表现也未验证。
+
+下一步：完成最终逐例/边界审查，之后再决定是否将 RET-003 C1 里程碑标记为验收完成；C0/C1 端到端比较需等待 APP-001。
+
+---
+
