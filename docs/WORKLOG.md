@@ -487,3 +487,10 @@ next=等待中枢书面审阅 C2 先验、公平性、主查询集合和敏感�
 决定=RET-003 保持 review；要求把现有 C2 明确改成目录规则 oracle/上界诊断，或定义不读取 held-out/完整目录真值的公平 C2；同时冻结三条件相同输入契约。里程碑 2 暂不放行。
 记录=`agent-work/reviews/RET-003-codex-review.md`。
 下一步=为原 RET-003 Agent 生成协议修正 Prompt；修正后重新审查，未获放行前不得创建或运行正式三条件对照。
+
+[2026-11-03] agent=Codex task=RET-003-protocol-fix status=planned
+动作=根据 `agent-work/reviews/RET-003-codex-review.md` 生成 RET-003 里程碑 1 协议修正 Prompt。
+范围=修正 C2 的身份和公平性：推荐将完整 CAD-003 目录规则降级为 `catalog_rule_oracle`/上界诊断，若无法定义不访问 held-out 真值的公平 C2，则取消公平 C2 并只保留 C1 检索级诊断；同时冻结 C0/C1/C2 的共同输入 payload 与额外上下文边界。
+交付=`docs/coordination/prompts/RET-003-protocol-fix-agent.md`。
+边界=只允许修改 RET-003 协议、查询集说明、checkpoint/handoff 和 WORKLOG；不得运行里程碑 2、调 RET-002 权重、修改上游冻结产物或正式状态文件；任务修正后保持 review，等待中枢复核。
+下一步=项目负责人将修正 Prompt 发给原 RET-003 Agent；修正完成后由 Codex 中枢再次审查并决定是否放行里程碑 2。
