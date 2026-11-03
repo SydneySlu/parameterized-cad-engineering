@@ -514,3 +514,11 @@ result=接受 C2O catalog_rule_oracle_v0 仅作隔离 oracle/上界诊断，不�
 limits=split_status=provisional_small_n；单族 15 行、3 个 retrieval_source 候选；不得声称统计显著、泛化或跨族能力；DATA/许可证/几何限制维持
 next=按已审协议准备并执行 C1 检索级诊断；APP-001 完成后再申请端到端比较审查
 record=agent-work/reviews/RET-003-codex-review.md
+
+[2026-11-03] agent=Codex task=RET-003-C1 status=planned
+动作=统一 RET-003 协议/ checkpoint/ handoff 中过期的等待放行表述，并修正 RET-002 README/checkpoint/handoff 与正式审查记录不一致的旧状态；生成给 CC 的 C1 检索级诊断执行 Prompt
+范围=只改集成与交接文档、项目状态更新时间和 docs/coordination/prompts/RET-003-C1-diagnostic-agent.md；未改源码、测试、manifest、检索策略或 query set
+verified=git diff --check；query-set-draft.json JSON 解析通过；确认协议、状态页、checkpoint/handoff 一致地只允许 C1 检索级诊断，C0/C2O/公平 C2、敏感性分析和端到端收益仍未获准
+result=执行方定为 CC（脚本/集成结果实现）；Codex 中枢负责后续独立复核。Prompt 与状态整理提交 c4e2576
+limits=单族 15 条、3 个 retrieval_source 候选、split_status=provisional_small_n；APP-001 前端到端指标 not_measured；历史验证和许可/几何限制继续有效
+next=项目负责人 push 后，将 docs/coordination/prompts/RET-003-C1-diagnostic-agent.md 交给 CC；执行完成保持 review，交 Codex 中枢审查
