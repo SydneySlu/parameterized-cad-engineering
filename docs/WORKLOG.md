@@ -506,3 +506,11 @@ scope=提交 C2 公平性协议修订；commit=e3f6a61
 verified=修订文档已纳入提交；查询集未修改；正式三条件对照和里程碑 2 产物均未创建
 result=等待中枢重新审查，RET-003 保持 review
 next=中枢书面确认 C2 身份、公平性和共同输入契约后再考虑后续执行 Prompt
+
+[2026-11-03] agent=Codex task=RET-003-codex-review-r2 status=in_progress
+动作=复审 C2 公平性修订提交 e3f6a61/7401a94，独立检查协议、查询清单、checkpoint/handoff 和项目状态；修正 checkpoint 对 query-set 的冲突描述
+verified=RET-002 检索测试 30/30；query-set JSON 解析通过；6 个查询引用的 manifest 存在性和 split role 一致；query-set 在 810221f..e3f6a61 无差异；git diff --check 通过
+result=接受 C2O catalog_rule_oracle_v0 仅作隔离 oracle/上界诊断，不进公平主比较、不调权重、不作 Prompt 示例；接受共同输入 payload 和条件额外上下文契约。当前仅放行 C1 检索级诊断，APP-001 前端到端指标为 not_measured；未批准敏感性调参、C2O 实际运行或正式三条件对照
+limits=split_status=provisional_small_n；单族 15 行、3 个 retrieval_source 候选；不得声称统计显著、泛化或跨族能力；DATA/许可证/几何限制维持
+next=按已审协议准备并执行 C1 检索级诊断；APP-001 完成后再申请端到端比较审查
+record=agent-work/reviews/RET-003-codex-review.md

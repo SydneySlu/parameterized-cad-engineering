@@ -5,6 +5,10 @@
 交接方：Codex / RET-003 原执行 Agent
 工作根目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
+当前状态补记（2026-11-03）：中枢已通过里程碑 1 协议，并仅放行 C1 检索级诊断；公平 C2
+仍未定义，APP-001 前端到端比较未放行。详见
+[`RET-003-codex-review.md`](../../reviews/RET-003-codex-review.md)。
+
 ## 交付内容
 
 ```text

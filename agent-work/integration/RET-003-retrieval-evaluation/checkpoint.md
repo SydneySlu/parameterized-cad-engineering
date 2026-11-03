@@ -5,13 +5,17 @@
 日期：2026-11-03  
 工作根目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
+中枢复审结论（2026-11-03）：里程碑 1 协议通过；仅放行 C1 检索级诊断。公平 C2 未定义，
+APP-001 前不得报告端到端收益。完整复审记录见
+[`RET-003-codex-review.md`](../../reviews/RET-003-codex-review.md)。
+
 ## 本 checkpoint 完成内容
 
 - 修订 `protocol-draft.md` 为 `RET-003.protocol.v0.1-draft`：将原 C2 降级为
   `C2O=catalog_rule_oracle_v0`，明确完整 `CATALOG_ROWS` 可间接包含 held-out 真值，
   不再把它当公平人工模板；补充共同输入 payload、条件额外上下文和公平性边界。
-- 新增 `query-set-draft.json`：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
-  诊断；只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
+- 沿用原有 `query-set-draft.json`：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
+  诊断；本轮未修改查询集，只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
 - 保持 `query-set-draft.json` 不变：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
   诊断仍只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
 - 追加 `docs/WORKLOG.md` 认领记录；未修改 `src/**`、`tests/**`、RET-001/RET-002
