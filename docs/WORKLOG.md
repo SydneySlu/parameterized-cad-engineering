@@ -617,3 +617,9 @@ commit=待提交本轮 C1 正式结果与状态记录
 结果=当前正式 C1 JSON、报告、脚本、checkpoint、handoff、协议、查询集和中枢审查记录均保留在正式路径；历史执行过程未删除；状态页和计划页已修正过时的“尚未 push/等待审查”表述，RET-003 C1 标记为验收完成，RET-003 整体仍 in_progress
 verified=git 工作树只剩本次归档与状态文档改动；main 与 origin/main 在整理前同步；正式 C1 结果提交 dc73e6d 已存在；归档 README 标明历史材料不可作为当前依据；未发现未记录的正式结果缺口
 next=休整后启动 APP-001。先冻结统一 LLM 输入输出契约、云端/本地基线模型、结构化样例集和失败处理边界，再生成执行 Prompt；不在 APP-001 前调 RET-002 权重或启动公平 C2
+
+[2026-11-04] agent=Codex task=RET-003-record-alignment status=review
+动作=最终清理正式 handoff/checkpoint/report 中残留的过期“待审查/正式 C1 尚未运行”状态；将被取代的 handoff/checkpoint 段落明确标记为历史；将报告顶部状态同步为 C1 验收通过、RET-003 整体 in_progress
+verified=固定环境重新运行 generate_report.py、cross_check.py（摘要、逐例章节、候选数、失败字段、确定性及 stage/fields 负例均通过）；git diff --check 通过；当前正式路径搜索确认无未标注的当前阻塞陈述
+commits=1b49e31（历史段落标记）、3369b4f（报告状态同步）；本地待 push
+next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型/输入输出/验收样例契约，再生成执行 Prompt
