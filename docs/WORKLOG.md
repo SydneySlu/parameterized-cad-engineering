@@ -500,3 +500,9 @@ scope=按 RET-003 Codex 审查修订里程碑 1 协议：原 C2 降级为 C2O ca
 verified=PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval（30/30）；python3 -m json.tool query-set-draft.json；git diff --check
 result=仅保留 C1 检索级诊断；公平 C2 尚未定义，APP-001 端到端指标仍为 not_measured；未运行正式对照、未调权重、未创建结果/报告
 next=提交修订文档后等待 Codex 中枢复审 C2O 身份、共同输入契约和信息边界
+
+[2026-11-03] agent=Codex task=RET-003 status=review
+scope=提交 C2 公平性协议修订；commit=e3f6a61
+verified=修订文档已纳入提交；查询集未修改；正式三条件对照和里程碑 2 产物均未创建
+result=等待中枢重新审查，RET-003 保持 review
+next=中枢书面确认 C2 身份、公平性和共同输入契约后再考虑后续执行 Prompt
