@@ -25,7 +25,7 @@ def generate_report(json_path: Path, output_path: Path) -> None:
     # 标题和元数据
     report.append("# RET-003 C1 检索级诊断报告")
     report.append("")
-    report.append("状态：`review`（等待 Codex 中枢独立审查）")
+    report.append("状态：C1 检索级诊断已由 Codex 中枢验收；RET-003 整体仍为 `in_progress`")
     report.append("任务：RET-003 里程碑 C1")
     report.append(f"日期：{date.today().isoformat()}")
     report.append(f"协议版本：`{data['protocol_version']}`")

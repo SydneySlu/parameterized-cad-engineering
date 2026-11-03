@@ -1,6 +1,6 @@
 # RET-003 C1 检索级诊断报告
 
-状态：`review`（等待 Codex 中枢独立审查）
+状态：C1 检索级诊断已由 Codex 中枢验收；RET-003 整体仍为 `in_progress`
 任务：RET-003 里程碑 C1
 日期：2026-11-04
 协议版本：`RET-003.protocol.v0.1-draft`
