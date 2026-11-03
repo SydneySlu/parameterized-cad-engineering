@@ -1,14 +1,14 @@
-# RET-003 handoff：里程碑 1 协议草案
+# RET-003 handoff：里程碑 1 协议修正版
 
-状态：`review`（等待 Codex 中枢独立审查；未运行正式对照）  
-任务：RET-003  
-交接方：Codex / RET-003 评测 Agent  
+状态：`review`（C2 公平性修正后等待 Codex 中枢复审；未运行正式对照）
+任务：RET-003
+交接方：Codex / RET-003 原执行 Agent
 工作根目录：`/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
 ## 交付内容
 
 ```text
-protocol-draft.md       评测协议和放行门
+protocol-draft.md       评测协议和放行门（v0.1；C2O oracle）
 query-set-draft.json    3 个主 held-out 查询 + 诊断引用
 checkpoint.md           实际复核命令、结果、限制和自检
 handoff.md              本交接说明
@@ -38,14 +38,16 @@ RET-002 replay_query.py (catalog-bore-020): catalog_validated, top1 catalog-bore
 ```text
 predecessor=RET-002（已由中枢放行至 RET-003；manifest/config hash 见 checkpoint）
 files_format=四个 RET-003 文档可解析；query-set 只引用现有 sample_id/role
-core_rerun=checkpoint.md 中的 verify_manifest、30 tests、smoke、replay 均实际通过
+core_rerun=本轮重跑 RET-002 retrieval unittest 30/30；query JSON 与 diff check 通过；上轮
+           verify_manifest/smoke/replay 均实际通过
 normal_case=source catalog-bore-020；top1 同行、distance 0、3 候选
 failure_case=缺少 outer_d 等字段；RETRIEVAL_MISSING_FIELD，结构化拒绝
 interface=manifest.parameters.normalized -> RET-002 query；输出保留 role、policy_id、hash
 limits=15 行单族、3 候选、provisional_small_n、单固定环境和许可证/几何限制均保留
 result=review
-blocking_issue=APP-001 尚未完成；C0/C2 端到端比较不能在本里程碑自行执行；等待中枢
-               决定 C2 规则先验是否公平且允许进入里程碑 2
+blocking_issue=完整 CATALOG_ROWS 包含 held-out 对应行；原 C2 已降级为 C2O
+               catalog_rule_oracle_v0，不进入公平主表；当前没有公平 C2，APP-001 尚未完成，
+               C0/C1 端到端比较不能在本里程碑自行执行
 ```
 
 续任 Agent 若收到放行，应先保持主查询和角色隔离不变，再按协议创建里程碑 2 运行文件；

@@ -494,3 +494,9 @@ next=等待中枢书面审阅 C2 先验、公平性、主查询集合和敏感�
 交付=`docs/coordination/prompts/RET-003-protocol-fix-agent.md`。
 边界=只允许修改 RET-003 协议、查询集说明、checkpoint/handoff 和 WORKLOG；不得运行里程碑 2、调 RET-002 权重、修改上游冻结产物或正式状态文件；任务修正后保持 review，等待中枢复核。
 下一步=项目负责人将修正 Prompt 发给原 RET-003 Agent；修正完成后由 Codex 中枢再次审查并决定是否放行里程碑 2。
+
+[2026-11-03] agent=Codex task=RET-003 status=review
+scope=按 RET-003 Codex 审查修订里程碑 1 协议：原 C2 降级为 C2O catalog_rule_oracle_v0，明确不进入公平主比较；新增共同输入 payload/条件额外上下文契约；更新 checkpoint 与 handoff；查询集保持不变
+verified=PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval（30/30）；python3 -m json.tool query-set-draft.json；git diff --check
+result=仅保留 C1 检索级诊断；公平 C2 尚未定义，APP-001 端到端指标仍为 not_measured；未运行正式对照、未调权重、未创建结果/报告
+next=提交修订文档后等待 Codex 中枢复审 C2O 身份、共同输入契约和信息边界

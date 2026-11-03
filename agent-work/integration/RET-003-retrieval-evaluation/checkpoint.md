@@ -7,10 +7,13 @@
 
 ## 本 checkpoint 完成内容
 
-- 新增 `protocol-draft.md`：问题、假设、角色隔离、C0 无检索、C1 RET-002 参数检索、
-  C2 人工模板/规则、指标分母、失败处理、权重边界和里程碑 2 运行门槛。
+- 修订 `protocol-draft.md` 为 `RET-003.protocol.v0.1-draft`：将原 C2 降级为
+  `C2O=catalog_rule_oracle_v0`，明确完整 `CATALOG_ROWS` 可间接包含 held-out 真值，
+  不再把它当公平人工模板；补充共同输入 payload、条件额外上下文和公平性边界。
 - 新增 `query-set-draft.json`：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
   诊断；只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
+- 保持 `query-set-draft.json` 不变：3 个 held-out 主查询、2 个接口诊断和 1 个结构化失败
+  诊断仍只引用现有 manifest `sample_id`/role，不复制参数值或扩写样本。
 - 追加 `docs/WORKLOG.md` 认领记录；未修改 `src/**`、`tests/**`、RET-001/RET-002
   冻结产物、正式状态看板或决策记录。
 - 未创建评测脚本、正式配置、结果或收益报告；没有运行未经批准的三条件正式对照。
@@ -70,12 +73,15 @@ agent-work/integration/RET-002-retrieval-baseline/replay_query.py \
 - 当前可复跑的证据只有检索级排序/距离/泄漏/确定性和结构化失败；没有 APP-001 固定
   模型、Prompt、自然语言输入集或统一下游求解器，所以端到端字段/Schema/CAD/STEP
   收益全部是 `not_measured`。
+- 完整 `CATALOG_ROWS` 包含 held-out 对应的 `bore_d=12/35/80`，所以原 C2 能间接
+  读取评测真值；修订后它只作为 C2O oracle/上界诊断。当前没有公平 C2，RET-003 仅保留
+  C1 检索级诊断，公平 C0/C1 端到端比较待 APP-001 和中枢放行。
 
 ## 未决事项和放行请求
 
-1. Codex 中枢是否接受 C2 使用现有 CAD-003 目录映射和 `second_screw_threshold` 的
-   固定规则先验，以及 C0/C2 与 C1 的公平输入契约；若不接受，应标记不可比并暂停。
-2. 是否批准仅运行 C1 的检索级诊断，还是等待 APP-001 后再进入任何对照。
+1. Codex 中枢是否接受 C2O `catalog_rule_oracle_v0` 的降级身份，以及未来公平 C2 暂
+   为空缺；C2O 不得进入公平主表、调权重或 Prompt 示例。
+2. 是否批准仅运行 C1 的检索级诊断，还是等待 APP-001 后再进入公平 C0/C1 对照。
 3. 是否接受 `{0.0, 0.5, 1.0}` 作为未来敏感性分析的预注册候选集合；当前未运行、未改
    RET-002 配置。
 4. split 仍未冻结，结果不得写成正式 benchmark 或统计泛化结论。
@@ -85,14 +91,15 @@ agent-work/integration/RET-002-retrieval-baseline/replay_query.py \
 ```text
 task=RET-003 milestone=1
 status=review
-changed=agent-work/integration/RET-003-retrieval-evaluation/protocol-draft.md,
-        query-set-draft.json, checkpoint.md, handoff.md; docs/WORKLOG.md (append-only)
-commands=verify_manifest.py --tracked-only (660/660); retrieval unittest (30/30);
-         run_smoke.py (3 normal/boundary PASS, 13/13 failure, determinism PASS);
-         replay_query.py (catalog-bore-020 canonical sha stable)
+changed=protocol-draft.md (v0.1 C2O downgrade + common input contract), checkpoint.md,
+        handoff.md; query-set-draft.json unchanged; docs/WORKLOG.md (append-only)
+commands=PYTHONPATH=src work/benchcad-output/venv/bin/python -m unittest discover -s tests/retrieval
+         (30/30); python3 -m json.tool query-set-draft.json; git diff --check
 confirmed=manifest hash/15 rows/9-3-3; candidate role boundary; normal/heldout/failed
-         query behavior; RET-002 policy and weight facts; report timestamp diffs restored
-unresolved=APP-001 absent; no endpoint-level comparison; C2 rule prior/fairness awaits
-          Codex review; split provisional; no sensitivity run
-next_agent_focus=审阅三条件公平性、主查询清单和指标分母；未书面放行前不得运行里程碑 2
+         query behavior; RET-002 policy and weight facts; query set unchanged; no timestamp
+         report noise from the test rerun
+unresolved=APP-001 absent; no endpoint-level comparison; no fair C2 defined; C2O oracle identity
+          awaits Codex review; split provisional; no sensitivity run
+next_agent_focus=复核 C2O 身份、共同输入 payload、信息边界和公平主表排除规则；未书面放行前
+                  不得运行里程碑 2
 ```
