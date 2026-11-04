@@ -646,3 +646,4 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 验证：`git rev-parse --show-toplevel` 返回目标仓库；环境变量存在性检查确认 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY`、`LLM_API_KEY` 均未设置（未读取/输出任何值）；`python3 -m json.tool agent-work/llm/APP-001-baseline-prep/acceptance-set-v0.json` 通过；Ruby `YAML.safe_load` 解析基线 YAML 并断言 pending model 字段通过；CAD-003 规则核对 5 个正常标签及 4 个缺失/冲突/越界案例通过；`git diff --check` 通过。
 - 限制：没有 API 请求、模型输出、正式 C0/C1 对照或字段/Schema/IR/CAD/几何/STEP 成绩；全部相关指标仍 `not_measured`。PyYAML 不可用，使用 Ruby Psych 的 `YAML.safe_load` 完成 YAML 语法检查。解码参数、Prompt、confidence、超时/重试及成本记录仍待负责人确认。
 - 下一步：Codex 中枢独立复核验收真值与严格 CAD-003 envelope 投影，项目负责人确认未决字段；确认之前不得冻结验收集或启动正式 APP-001。
+- 交付提交：`0bfc75b`（`docs: draft APP-001 baseline and acceptance contract [APP-001-PREP]`）。
