@@ -47,6 +47,8 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | planned | ADR-0009 与基线契约已建立；等待执行准备任务，未运行正式模型或端到端测量 |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 审查通过后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入确定性链后测 |
 
 ## 阻塞项
 
@@ -55,6 +57,6 @@
 ## 下一步
 
 1. 休整并保留当前验证基线；如近期需要跨设备协作，再执行一次 clone/pull 验证。
-2. APP-001 已确定云端 DeepSeek v4.1 Flash 1017（运行时记录 API `model`）和本地 Ollama `qwen3:8b` 基线；先冻结 LLM 输入输出契约、解码参数和小型验收集。
+2. 用户 push `443f534` 与 `48a658e` 后，启动 APP-001-PREP，冻结 LLM 输入输出契约、解码参数和小型验收集；执行 Prompt 见 `docs/coordination/prompts/APP-001-baseline-freeze-agent.md`。
 3. APP-001 完成后，再设计端到端 C0/C1 比较；公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。

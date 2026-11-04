@@ -2,6 +2,15 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### APP-001-PREP / Codex / planned
+
+- 动作：根据项目负责人确认的云端 DeepSeek v4.1 Flash 1017、本地 Ollama `qwen3:8b`（digest `500a1f067a9f`）及 MacBook Air M5 设备条件，建立 APP-001 双基线契约和准备 Agent Prompt。
+- 结果：明确 APP-001 前冻结口径、不产生成绩；模型运行后测字段/Schema/追问，接入确定性 CAD/STEP 链后测几何和回读指标；未来 Windows CPU 结果单独记录。
+- 交付：`docs/coordination/APP-001-baseline-contract.md`、`docs/coordination/prompts/APP-001-baseline-freeze-agent.md`、ADR-0009；任务看板新增 APP-001-PREP 并设置 APP-001 依赖。
+- 验证：`git diff --check` 通过；两个文档提交分别为 `443f534`、`48a658e`。
+- 限制：云端 provider 和 API 返回实际 `model` 字段仍待正式运行时记录；目前没有字段抽取、Schema、CAD、STEP 端到端实测结果。
+- 下一步：项目负责人 push 提交后，按 APP-001-PREP Prompt 完成验收集与 I/O 契约草案，中枢审查通过后再运行双模型基线。
+
 ## 2026-10-28
 
 ### INFRA-001 / Codex / done
