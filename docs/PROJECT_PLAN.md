@@ -42,7 +42,7 @@
 
 ## 阶段 4：轻量版交付
 
-- [ ] 接入云端/本地 LLM，统一结构化输出协议（APP-001）
+- [ ] 接入云端/本地 LLM，统一结构化输出协议（APP-001；基线与指标契约见 [`docs/coordination/APP-001-baseline-contract.md`](coordination/APP-001-baseline-contract.md)）
 - [ ] 实现有限验证和字段修复循环（APP-002）
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）

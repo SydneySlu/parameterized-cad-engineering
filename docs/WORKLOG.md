@@ -623,3 +623,9 @@ next=休整后启动 APP-001。先冻结统一 LLM 输入输出契约、云端/�
 verified=固定环境重新运行 generate_report.py、cross_check.py（摘要、逐例章节、候选数、失败字段、确定性及 stage/fields 负例均通过）；git diff --check 通过；当前正式路径搜索确认无未标注的当前阻塞陈述
 commits=1b49e31（历史段落标记）、3369b4f（报告状态同步）；本地待 push
 next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型/输入输出/验收样例契约，再生成执行 Prompt
+[2026-11-04] agent=Codex task=APP-001-baseline-contract status=planned
+- 动作：根据项目负责人提供的可调用模型和设备，冻结 APP-001 的云端/本地双基线边界，并明确字段、Schema、CAD、STEP 指标的测量顺序。
+- 结果：云端记录为 DeepSeek v4.1 Flash 1017，正式运行须保存 API 返回的 `model` 字段；本地为 Ollama `qwen3:8b`、digest/ID `500a1f067a9f`；首期本地设备为 MacBook Air M5 16 GB/512 GB，Windows CPU 仅作单独迁移探索。
+- 交付：`docs/coordination/APP-001-baseline-contract.md`、ADR-0009；APP-001 前只冻结口径，不生成端到端成绩。模型运行后先测字段/Schema，再将同一输出接入 Typed CAD IR、CAD 构造和 STEP 回读测量下游指标。
+- 限制：云端 provider 和 API 返回的确切 `model` 字段尚待正式运行时记录；公平 C2 尚未定义；端到端指标当前仍为 `not_measured`。
+- 下一步：冻结小型人工验收集和 Prompt/输出契约，再生成 APP-001 执行 Agent prompt。
