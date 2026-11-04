@@ -1,6 +1,6 @@
 # APP-001 Prompt / output contract v0 (draft)
 
-Status: `review`. This document is a proposal for Codex hub and project-owner review. The prompt, sample labels, decode settings, and comparison conditions are not frozen; do not run formal evaluation from this draft.
+Status: `review`. The project owner has confirmed the initial extraction, confidence, retry, and cost/latency policy. The acceptance labels and exact run batch still require Codex review/freeze; do not run formal evaluation before that gate.
 
 ## Version and run boundary
 
@@ -9,6 +9,7 @@ Status: `review`. This document is a proposal for Codex hub and project-owner re
 - Family: `set_screw_shaft_collar`; schema target: `set_screw_shaft_collar.v0`.
 - Acceptance set: `acceptance-set-v0` (draft/review only).
 - A run must record model identity, provider/runtime, prompt and input hashes, decoding settings, relevant software versions, condition, latency and available token/cost data. A changed identity or protocol starts a new run batch and requires review.
+- Record configured provider/model name separately from provider/model returned at runtime. Do not collapse aliases or silently rewrite mismatches.
 - C0/C1 can only be compared when model, Prompt, natural-language payloads, decoding parameters, output contract and post-processing are identical. C1's retrieved material is separately recorded as reference context. Fair C2 is outside this task and remains undefined.
 
 ## Common input
@@ -34,11 +35,11 @@ The model returns one JSON object and no prose or code fences. Proposed envelope
   ],
   "missing_fields": [],
   "questions": [],
-  "confidence": {"value": null, "basis": "not_calibrated"}
+  "confidence": null
 }
 ```
 
-`decision` is one of `answer`, `ask`, or `refuse`. In an `ask`/`refuse` response, `cad_parameters` may be `null`; it must never be presented as construction-ready when a required selector is absent or a conflict remains. For an `answer`, `parameters` contains only values explicitly stated by the user. The frozen Schema/rule layer may derive catalog fields and `second_screw`, recording provenance; the model must not fabricate those as explicit claims. This is intentionally conservative and should be reviewed against the desired extraction-vs-derivation responsibility before freezing.
+`decision` is one of `answer`, `ask`, or `refuse`. In an `ask`/`refuse` response, `cad_parameters` may be `null`; it must never be presented as construction-ready when a required selector is absent or a conflict remains. For an `answer`, `parameters` contains only values explicitly stated by the user. The frozen Schema/rule layer may derive catalog fields and `second_screw`, recording provenance; the model must not fabricate those as explicit claims. This extraction/derivation boundary is the project owner's initial choice.
 
 The `cad_parameters` object is a projection into the CAD-003 formal envelope. Only that object is passed to CAD-003 validation; the outer transport metadata is not part of `schema-v0.json`, whose root is strict. Do not modify the frozen Schema to accommodate this draft. Where a future adapter adds normalized or derived values, preserve both raw model output and post-processed output with distinct stage labels.
 
@@ -47,7 +48,7 @@ The `cad_parameters` object is a projection into the CAD-003 formal envelope. On
 - `evidence`: array of field-level support. `source` may be `user_input` or `retrieval_reference`; a retrieval reference is not user intent and cannot justify copying a value that conflicts with the request. Use short verbatim quotes where possible. Empty evidence means no supported claim.
 - `missing_fields`: fields needed to proceed but not present in the user request. Missing `bore_d` is critical: ask for it or refuse; never supply a default or nearest catalog value. Derived fields should not be mislabeled as missing user inputs.
 - `questions`: concrete, minimal clarification questions tied to missing or conflicting fields. A conflict between explicit values and the selected catalog/rule must be surfaced, not silently corrected.
-- `confidence`: nullable numeric value in `[0,1]`, with a brief basis. It is an uncalibrated model self-report unless a separate calibration protocol is approved; it is not an acceptance criterion and must not replace evidence or validation.
+- `confidence`: optional and nullable. It is not used in decision routing, acceptance/scoring, Schema/CAD gating, or model comparison. It is not calibrated; safest default is `null`.
 - Units: length output is normalized to mm only after preserving the original value/unit in evidence or provenance. CAD-003 accepts canonical bare numbers in mm or value/unit objects; exact-match scoring converts both reference and output to mm before comparison.
 - Unknown or unsupported requests: use `ask` or `refuse`; do not invent a catalog row or extend the family schema.
 - Never emit CAD code, Python, CadQuery, OpenSCAD, STEP, or free-form geometry instructions. This stage returns structured intent only.
@@ -80,7 +81,11 @@ Every attempted request, including failures, gets one record. Suggested stable s
 }
 ```
 
-Stages are `input`, `model_request`, `json_parse`, `contract_validation`, `schema`, `typed_cad_ir`, `cad_build`, `geometry_rules`, `step_export`, and `step_readback`. Error codes should be stable and stage-local; keep `fields` empty if no parameter field applies. Distinguish `TIMEOUT`, `RATE_LIMIT`, `PROVIDER_ERROR`, `INVALID_JSON`, `CONTRACT_ERROR`, and downstream validation/build errors. Record retries and total wall time. Do not store secrets, authorization headers, private raw prompts/responses beyond approved sample data, or provider error bodies that may contain sensitive content. Missing cost/token metadata is `null`/`not_available`, never estimated.
+At most 2 retries are allowed after the initial attempt (3 total attempts), only for transient failures: connection/read timeout, connection interruption, HTTP 429, or HTTP 5xx. Use fixed backoff of 1 second before retry 1 and 2 seconds before retry 2. Do not retry authentication/permission errors, malformed requests, context overflow, invalid JSON, contract/schema/rule rejection, or CAD failures. Record each attempt plus sample-level attempt count and total elapsed time. Exhausted transient failures remain in the evaluation denominator.
+
+Stages are `input`, `model_request`, `json_parse`, `contract_validation`, `schema`, `typed_cad_ir`, `cad_build`, `geometry_rules`, `step_export`, and `step_readback`. Error codes should be stable and stage-local; keep `fields` empty if no parameter field applies. Distinguish `TIMEOUT`, `RATE_LIMIT`, `PROVIDER_ERROR`, `INVALID_JSON`, `CONTRACT_ERROR`, and downstream validation/build errors. Do not store secrets, authorization headers, private raw prompts/responses beyond approved sample data, or provider error bodies that may contain sensitive content. Missing cloud token/cost metadata is `null`/`not_available`, never estimated.
+
+For cloud requests, record per-attempt input/output/total tokens and cost/currency when supplied. If cost is calculated, include the dated/versioned provider price source and calculation. For local Ollama runs, record per-sample inference wall time, attempt count and total elapsed time; cloud token/fee fields are not applicable. Keep configured provider/model name separate from runtime-returned provider/model fields.
 
 ## Measurement order and status
 
@@ -90,6 +95,12 @@ Stages are `input`, `model_request`, `json_parse`, `contract_validation`, `schem
 
 Current values for all language, Schema, IR, CAD, geometry, STEP, latency and cost outcomes are `not_measured`. This draft creates no C0/C1 result and makes no end-to-end claim.
 
-## Items awaiting confirmation
+## Project-owner decisions recorded
 
-The project owner and Codex hub should confirm Prompt wording, whether model output should include only user-explicit parameters (the conservative proposal above), decode settings and seed behavior, confidence handling, timeout/retry policy, cost source, acceptance labels, and whether the small set is sufficient. Until those decisions are recorded, all artifacts remain `review`.
+- Extract only user-explicit parameters; deterministic Schema/rules derive catalog and threshold fields.
+- Confidence is not used for decisions or scoring; return `null` by default.
+- Retry only transient call failures, at most 2 retries after the first request, with fixed 1s/2s backoff.
+- Record cloud token usage and traceable fees separately from local elapsed inference time.
+- Record configured provider/model name and runtime-returned provider/model fields separately.
+
+Remaining freeze checks: prompt wording, sample labels and sufficiency, provider/API runtime identity, applied decoding values and seed support, and technical review of the run logger/output adapter.

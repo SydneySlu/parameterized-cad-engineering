@@ -654,3 +654,10 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 结论：技术草案可进入项目负责人确认；模型标签与设备正确记录，API 返回 `model` 尚待真实请求核实。外层 transport envelope 与严格 CAD-003 输入 envelope 分开，模型明确字段经适配后才传 Schema；不应将 evaluator-only 标签或检索真值注入模型输入。
 - 保留：Prompt/样例仍为 draft；temperature/top-p/max_tokens/seed、重试/超时、cost 来源和显式参数与目录派生职责仍待项目负责人确认。无正式模型运行，所有性能指标继续 `not_measured`。
 - 状态：APP-001-PREP 置为 `review`，等待项目负责人确认后才可冻结；APP-001 正式实验未放行。
+
+[2026-11-05] agent=Codex task=APP-001-policy-freeze status=review
+- 动作：根据项目负责人确认的初始选择，细化 APP-001 的抽取职责、confidence 使用、瞬时故障重试、云端/本地用量记录和双模型身份字段；将解码默认值具体化。
+- 决策：模型只抽取显式参数，目录/阈值字段由确定性 Schema 规则派生；confidence 不参与路由、放行、评分或模型比较，默认 null；最多 2 次额外重试，只针对超时/连接中断、429、5xx，固定 1s/2s 退避；云端记 token 与可追溯费用，本地记每样本推理耗时；配置 provider/model 名与运行时返回 provider/model 分开保存。共同解码默认 `temperature=0`、`top_p=1`、`max_output_tokens=512`，seed 支持情况逐次记录。
+- 交付：更新 APP-001 基线契约、YAML 基线和 Prompt/输出契约；追加 ADR-0010。checkpoint/handoff 移除已解决的项目负责人决策项。
+- 边界：API 实际 provider/model、endpoint 非敏感标签、seed 支持、运行时版本和云端费率来源需在 runtime probe/正式运行记录；验收集和最终 Prompt 尚未冻结，未调用模型，所有指标仍 `not_measured`。
+- 下一步：完成验收集与输出适配器终审，探测并记录 API 返回身份（不读取或记录密钥），再审查是否放行正式 APP-001。

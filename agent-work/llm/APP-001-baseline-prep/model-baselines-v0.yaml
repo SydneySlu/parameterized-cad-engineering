@@ -8,11 +8,14 @@ freeze_gate:
 baselines:
   cloud_primary_effect:
     label: DeepSeek v4.1 Flash 1017
+    configured_provider: pending_runtime_probe
+    configured_model_name: DeepSeek v4.1 Flash 1017
     provider:
       status: pending_runtime_probe
       name: unknown
       endpoint_label: unknown_non_secret
     api_returned_identity:
+      provider: pending_runtime_probe
       model: model_id_pending_runtime_probe
       captured_at: null
       request_id: null
@@ -41,11 +44,18 @@ shared_run_fields:
   prompt_version: pending_freeze
   acceptance_set_version: acceptance-set-v0
   decoding_parameters:
-    temperature: pending_owner_confirmation
-    top_p: pending_owner_confirmation
-    max_tokens: pending_owner_confirmation
-    seed: pending_provider_capability_check
-    stop_sequences: pending_owner_confirmation
+    temperature: 0
+    top_p: 1
+    max_output_tokens: 512
+    seed: fixed_if_supported_else_record_unsupported
+    stop_sequences: none
+  retry_policy:
+    max_retries_after_initial_attempt: 2
+    max_attempts_total: 3
+    transient_only: true
+    retryable: [connection_or_read_timeout, connection_interruption, http_429, http_5xx]
+    non_retryable: [authentication_or_permission, malformed_request, context_overflow, invalid_json, contract_error, schema_or_rule_rejection, cad_or_geometry_failure]
+    backoff_seconds: [1, 2]
   versions:
     client_or_adapter: pending_runtime_record
     provider_api_or_runtime: pending_runtime_record
@@ -61,17 +71,24 @@ shared_run_fields:
     - timestamp_utc
     - query_id
     - provider
-    - api_returned_model
+    - configured_provider
+    - configured_model_name
+    - runtime_returned_provider
+    - runtime_returned_model
     - local_digest_if_applicable
     - prompt_version
     - input_payload_sha256
     - decoding_parameters
     - software_versions
     - latency_ms
-    - input_tokens
-    - output_tokens
-    - cost_amount
-    - cost_currency
+    - cloud_input_tokens_if_applicable
+    - cloud_output_tokens_if_applicable
+    - cloud_total_tokens_if_applicable
+    - cloud_cost_amount_and_currency_if_available
+    - cloud_cost_source_or_rate_card_version_if_calculated
+    - local_wall_time_ms_if_applicable
+    - attempt_count
+    - total_elapsed_ms
     - outcome_status
     - error_code
     - error_stage
@@ -83,4 +100,5 @@ security:
 notes:
   - Cloud API configuration was not available through the checked environment variables; no request was made.
   - The API-returned model identity is unknown until a permitted runtime probe is performed.
-  - Decoding values remain unset until the owner freezes them; do not silently use provider defaults.
+  - Initial decoding/retry choices are recorded in ADR-0010 and APP-001 contract; actual provider capability and applied values must be recorded per run.
+  - Never estimate a cloud fee without a dated, versioned price source; use not_available if usage or price is unavailable.
