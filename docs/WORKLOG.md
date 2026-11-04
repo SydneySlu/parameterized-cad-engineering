@@ -638,3 +638,11 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 交付：`docs/coordination/APP-001-baseline-contract.md`、ADR-0009；APP-001 前只冻结口径，不生成端到端成绩。模型运行后先测字段/Schema，再将同一输出接入 Typed CAD IR、CAD 构造和 STEP 回读测量下游指标。
 - 限制：云端 provider 和 API 返回的确切 `model` 字段尚待正式运行时记录；公平 C2 尚未定义；端到端指标当前仍为 `not_measured`。
 - 下一步：冻结小型人工验收集和 Prompt/输出契约，再生成 APP-001 执行 Agent prompt。
+
+[2026-11-04] agent=Codex task=APP-001-PREP status=review
+- 动作：在 `agent-work/llm/APP-001-baseline-prep/` 起草模型基线 YAML、9 条人工验收样本 JSON、Prompt/输出契约、checkpoint 和 handoff；仅追加本日志。
+- 结果：固定用户给定的 DeepSeek v4.1 Flash 1017 标签、Ollama `qwen3:8b` digest `500a1f067a9f` 与 MacBook Air M5 16 GB/512 GB；云端 provider 和 API 返回 `model` 未探测，写为 `model_id_pending_runtime_probe`。所有草案保持 `review`，必须中枢审查及负责人确认后才可冻结。
+- 样本覆盖：完整描述、仅 `bore_d`、单位换算、缺失关键字段、目录冲突、`second_screw` 边界及冲突、越界/不支持、检索示例不可照抄。验收真值与输入分离，检索示例显式标为不可信参考。
+- 验证：`git rev-parse --show-toplevel` 返回目标仓库；环境变量存在性检查确认 `DEEPSEEK_API_KEY`、`OPENAI_API_KEY`、`LLM_API_KEY` 均未设置（未读取/输出任何值）；`python3 -m json.tool agent-work/llm/APP-001-baseline-prep/acceptance-set-v0.json` 通过；Ruby `YAML.safe_load` 解析基线 YAML 并断言 pending model 字段通过；CAD-003 规则核对 5 个正常标签及 4 个缺失/冲突/越界案例通过；`git diff --check` 通过。
+- 限制：没有 API 请求、模型输出、正式 C0/C1 对照或字段/Schema/IR/CAD/几何/STEP 成绩；全部相关指标仍 `not_measured`。PyYAML 不可用，使用 Ruby Psych 的 `YAML.safe_load` 完成 YAML 语法检查。解码参数、Prompt、confidence、超时/重试及成本记录仍待负责人确认。
+- 下一步：Codex 中枢独立复核验收真值与严格 CAD-003 envelope 投影，项目负责人确认未决字段；确认之前不得冻结验收集或启动正式 APP-001。

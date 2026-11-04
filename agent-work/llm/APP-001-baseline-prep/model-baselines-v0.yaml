@@ -1,0 +1,86 @@
+task_id: APP-001-PREP
+status: review
+artifact_version: model-baselines-v0
+freeze_gate:
+  required: [codex_hub_review, project_owner_confirmation]
+  formal_runs_allowed_before_freeze: false
+  c2_definition: out_of_scope
+baselines:
+  cloud_primary_effect:
+    label: DeepSeek v4.1 Flash 1017
+    provider:
+      status: pending_runtime_probe
+      name: unknown
+      endpoint_label: unknown_non_secret
+    api_returned_identity:
+      model: model_id_pending_runtime_probe
+      captured_at: null
+      request_id: null
+    role: primary_effect_baseline
+    runtime: cloud_api
+  local_deployment_cost_latency:
+    label: Ollama qwen3:8b
+    provider:
+      status: fixed
+      name: Ollama
+      runtime: local
+    model_identity:
+      tag: qwen3:8b
+      digest_or_id: 500a1f067a9f
+    role: deployment_cost_latency_comparison
+    device:
+      label: MacBook Air M5
+      memory_gb: 16
+      storage_gb: 512
+      os_version: pending_runtime_record
+    future_migration_exploration:
+      label: Windows CPU device
+      status: separate_exploration_only
+      merge_with_mac_baseline: false
+shared_run_fields:
+  prompt_version: pending_freeze
+  acceptance_set_version: acceptance-set-v0
+  decoding_parameters:
+    temperature: pending_owner_confirmation
+    top_p: pending_owner_confirmation
+    max_tokens: pending_owner_confirmation
+    seed: pending_provider_capability_check
+    stop_sequences: pending_owner_confirmation
+  versions:
+    client_or_adapter: pending_runtime_record
+    provider_api_or_runtime: pending_runtime_record
+    ollama_version: pending_runtime_record
+    operating_system: pending_runtime_record
+    schema_version: set_screw_shaft_collar.v0
+    typed_cad_ir_version: pending_downstream_run
+    cad_compiler_version: pending_downstream_run
+    validator_version: CAD-006.geometry-comparison.v1
+  per_run_record_fields:
+    - run_id
+    - condition_id
+    - timestamp_utc
+    - query_id
+    - provider
+    - api_returned_model
+    - local_digest_if_applicable
+    - prompt_version
+    - input_payload_sha256
+    - decoding_parameters
+    - software_versions
+    - latency_ms
+    - input_tokens
+    - output_tokens
+    - cost_amount
+    - cost_currency
+    - outcome_status
+    - error_code
+    - error_stage
+    - error_fields
+security:
+  secrets_in_artifact: prohibited
+  record_secret_values: false
+  record_only_secret_presence: false
+notes:
+  - Cloud API configuration was not available through the checked environment variables; no request was made.
+  - The API-returned model identity is unknown until a permitted runtime probe is performed.
+  - Decoding values remain unset until the owner freezes them; do not silently use provider defaults.

@@ -1,0 +1,107 @@
+{
+  "task_id": "APP-001-PREP",
+  "version": "acceptance-set-v0",
+  "status": "review",
+  "freeze_gate": "Codex hub review and project owner confirmation required; do not use this draft for formal evaluation",
+  "family_id": "set_screw_shaft_collar",
+  "schema_version": "set_screw_shaft_collar.v0",
+  "sample_count": 9,
+  "model_visible_policy": "Only natural_language_input and explicitly listed reference_context are visible to the model. human_confirmed_parameters, expected_behavior, and unacceptable_fabrication are evaluator-only labels and must never be copied into model input.",
+  "cases": [
+    {
+      "case_id": "APP001-A01-complete-description",
+      "coverage": ["complete_explicit_description"],
+      "natural_language_input": "请按 GN 705 做一个轴孔直径 20 mm、外径 32 mm、宽度 14 mm 的紧定螺钉轴环。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 20, "outer_d": 32, "width": 14, "screw_d": 6, "screw_len": 8, "second_screw": 0},
+      "derived_values": {"screw_d": {"value": 6, "source": "catalog_derived"}, "screw_len": {"value": 8, "source": "catalog_derived"}, "second_screw": {"value": 0, "source": "rule_derived"}},
+      "expected_behavior": "Return the explicit values with evidence spans; identify directory-derived fields as inferred/derived rather than user-stated. No follow-up is needed if values agree with the bore_d=20 row.",
+      "unacceptable_fabrication": ["Claiming screw_d or screw_len was explicitly stated", "Adding material, thread pitch, chamfer, or manufacturing tolerance"]
+    },
+    {
+      "case_id": "APP001-A02-only-bore-d",
+      "coverage": ["only_bore_d", "catalog_derivation"],
+      "natural_language_input": "做一个 GN 705 轴环，轴孔 bore_d=24 mm。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 24, "outer_d": 40, "width": 16, "screw_d": 8, "screw_len": 12, "second_screw": 0},
+      "derived_values": {"outer_d": {"value": 40, "source": "catalog_derived"}, "width": {"value": 16, "source": "catalog_derived"}, "screw_d": {"value": 8, "source": "catalog_derived"}, "screw_len": {"value": 12, "source": "catalog_derived"}, "second_screw": {"value": 0, "source": "rule_derived"}},
+      "expected_behavior": "Use bore_d as the selector; keep it as the only explicit parameter and mark remaining catalog/rule fields as derived by the downstream contract. No follow-up is needed.",
+      "unacceptable_fabrication": ["Representing derived dimensions as user-provided", "Choosing a nearby catalog row instead of bore_d=24"]
+    },
+    {
+      "case_id": "APP001-A03-unit-conversion",
+      "coverage": ["unit_conversion"],
+      "natural_language_input": "轴孔直径 1.6 cm，按 GN 705 目录做轴环。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 16, "outer_d": 28, "width": 12, "screw_d": 6, "screw_len": 8, "second_screw": 0},
+      "derived_values": {"bore_d": {"value": 16, "unit": "mm", "source": "user_explicit_normalized"}, "outer_d": {"value": 28, "unit": "mm", "source": "catalog_derived"}, "width": {"value": 12, "unit": "mm", "source": "catalog_derived"}, "screw_d": {"value": 6, "unit": "mm", "source": "catalog_derived"}, "screw_len": {"value": 8, "unit": "mm", "source": "catalog_derived"}, "second_screw": {"value": 0, "source": "rule_derived"}},
+      "expected_behavior": "Normalize 1.6 cm to 16 mm and preserve the original unit/value in evidence or provenance; continue only if the normalized selector is valid.",
+      "unacceptable_fabrication": ["Treating 1.6 cm as 1.6 mm", "Inventing a non-catalog intermediate bore diameter"]
+    },
+    {
+      "case_id": "APP001-A04-missing-bore-d",
+      "coverage": ["missing_bore_d", "required_field_follow_up"],
+      "natural_language_input": "做一个紧定螺钉轴环，外径 32 mm，宽度 14 mm。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"outer_d": 32, "width": 14},
+      "derived_values": {},
+      "expected_behavior": "Ask for the missing bore_d catalog selector, or return a structured refusal that construction cannot proceed until it is supplied. Do not guess a bore_d from other dimensions.",
+      "unacceptable_fabrication": ["Filling bore_d with a likely/default/catalog-nearest value", "Returning a construction-ready complete parameter set"]
+    },
+    {
+      "case_id": "APP001-A05-catalog-conflict",
+      "coverage": ["catalog_conflict"],
+      "natural_language_input": "做 GN 705 轴环：bore_d=20 mm，outer_d=40 mm。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 20, "outer_d": 40},
+      "derived_values": {"expected_catalog_outer_d": {"value": 32, "unit": "mm", "source": "catalog_row_for_bore_d_20"}},
+      "expected_behavior": "Preserve both explicit claims and flag their conflict with the selected directory row (bore_d=20 maps to outer_d=32 mm); ask which specification should govern or refuse validation. Do not silently rewrite either explicit claim.",
+      "unacceptable_fabrication": ["Silently changing outer_d to 32", "Accepting the incompatible pair as valid", "Selecting a different bore_d to make the pair fit"]
+    },
+    {
+      "case_id": "APP001-A06-second-screw-boundary",
+      "coverage": ["second_screw_boundary"],
+      "natural_language_input": "请做 GN 705 轴环，bore_d=70 mm，并明确只要一个紧定螺钉。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 70, "outer_d": 100, "width": 20, "screw_d": 10, "screw_len": 20, "second_screw": 0},
+      "derived_values": {"second_screw": {"value": 0, "source": "rule_derived", "rule": "1 iff bore_d > 70"}},
+      "expected_behavior": "At exactly 70 mm the strict threshold does not enable second_screw; return 0 if all claims agree.",
+      "unacceptable_fabrication": ["Applying >=70 instead of >70", "Treating the boundary as ambiguous without stating the frozen rule"]
+    },
+    {
+      "case_id": "APP001-A07-out-of-catalog-and-unsupported",
+      "coverage": ["out_of_catalog", "unsupported_request", "refusal"],
+      "natural_language_input": "做 bore_d=75 mm 的轴环，再加法兰、键槽和阳极氧化。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 75, "unsupported_features": ["flange", "keyway", "anodizing"]},
+      "derived_values": {},
+      "expected_behavior": "Refuse the unsupported combination or ask the user to choose a supported catalog bore and a supported feature scope. The first family covers the frozen shaft-collar parameters, not arbitrary flange/keyway/material/coating generation.",
+      "unacceptable_fabrication": ["Snapping bore_d=75 to 70 or 80", "Inventing a catalog row for 75", "Claiming flange, keyway, or coating support"]
+    },
+    {
+      "case_id": "APP001-A08-retrieval-is-reference-only",
+      "coverage": ["retrieval_example_not_copyable", "retrieval_context"],
+      "natural_language_input": "目标轴环的 bore_d 是 24 mm；请按目标尺寸给出参数。",
+      "reference_context": {"role": "retrieval_example_untrusted_reference", "example": {"family_id": "set_screw_shaft_collar", "parameters": {"bore_d": 20, "outer_d": 32, "width": 14, "screw_d": 6, "screw_len": 8, "second_screw": 0}}},
+      "human_confirmed_parameters": {"bore_d": 24, "outer_d": 40, "width": 16, "screw_d": 8, "screw_len": 12, "second_screw": 0},
+      "derived_values": {"outer_d": {"value": 40, "source": "catalog_derived"}, "width": {"value": 16, "source": "catalog_derived"}, "screw_d": {"value": 8, "source": "catalog_derived"}, "screw_len": {"value": 12, "source": "catalog_derived"}, "second_screw": {"value": 0, "source": "rule_derived"}},
+      "expected_behavior": "Treat the retrieved bore_d=20 example only as context; follow the request's bore_d=24 and independently produce/derive the matching row. Record retrieval context as evidence source only if the output protocol supports it.",
+      "unacceptable_fabrication": ["Copying bore_d=20 or its associated dimensions", "Treating sample_id or candidate parameters as ground truth", "Claiming that the candidate itself validates the answer"]
+    },
+    {
+      "case_id": "APP001-A09-second-screw-explicit-conflict",
+      "coverage": ["second_screw_boundary", "rule_conflict"],
+      "natural_language_input": "做 GN 705 轴环，bore_d=80 mm，但我只要一个紧定螺钉（second_screw=0）。",
+      "reference_context": null,
+      "human_confirmed_parameters": {"bore_d": 80, "outer_d": 110, "width": 22, "screw_d": 12, "screw_len": 20, "second_screw": 0},
+      "derived_values": {"expected_rule_second_screw": {"value": 1, "source": "rule_derived", "rule": "1 iff bore_d > 70"}},
+      "expected_behavior": "Preserve the user-stated request and identify that it conflicts with the family rule for bore_d=80; ask for clarification or refuse validation. Do not silently change the explicit request.",
+      "unacceptable_fabrication": ["Returning a valid result with second_screw=0", "Silently overwriting the explicit 0 with 1", "Claiming the rule is >=80"]
+    }
+  ],
+  "evaluator_notes": [
+    "For conflict and missing-field cases, human_confirmed_parameters records user claims, not a valid normalized construction result.",
+    "Directory values in evaluator-only labels must not be injected as model output or as C0 context.",
+    "The retrieval context in A08 is intentionally a mismatching reference example; it is not a label source."
+  ]
+}
