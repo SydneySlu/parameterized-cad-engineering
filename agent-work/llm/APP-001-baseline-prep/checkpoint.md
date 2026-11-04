@@ -30,7 +30,7 @@ next_agent_focus=independently validate gold values and contract/schema adapter 
 ### Successor check
 
 ```text
-predecessor=APP-001-PREP, this checkpoint and handoff, commit pending
+predecessor=APP-001-PREP, this checkpoint and handoff, draft commit 0bfc75b (follow-up log commit d7486e7)
 files_format=to be checked by successor
 core_rerun=not_run
 normal_case=not_run

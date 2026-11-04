@@ -37,7 +37,7 @@ handoff_self_check:
 
 ```text
 handoff_successor_check:
-  predecessor=APP-001-PREP, checkpoint.md, commit pending
+  predecessor=APP-001-PREP, checkpoint.md, draft commit 0bfc75b (follow-up log commit d7486e7)
   files_format=not_run
   core_rerun=not_run
   normal_case=not_run
