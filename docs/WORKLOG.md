@@ -647,3 +647,10 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 限制：没有 API 请求、模型输出、正式 C0/C1 对照或字段/Schema/IR/CAD/几何/STEP 成绩；全部相关指标仍 `not_measured`。PyYAML 不可用，使用 Ruby Psych 的 `YAML.safe_load` 完成 YAML 语法检查。解码参数、Prompt、confidence、超时/重试及成本记录仍待负责人确认。
 - 下一步：Codex 中枢独立复核验收真值与严格 CAD-003 envelope 投影，项目负责人确认未决字段；确认之前不得冻结验收集或启动正式 APP-001。
 - 交付提交：`0bfc75b`（`docs: draft APP-001 baseline and acceptance contract [APP-001-PREP]`）。
+
+[2026-11-04] agent=Codex task=APP-001-PREP-review status=review
+- 动作：独立核验 APP-001-PREP 交付物、提交范围、九条样例标签和 CAD-003 接口；清理 handoff 文档尾随空格。
+- 验证：逐条将自然语言中明确参数映射为 CAD-003 输入；A01/A02/A03/A06/A08 按预期成功并得出目录值，A04 缺失必填项被拒绝，A05 目录冲突被拒绝，A07 非目录 bore 被拒绝，A09 第二螺钉约束冲突被拒绝；JSON 解析、Ruby YAML.safe_load、密钥模式扫描、`git diff --check` 通过。
+- 结论：技术草案可进入项目负责人确认；模型标签与设备正确记录，API 返回 `model` 尚待真实请求核实。外层 transport envelope 与严格 CAD-003 输入 envelope 分开，模型明确字段经适配后才传 Schema；不应将 evaluator-only 标签或检索真值注入模型输入。
+- 保留：Prompt/样例仍为 draft；temperature/top-p/max_tokens/seed、重试/超时、cost 来源和显式参数与目录派生职责仍待项目负责人确认。无正式模型运行，所有性能指标继续 `not_measured`。
+- 状态：APP-001-PREP 置为 `review`，等待项目负责人确认后才可冻结；APP-001 正式实验未放行。

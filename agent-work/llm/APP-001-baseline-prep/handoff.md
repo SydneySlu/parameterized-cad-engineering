@@ -1,8 +1,8 @@
 # APP-001-PREP handoff
 
-Date: 2026-11-04  
-Task: `APP-001-PREP`  
-Status: `review`  
+Date: 2026-11-04
+Task: `APP-001-PREP`
+Status: `review`
 Work root: `/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
 ## Delivered
