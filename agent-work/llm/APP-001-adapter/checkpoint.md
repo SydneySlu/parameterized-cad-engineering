@@ -492,7 +492,7 @@ status=review
 APP-001-PREP=review
 APP-001=planned
 formal_evaluation_allowed=false
-commit=pending
+commit=c0543d6
 ```
 
 真实模型、九条冻结样例、正式字段/CAD/STEP 指标均未运行。
