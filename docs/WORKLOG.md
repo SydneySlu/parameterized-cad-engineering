@@ -841,3 +841,10 @@ next=Codex 中枢 R3-FIX 复核；通过后项目负责人可授权正式 APP-00
 - 结论：`APP-001-ADAPTER-R3-FIX` 验收通过，`APP-001-ADAPTER` 标记 `done`。审查记录见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md`。
 - 边界：APP-001-PREP 仍为 `review`，APP-001 仍为 `planned`；正式评测门关闭；真实模型、九条样例、正式字段/CAD/STEP 指标未运行；IR 映射仍未冻结。
 - 下一步：完成 APP-001-PREP 最终前置审查，之后由项目负责人单独授权正式 APP-001。
+
+[2026-11-05] agent=Codex task=APP-001-PREP-FINAL-REVIEW status=needs_revision
+- 动作：只读复核冻结契约、模型基线、输入隔离、指标口径和已验收 adapter；未调用真实模型、未读取 API key、未运行九条样例。
+- 验证：acceptance JSON、baseline YAML、LLM 170 tests、Schema 17 tests 均通过；云端/本地身份和 provider-specific thinking 配置与决策一致。
+- 结论：契约和实现证据基本通过，但 PREP handoff 的当前 ADR-0013 段仍写 adapter/logger 尚未实现和审查，与 `APP-001-ADAPTER=done` 不一致。详见 `agent-work/reviews/APP-001-PREP-FINAL-REVIEW.md`。
+- 边界：APP-001-PREP 保持 `review`，APP-001 保持 `planned`，formal gate 关闭；正式字段/Schema/CAD/STEP/成本/延迟指标均未测量。
+- 下一步：原 PREP Agent 只追加状态收尾，明确 adapter 已完成、剩余仅 owner authorization；完成后中枢重新复核。
