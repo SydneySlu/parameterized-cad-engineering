@@ -128,3 +128,93 @@ Commit: `e496ac0` (`feat: implement APP-001 dual-baseline execution adapter with
 `APP-001` remains `planned`. No formal model run is authorized. The adapter
 implementation and review is one required gate; explicit project-owner authorization
 is the second gate. Neither has been satisfied.
+
+---
+
+## APP-001-ADAPTER-R1 corrections
+
+Date: 2026-11-05
+Task: `APP-001-ADAPTER-R1`
+
+All 4 required fixes and 3 contract clarifications from
+`APP-001-ADAPTER-codex-review.md` have been addressed.
+
+### Handoff self-check (R1)
+
+```text
+handoff_self_check:
+  changed=
+    src/llm/providers.py     (remove api_key param + env read; credential-free)
+    src/llm/transport.py     (add MockTransport base; FakeTransport sanitizes calls)
+    src/llm/gate.py          (unchanged; used as-is by adapter for gate check)
+    src/llm/adapter.py       (gate enforces MockTransport check; RetentionPolicy;
+                               prompt hashes; remove allow_real_network kwarg;
+                               use 3-tuple from send_with_retry)
+    src/llm/retry.py         (return 3-tuple: response, outcomes, total_elapsed_ms)
+    src/llm/runrecord.py     (add prompt_hashes, raw_response_retention fields)
+    src/llm/cost.py          (strict: no fallback split; consistency check)
+    src/llm/parser.py        (add _walk_check_finite; element type checks)
+    src/llm/README.md        (full rewrite for R1 accuracy)
+    tests/llm/test_retry.py  (updated for 3-tuple; new elapsed tests)
+    tests/llm/test_providers.py (remove api_key test; add env-isolation test)
+    tests/llm/test_adapter.py (fix cost assertion; rename gate test)
+    tests/llm/test_security.py (revamp gate test; revamp credential tests)
+    tests/llm/test_r1_regression.py (new: 36 R1 regression tests)
+    agent-work/llm/APP-001-adapter/checkpoint.md (R1 section appended)
+    agent-work/llm/APP-001-adapter/handoff.md (this section)
+    docs/WORKLOG.md (append-only R1 entry)
+  commands=
+    PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+    PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 121 tests, OK
+    PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+    git diff --check → PASS
+    secret scan (grep sk-*, Bearer real, DEEPSEEK_API_KEY real) → only synthetic fixtures
+  confirmed=
+    3.1: mock requests always authorization=None; FakeTransport stores sanitized copies;
+         synthetic env var not read during mock run; fake records contain no auth values.
+         All confirmed by test_retry.FakeTransportTrackingTests and
+         test_security.SecretScanTests.test_no_env_key_read_during_run.
+    3.2: Non-MockTransport refused before send() with gate closed; FakeTransport path
+         still runs. Confirmed by test_security.GateTests.test_non_mock_transport_trips_gate_before_send
+         (send_calls==0 verified).
+    3.3: cache fields both missing → not_available (not 0.00028). Inconsistent split,
+         negative, bool also not_available. Confirmed by test_r1_regression.CostNotAvailableTests.
+    3.4: total_elapsed_ms includes injected backoff. Confirmed by
+         test_retry.ElapsedTimeTests (retry_success_elapsed_includes_backoff: total > sum_of_attempts).
+    3.5: NaN rejected (NON_FINITE_VALUE); Infinity/-Infinity rejected; evidence field/quote/source
+         type errors; array element string checks. Confirmed by test_r1_regression.ParserNaNInfinityTests
+         and ParserArrayElementTypeTests.
+    4.1: Default retention=off; opt-in writes to tempdir; path errors produce retention_failed.
+         Confirmed by test_r1_regression.RetentionPolicyTests.
+    4.2: Prompt hashes stable; change with content; text not in record JSON.
+         Confirmed by test_r1_regression.PromptHashTests.
+    No real API/Ollama calls. No real credentials read. No frozen samples run.
+  unresolved=
+    - IR mapping: still no frozen src-level parameter->IR adapter; IR stage blocked.
+    - Rate card consistency check assumes DeepSeek field semantics
+      (cache_hit + cache_miss == prompt_tokens); if API semantics differ in future,
+      this will produce not_available until a new ADR adjusts the definition.
+    - Prompt version verification: the adapter records hashes but does not currently
+      load and verify the frozen prompt artifact from disk at runtime. This must be
+      added before any formal run to prevent version mislabeling.
+    - Formal evaluation gate remains closed. APP-001 remains planned.
+  next_agent_focus=
+    - Codex hub: verify 3.1 (no env read), 3.2 (gate before send), 3.3 (no fallback),
+      3.4 (elapsed includes backoff), 3.5 (NaN/Infinity, element types).
+    - Prompt artifact verification: should the adapter load and hash-verify the
+      frozen prompt-v2.md at startup? Recommend yes before any formal run.
+    - If all R1 fixes verified, project owner may authorize formal APP-001 run.
+      adapter/logger review is now satisfied pending Codex R1 acceptance.
+```
+
+### Checks not executed (R1)
+
+- Real DeepSeek API call (gate closed; no key used; not attempted).
+- Real Ollama inference (gate closed; not attempted).
+- Frozen acceptance-set evaluation (labels not read; not run).
+- Formal C0/C1/C2 metrics (all `not_measured`).
+- IR/CAD/geometry/STEP pipeline (no frozen src-level mapping; all `not_run`/`blocked`).
+
+### APP-001 formal evaluation status
+
+`APP-001` remains `planned`.  No formal model run is authorized.

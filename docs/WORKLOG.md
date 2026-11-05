@@ -761,3 +761,15 @@ next=Codex hub read-only review; if passing, project owner authorizes formal APP
 - 交付：`docs/coordination/prompts/APP-001-ADAPTER-R1-correction-cc-agent.md`，commit `a834c3e`。
 - 边界：未修改实现、未调用真实 API、未读取凭据、未运行冻结验收样例；`APP-001-ADAPTER=review`、`APP-001=planned`、正式评测门关闭。
 - 下一步：项目负责人 push 后将该 Prompt 交给 CC；完成后由 Codex 中枢独立复核。
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-R1 status=review
+scope=修复 Codex 审查发现的 7 项问题（3.1 凭据隔离、3.2 评测门、3.3 费用计算、3.4 总耗时、3.5 解析器严格性、4.1 响应保留策略、4.2 Prompt hash）
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 121 tests, OK (原85+新增36)
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+  git diff --check → PASS
+  secret scan → only synthetic fixtures
+result=所有 7 项审查问题已修复；121 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
+limits=IR 映射仍未冻结；正式 APP-001 仍未授权；Prompt artifact 哈希验证（运行时核对冻结文件）尚未实现
+next=Codex 中枢 R1 只读复核；通过后项目负责人可明确授权正式 APP-001 运行

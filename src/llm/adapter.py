@@ -6,15 +6,30 @@ records.  CAD/IR/STEP hooks are explicit interfaces that stay ``not_run`` /
 ``blocked_no_approved_ir_mapping`` because no frozen src-level parameter-to-IR
 mapping exists in this task.
 
-This module never performs real network calls by itself.  Real transport
-implementations are never imported here; the caller injects a transport
-(which, in tests, is a :class:`FakeTransport`).  The formal evaluation gate is
-checked at any runnable entry point.
+Gate enforcement (ADR-0013 / task section 3.2):
+Any transport that is NOT a :class:`~src.llm.transport.MockTransport`
+(e.g. a real HTTP transport) is refused before ``send()`` is called unless the
+formal evaluation gate is open.  :class:`~src.llm.transport.FakeTransport` is
+a :class:`~src.llm.transport.MockTransport` and may be used while the gate is
+closed.  This check is unconditional and cannot be bypassed by the caller.
+
+Credential handling (task section 3.1):
+The mock-path request builders never read environment variables or credentials.
+Credential injection is reserved for a future real-transport layer.
+
+Raw response retention (task section 4.1):
+Raw model responses are not stored by default (``RetentionPolicy.retain_raw=False``).
+When a future authorized run enables retention, responses are written only to
+the git-ignored ``work/app001-runs/`` directory, never to tracked files or
+run records.  The run record always contains only sanitized metadata.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import os
+from dataclasses import dataclass
 from typing import Any
 
 from .contract import (
@@ -28,7 +43,7 @@ from .contract import (
     SCHEMA_VERSION,
 )
 from .cost import compute_cloud_cost
-from .gate import require_formal_evaluation_allowed
+from .gate import FormalEvaluationBlockedError, require_formal_evaluation_allowed
 from .parser import ParseResult, parse_response
 from .projector import ProjectionResult, project_to_cad003
 from .providers import (
@@ -44,7 +59,71 @@ from .runrecord import (
     stage,
     utc_now_iso,
 )
-from .transport import PreparedRequest, Transport, TransportResponse
+from .transport import MockTransport, PreparedRequest, Transport, TransportResponse
+
+
+# ---------------------------------------------------------------------------
+# Retention policy
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RetentionPolicy:
+    """Controls whether raw model responses are persisted to disk.
+
+    Default: ``retain_raw=False`` -- no raw content is written anywhere.
+    When ``retain_raw=True`` (future authorized runs only), raw responses are
+    written to ``base_dir`` (must be a git-ignored path).  The run record
+    always records only the retention status and a body-length/hash, never
+    the raw content itself.
+    """
+
+    retain_raw: bool = False
+    base_dir: str = "work/app001-runs"
+
+    # Returns False (disabled) by default; enabled only when
+    # formal evaluation is authorized and this policy is explicitly set.
+    @classmethod
+    def default(cls) -> "RetentionPolicy":
+        return cls(retain_raw=False)
+
+
+def _retain_response(
+    body: str,
+    run_id: str,
+    query_id: str,
+    policy: RetentionPolicy,
+) -> dict[str, Any]:
+    """Attempt to retain a raw response body per the policy.
+
+    Returns a metadata dict with ``retained``, ``path`` (if retained),
+    ``body_length``, and ``body_sha256``.  Never writes content to tracked
+    paths, RunRecord fields, stdout, or exceptions.
+    """
+    body_len = len(body.encode("utf-8"))
+    body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    if not policy.retain_raw:
+        return {"retained": False, "body_length": body_len, "body_sha256": body_hash}
+
+    # Only allow writing to the ignored work/app001-runs/ directory.
+    import re
+
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", f"{run_id}_{query_id}")
+    rel_path = os.path.join(policy.base_dir, f"{safe_id}_raw_response.txt")
+    try:
+        os.makedirs(policy.base_dir, exist_ok=True)
+        with open(rel_path, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        return {"retained": True, "path": rel_path, "body_length": body_len, "body_sha256": body_hash}
+    except OSError as exc:
+        return {
+            "retained": False,
+            "retention_failed": True,
+            "error": type(exc).__name__,
+            "body_length": body_len,
+            "body_sha256": body_hash,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +132,12 @@ from .transport import PreparedRequest, Transport, TransportResponse
 
 
 class AdapterInput:
-    """The frozen input for one query under one condition."""
+    """The frozen input for one query under one condition.
+
+    In addition to the query content, records SHA-256 hashes of the system
+    prompt and user-message template so that the run record can identify which
+    prompt was actually used, independent of the version label.
+    """
 
     def __init__(
         self,
@@ -92,8 +176,6 @@ class AdapterInput:
             "natural_language_input": self.natural_language_input,
             "reference_context": self.reference_context,
         }
-        import json
-
         raw = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
 
@@ -101,6 +183,20 @@ class AdapterInput:
         if self.reference_context is None:
             return None
         return hashlib.sha256(self.reference_context.encode("utf-8")).hexdigest()
+
+    def system_prompt_sha256(self) -> str:
+        """SHA-256 of the system prompt (UTF-8 encoded).  Not the prompt text."""
+        return hashlib.sha256(self.system_prompt.encode("utf-8")).hexdigest()
+
+    def user_template_sha256(self) -> str:
+        """SHA-256 of the user prompt template (UTF-8 encoded)."""
+        return hashlib.sha256(self.user_prompt_template.encode("utf-8")).hexdigest()
+
+    def rendered_payload_sha256(self, rendered_user: str) -> str:
+        """SHA-256 of the actual rendered request payload (system + user)."""
+        payload = {"system_prompt": self.system_prompt, "user_message": rendered_user}
+        raw = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +207,13 @@ class AdapterInput:
 class AdapterRunResult:
     """The complete staged result of running one query."""
 
-    def __init__(self, record: RunRecord, parse_result: ParseResult | None, projection: ProjectionResult | None, schema_result: Any | None) -> None:
+    def __init__(
+        self,
+        record: RunRecord,
+        parse_result: ParseResult | None,
+        projection: ProjectionResult | None,
+        schema_result: Any | None,
+    ) -> None:
         self.record = record
         self.parse_result = parse_result
         self.projection = projection
@@ -135,26 +237,27 @@ class Adapter:
     provider:
         One of ``"DeepSeek"`` or ``"Ollama"``.
     transport:
-        The injectable :class:`Transport`.  In tests this is a
-        :class:`FakeTransport`; a real HTTP transport may be injected in a
-        future authorized run, but is never created here.
+        The injectable transport.  In tests this is a :class:`FakeTransport`
+        (a :class:`MockTransport`).  A real HTTP transport may only be injected
+        after the formal evaluation gate is open; the adapter enforces this.
     clock, sleeper:
         Injected monotonic clock and sleeper for retry/backoff.  Tests pass
         no-op fakes so ``time.sleep`` is never called.
     schema_validator:
-        The CAD-003 validation callable.  Defaults to the real
-        ``schema.set_screw_shaft_collar.validate_parameters`` (imported lazily so
-        tests can import this module without the schema package on the path).
+        The CAD-003 validation callable (lazy import by default).
+    retention_policy:
+        Controls raw-response persistence.  Default: disabled.
     """
 
     def __init__(
         self,
         *,
         provider: str,
-        transport: Transport,
+        transport,
         clock=None,
         sleeper=None,
         schema_validator=None,
+        retention_policy: RetentionPolicy | None = None,
     ) -> None:
         if provider not in (DEEPSEEK_PROVIDER, OLLAMA_PROVIDER):
             raise ValueError(f"unknown provider: {provider!r}")
@@ -163,24 +266,24 @@ class Adapter:
         self.clock = clock
         self.sleeper = sleeper
         self._schema_validator = schema_validator
+        self._retention_policy = retention_policy or RetentionPolicy.default()
 
     # ------------------------------------------------------------------
-    # Public runnable entry point (still mock-only by default)
+    # Public entry point
     # ------------------------------------------------------------------
 
-    def run(self, adapter_input: AdapterInput, *, run_id: str, allow_real_network: bool = False) -> AdapterRunResult:
+    def run(self, adapter_input: AdapterInput, *, run_id: str) -> AdapterRunResult:
         """Run one query and return a staged :class:`AdapterRunResult`.
 
-        ``allow_real_network`` must be True for any real-network transport to
-        proceed; even then, :func:`require_formal_evaluation_allowed` is called
-        first and fails closed.  With the default ``False`` and a fake
-        transport, no guard trips because no real network is used.
+        Gate enforcement (3.2): if the injected transport is not a
+        :class:`MockTransport`, the formal evaluation gate is checked
+        **before** calling ``send()``.  This is unconditional and cannot be
+        bypassed by the caller.  :class:`FakeTransport` (a
+        :class:`MockTransport`) is always allowed.
         """
-        if allow_real_network:
-            require_formal_evaluation_allowed("run a real provider request")
-        # If allow_real_network is False, we proceed only because tests inject
-        # a FakeTransport.  A real transport with allow_real_network=False is
-        # the caller's contract violation, not ours to enforce further.
+        # --- 3.2: Gate enforcement before any transport use ---
+        if not isinstance(self.transport, MockTransport):
+            require_formal_evaluation_allowed("run a non-mock transport request")
 
         record = RunRecord(
             run_id=run_id,
@@ -199,9 +302,17 @@ class Adapter:
             formal_evaluation_allowed=FORMAL_EVALUATION_ALLOWED,
         )
 
+        # --- 4.2: Prompt hashes ---
+        rendered_user = adapter_input.rendered_user_prompt()
+        record.prompt_hashes = {
+            "system_prompt_sha256": adapter_input.system_prompt_sha256(),
+            "user_template_sha256": adapter_input.user_template_sha256(),
+            "rendered_payload_sha256": adapter_input.rendered_payload_sha256(rendered_user),
+        }
+
         # --- Stage: model_call (transport + retry) ---
-        request = self._build_request(adapter_input)
-        response, attempts = send_with_retry(
+        request = self._build_request(adapter_input, rendered_user)
+        response, attempts, total_elapsed_ms = send_with_retry(
             self.transport,
             request,
             clock=self.clock or _default_clock,
@@ -221,10 +332,11 @@ class Adapter:
             for o in attempts
         ]
         record.attempt_count = len(attempts)
-        record.total_elapsed_ms = sum(o.elapsed_ms for o in attempts)
+        # 3.4: total_elapsed_ms is wall-clock from before first attempt to
+        # after final outcome, including all backoff waits.
+        record.total_elapsed_ms = total_elapsed_ms
 
         if response is None:
-            # Transport failed (exhausted retries or non-retryable).
             last = attempts[-1] if attempts else None
             record.add_stage(stage("model_call", "fail", error_code=(last.error_condition if last else "no_attempt"), error_fields=(last.error_fields if last else ())))
             self._finalize_no_construction(record)
@@ -232,6 +344,12 @@ class Adapter:
 
         record.add_stage(stage("model_call", "pass"))
         self._record_runtime_identity(record, response)
+
+        # --- 4.1: Raw response retention (default: not retained) ---
+        retention_meta = _retain_response(
+            response.body, run_id, adapter_input.query_id, self._retention_policy
+        )
+        record.raw_response_retention = retention_meta
 
         # --- Stage: parse ---
         parse_result = parse_response(response.body)
@@ -242,7 +360,6 @@ class Adapter:
         record.add_stage(stage("parse", "pass"))
 
         # --- Stage: contract ---
-        # The parser already validated the contract; record pass explicitly.
         record.add_stage(stage("contract", "pass"))
 
         envelope = parse_result.envelope
@@ -253,7 +370,7 @@ class Adapter:
 
         # --- Local timing (Ollama only) ---
         if self.provider == OLLAMA_PROVIDER:
-            record.local_wall_time_ms = record.total_elapsed_ms
+            record.local_wall_time_ms = total_elapsed_ms
 
         # --- Stage: projection ---
         projection = project_to_cad003(envelope.extracted_parameters)
@@ -292,7 +409,6 @@ class Adapter:
         record.add_stage(stage("construction_gate", "pass" if construction_ready else "fail", error_code=None if construction_ready else "CONSTRUCTION_GATE_BLOCKED", error_fields=() if construction_ready else ("decision", "unsupported_requests", "schema"), detail={"construction_ready": construction_ready, "gate_errors": gate_errors}))
 
         # --- IR / CAD / STEP hooks (not_run / blocked) ---
-        # No frozen src-level parameter-to-IR mapping exists; record honestly.
         record.add_stage(stage("ir", "blocked", error_code="blocked_no_approved_ir_mapping", detail={"reason": "no frozen src-level parameter->IR adapter; requires Codex hub to freeze mapping contract"}))
         record.add_stage(stage("cad", "not_run"))
         record.add_stage(stage("geometry", "not_run"))
@@ -313,9 +429,9 @@ class Adapter:
 
         return OLLAMA_MODEL
 
-    def _build_request(self, adapter_input: AdapterInput) -> PreparedRequest:
+    def _build_request(self, adapter_input: AdapterInput, rendered_user: str | None = None) -> PreparedRequest:
         system = adapter_input.system_prompt
-        user = adapter_input.rendered_user_prompt()
+        user = rendered_user if rendered_user is not None else adapter_input.rendered_user_prompt()
         if self.provider == DEEPSEEK_PROVIDER:
             return build_deepseek_request(system_prompt=system, user_prompt=user)
         return build_ollama_request(system_prompt=system, user_prompt=user)
@@ -349,7 +465,6 @@ class Adapter:
     def _validate_schema(self, projected_payload: dict[str, Any] | None):
         validator = self._schema_validator
         if validator is None:
-            # Lazy import the real schema validator.
             from schema.set_screw_shaft_collar import validate_parameters
 
             validator = validate_parameters
@@ -359,10 +474,8 @@ class Adapter:
 
     def _finalize_no_construction(self, record: RunRecord) -> None:
         record.construction_ready = False
-        # Explicitly record the construction gate as fail when not reached.
         if record.stage_status("construction_gate") is None:
             record.add_stage(stage("construction_gate", "fail", error_code="CONSTRUCTION_GATE_BLOCKED", error_fields=("decision", "unsupported_requests", "schema"), detail={"construction_ready": False}))
-        # Any stage not yet recorded downstream of the failure is not_run.
         for stage_name in ("projection", "schema", "ir", "cad", "geometry", "step"):
             if record.stage_status(stage_name) is None:
                 record.add_stage(stage(stage_name, "not_run"))
@@ -380,7 +493,7 @@ class Adapter:
 
 
 def _empty_schema_result():
-    from schema.set_screw_shaft_collar import ValidationResult, RuleViolation
+    from schema.set_screw_shaft_collar import RuleViolation, ValidationResult
 
     return ValidationResult(
         ok=False,

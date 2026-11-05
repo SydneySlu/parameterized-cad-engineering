@@ -6,11 +6,18 @@ classified error.  Tests inject :class:`FakeTransport`; a real HTTP transport
 can exist for future authorized runs but is not wired into any runnable entry
 point here.
 
-Security: transport implementations must never log Authorization headers, full
-request headers, full provider error bodies, or response content beyond what
-the run-record policy allows.  The :class:`TransportError` carries only a
-stable ``condition``, an HTTP status (when applicable), and a short redacted
-message.
+Security:
+- :class:`FakeTransport` (a :class:`MockTransport`) may be used while the
+  formal evaluation gate is closed.  Any transport that is NOT a subclass of
+  :class:`MockTransport` requires the formal evaluation gate to be open; the
+  adapter enforces this before calling ``send()``.
+- :class:`FakeTransport` stores a sanitized copy of each request (with
+  ``authorization`` cleared) so that ``calls`` / ``last_call()`` never contain
+  credential values.  Tests must not assert on ``authorization`` values in
+  stored calls.
+- :class:`TransportError` carries only a stable ``condition``, an HTTP status,
+  and a short redacted message; never the full response body, headers, or
+  Authorization value.
 """
 
 from __future__ import annotations
@@ -86,7 +93,13 @@ class TransportResponse:
 
 @dataclass(frozen=True)
 class PreparedRequest:
-    """A provider-specific, ready-to-send request."""
+    """A provider-specific, ready-to-send request.
+
+    In the mock/test path, ``authorization`` is always ``None`` because
+    :func:`build_deepseek_request` never reads credentials.  Credential
+    injection is reserved for a future real-transport layer that must only be
+    instantiated after the formal evaluation gate is open.
+    """
 
     provider: str
     model: str
@@ -94,8 +107,9 @@ class PreparedRequest:
     endpoint: str
     # The request body is the JSON-serializable payload (without secrets).
     body: dict[str, Any]
-    # The Authorization header value is held separately and never serialized
-    # into a run record; it is only used by a real transport.
+    # authorization is always None in the mock path.  A future real transport
+    # may populate it when the gate is open, but only within the transport
+    # itself -- never in the shared adapter code.
     authorization: str | None = None
     # Provider-specific headers that are not secret (e.g. Content-Type).
     headers: dict[str, str] = field(default_factory=dict)
@@ -104,6 +118,18 @@ class PreparedRequest:
         import json
 
         return json.dumps(self.body, ensure_ascii=False, sort_keys=True)
+
+    def sanitized(self) -> "PreparedRequest":
+        """Return a copy with authorization cleared for safe storage in logs."""
+        return PreparedRequest(
+            provider=self.provider,
+            model=self.model,
+            base_url=self.base_url,
+            endpoint=self.endpoint,
+            body=self.body,
+            authorization=None,
+            headers=dict(self.headers),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -120,20 +146,44 @@ class Transport(Protocol):
 
 
 # ---------------------------------------------------------------------------
+# MockTransport base class
+# ---------------------------------------------------------------------------
+
+
+class MockTransport:
+    """Base class for transports that are safe to use while the formal
+    evaluation gate is closed.
+
+    Any transport that is a subclass of :class:`MockTransport` is allowed to
+    run regardless of the gate state.  Any other transport -- including custom
+    HTTP implementations -- requires the gate to be open.  The adapter enforces
+    this check before calling ``send()``.
+
+    Subclass this to create in-test transports.  Do NOT subclass this for real
+    HTTP implementations.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Fake transport for tests
 # ---------------------------------------------------------------------------
 
 
-class FakeTransport:
+class FakeTransport(MockTransport):
     """An injectable transport that returns scripted responses or errors.
 
-    Records every request it receives (without the Authorization value) so
-    tests can assert on the prepared payloads.  Never performs any network I/O.
+    Stores a *sanitized* copy of each request (``authorization`` cleared) so
+    that ``calls`` / ``last_call()`` never contain credential values.  Never
+    performs any network I/O.
+
+    The ``calls`` list contains :class:`PreparedRequest` objects with
+    ``authorization=None`` regardless of what was passed into ``send()``.
     """
 
     def __init__(self) -> None:
+        # Stores sanitized (no authorization) copies of each request.
         self.calls: list[PreparedRequest] = []
-        self._scripted: list[Any] = []  # list of TransportResponse or TransportError
+        self._scripted: list[Any] = []
         self._index = 0
 
     def queue_response(self, response: TransportResponse) -> None:
@@ -147,8 +197,8 @@ class FakeTransport:
             self._scripted.append(item)
 
     def send(self, request: PreparedRequest) -> TransportResponse:
-        # Record the request without the Authorization value.
-        self.calls.append(request)
+        # Store a sanitized copy -- authorization is always cleared.
+        self.calls.append(request.sanitized())
         if self._index >= len(self._scripted):
             raise AssertionError("FakeTransport: no more scripted responses; calls exceeded script")
         item = self._scripted[self._index]

@@ -84,22 +84,55 @@ def compute_cloud_cost(
     if output_tokens is None:
         missing.append("output_tokens")
 
-    # We need either the cache split or a single prompt_tokens figure to split.
-    # DeepSeek responses provide both cache_hit and cache_miss; use those.
+    # Both cache fields must be present as non-negative integers.
+    # We do NOT fall back to treating all prompt_tokens as cache miss --
+    # that would be fabricating data absent from the actual API response.
     cache_hit = cached_input_tokens
     cache_miss = cache_miss_input_tokens
-    if cache_hit is None and cache_miss is None and prompt_tokens is not None:
-        # Fall back: treat all prompt_tokens as cache miss (conservative).
-        cache_hit = 0
-        cache_miss = prompt_tokens
-    elif cache_hit is None or cache_miss is None:
-        missing.append("cache_hit/miss")
 
-    if missing or cache_hit is None or cache_miss is None or output_tokens is None:
+    if cache_hit is None:
+        missing.append("cached_input_tokens")
+    if cache_miss is None:
+        missing.append("cache_miss_input_tokens")
+
+    # Validate types: must be non-negative integers (not bool, not float, not str).
+    for field_name, value in [
+        ("prompt_tokens", prompt_tokens),
+        ("output_tokens", output_tokens),
+        ("cached_input_tokens", cache_hit),
+        ("cache_miss_input_tokens", cache_miss),
+    ]:
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int):
+            missing.append(f"{field_name}_invalid_type")
+        elif value < 0:
+            missing.append(f"{field_name}_negative")
+
+    if missing:
         return {
             "cost_amount": None,
             "not_available": True,
-            "not_available_reason": f"missing usage field(s): {missing}",
+            "not_available_reason": f"missing or invalid usage field(s): {missing}",
+            "cost_currency": RATE_CARD_CURRENCY,
+            "cost_source": RATE_CARD_SOURCE,
+            "rate_card_observed_date": RATE_CARD_OBSERVED_DATE,
+            "rate_card_unit": RATE_CARD_UNIT,
+            "rate_period": period,
+        }
+
+    # Consistency check: cache_hit + cache_miss must equal prompt_tokens.
+    # If the API's field semantics make this equation incorrect, we stop rather
+    # than adjusting the definition ourselves.
+    if cache_hit + cache_miss != prompt_tokens:
+        return {
+            "cost_amount": None,
+            "not_available": True,
+            "not_available_reason": (
+                f"cache_hit({cache_hit}) + cache_miss({cache_miss}) "
+                f"!= prompt_tokens({prompt_tokens}); "
+                "cannot compute cost without consistent usage data"
+            ),
             "cost_currency": RATE_CARD_CURRENCY,
             "cost_source": RATE_CARD_SOURCE,
             "rate_card_observed_date": RATE_CARD_OBSERVED_DATE,

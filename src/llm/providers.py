@@ -5,14 +5,15 @@ frozen shared decode settings and the provider-specific controls required by
 ADR-0011/0012.  The two builders are deliberately separate so a DeepSeek-only
 parameter (``thinking``) is never sent to Ollama and vice-versa.
 
-No real network call is made here.  The authorization token, when provided, is
-held only on the :class:`PreparedRequest` and is never serialized into a run
-record.
+No real network call is made here.  In the mock/test path, requests are
+always credential-free -- ``build_deepseek_request()`` never reads environment
+variables or the ``.env`` file.  Credential injection is the responsibility of
+a real transport implementation that must only be used after the formal
+evaluation gate is open and explicitly authorized.
 """
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from .contract import (
@@ -52,20 +53,19 @@ def build_deepseek_request(
     *,
     system_prompt: str,
     user_prompt: str,
-    api_key: str | None = None,
     base_url: str = DEEPSEEK_BASE_URL,
 ) -> PreparedRequest:
-    """Build a DeepSeek Chat Completions request.
+    """Build a credential-free DeepSeek Chat Completions request body.
+
+    This function never reads environment variables, the ``.env`` file, or any
+    credential store.  The returned ``PreparedRequest.authorization`` is always
+    ``None``.  Credential injection is deliberately deferred to a future real
+    transport layer that is only instantiated after the formal evaluation gate
+    is open and explicitly authorized.
 
     Sends the frozen shared decode settings plus the explicit
     ``thinking: {"type":"disabled"}`` control required by ADR-0012.  JSON mode
     is requested via ``response_format``.
-
-    The API key is read only from the argument or the environment; it is never
-    printed or logged.  When ``api_key`` is ``None`` and the environment
-    variable is unset, the authorization is left ``None`` -- a real transport
-    would then fail with an auth error, which is the correct fail-closed
-    behavior for any accidentally-enabled real run.
     """
     body: dict[str, Any] = {
         "model": DEEPSEEK_MODEL,
@@ -79,26 +79,15 @@ def build_deepseek_request(
         "stream": False,
     }
 
-    auth = _resolve_deepseek_auth(api_key)
     return PreparedRequest(
         provider=DEEPSEEK_PROVIDER,
         model=DEEPSEEK_MODEL,
         base_url=base_url,
         endpoint="/chat/completions",
         body=body,
-        authorization=auth,
+        authorization=None,  # credential-free; real transport injects auth
         headers={"Content-Type": "application/json"},
     )
-
-
-def _resolve_deepseek_auth(explicit_key: str | None) -> str | None:
-    """Resolve the DeepSeek API key without ever printing it."""
-    if explicit_key is not None:
-        return f"Bearer {explicit_key}"
-    env_value = os.environ.get("DEEPSEEK_API_KEY")
-    if env_value:
-        return f"Bearer {env_value}"
-    return None
 
 
 def deepseek_configured_identity() -> dict[str, Any]:
@@ -129,6 +118,7 @@ def build_ollama_request(
     Uses the Ollama-native controls: ``think=False``, ``format=json``,
     ``num_predict`` (Ollama's max-output token field), and the shared seed.
     No DeepSeek-specific ``thinking`` parameter is sent.
+    No credentials are required for local Ollama.
     """
     body: dict[str, Any] = {
         "model": OLLAMA_MODEL,

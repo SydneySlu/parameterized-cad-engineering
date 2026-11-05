@@ -208,9 +208,23 @@ def parse_response(raw: str | bytes) -> ParseResult:
                 errors.append(_err("EVIDENCE_ENTRY_MISSING_KEY", STAGE_CONTRACT, (f"evidence[{index}]",), f"evidence[{index}] missing key(s): {ev_missing}"))
             if ev_extra:
                 errors.append(_err("EVIDENCE_ENTRY_EXTRA_KEY", STAGE_CONTRACT, (f"evidence[{index}]",), f"evidence[{index}] unexpected key(s): {ev_extra}"))
+            # 3.5: field, quote, source must be strings.
+            for str_field in ("field", "quote", "source"):
+                val = entry.get(str_field)
+                if val is not None and not isinstance(val, str):
+                    errors.append(_err("EVIDENCE_FIELD_TYPE_ERROR", STAGE_CONTRACT, (f"evidence[{index}].{str_field}",), f"evidence[{index}].{str_field} must be a string, got {type(val).__name__}"))
             source = entry.get("source")
             if isinstance(source, str) and source not in EVIDENCE_SOURCE_VALUES:
                 errors.append(_err("EVIDENCE_SOURCE_INVALID", STAGE_CONTRACT, (f"evidence[{index}].source",), f"evidence source must be one of {sorted(EVIDENCE_SOURCE_VALUES)}, got {source!r}"))
+
+    # 3.5: Array element type checks for unsupported_requests, missing_fields, questions.
+    for str_array_field in ("unsupported_requests", "missing_fields", "questions"):
+        arr = body.get(str_array_field)
+        if not isinstance(arr, list):
+            continue  # already reported as FIELD_NOT_ARRAY above
+        for idx, elem in enumerate(arr):
+            if not isinstance(elem, str):
+                errors.append(_err("ARRAY_ELEMENT_TYPE_ERROR", STAGE_CONTRACT, (f"{str_array_field}[{idx}]",), f"{str_array_field}[{idx}] must be a string, got {type(elem).__name__}"))
 
     # --- Step 7: confidence must be null (diagnostic only) ---
     confidence = body.get("confidence")
@@ -265,15 +279,47 @@ def _decode_and_parse_json(raw: str | bytes, errors: list[ParseError]) -> Any | 
         errors.append(_err("RESPONSE_HAS_CODE_FENCE", STAGE_PARSE, (), "response must be a single JSON object, not a code-fenced block"))
         return None
 
+    # 3.5: Reject non-finite literals (NaN, Infinity, -Infinity) which Python's
+    # json.loads accepts when they appear as bare identifiers, but which are not
+    # valid JSON per RFC 8259 / ECMA-404.  Python's default json module does NOT
+    # parse bare NaN/Infinity, but model outputs may contain them as strings or
+    # as float values in JSON (e.g. via non-compliant serializers).  We
+    # additionally reject them after parsing.
     try:
+        # Use parse_constant=None (disables NaN/Infinity if present in source)
+        # Python's json.loads already rejects bare NaN/Infinity by default,
+        # but we add a post-parse walk to catch them as float values.
         parsed = json.loads(text)
     except json.JSONDecodeError as exc:
         errors.append(_err("INVALID_JSON", STAGE_PARSE, (), f"invalid JSON: {str(exc)[:200]}"))
         return None
 
-    # Reject multiple top-level objects / arrays.  json.loads already rejects
-    # trailing data, so a successful parse means exactly one JSON value.
+    # Walk the parsed value to detect non-finite floats (NaN / ±Infinity).
+    # json.loads in Python won't produce these from well-formed JSON, but
+    # some JSON variants (JavaScript, non-standard serializers) may; adding
+    # the check makes the parser robust to those inputs.
+    _nan_inf_errors: list[str] = []
+    _walk_check_finite(parsed, "", _nan_inf_errors)
+    if _nan_inf_errors:
+        errors.append(_err("NON_FINITE_VALUE", STAGE_PARSE, tuple(_nan_inf_errors[:5]), "response contains non-finite numeric values (NaN or Infinity), which are not valid JSON"))
+        return None
+
     return parsed
+
+
+def _walk_check_finite(obj: Any, path: str, found: list[str]) -> None:
+    """Walk a parsed JSON value and record paths of any non-finite floats."""
+    import math
+
+    if isinstance(obj, float):
+        if not math.isfinite(obj):
+            found.append(path or "<root>")
+    elif isinstance(obj, Mapping):
+        for key, value in obj.items():
+            _walk_check_finite(value, f"{path}.{key}" if path else key, found)
+    elif isinstance(obj, list):
+        for i, item in enumerate(obj):
+            _walk_check_finite(item, f"{path}[{i}]", found)
 
 
 def _is_number_or_measurement(value: Any) -> bool:

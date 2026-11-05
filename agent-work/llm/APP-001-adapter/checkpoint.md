@@ -225,3 +225,90 @@ APP-001=planned
 formal_evaluation_allowed=false
 commit=e496ac0 (feat: implement APP-001 dual-baseline execution adapter with mock transport [APP-001-ADAPTER])
 ```
+
+---
+
+## APP-001-ADAPTER-R1 corrections (2026-11-05)
+
+Codex review `APP-001-ADAPTER-codex-review.md` flagged 4 required fixes and
+3 contract clarifications.  All 7 have been addressed.
+
+### Fixes applied
+
+**3.1 Mock credential isolation:**
+- `build_deepseek_request()` no longer reads `os.environ["DEEPSEEK_API_KEY"]`
+  or accepts an `api_key` parameter.  All mock-path requests have `authorization=None`.
+- `FakeTransport.send()` now stores `request.sanitized()` (authorization cleared)
+  in `calls`.  `last_call()` also returns the sanitized copy.
+- Removed the `api_key` kwarg from `build_deepseek_request()`.
+- Added `MockTransport` base class so the gate can distinguish safe mock
+  transports from potentially network-capable ones.
+
+**3.2 Formal evaluation gate enforced unconditionally:**
+- `Adapter.run()` no longer accepts `allow_real_network` kwarg.
+- Gate check: any transport that is NOT a `MockTransport` subclass is refused
+  before `send()` is called, unconditionally.  `FakeTransport` is a
+  `MockTransport` and always allowed.  No env variable bypass.
+
+**3.3 Cost not_available on incomplete/inconsistent usage:**
+- `compute_cloud_cost()` no longer falls back to treating all prompt tokens as
+  cache miss.  Both cache fields must be present, non-negative integers.
+- Added consistency check: `cache_hit + cache_miss == prompt_tokens` required.
+  If not, cost is `not_available` with an explicit reason string.
+- Bool, negative, or missing fields all yield `not_available`.
+
+**3.4 Total elapsed includes backoff:**
+- `send_with_retry()` now returns a 3-tuple: `(response, outcomes, total_elapsed_ms)`.
+- `total_elapsed_ms` is measured from before the first attempt to after the
+  final outcome, including all sleeper calls.
+- `RunRecord.total_elapsed_ms` and `local_wall_time_ms` use this value.
+
+**3.5 Strict JSON parser:**
+- Added `_walk_check_finite()` post-parse walk to reject non-finite floats
+  (NaN, ±Infinity) from non-standard JSON parsers.  Python 3.10's `json.loads`
+  accepts bare `NaN`; the walk catches it with `NON_FINITE_VALUE`.
+- Added per-element type checks for `unsupported_requests`, `missing_fields`,
+  `questions` (each element must be a string).
+- Added per-field type checks for evidence entries: `field`, `quote`, `source`
+  must all be strings.
+
+**4.1 Raw response retention implemented:**
+- Added `RetentionPolicy` dataclass to `adapter.py`.  Default: `retain_raw=False`.
+- `_retain_response()` writes to a git-ignored `base_dir` only when explicitly
+  enabled.  Returns metadata dict (retained, path, body_length, body_sha256).
+- `RunRecord.raw_response_retention` carries this metadata.  Raw body never
+  appears in `RunRecord` JSON, stdout, or tracked files.
+- Retention failures (OSError) recorded with `retention_failed: true`; not
+  silently swallowed.
+
+**4.2 Prompt hash recorded:**
+- `AdapterInput` gains `system_prompt_sha256()`, `user_template_sha256()`,
+  `rendered_payload_sha256(rendered_user)` methods.
+- `RunRecord.prompt_hashes` dict records all three SHA-256 hashes.
+- The adapter stores prompt hashes before the first transport call.
+- Prompt text is never stored in the run record.
+
+### Test additions
+
+36 new tests across `test_retry.py` (elapsed time) and new
+`test_r1_regression.py` (cost, parser, retention, prompt hash).
+
+### Verification commands
+
+```text
+PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py  → OK
+PYTHONPATH=src python3 -m unittest discover -s tests/llm -v       → 121 tests, OK
+PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+git diff --check  → PASS
+```
+
+### Status
+
+```text
+task=APP-001-ADAPTER-R1
+status=review
+APP-001-PREP=review
+APP-001=planned
+formal_evaluation_allowed=false
+commit=pending (to be recorded after commit)
+```

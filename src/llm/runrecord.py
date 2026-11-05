@@ -146,6 +146,12 @@ class RunRecord:
     # --- Formal evaluation gate (always false in this task) ---
     formal_evaluation_allowed: bool = False
 
+    # --- Prompt hashes (4.2: identifies actual prompt used, not just version label) ---
+    prompt_hashes: dict[str, Any] = field(default_factory=dict)
+
+    # --- Raw response retention metadata (4.1: body never stored in record) ---
+    raw_response_retention: dict[str, Any] = field(default_factory=dict)
+
     def add_stage(self, stage: StageStatus) -> None:
         self.stages.append(stage)
 
@@ -188,6 +194,8 @@ class RunRecord:
             "local_wall_time_ms": self.local_wall_time_ms,
             "construction_ready": self.construction_ready,
             "formal_evaluation_allowed": self.formal_evaluation_allowed,
+            "prompt_hashes": dict(self.prompt_hashes),
+            "raw_response_retention": dict(self.raw_response_retention),
         }
 
     def to_json(self, *, indent: int | None = 2) -> str:

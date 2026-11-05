@@ -66,12 +66,30 @@ class GateTests(unittest.TestCase):
         with self.assertRaises(FormalEvaluationBlockedError):
             require_formal_evaluation_allowed("test run")
 
-    def test_adapter_with_allow_real_network_trips_gate(self):
-        transport = FakeTransport()
-        transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {}))
-        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
+    def test_non_mock_transport_trips_gate_before_send(self):
+        """3.2: Any non-MockTransport transport must be refused before send()."""
+        class CountingTransport:
+            """Not a MockTransport -- simulates a custom/real transport."""
+            def __init__(self):
+                self.send_calls = 0
+            def send(self, request):
+                self.send_calls += 1
+                return TransportResponse(200, "{}")
+
+        custom = CountingTransport()
+        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=lambda s: None)
         with self.assertRaises(FormalEvaluationBlockedError):
-            adapter.run(_input(), run_id="g1", allow_real_network=True)
+            adapter.run(_input(), run_id="g1")
+        # send() must NOT have been called -- gate fires before transport
+        self.assertEqual(custom.send_calls, 0)
+
+    def test_fake_transport_allowed_with_gate_closed(self):
+        """3.2: FakeTransport (MockTransport) runs regardless of gate state."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40}))
+        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
+        result = adapter.run(_input(), run_id="g2")
+        self.assertTrue(result.record.construction_ready)
 
 
 class SecretScanTests(unittest.TestCase):
@@ -99,26 +117,39 @@ class SecretScanTests(unittest.TestCase):
             self.assertIsNone(pat.search(text), f"matched secret pattern {pat.pattern}")
 
     def test_authorization_not_in_record(self):
-        from src.llm.providers import build_deepseek_request
-        req = build_deepseek_request(system_prompt="s", user_prompt="u", api_key="sk-test-secret-key-value")
+        """3.1: Authorization values must never appear in run records."""
+        # Build a mock run; mock path requests have no credentials.
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
         text = adapter.run(_input(), run_id="sec2").record.to_json()
-        self.assertNotIn("sk-test-secret-key-value", text)
+        # No authorization values should appear anywhere in the record.
+        self.assertNotIn("Bearer ", text)
+        self.assertNotIn("sk-test", text)
 
     def test_no_env_key_read_during_run(self):
-        # Ensure no env var is read during a normal mock run.
-        saved = os.environ.pop("DEEPSEEK_API_KEY", None)
+        """3.1: DEEPSEEK_API_KEY env var must not be read during a mock run."""
+        import os
+        # Set a synthetic env var. If the adapter reads it, authorization
+        # would appear as "Bearer synthetic-never-read-key" in the record.
+        saved = os.environ.get("DEEPSEEK_API_KEY")
+        os.environ["DEEPSEEK_API_KEY"] = "synthetic-never-read-key"
         try:
             transport = FakeTransport()
             transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
             adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
-            # Should not raise even with no key in env.
             result = adapter.run(_input(), run_id="sec3")
             self.assertTrue(result.record.construction_ready)
+            # The stored request must have no authorization.
+            req = transport.last_call()
+            self.assertIsNone(req.authorization)
+            # The JSON record must not contain the synthetic key value.
+            record_text = result.record.to_json()
+            self.assertNotIn("synthetic-never-read-key", record_text)
         finally:
-            if saved is not None:
+            if saved is None:
+                os.environ.pop("DEEPSEEK_API_KEY", None)
+            else:
                 os.environ["DEEPSEEK_API_KEY"] = saved
 
 

@@ -70,19 +70,21 @@ class DeepSeekRequestTests(unittest.TestCase):
         self.assertNotIn("options", req.body)
 
     def test_no_explicit_key_uses_env_or_none(self):
+        """3.1: build_deepseek_request never reads env vars; authorization is always None."""
         import os
-
         saved = os.environ.pop("DEEPSEEK_API_KEY", None)
         try:
-            req = build_deepseek_request(system_prompt=SYSTEM, user_prompt=USER, api_key=None)
+            req = build_deepseek_request(system_prompt=SYSTEM, user_prompt=USER)
             self.assertIsNone(req.authorization)
         finally:
             if saved is not None:
                 os.environ["DEEPSEEK_API_KEY"] = saved
 
-    def test_explicit_key_used_as_bearer(self):
-        req = build_deepseek_request(system_prompt=SYSTEM, user_prompt=USER, api_key="dummy")
-        self.assertEqual(req.authorization, "Bearer dummy")
+    def test_explicit_key_not_accepted_by_mock_builder(self):
+        """3.1: build_deepseek_request does not accept an api_key parameter."""
+        import inspect
+        sig = inspect.signature(build_deepseek_request)
+        self.assertNotIn("api_key", sig.parameters)
 
     def test_decode_snapshot_deepseek(self):
         snap = decoding_parameters_snapshot(DEEPSEEK_PROVIDER)

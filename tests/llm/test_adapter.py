@@ -220,19 +220,20 @@ class DeepSeekAdapterTests(unittest.TestCase):
         self.assertFalse(rec.construction_ready)
 
     def test_usage_with_missing_cache_fields_yields_not_available_cost(self):
+        """3.3: cache hit/miss missing -> cost must be not_available, never estimated."""
         self.transport.queue_response(
             TransportResponse(
                 status=200,
                 body=_envelope_body(),
                 runtime_returned_model=DEEPSEEK_MODEL,
                 usage={"prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46},
+                # prompt_cache_hit_tokens and prompt_cache_miss_tokens are absent
             )
         )
         result = self._adapter().run(_input(), run_id="r10")
         rec = result.record
-        # Missing cache fields -> cost falls back to treating all as cache miss,
-        # so cost is computable here.  Verify it's a positive number.
-        self.assertIsNotNone(rec.cloud_cost_amount)
+        # Cost must be None (not_available) because cache fields are missing.
+        self.assertIsNone(rec.cloud_cost_amount)
 
 
 class OllamaAdapterTests(unittest.TestCase):

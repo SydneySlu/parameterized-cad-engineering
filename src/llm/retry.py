@@ -1,11 +1,16 @@
 """Transient-fault retry loop with an injectable clock and sleeper.
 
 Retries only for connection/read timeout, connection interruption, HTTP 429
-and HTTP 5xx, with fixed 1s/2s backoff (max 2 retries after the initial attempt).
-Authentication/permission, malformed request, context overflow, invalid JSON,
-contract/schema/rule and CAD failures are never retried.
+and HTTP 5xx, with fixed 1s/2s backoff (max 2 retries after the initial
+attempt).  Authentication/permission, malformed request, context overflow,
+invalid JSON, contract/schema/rule and CAD failures are never retried.
 
 The clock and sleeper are injected so tests never call ``time.sleep``.
+
+3.4 fix: ``send_with_retry`` returns a third value, ``total_elapsed_ms``, which
+is measured from before the first attempt to after the final outcome,
+*including* all backoff waits.  This is distinct from the sum of per-attempt
+request durations and gives the correct per-sample wall-clock time.
 """
 
 from __future__ import annotations
@@ -37,7 +42,7 @@ class AttemptOutcome:
 
     attempt_number: int
     started_at: float
-    elapsed_ms: float
+    elapsed_ms: float  # duration of this transport.send() call only
     outcome: str  # "success" | "transient_retryable" | "non_retryable" | "exhausted"
     http_status: int | None
     error_condition: str | None
@@ -51,14 +56,22 @@ def send_with_retry(
     *,
     clock: Clock = _real_clock,
     sleeper: Sleeper = _real_sleeper,
-) -> tuple[TransportResponse | None, list[AttemptOutcome]]:
+) -> tuple[TransportResponse | None, list[AttemptOutcome], float]:
     """Send ``request`` via ``transport`` with the frozen retry policy.
 
-    Returns the final response (or ``None`` if all attempts failed) and the
-    list of per-attempt outcomes.  Non-retryable errors stop immediately.
+    Returns a 3-tuple:
+    - ``response``: the final :class:`TransportResponse`, or ``None`` on failure.
+    - ``outcomes``: per-attempt outcome records (request durations only).
+    - ``total_elapsed_ms``: wall-clock time from before the first attempt to
+      after the final outcome, **including all backoff waits**.  This is what
+      ``RunRecord.total_elapsed_ms`` and ``local_wall_time_ms`` must use.
     """
     outcomes: list[AttemptOutcome] = []
     backoff = list(BACKOFF_SECONDS)
+
+    # Start the overall wall-clock before the first attempt.
+    overall_start = clock()
+
     for attempt in range(1, MAX_ATTEMPTS_TOTAL + 1):
         started = clock()
         http_status: int | None = None
@@ -78,7 +91,8 @@ def send_with_retry(
                     error_fields=(),
                 )
             )
-            return response, outcomes
+            total_elapsed_ms = (clock() - overall_start) * 1000.0
+            return response, outcomes, total_elapsed_ms
         except TransportError as exc:
             elapsed_ms = (clock() - started) * 1000.0
             http_status = exc.http_status
@@ -97,7 +111,8 @@ def send_with_retry(
                         error_fields=(error_condition or "unknown",),
                     )
                 )
-                return None, outcomes
+                total_elapsed_ms = (clock() - overall_start) * 1000.0
+                return None, outcomes, total_elapsed_ms
             # Retryable: record and maybe back off.
             if attempt < MAX_ATTEMPTS_TOTAL:
                 outcomes.append(
@@ -114,6 +129,7 @@ def send_with_retry(
                 )
                 sleep_for = backoff[attempt - 1] if attempt - 1 < len(backoff) else backoff[-1]
                 sleeper(sleep_for)
+                # (wall clock continues ticking during sleep via the injected clock)
             else:
                 outcomes.append(
                     AttemptOutcome(
@@ -127,7 +143,8 @@ def send_with_retry(
                         error_fields=(error_condition,),
                     )
                 )
-                return None, outcomes
+                total_elapsed_ms = (clock() - overall_start) * 1000.0
+                return None, outcomes, total_elapsed_ms
         except Exception as exc:  # pragma: no cover - defensive
             elapsed_ms = (clock() - started) * 1000.0
             outcomes.append(
@@ -142,5 +159,8 @@ def send_with_retry(
                     error_fields=("other_non_retryable",),
                 )
             )
-            return None, outcomes
-    return None, outcomes
+            total_elapsed_ms = (clock() - overall_start) * 1000.0
+            return None, outcomes, total_elapsed_ms
+
+    total_elapsed_ms = (clock() - overall_start) * 1000.0
+    return None, outcomes, total_elapsed_ms
