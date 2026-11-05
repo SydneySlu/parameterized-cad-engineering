@@ -792,3 +792,10 @@ verified=
 result=3 项 R2 修正全部完成；143 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
 limits=IR 映射仍未冻结；正式 APP-001 仍未授权；真实 provider/样例/正式指标均未运行
 next=Codex 中枢 R2 只读复核；通过后项目负责人可授权正式 APP-001 运行
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-R2-review status=review
+- 动作：独立复核 `c9abdcb` 与 `405f933`，复跑 LLM/Schema 回归，并用合成 transport、临时路径和临时 symlink 验证 R2 安全边界。
+- 验证：LLM 143/143、Schema 17/17、`py_compile` 与 `git diff --check` 通过；越界 symlink 被拒绝；但公开 `verify_frozen_prompt=False` 让任意 Prompt 到达 FakeTransport，直接设置 RetentionPolicy `_test_only=True` 也成功将合成 raw response 写出仓库外。
+- 结论：R2 部分有效但不验收通过。评测门精确类型与 canonical path resolver 有效；Prompt 校验和 Retention test-only 机制均可由普通调用者绕过。具体证据见 `agent-work/reviews/APP-001-ADAPTER-R2-codex-review.md`。
+- 边界：没有真实网络、密钥、模型、冻结验收样例或正式指标；IR 映射仍未冻结并属于后续依赖。
+- 下一步：窄范围 R3 修复上述两个可绕过入口，保持 APP-001=planned 和正式评测门关闭。
