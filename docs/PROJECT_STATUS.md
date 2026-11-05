@@ -48,7 +48,7 @@
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | `app001-io.v1` / `app001-extraction.v2` 与 9 条 evaluator-only 样例已由中枢/负责人冻结；显式抽取与 CAD-003 投影分层；等待 adapter/logger 实现与中枢审查 |
-| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | R2 `c9abdcb` 的评测门精确类型检查和 canonical Retention 路径验证有效；中枢复核发现公开 `verify_frozen_prompt=False` 可绕过 Prompt 核验，且 `_test_only=True` 可伪造并将 raw response 写到仓库外；详见 `agent-work/reviews/APP-001-ADAPTER-R2-codex-review.md`，不放行正式 APP-001 |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | R3 已关闭公开 Prompt/Retention 绕过，167 个 LLM 回归与 17 个 Schema 测试通过；中枢复核仍要求补齐真实篡改 artifact、symlink 越界测试并同步 README/状态文档，详见 `agent-work/reviews/APP-001-ADAPTER-R3-codex-review.md`，不放行正式 APP-001 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 adapter/logger 审查通过且负责人另行授权后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入已批准确定性链后测 |
 
 ## 阻塞项
@@ -57,7 +57,7 @@
 
 ## 下一步
 
-1. 完成 `APP-001-ADAPTER-R3` 定点修正：移除正式 `Adapter.run()` 的 Prompt 校验绕过/任意 artifact 路径，并让测试专用 Retention 路径不能由公开策略字段伪造。
-2. R3 修正经中枢复核后，再评估 APP-001 前置条件；在此之前不调用九条冻结验收样例。
+1. 完成 `APP-001-ADAPTER-R3` 收尾证据和文档修正：真实篡改 artifact 测试、symlink 越界测试及 README/状态同步。
+2. R3 收尾经中枢复核后，再评估 APP-001 前置条件；在此之前不调用九条冻结验收样例。
 3. APP-001 完成后，再设计端到端 C0/C1 下游比较；公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。

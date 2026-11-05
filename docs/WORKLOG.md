@@ -813,3 +813,10 @@ verified=
 result=2 项 R3 修正完成；167 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
 limits=IR 映射未冻结；正式 APP-001 未授权；prompt loader 两次读文件存在理论 TOCTOU
 next=Codex 中枢 R3 只读复核；通过后项目负责人可授权正式 APP-001 运行
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-R3-review status=review
+- 动作：独立复核 `750897d`/`5e29cbf` 的 R3 代码、测试和状态文档；未调用真实 API、未读取密钥、未运行冻结验收样例。
+- 验证：LLM 167/167、Schema 17/17、`py_compile` 与 `git diff --check` 通过；手工 symlink 越界探针被拒绝；Adapter.run 绕过参数和 Retention `_test_only` 均已移除。
+- 结论：R3 代码行为条件性通过，但不作最终验收。篡改 artifact 测试没有真正加载篡改文件，symlink 越界测试未固化；README 与 PROJECT_STATUS 仍有 R2/旧规则表述。具体证据见 `agent-work/reviews/APP-001-ADAPTER-R3-codex-review.md`。
+- 边界：IR 映射仍未冻结；正式 APP-001、真实 provider、九条样例和正式指标均未授权或运行。
+- 下一步：给原 R3 Agent 窄范围收尾修正，完成两项测试证据和文档同步后再复审。
