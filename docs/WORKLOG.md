@@ -702,5 +702,5 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 
 [2026-11-05] agent=APP-001-PREP-R2 task=APP-001-PREP-doc-consistency status=review
 - 动作=修正 `prompt-output-contract-v0.md` 输出示例中的过期 `app001-extraction.v0-draft`，统一为当前候选 `app001-extraction.v1`；移除 `prompt-v1.md` 末尾多余空行；未改历史日志、模型策略、验收标签或正式状态。
-- 验证=检查 Prompt、output contract、baseline artifact 的当前版本标识一致；无 JSON/YAML 改动，按要求不重复解析；未运行 DeepSeek/Ollama 请求、验收样例或质量评测。
-- 下一步=提交窄范围修正并交 Codex 中枢复核；保持 APP-001-PREP=review、APP-001=planned、formal_evaluation_allowed=false。
+- 验证=检查 Prompt、output contract、baseline artifact 的当前版本标识一致；无 JSON/YAML 改动，按要求不重复解析；未运行 DeepSeek/Ollama 请求、验收样例或质量评测；提交后 `git diff --check HEAD^ HEAD` 通过。
+- 交付提交=窄范围修正 commit `f877b0c`；保持 APP-001-PREP=review、APP-001=planned、formal_evaluation_allowed=false，交 Codex 中枢复核。
