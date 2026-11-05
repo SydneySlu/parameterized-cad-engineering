@@ -24,7 +24,7 @@ The model returns one JSON object and no prose or code fences. Proposed envelope
 ```json
 {
   "contract_version": "app001-io.v0-draft",
-  "prompt_version": "app001-extraction.v0-draft",
+  "prompt_version": "app001-extraction.v1",
   "decision": "answer",
   "cad_parameters": {
     "schema_version": "set_screw_shaft_collar.v0",

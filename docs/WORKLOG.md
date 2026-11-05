@@ -698,3 +698,9 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 验证=Ruby YAML parse、两份 JSON parse、`git diff --check`、`git check-ignore -v .env`、Prompt evaluator-label scan、secret/index scan 均通过；未修改 ADR-0009 至 ADR-0012，未修改 CAD-003/IR/CAD/RET-003 实现。
 - 限制=候选 Prompt/样例、adapter/logger 和本地/云端模式公平性仍待 Codex 中枢/负责人审核；APP-001-PREP 保持 review，APP-001 保持 planned，formal evaluation gate=false；所有正式字段/Schema/IR/CAD/STEP/成本/延迟结果仍 not_measured。
 - 下一步=中枢独立审查 `prompt-v1.md` 的真值隔离、严格 CAD-003 投影和运行记录适配器，确认后另行决定是否放行 APP-001；本提交不 push、不合并。
+- 交付提交=前序 APP-001-PREP-R2 交付 commit `c255d4e`（本次文档一致性修正的核对基线）。
+
+[2026-11-05] agent=APP-001-PREP-R2 task=APP-001-PREP-doc-consistency status=review
+- 动作=修正 `prompt-output-contract-v0.md` 输出示例中的过期 `app001-extraction.v0-draft`，统一为当前候选 `app001-extraction.v1`；移除 `prompt-v1.md` 末尾多余空行；未改历史日志、模型策略、验收标签或正式状态。
+- 验证=检查 Prompt、output contract、baseline artifact 的当前版本标识一致；无 JSON/YAML 改动，按要求不重复解析；未运行 DeepSeek/Ollama 请求、验收样例或质量评测。
+- 下一步=提交窄范围修正并交 Codex 中枢复核；保持 APP-001-PREP=review、APP-001=planned、formal_evaluation_allowed=false。

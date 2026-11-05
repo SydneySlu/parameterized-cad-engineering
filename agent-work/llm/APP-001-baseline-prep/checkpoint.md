@@ -55,3 +55,11 @@ No acceptance sample, formal C0/C1, cloud/local comparison, Schema/IR/CAD/STEP r
 ## Required Codex hub decisions
 
 Review `prompt-v1.md`, the nine evaluator-only labels, adapter/logger implementation boundary, and whether the recorded Ollama no-think configuration is sufficient for a future fair comparison. Keep `APP-001-PREP=review`, `APP-001=planned`, and the formal evaluation gate false until explicit approval.
+
+## APP-001-PREP-R2 document consistency correction
+
+- Corrected the required output example in `prompt-output-contract-v0.md` from the stale `app001-extraction.v0-draft` label to the candidate `app001-extraction.v1` label.
+- Removed the extra trailing blank line from `prompt-v1.md`.
+- Repository search confirmed current Prompt version references in the Prompt, output contract, and baseline artifact are all `app001-extraction.v1`; historical records were not changed.
+- No JSON/YAML files were modified in this correction, so no parser rerun was required. `git diff --check HEAD^ HEAD` was run for the correction commit; no model/API requests or acceptance samples were run.
+- Prior delivery commit recorded for traceability: `c255d4e`. Status remains `APP-001-PREP=review`, `APP-001=planned`, `formal_evaluation_allowed=false`.

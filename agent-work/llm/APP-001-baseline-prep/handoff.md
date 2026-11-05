@@ -44,3 +44,11 @@ handoff_self_check:
   unresolved=final hub review, project-owner confirmation, execution adapter/logger review, fair comparison mode equivalence
   next_agent_focus=independently inspect prompt truth isolation and output adapter; keep APP-001 planned and formal gate false
 ```
+
+## APP-001-PREP-R2 document consistency correction
+
+- Prior delivery commit: `c255d4e`.
+- Corrected the output-envelope example's `prompt_version` to `app001-extraction.v1` and removed the extra trailing blank line from `prompt-v1.md`.
+- Checked current Prompt version references across `prompt-v1.md`, `prompt-output-contract-v0.md`, and `model-baselines-v0.yaml`; all agree on `app001-extraction.v1`. Historical records were left unchanged.
+- No JSON/YAML was changed. Validation is limited to the version-consistency check and `git diff --check HEAD^ HEAD`; no model calls, acceptance samples, or quality measurements were run.
+- Handoff remains `review`; Codex hub review is required before any APP-001 release decision.

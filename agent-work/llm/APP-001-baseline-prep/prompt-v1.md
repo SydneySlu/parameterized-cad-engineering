@@ -43,4 +43,3 @@ reference_context:
 ```
 
 The caller must substitute the four placeholders without adding evaluator-only labels, expected values, directory rows, schema truth, CAD/IR/STEP data, or private source samples. When `reference_context` is present, label it as an untrusted example and include only the RET-002 candidate fields intended for reference. The model input must never contain the evaluator file's truth, derived-value annotations, expected behavior, or unacceptable-output list.
-
