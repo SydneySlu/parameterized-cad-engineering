@@ -265,6 +265,8 @@ class OllamaTransport:
         self._timeout = timeout_seconds
         self._ollama_version: str | None = None
         self._verified_digest: bool = False
+        self._actual_digest: str | None = None
+        self._actual_model_name: str | None = None
 
     def send(self, request: PreparedRequest) -> TransportResponse:
         """Send the request to the local Ollama /api/chat endpoint."""
@@ -309,10 +311,12 @@ class OllamaTransport:
         return self._parse_response(status, raw, t_elapsed)
 
     def _verify_model_digest(self) -> None:
-        """Check that the expected model is running locally.
+        """Check that the expected model is running locally with the correct digest.
 
-        Does NOT pull the model or change anything.  Raises a non-retryable
-        :class:`TransportError` if the model is absent or digest mismatches.
+        Uses strict prefix matching: actual_digest.startswith(OLLAMA_DIGEST).
+        Does NOT use contains-check.  Does NOT pull or replace the model.
+        Records the actual model name and digest from the API response.
+        Raises a non-retryable :class:`TransportError` on any mismatch.
         """
         url = f"{self._host}/api/show"
         body_bytes = json.dumps({"name": OLLAMA_MODEL}).encode("utf-8")
@@ -331,25 +335,47 @@ class OllamaTransport:
                     "ensure Ollama is running with qwen3:8b loaded"
                 ),
             )
-        # Check digest prefix matches the frozen value
+        if not isinstance(data, dict):
+            raise TransportError(
+                condition=COND_OTHER_NON_RETRYABLE,
+                http_status=None,
+                message="Ollama /api/show returned non-object response",
+            )
+        # Verify model name
+        returned_model = data.get("model_info", {}).get("general.basename") or data.get("model") or ""
+        # Also check modelfile header and details
         details = data.get("details", {}) if isinstance(data, dict) else {}
-        model_id = data.get("modelfile", "") or ""
-        digest_field = data.get("digest", "") or details.get("digest", "") or ""
-        if not (
-            str(digest_field).startswith(OLLAMA_DIGEST)
-            or OLLAMA_DIGEST in str(digest_field)
-        ):
+        # Accept if any of the model name indicators match "qwen3"
+        family = details.get("family", "") or ""
+        if not ("qwen3" in str(returned_model).lower() or "qwen3" in str(family).lower()):
             raise TransportError(
                 condition=COND_OTHER_NON_RETRYABLE,
                 http_status=None,
                 message=(
-                    f"Ollama model digest mismatch: expected prefix {OLLAMA_DIGEST!r}, "
-                    f"got {str(digest_field)[:20]!r}; "
+                    f"Ollama model name mismatch: expected qwen3:8b, "
+                    f"got model={returned_model!r}, family={family!r}"
+                ),
+            )
+        # Verify digest with strict prefix matching
+        digest_field = (
+            data.get("digest")
+            or details.get("digest")
+            or ""
+        )
+        actual_digest = str(digest_field).strip()
+        if not actual_digest.startswith(OLLAMA_DIGEST):
+            raise TransportError(
+                condition=COND_OTHER_NON_RETRYABLE,
+                http_status=None,
+                message=(
+                    f"Ollama model digest mismatch: expected prefix "
+                    f"{OLLAMA_DIGEST!r}, got {actual_digest[:20]!r}; "
                     "do not auto-pull; verify the model manually"
                 ),
             )
         self._verified_digest = True
-        # Record Ollama runtime version (non-sensitive)
+        self._actual_digest = actual_digest  # actual runtime value
+        self._actual_model_name = str(returned_model) if returned_model else OLLAMA_MODEL
         self._ollama_version = data.get("version", "unknown")
 
     def _parse_response(
@@ -371,11 +397,14 @@ class OllamaTransport:
             )
         message = data.get("message", {})
         body = message.get("content", "") if isinstance(message, dict) else ""
-        # Runtime metadata (no secrets)
+        # Runtime identity — actual values from /api/show (not frozen constants)
         runtime_model = data.get("model", OLLAMA_MODEL)
-        usage: dict[str, Any] = {
+        usage: dict = {
             "local_wall_time_seconds": wall_time_s,
             "ollama_runtime": self._ollama_version,
+            # Actual digest from /api/show verification — NOT the frozen expected value
+            "local_actual_digest": self._actual_digest,
+            "local_actual_model_name": self._actual_model_name,
             "cloud_tokens": "not_applicable",
             "cloud_cost": "not_applicable",
         }

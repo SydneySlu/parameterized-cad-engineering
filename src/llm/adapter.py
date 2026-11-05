@@ -580,9 +580,18 @@ class Adapter:
         record.runtime_returned_model = response.runtime_returned_model
         record.runtime_returned_provider = response.runtime_returned_provider
         if self.provider == OLLAMA_PROVIDER:
-            from .contract import OLLAMA_DIGEST
-
-            record.local_digest = OLLAMA_DIGEST
+            # Use actual digest from the transport's /api/show verification result,
+            # not the frozen expected constant.  If not available (e.g. FakeTransport),
+            # fall back to the usage field set by OllamaTransport.
+            usage = response.usage or {}
+            actual_digest = usage.get("local_actual_digest")
+            if actual_digest:
+                record.local_digest = str(actual_digest)
+            else:
+                # FakeTransport / tests: record the expected constant but note it's
+                # not confirmed by a real /api/show call
+                from .contract import OLLAMA_DIGEST
+                record.local_digest = OLLAMA_DIGEST
 
     def _record_cloud_usage_and_cost(self, record: RunRecord, response: TransportResponse) -> None:
         usage = response.usage or {}

@@ -407,3 +407,80 @@ def _utc_now_iso() -> str:
     from datetime import datetime, timezone
 
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ---------------------------------------------------------------------------
+# Budget-aware transport wrapper
+# ---------------------------------------------------------------------------
+
+
+class BudgetAwareTransport:
+    """Transport wrapper that atomically reserves one budget slot per send().
+
+    Each call to ``send()`` performs, in order:
+    1. ``ledger.reserve_attempt(logical_run_id, provider)`` — atomic, fail-closed
+    2. ``inner.send(request)`` — the real or fake transport
+    3. ``ledger.record_outcome(...)`` — records success or error classification
+
+    This ensures every physical HTTP request consumes exactly one budget slot,
+    including each internal retry made by ``send_with_retry()``.
+
+    The wrapper is intentionally not a :class:`~src.llm.transport.MockTransport`
+    subclass so that the adapter's gate check (``type(transport) is FakeTransport``)
+    continues to function correctly: a real formal run uses a real transport wrapped
+    in this class, and the adapter must have a valid ``FormalRunAuthorization``.
+    """
+
+    def __init__(
+        self,
+        inner,
+        *,
+        ledger: BudgetLedger,
+        logical_run_id: str,
+        provider: str,
+    ) -> None:
+        self._inner = inner
+        self._ledger = ledger
+        self._logical_run_id = logical_run_id
+        self._provider = provider
+        self._attempt_numbers: list[int] = []
+
+    @property
+    def attempt_numbers(self) -> list[int]:
+        return list(self._attempt_numbers)
+
+    def send(self, request) -> object:
+        """Reserve a budget slot, call inner.send(), record outcome."""
+        reservation = self._ledger.reserve_attempt(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+        )
+        self._attempt_numbers.append(reservation.attempt_number)
+        from .transport import TransportError
+
+        try:
+            response = self._inner.send(request)
+        except TransportError as exc:
+            outcome = "transient_retryable" if exc.is_retryable() else "non_retryable"
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=reservation.attempt_number,
+                outcome=outcome,
+            )
+            raise
+        except Exception:
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=reservation.attempt_number,
+                outcome="non_retryable",
+            )
+            raise
+        self._ledger.record_outcome(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            attempt_number=reservation.attempt_number,
+            outcome="success",
+        )
+        return response

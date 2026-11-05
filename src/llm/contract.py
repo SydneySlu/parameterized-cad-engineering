@@ -17,6 +17,10 @@ from typing import Final
 CONTRACT_VERSION: Final[str] = "app001-io.v1"
 PROMPT_VERSION: Final[str] = "app001-extraction.v2"
 ACCEPTANCE_SET_VERSION: Final[str] = "acceptance-set-v0"
+# SHA-256 of the frozen acceptance-set-v0.json file, verified 2026-11-06.
+# Any content change — including NLI, query IDs, or evaluator-only fields —
+# must be rejected before any run proceeds.
+ACCEPTANCE_SET_SHA256: Final[str] = "ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf"
 FORMAL_EVALUATION_ALLOWED: Final[bool] = False
 
 # ---------------------------------------------------------------------------

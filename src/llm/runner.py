@@ -38,7 +38,7 @@ from typing import Any
 
 from .adapter import Adapter, AdapterInput, RetentionPolicy
 from .authorization import FormalRunAuthorization, authorize_phase1_run
-from .budget import BudgetError, BudgetLedger
+from .budget import BudgetAwareTransport, BudgetError, BudgetLedger
 from .combinations import (
     CONDITION_C0,
     CONDITION_C1,
@@ -49,6 +49,7 @@ from .combinations import (
 )
 from .conditions import assemble_c0, assemble_c1
 from .contract import (
+    ACCEPTANCE_SET_SHA256,
     ACCEPTANCE_SET_VERSION,
     DEEPSEEK_PROVIDER,
     FAMILY_ID,
@@ -311,13 +312,17 @@ class App001Runner:
         self,
         *,
         combo: LogicalRunCombination,
-        assembled_input: Any,
+        assembled_input: object,
         authorization: FormalRunAuthorization,
         ledger: BudgetLedger,
         batch_dir: Path,
-        prompt_artifact: Any,
-    ) -> LogicalRunResult:
-        """Execute one logical run (up to max_attempts_per_run)."""
+        prompt_artifact: object,
+    ) -> "LogicalRunResult":
+        """Execute one logical run (up to max_attempts_per_run).
+
+        Each physical transport.send() call atomically reserves one budget
+        slot via BudgetAwareTransport before the actual request.
+        """
         lrid = combo.logical_run_id
         # Check if already completed (restart recovery)
         existing = ledger.run_result(lrid)
@@ -333,6 +338,29 @@ class App001Runner:
                 record=None,
                 record_dict=None,
                 blocked_reason=None,
+            )
+        # Check for unfinished reservations (incomplete attempt — fail closed)
+        run_used = ledger.run_attempts_used(lrid)
+        run_result_val = ledger.run_result(lrid)
+        # If there are attempts but no result, that means a previous run was
+        # interrupted mid-attempt.  We cannot safely resume — fail closed.
+        if run_used > 0 and run_result_val is None:
+            ledger.record_run_result(logical_run_id=lrid, result="interrupted_fail_closed")
+            return LogicalRunResult(
+                logical_run_id=lrid,
+                query_id=combo.query_id,
+                condition_id=combo.condition_id,
+                provider=combo.provider,
+                model=combo.model,
+                attempt_count=run_used,
+                final_outcome="interrupted_fail_closed",
+                record=None,
+                record_dict=None,
+                blocked_reason=(
+                    "FAIL_CLOSED_INCOMPLETE_RESERVATION: "
+                    "ledger shows attempts without a final result; "
+                    "cannot safely resume without knowing prior budget consumption"
+                ),
             )
         # C1 blocked?
         if assembled_input is None:
@@ -363,20 +391,23 @@ class App001Runner:
                 record_dict=None,
                 blocked_reason=assembled_input.blocked_reason,
             )
-        # Build transport and adapter
-        transport = self._build_transport(combo.provider, authorization)
+        # Build real transport and wrap it with BudgetAwareTransport
+        inner_transport = self._build_transport(combo.provider, authorization)
+        budget_transport = BudgetAwareTransport(
+            inner_transport,
+            ledger=ledger,
+            logical_run_id=lrid,
+            provider=combo.provider,
+        )
         retention = RetentionPolicy(
             retain_raw=True,
             base_dir=f"work/app001-runs/{authorization.batch_id}",
         )
-        import time as _time
-        fake_clock = _time.monotonic
         adapter = Adapter(
             provider=combo.provider,
-            transport=transport,
+            transport=budget_transport,
             retention_policy=retention,
         )
-        # Build AdapterInput from assembled input
         ref_ctx = getattr(assembled_input, "reference_context", None)
         adapter_input = AdapterInput(
             query_id=combo.query_id,
@@ -387,46 +418,26 @@ class App001Runner:
             condition_id=combo.condition_id,
         )
         run_id = _safe(f"{authorization.batch_id}__{lrid}")
-        # The retry loop is handled inside Adapter.run() via send_with_retry.
-        # We reserve budget BEFORE calling adapter.run() which calls send_with_retry.
-        # Because send_with_retry can make up to 3 calls internally, we reserve
-        # the max budget atomically upfront per run, then reconcile via outcomes.
-        # Per requirement: "每次调用前先原子预留预算" -- this means per attempt.
-        # We use a custom retry wrapper to reserve per-attempt.
         result_record = None
         final_outcome = "non_retryable_error"
         attempt_count = 0
         try:
-            reservation = ledger.reserve_attempt(
-                logical_run_id=lrid, provider=combo.provider
-            )
-            attempt_count = reservation.attempt_number
             run_result = adapter.run(
                 adapter_input,
                 run_id=run_id,
                 formal_authorization=authorization,
             )
             result_record = run_result.record
-            # Determine final outcome from record
+            attempt_count = len(budget_transport.attempt_numbers)
             model_call_stage = result_record.stage_status("model_call")
             if model_call_stage == "pass":
                 final_outcome = "success"
-                ledger.record_outcome(
-                    logical_run_id=lrid,
-                    provider=combo.provider,
-                    attempt_number=reservation.attempt_number,
-                    outcome="success",
-                )
             else:
                 final_outcome = "non_retryable_error"
-                ledger.record_outcome(
-                    logical_run_id=lrid,
-                    provider=combo.provider,
-                    attempt_number=reservation.attempt_number,
-                    outcome="non_retryable_error",
-                )
         except BudgetError as exc:
             final_outcome = "budget_exhausted"
+            attempt_count = len(budget_transport.attempt_numbers)
+            ledger.record_run_result(logical_run_id=lrid, result=final_outcome)
             return LogicalRunResult(
                 logical_run_id=lrid,
                 query_id=combo.query_id,
@@ -439,17 +450,17 @@ class App001Runner:
                 record_dict=None,
                 blocked_reason=f"BUDGET_EXHAUSTED: {exc}",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception:
             final_outcome = "non_retryable_error"
-        finally:
-            ledger.record_run_result(logical_run_id=lrid, result=final_outcome)
+            attempt_count = len(budget_transport.attempt_numbers)
+        ledger.record_run_result(logical_run_id=lrid, result=final_outcome)
         record_dict = None
         if result_record is not None:
             d = result_record.as_dict()
             d["logical_run_id"] = lrid
             d["batch_id"] = authorization.batch_id
             d["final_outcome"] = final_outcome
-            # Ensure IR/CAD/STEP are always not_run / blocked
+            d["acceptance_set_sha256"] = ACCEPTANCE_SET_SHA256
             _ensure_ir_cad_not_run(d)
             record_dict = d
         return LogicalRunResult(
@@ -535,7 +546,10 @@ class App001Runner:
     # ------------------------------------------------------------------
 
     def _load_projection(self) -> AcceptanceSetProjection:
-        return project_acceptance_set(self._acceptance_set_path)
+        return project_acceptance_set(
+            self._acceptance_set_path,
+            expected_sha256=ACCEPTANCE_SET_SHA256,
+        )
 
     def _resolve_batch_dir(self, batch_id: str) -> Path:
         safe_id = _safe(batch_id)

@@ -879,3 +879,18 @@ results=dry_run() 生成正确的 36 条组合，不泄露评估器标签；Form
 not_run=正式九条样例评测未运行；未发起真实 DeepSeek 或 Ollama 请求；无模型质量、延迟或费用结论；所有正式指标仍 not_measured
 known_limits=预算账本目前每 Adapter.run() 预留一次（含内部最多 3 次重试），非每物理 attempt 预留；C1 reference context 在 retrieval_index=None 时阻塞；TOCTOU 继承自 R3；FORMAL_EVALUATION_ALLOWED=False 未改变
 next=Codex 中枢独立审查：验证 36 组合、gate 行为、预算耗尽、eval-label 隔离、密钥隔离、JSONL schema；通过后项目负责人单独授权正式 APP-001；本任务保持 review，未 push
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R1 status=review
+scope=关闭 APP-001-RUNNER-001 的四项边界差距：冻结验收集 SHA-256 强制校验、物理请求按每次 transport 调用计账、C1 从自然语言提取 bore_d（不使用固定 bore_d=20）、Ollama 身份和 digest 严格校验（src/llm/{contract,conditions,budget,runner,real_transport,adapter}.py；tests/llm/test_runner_r1.py；agent-work/llm/APP-001-runner-R1/；docs/WORKLOG.md 只追加）
+动作=1)contract.py 新增 ACCEPTANCE_SET_SHA256 常量；runner._load_projection() 强制传入该哈希；2)budget.py 新增 BudgetAwareTransport，每次 send() 预留一个预算槽位；runner._execute_one_run() 改为使用 BudgetAwareTransport，移除旧的单次预留；新增中断失败关闭逻辑；3)conditions.py 完整重写：deterministic bore_d 提取函数，支持 mm/cm，NLI 无 bore_d 时 blocked（C1_NO_SAFE_QUERY_PARAMETER）；4)real_transport.py 严格 startswith() digest 校验，记录实际模型名和 digest 到 usage；adapter.py _record_runtime_identity 使用 usage 字段中的实际 digest
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/{contract,conditions,budget,runner,real_transport,adapter}.py tests/llm/test_runner_r1.py → OK
+  PYTHONPATH=src python3 -m unittest tests.llm.test_runner_r1 → 40 tests OK
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm → 316 tests OK (skipped=1)
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests OK
+  git diff --check → OK; work/app001-runs/ git-ignored; secret scan → no hardcoded keys
+  dry-run 36 combinations pass hash check; acceptance-set tampered NLI/query_id/eval-only fields rejected; bore_d=24mm/1.6cm/20mm/A08 all correctly extracted; C1 blocked for cases without bore_d; Ollama missing/non-prefix digest rejected; DeepSeek transport has no digest attributes
+not_run=正式九条样例评测未运行；未发起真实 DeepSeek 或 Ollama 请求；无模型质量、延迟或费用结论；所有正式指标仍 not_measured；FORMAL_EVALUATION_ALLOWED=False 未改变
+python_env=Python 3.10.12 / Linux aarch64（Linux sandbox 仅有此版本）；macOS venv python3.11 symlink 在 Linux FUSE 下无法访问；新代码使用 typing.Optional 兼容 3.10
+known_limits=C1 对 A04/A07/A09（NLI 无 bore_d）阻塞，符合规范；中断运行 fail-closed；Ollama digest 测试使用 monkey-patch；TOCTOU 继承自 R3
+next=Codex 中枢独立审查 SHA-256 强制校验、per-attempt 预算计数、C1 bore_d 提取、Ollama 严格 digest、316 tests 通过；确认 C1-blocked 对 A04/A07/A09 可接受；通过后项目负责人单独授权正式 APP-001；本任务保持 review，未 push
