@@ -310,5 +310,5 @@ status=review
 APP-001-PREP=review
 APP-001=planned
 formal_evaluation_allowed=false
-commit=pending (to be recorded after commit)
+commit=2a324f7 (fix: address APP-001-ADAPTER Codex review R1 corrections [APP-001-ADAPTER-R1])
 ```
