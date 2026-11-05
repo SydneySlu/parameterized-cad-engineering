@@ -711,3 +711,11 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 限制=执行 adapter/logger 尚未实现及审查；APP-001-PREP 保持 review，APP-001 保持 planned，formal_evaluation_allowed=false。
 - 下一步=实现并审查 adapter/logger，确认原始模型输出、显式抽取、CAD-003 投影/验证及下游 CAD/STEP 分阶段记录；完成后另向项目负责人申请正式运行授权。
 - 交付提交=`88cdea7`（本次冻结契约、Prompt、样例标签及同步状态文档）。
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-prompt status=planned
+- 动作：依据已接受 ADR-0013 和冻结 `app001-io.v1` / `app001-extraction.v2`，拆出正式评测前置的双基线 adapter/logger 实现任务，限制为 mock transport、严格解析、CAD-003 投影与分阶段日志。
+- 结果：新增 CC 执行 Prompt；明确不调用真实 API/Ollama、不读取密钥、不运行九条验收样例或产生正式指标。检查当前仓库未发现经过审查的六字段参数→Typed CAD IR 映射，因此要求没有映射时 CAD/STEP 阶段如实标记 not_run/blocked，不得临时造 IR。
+- 状态：新增 `APP-001-ADAPTER=planned`；`APP-001-PREP=review`、`APP-001=planned`、正式评测门关闭。当前 `main` 在本次改动前比 `origin/main` 超前 2 个 APP-001 冻结提交。
+- 验证：已复核目标 Git 根目录、冻结契约版本、Schema API 与编译器入口；`python3 -m json.tool agent-work/llm/APP-001-baseline-prep/acceptance-set-v0.json` 与 `git diff --check` 通过。只解析样例 JSON 文件格式，没有将标签用于模型输入或评测。
+- 交付：`docs/coordination/prompts/APP-001-adapter-logger-cc-agent.md`。
+- 下一步：先提交并由项目负责人 push 冻结契约及本次任务 Prompt，再把 Prompt 发给 CC；完成后由 Codex 中枢独立审查，不能据此直接启动正式 APP-001。

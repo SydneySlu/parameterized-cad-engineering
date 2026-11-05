@@ -47,8 +47,9 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
-| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | `app001-io.v1` / `app001-extraction.v2` 与 9 条 evaluator-only 样例已由中枢/负责人冻结；显式抽取与 CAD-003 投影分层；adapter/logger 尚待实现及审查，正式评测未放行 |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 审查通过后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入确定性链后测 |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | `app001-io.v1` / `app001-extraction.v2` 与 9 条 evaluator-only 样例已由中枢/负责人冻结；显式抽取与 CAD-003 投影分层；等待 adapter/logger 实现与中枢审查 |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | planned | Prompt 已准备；仅 mock transport 和合成 fixture；禁止真实调用/正式样例；IR 映射未冻结时 CAD/STEP 保持 not_run |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 adapter/logger 审查通过且负责人另行授权后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入已批准确定性链后测 |
 
 ## 阻塞项
 
@@ -56,7 +57,7 @@
 
 ## 下一步
 
-1. 完成 APP-001 执行 adapter/logger，实现模型原始输出、显式参数抽取、CAD-003 投影/校验和后续 CAD/STEP 结果的分阶段记录，并由中枢审查。
+1. 执行 `APP-001-ADAPTER`：完成双基线 mock adapter、严格解析、CAD-003 投影/验证和分阶段记录；没有冻结参数→IR 映射时不运行 CAD/STEP，并由中枢审查。
 2. adapter/logger 审查通过后，由项目负责人明确授权正式运行 APP-001；在此之前不调用九条冻结验收样例。
 3. APP-001 完成后，再设计端到端 C0/C1 下游比较；公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
