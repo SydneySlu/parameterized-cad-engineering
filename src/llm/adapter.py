@@ -370,16 +370,25 @@ class Adapter:
         adapter_input: AdapterInput,
         *,
         run_id: str,
+        formal_authorization: "Any | None" = None,
     ) -> AdapterRunResult:
         """Run one query and return a staged :class:`AdapterRunResult`.
 
-        Gate enforcement (4.1 R2): only the exact :class:`FakeTransport` type is
-        allowed while the formal evaluation gate is closed.  Any other transport
-        -- including custom subclasses of :class:`MockTransport`, anonymous duck-
-        type implementations, or future HTTP transports -- is refused before
-        ``send()`` is called.  This check uses an exact type comparison
-        (``type(transport) is FakeTransport``) so it cannot be bypassed by
-        inheriting from ``FakeTransport`` or ``MockTransport``.
+        Gate enforcement (4.1 R2 / runner extension):
+        Only the exact :class:`FakeTransport` type is allowed while the
+        formal evaluation gate is closed AND no narrow-scope
+        :class:`FormalRunAuthorization` is provided.
+
+        - If transport is FakeTransport: always allowed (tests, dry-run).
+        - If transport is NOT FakeTransport AND a valid
+          :class:`~src.llm.authorization.FormalRunAuthorization` is provided:
+          allowed for the authorized scope only (ADR-0014).
+        - If transport is NOT FakeTransport AND no authorization is provided:
+          the gate check raises :class:`FormalEvaluationBlockedError`.
+
+        This means the global ``FORMAL_EVALUATION_ALLOWED = False`` constant
+        is NOT changed.  The authorization object is a separate, explicit,
+        scope-validated path that the runner must obtain and pass in.
 
         Prompt verification (R3-A): the frozen prompt artifact is always loaded
         and verified against the ``adapter_input``'s system prompt and user
@@ -387,11 +396,24 @@ class Adapter:
         bypass this check.  Tests that need synthetic prompts must test the
         loader/verifier directly, not via ``Adapter.run()``.
         """
-        # --- 4.1 R2: Exact type gate check (not subclass-bypassable) ---
+        # --- Gate check: FakeTransport, authorized formal run, or fail-closed ---
         from .transport import FakeTransport as _FakeTransport
 
         if type(self.transport) is not _FakeTransport:
-            require_formal_evaluation_allowed("run a non-FakeTransport request")
+            if formal_authorization is not None:
+                # Narrow-scope formal run authorization path (ADR-0014).
+                from .authorization import FormalRunAuthorization as _FRA
+
+                if not isinstance(formal_authorization, _FRA):
+                    require_formal_evaluation_allowed(
+                        "run with invalid formal_authorization type"
+                    )
+                # FormalRunAuthorization validates scope in __post_init__; no
+                # further check needed here -- scope mismatch would have raised
+                # AuthorizationScopeError at construction time.
+            else:
+                # No authorization and not FakeTransport: fail-closed.
+                require_formal_evaluation_allowed("run a non-FakeTransport request")
 
         # --- R3-A: Verify frozen prompt artifact unconditionally before send() ---
         try:

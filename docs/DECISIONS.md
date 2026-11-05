@@ -275,3 +275,61 @@ APP-001 使用 DeepSeek v4.1 Flash 1017 作为云端主效果基线，使用 Oll
 - 九条验收标签已冻结，但不得在正式评测门打开前调用模型或宣称测得任何性能结果。
 - DeepSeek disabled thinking 与 Ollama `think=false` 是不同运行时控制；比较报告不得宣称二者完全等价。
 
+
+## ADR-0014：APP-001 第一阶段正式运行授权路径
+
+- 日期：2026-11-06
+- 状态：accepted
+- 决策人：项目负责人 + Codex（基于 APP-001-RUNNER-001 任务授权）
+- 关联：ADR-0009、ADR-0010、ADR-0011、ADR-0012、ADR-0013
+
+### 背景
+
+APP-001-ADAPTER 已完成并通过中枢验收（`APP-001-ADAPTER-R3-FIX`）。适配器内的正式评测门 `FORMAL_EVALUATION_ALLOWED = False` 是一个模块级别的 `Final[bool]` 常量，在没有 ADR 的情况下不应更改。项目负责人授权了 APP-001 第一阶段评测，范围严格限定如下：
+
+- 9 条冻结样例；条件 C0/C1；
+- DeepSeek `deepseek-flash` 与 Ollama `qwen3:8b`；
+- 36 个逻辑运行（9 × 2 条件 × 2 模型）；
+- 每个逻辑运行最多 3 次实际尝试，全批次最多 108 次尝试，每 provider 最多 54 次；
+- IR/CAD/geometry/STEP 明确禁用（`not_run`/`blocked`）。
+
+### 决策
+
+保留 `FORMAL_EVALUATION_ALLOWED = False` 不变。增加独立的窄范围 `FormalRunAuthorization` 数据类（`src/llm/authorization.py`），其构造时验证请求 scope 必须严格等于冻结的第一阶段 scope。只有当适配器的 `Adapter.run()` 接收到有效的 `FormalRunAuthorization` 实例时，才允许非 FakeTransport 执行；未持有有效授权时仍 fail-closed。
+
+这种方式满足"提供显式、窄范围、可审查的授权路径"的要求，保持现有测试默认 fail-closed 行为不变，且不需要把全局 gate 改为 `True`。
+
+### 授权范围（精确值，不可单独更改）
+
+```
+protocol_versions: {app001-io.v1, app001-extraction.v2}
+sample_set: acceptance-set-v0
+conditions: {C0, C1}
+providers: {DeepSeek, Ollama}
+models: {deepseek-flash, qwen3:8b}
+max_logical_runs: 36
+max_attempts_per_run: 3
+max_batch_attempts: 108
+max_provider_attempts: 54
+ir_cad_geometry_step_disabled: True
+```
+
+### 实现文件
+
+- `src/llm/authorization.py` — `FormalRunAuthorization`、`authorize_phase1_run()`
+- `src/llm/budget.py` — 原子预算账本，每次调用前预留
+- `src/llm/combinations.py` — 固定 36 组合生成器
+- `src/llm/conditions.py` — C0/C1 输入组装（评估器标签隔离）
+- `src/llm/real_transport.py` — DeepSeek/Ollama 真实 HTTP transport
+- `src/llm/input_projection.py` — 验收集 allowlist 投影
+- `src/llm/runner.py` — 受控批次 runner 入口
+- `src/llm/adapter.py` — 修改：新增可选 `formal_authorization` 参数
+
+### 边界
+
+- `FORMAL_EVALUATION_ALLOWED = False` 未改变；gate 对未持有有效授权的调用仍 fail-closed。
+- `FormalRunAuthorization` 不接受 C2、未冻结模型或额外条件——任何 scope 偏差引发 `AuthorizationScopeError`。
+- 预算账本持久化到 `work/app001-runs/<batch-id>/budget_ledger.json`（git-ignored）；进程重启从账本恢复计数。
+- 同批次并发运行通过排他锁文件拒绝。
+- 真实 transport 在 `send()` 内才读取 `DEEPSEEK_API_KEY`，读后立即清除局部变量，不存储、不日志。
+- 正式九样例评测在本 ADR 生效时尚未运行；本 ADR 只建立合法授权路径。

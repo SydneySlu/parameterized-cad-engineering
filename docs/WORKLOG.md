@@ -865,3 +865,17 @@ next=Codex 中枢最终复核
 - 结论：`APP-001-PREP` 最终验收通过并标记 `done`。详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md`。
 - 边界：APP-001 仍为 `planned`，formal gate 仍关闭；真实模型、九条样例、正式字段/Schema/CAD/STEP/费用/延迟指标未运行；IR 映射未冻结。
 - 下一步：等待项目负责人单独授权正式 APP-001。
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-001 status=review
+scope=APP-001 Phase 1 受控运行入口实现（src/llm/ 7 个新模块 + adapter.py 修改，tests/llm/ 3 个新测试文件 106 项，docs/DECISIONS.md ADR-0014，agent-work/llm/APP-001-runner/checkpoint.md 和 handoff.md；docs/WORKLOG.md 只追加）
+动作=实现正式评测受控运行入口，将已有模块串接：冻结验收集 allowlist 投影、C0/C1 条件输入组装（C1 经 RET-002）、DeepSeek/Ollama 真实 HTTP transport（不在测试中使用）、原子预算账本（per-run/provider/batch 硬上限）、36 组合生成器、受控批次 runner；修改 adapter.py 新增窄范围 formal_authorization 参数路径；新增 ADR-0014 授权路径
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/{authorization,budget,combinations,conditions,real_transport,input_projection,runner,adapter}.py tests/llm/test_{authorization,budget,runner}.py → OK
+  PYTHONPATH=src python3 -m unittest tests.llm.test_runner tests.llm.test_authorization tests.llm.test_budget → 106 tests, OK (skipped=1 FUSE env symlink)
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm → 276 tests (errors=2 pre-existing FUSE env symlink in test_r3_regression, skipped=1)
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+  git diff --check → OK
+results=dry_run() 生成正确的 36 条组合，不泄露评估器标签；FormalRunAuthorization scope 验证通过；C2/错误模型/错误样本集均在任何网络调用前被拒绝；预算原子预留、并发锁、损坏账本 fail-closed 全部通过；评估器标签（explicit_parameter_claims、derived_values、expected_behavior）不进入任何模型输入、干运行输出或 C1 reference；API key 不存入 repr/日志/异常/输出文件；IR/CAD/geometry/STEP 始终 not_run/blocked；JSONL 可解析且含所有必需元数据；失败样本保留在批次记录中
+not_run=正式九条样例评测未运行；未发起真实 DeepSeek 或 Ollama 请求；无模型质量、延迟或费用结论；所有正式指标仍 not_measured
+known_limits=预算账本目前每 Adapter.run() 预留一次（含内部最多 3 次重试），非每物理 attempt 预留；C1 reference context 在 retrieval_index=None 时阻塞；TOCTOU 继承自 R3；FORMAL_EVALUATION_ALLOWED=False 未改变
+next=Codex 中枢独立审查：验证 36 组合、gate 行为、预算耗尽、eval-label 隔离、密钥隔离、JSONL schema；通过后项目负责人单独授权正式 APP-001；本任务保持 review，未 push
