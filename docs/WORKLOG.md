@@ -719,3 +719,31 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 验证：已复核目标 Git 根目录、冻结契约版本、Schema API 与编译器入口；`python3 -m json.tool agent-work/llm/APP-001-baseline-prep/acceptance-set-v0.json` 与 `git diff --check` 通过。只解析样例 JSON 文件格式，没有将标签用于模型输入或评测。
 - 交付：`docs/coordination/prompts/APP-001-adapter-logger-cc-agent.md`。
 - 下一步：先提交并由项目负责人 push 冻结契约及本次任务 Prompt，再把 Prompt 发给 CC；完成后由 Codex 中枢独立审查，不能据此直接启动正式 APP-001。
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-M0 status=in_progress
+scope=M0 interface and boundary inventory; no code changes
+verified=git root confirmed; .env existence-only check (not read); system Python 3.10.12 + unittest runs schema tests 17/17 OK; work/app001-runs git-ignored; frozen contract versions app001-io.v1/app001-extraction.v2/acceptance-set-v0 cross-checked against ADR-0013 and baseline contract; Schema API (validate_parameters/validate_json/resolve_parameters -> ValidationResult) and CAD compiler entry (compile_ir) signatures confirmed; param->IR mapping exists as spec (mapping.md, review) + RET-001 generator but no frozen src-level adapter, so IR/CAD/STEP kept not_run
+result=M0 inventory recorded in agent-work/llm/APP-001-adapter/checkpoint.md; proceeding to M1
+limits=no real API/Ollama calls, no key reads, no acceptance-sample runs, formal eval gate remains false
+next=implement M1 strict parser + run record model + CAD-003 projector as pure functions
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-M1 status=in_progress
+scope=Implement minimal data model, strict parser, CAD-003 projector (pure functions)
+verified=PYTHONPATH=src python3 -m py_compile src/llm/*.py OK; imports OK; contract versions app001-io.v1/app001-extraction.v2 confirmed in code
+result=Modules written: contract, parser (strict, no repair), projector (CAD-003 envelope, rejects unknown keys), runrecord (staged, versioned), transport (injectable + Fake), providers (DeepSeek thinking-disabled + Ollama think=false isolated), retry (injectable clock/sleeper, 1s/2s backoff), cost (dated rate card, not_available on missing), gate (default-off fail-closed), adapter (orchestrator, IR/CAD/STEP not_run/blocked)
+limits=no real network, no key reads, formal eval gate false; IR/CAD/STEP blocked_no_approved_ir_mapping
+next=write and run fake-transport tests (M2/M3 coverage)
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-M4 status=review
+scope=M4 final tests, verification, secret scan, README, checkpoint/handoff, git commit
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 85 tests, 0 failures, OK
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK (no regressions)
+  grep -rn "import cadquery|from cad_compilation.compiler import compile_ir" src/llm/ tests/llm/ → no matches
+  secret scan (sk-*, Bearer real, DEEPSEEK_API_KEY real values) → only synthetic fixtures
+  git diff --check → OK
+  gate: formal_evaluation_allowed()=False; require_formal_evaluation_allowed() raises FormalEvaluationBlockedError
+result=APP-001-ADAPTER implementation complete and submitted for review; 85 tests pass with FakeTransport only; no real API calls, no credential reads, no acceptance-sample runs; IR/CAD/geometry/STEP stages honestly not_run/blocked; formal evaluation gate closed
+limits=IR mapping not frozen at src level; real provider runs not executed; all formal metrics not_measured; formal evaluation not authorized; APP-001-PREP=review, APP-001=planned
+next=Codex hub read-only review; if passing, project owner authorizes formal APP-001 run

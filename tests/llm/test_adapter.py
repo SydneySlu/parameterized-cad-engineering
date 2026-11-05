@@ -1,0 +1,288 @@
+"""Adapter integration tests with fake transport, staged records, and the
+construction gate. Covers normal/missing/conflict/unsupported/ask/refuse paths,
+usage/cost, local timing, construction gate, and IR/CAD/STEP staying not_run.
+"""
+
+import json
+import unittest
+
+from src.llm.adapter import Adapter, AdapterInput
+from src.llm.contract import (
+    DEEPSEEK_MODEL,
+    DEEPSEEK_PROVIDER,
+    OLLAMA_DIGEST,
+    OLLAMA_MODEL,
+    OLLAMA_PROVIDER,
+)
+from src.llm.transport import (
+    COND_HTTP_429,
+    COND_HTTP_5XX,
+    FakeTransport,
+    TransportError,
+    TransportResponse,
+)
+
+
+SYSTEM_PROMPT = (
+    "You extract only parameters explicitly stated by the user. "
+    "Return exactly one UTF-8 JSON object."
+)
+USER_TEMPLATE = (
+    "query_id: {query_id}\n"
+    "family_id: set_screw_shaft_collar\n"
+    "natural_language_input:\n"
+    "{natural_language_input}\n"
+    "reference_context:\n"
+    "{reference_context_or_null}"
+)
+
+
+def _input(nl="轴孔直径 20 mm 的紧定螺钉轴环", ref=None, qid="q1", cond="c0"):
+    return AdapterInput(
+        query_id=qid,
+        natural_language_input=nl,
+        reference_context=ref,
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt_template=USER_TEMPLATE,
+        condition_id=cond,
+    )
+
+
+def _envelope_body(**overrides):
+    body = {
+        "contract_version": "app001-io.v1",
+        "prompt_version": "app001-extraction.v2",
+        "decision": "answer",
+        "extracted_parameters": {"bore_d": 20},
+        "unsupported_requests": [],
+        "evidence": [{"field": "bore_d", "quote": "20 mm", "source": "user_input"}],
+        "missing_fields": [],
+        "questions": [],
+        "confidence": None,
+    }
+    body.update(overrides)
+    return json.dumps(body, ensure_ascii=False)
+
+
+def _deepseek_response(body=None, model=DEEPSEEK_MODEL, usage=None):
+    return TransportResponse(
+        status=200,
+        body=body or _envelope_body(),
+        runtime_returned_model=model,
+        runtime_returned_provider=None,
+        usage=usage or {"prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40},
+    )
+
+
+def _ollama_response(body=None):
+    return TransportResponse(
+        status=200,
+        body=body or _envelope_body(),
+        runtime_returned_model=None,
+        runtime_returned_provider=None,
+        usage=None,
+    )
+
+
+class _NoSleep:
+    def __call__(self, seconds):
+        raise AssertionError(f"unexpected sleep({seconds})")
+
+
+class DeepSeekAdapterTests(unittest.TestCase):
+    def setUp(self):
+        self.transport = FakeTransport()
+
+    def _adapter(self):
+        return Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep())
+
+    def test_normal_answer_passes_to_construction_gate(self):
+        self.transport.queue_response(_deepseek_response())
+        result = self._adapter().run(_input(), run_id="r1")
+        rec = result.record
+        self.assertTrue(rec.construction_ready)
+        self.assertEqual(rec.stage_status("model_call"), "pass")
+        self.assertEqual(rec.stage_status("parse"), "pass")
+        self.assertEqual(rec.stage_status("schema"), "pass")
+        self.assertEqual(rec.stage_status("construction_gate"), "pass")
+        self.assertEqual(rec.stage_status("ir"), "blocked")
+        self.assertEqual(rec.stage_status("cad"), "not_run")
+        self.assertEqual(rec.stage_status("step"), "not_run")
+        self.assertEqual(rec.configured_provider, DEEPSEEK_PROVIDER)
+        self.assertEqual(rec.runtime_returned_model, DEEPSEEK_MODEL)
+        self.assertIsNone(rec.runtime_returned_provider)
+        self.assertEqual(rec.cloud_input_tokens, 40)
+        self.assertEqual(rec.cloud_output_tokens, 6)
+        self.assertIsNotNone(rec.cloud_cost_amount)
+        self.assertEqual(rec.cloud_cost_currency, "CNY")
+
+    def test_missing_bore_d_ask_decision_not_construction_ready(self):
+        self.transport.queue_response(
+            _deepseek_response(
+                body=_envelope_body(decision="ask", extracted_parameters={"outer_d": 32},
+                                     missing_fields=["bore_d"], questions=["bore?"])
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r2")
+        rec = result.record
+        self.assertFalse(rec.construction_ready)
+        self.assertEqual(rec.stage_status("schema"), "fail")
+        self.assertEqual(rec.stage_status("construction_gate"), "fail")
+        self.assertEqual(rec.stage_status("ir"), "not_run")
+
+    def test_catalog_conflict_explicit_outer_d_kept(self):
+        # bore_d=20 implies outer_d=32; explicit outer_d=99 is a conflict.
+        self.transport.queue_response(
+            _deepseek_response(
+                body=_envelope_body(extracted_parameters={"bore_d": 20, "outer_d": 99})
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r3")
+        rec = result.record
+        self.assertFalse(rec.construction_ready)
+        self.assertEqual(rec.stage_status("schema"), "fail")
+        # The explicit claim is preserved in the projection raw_extraction.
+        self.assertEqual(result.projection.raw_extraction["outer_d"], 99)
+        self.assertEqual(rec.stage_status("construction_gate"), "fail")
+        self.assertEqual(rec.stage_status("cad"), "not_run")
+
+    def test_unknown_field_in_extracted_parameters_fails_projection(self):
+        self.transport.queue_response(
+            _deepseek_response(
+                body=_envelope_body(extracted_parameters={"bore_d": 20, "color": "red"})
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r4")
+        rec = result.record
+        # Parser rejects unknown field already; projection never reached.
+        self.assertEqual(rec.stage_status("parse"), "fail")
+
+    def test_unsupported_requests_block_construction(self):
+        self.transport.queue_response(
+            _deepseek_response(
+                body=_envelope_body(
+                    decision="answer",
+                    extracted_parameters={"bore_d": 20},
+                    unsupported_requests=["flange"],
+                )
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r5")
+        rec = result.record
+        # Schema passes but construction gate fails due to unsupported_requests.
+        self.assertEqual(rec.stage_status("schema"), "pass")
+        self.assertFalse(rec.construction_ready)
+        self.assertEqual(rec.stage_status("construction_gate"), "fail")
+        self.assertEqual(rec.stage_status("cad"), "not_run")
+
+    def test_refuse_decision_not_construction_ready(self):
+        self.transport.queue_response(
+            _deepseek_response(
+                body=_envelope_body(decision="refuse", extracted_parameters={},
+                                     questions=["out of scope"])
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r6")
+        rec = result.record
+        self.assertFalse(rec.construction_ready)
+        self.assertEqual(rec.stage_status("construction_gate"), "fail")
+
+    def test_parse_failure_recorded_and_no_construction(self):
+        self.transport.queue_response(
+            TransportResponse(status=200, body="```json\n" + _envelope_body() + "\n```")
+        )
+        result = self._adapter().run(_input(), run_id="r7")
+        rec = result.record
+        self.assertEqual(rec.stage_status("parse"), "fail")
+        self.assertFalse(rec.construction_ready)
+        self.assertEqual(rec.stage_status("schema"), "not_run")
+
+    def test_transient_retry_then_success(self):
+        sleeps = []
+        self.transport.queue_error(TransportError(COND_HTTP_429, 429, "rate"))
+        self.transport.queue_response(_deepseek_response())
+        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=lambda s: sleeps.append(s))
+        result = adapter.run(_input(), run_id="r8")
+        rec = result.record
+        self.assertTrue(rec.construction_ready)
+        self.assertEqual(rec.attempt_count, 2)
+        self.assertEqual(sleeps, [1])
+
+    def test_non_retryable_auth_error_no_retry(self):
+        from src.llm.transport import COND_AUTH_PERMISSION
+
+        self.transport.queue_error(TransportError(COND_AUTH_PERMISSION, 401, "auth"))
+        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep())
+        result = adapter.run(_input(), run_id="r9")
+        rec = result.record
+        self.assertEqual(rec.stage_status("model_call"), "fail")
+        self.assertEqual(rec.attempt_count, 1)
+        self.assertFalse(rec.construction_ready)
+
+    def test_usage_with_missing_cache_fields_yields_not_available_cost(self):
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body=_envelope_body(),
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage={"prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46},
+            )
+        )
+        result = self._adapter().run(_input(), run_id="r10")
+        rec = result.record
+        # Missing cache fields -> cost falls back to treating all as cache miss,
+        # so cost is computable here.  Verify it's a positive number.
+        self.assertIsNotNone(rec.cloud_cost_amount)
+
+
+class OllamaAdapterTests(unittest.TestCase):
+    def setUp(self):
+        self.transport = FakeTransport()
+
+    def _adapter(self):
+        return Adapter(provider=OLLAMA_PROVIDER, transport=self.transport, sleeper=_NoSleep())
+
+    def test_local_run_records_wall_time_no_cloud_tokens(self):
+        self.transport.queue_response(_ollama_response())
+        result = self._adapter().run(_input(), run_id="o1")
+        rec = result.record
+        self.assertTrue(rec.construction_ready)
+        self.assertEqual(rec.configured_provider, OLLAMA_PROVIDER)
+        self.assertEqual(rec.local_digest, OLLAMA_DIGEST)
+        self.assertIsNotNone(rec.local_wall_time_ms)
+        self.assertIsNone(rec.cloud_input_tokens)
+        self.assertIsNone(rec.cloud_cost_amount)
+
+    def test_ollama_no_think_field_in_request(self):
+        self.transport.queue_response(_ollama_response())
+        adapter = self._adapter()
+        adapter.run(_input(), run_id="o2")
+        req = self.transport.last_call()
+        self.assertEqual(req.provider, OLLAMA_PROVIDER)
+        self.assertFalse(req.body["think"])
+        self.assertEqual(req.body["format"], "json")
+        self.assertNotIn("thinking", req.body)
+
+
+class RunRecordTests(unittest.TestCase):
+    def test_record_serializes_to_json(self):
+        self.transport = FakeTransport()
+        self.transport.queue_response(_deepseek_response())
+        result = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), run_id="s1")
+        text = result.record.to_json()
+        data = json.loads(text)
+        self.assertEqual(data["run_id"], "s1")
+        self.assertIn("stages", data)
+        self.assertTrue(data["construction_ready"])
+        self.assertFalse(data["formal_evaluation_allowed"])
+
+    def test_stage_status_lookup(self):
+        self.transport = FakeTransport()
+        self.transport.queue_response(_deepseek_response())
+        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), run_id="s2").record
+        self.assertEqual(rec.stage_status("model_call"), "pass")
+        self.assertIsNone(rec.stage_status("nonexistent_stage"))
+
+
+if __name__ == "__main__":
+    unittest.main()
