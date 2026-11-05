@@ -720,6 +720,13 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 交付：`docs/coordination/prompts/APP-001-adapter-logger-cc-agent.md`。
 - 下一步：先提交并由项目负责人 push 冻结契约及本次任务 Prompt，再把 Prompt 发给 CC；完成后由 Codex 中枢独立审查，不能据此直接启动正式 APP-001。
 
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-review status=review
+- 动作：对 CC 提交 `e496ac0` 与状态同步 `9cd1f98` 做中枢独立审查，复跑 README 指定的 mock 测试并设计合成边界检查。
+- 验证：`PYTHONPATH=src python3 -m unittest discover -s tests/llm -v` 85 项通过；未设置或读取真实密钥、未调用网络、未运行验收样例。裸 unittest 命令不符合仓库 src-layout，出现 19 项 import errors；README 指定命令通过。
+- 结论：不验收通过。发现 mock 请求会读取环境 key 并保留 authorization、自定义 transport 默认可绕过正式评测门、cache hit/miss 缺失仍估算费用、总耗时漏计 backoff；另发现 NaN/Infinity 和数组/evidence 元素类型校验缺口，以及文档宣称 raw-output retention 但实现缺失、Prompt 未绑定 hash 等待补齐项。
+- 交付：`agent-work/reviews/APP-001-ADAPTER-codex-review.md`；`APP-001-ADAPTER` 保持 `review`，正式评测门关闭。
+- 下一步：CC 修正审查记录中的问题并更新测试/交接；中枢再复核，通过前不得启动正式 APP-001。
+
 [2026-11-05] agent=CC task=APP-001-ADAPTER-M0 status=in_progress
 scope=M0 interface and boundary inventory; no code changes
 verified=git root confirmed; .env existence-only check (not read); system Python 3.10.12 + unittest runs schema tests 17/17 OK; work/app001-runs git-ignored; frozen contract versions app001-io.v1/app001-extraction.v2/acceptance-set-v0 cross-checked against ADR-0013 and baseline contract; Schema API (validate_parameters/validate_json/resolve_parameters -> ValidationResult) and CAD compiler entry (compile_ir) signatures confirmed; param->IR mapping exists as spec (mapping.md, review) + RET-001 generator but no frozen src-level adapter, so IR/CAD/STEP kept not_run

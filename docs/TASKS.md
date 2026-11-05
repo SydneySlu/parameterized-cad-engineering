@@ -26,7 +26,7 @@
 | RET-002 | 单族确定性检索基线 | CC + DSH + Codex | done | RET-001 | 单族参数距离、候选角色、稳定排序和结构化失败路径通过中枢复核；策略范围修正已验收，限制见 `agent-work/reviews/RET-002-codex-review.md` |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | RET-001 | 里程碑 1 协议已通过复审；当前仅允许 C1 检索级诊断；公平端到端比较待 APP-001，公平 C2 尚未定义 |
 | APP-001-PREP | 冻结模型基线、输入输出契约与小型验收集 | LLM Agent + Codex + 用户 | review | 已接受 ADR-0009/0010/0011/0012/0013、CAD-003/IR/CAD 主链 | `app001-io.v1` / `app001-extraction.v2` 和 9 条 evaluator-only 样例已冻结；adapter/logger 尚待实现及审查；正式模型评测仍关闭 |
-| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | planned | APP-001-PREP 冻结契约 | 使用 fake transport 实现云端/本地请求适配、严格输出解析、CAD-003 投影/门控、脱敏分阶段记录和测试；禁止真实调用、读取密钥或运行正式样例；Prompt 见 `docs/coordination/prompts/APP-001-adapter-logger-cc-agent.md` |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | APP-001-PREP 冻结契约 | 实现已提交于 `e496ac0`，但中枢复核发现 mock 凭据隔离、正式运行门、费用缺缓存拆分和含重试等待的总耗时等缺口；修正前不放行正式 APP-001。详见 `agent-work/reviews/APP-001-ADAPTER-codex-review.md` |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | APP-001-PREP | 冻结模型、Prompt、输入集和解码参数；可复现字段/追问/Schema 结果，并记录模型身份 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
 
