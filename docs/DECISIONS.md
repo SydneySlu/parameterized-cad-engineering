@@ -232,5 +232,20 @@ APP-001 使用 DeepSeek v4.1 Flash 1017 作为云端主效果基线，使用 Oll
 
 ### 尚待运行时确认
 
-最小 runtime probe 已确认响应 `model=deepseek-flash`，实际返回 token/cache usage 字段且没有 provider 字段；seed 支持、正式运行时版本仍未观测。该次 probe 单独使用 thinking disabled，不构成首轮 APP-001 的思考模式决策。官方文档说明默认开启思考模式；首轮 APP-001 是否显式关闭仍需负责人确认，且必须在云端配置与本地对照协议中清楚记录。此 ADR 不改变 ADR-0010 的共同解码设置，不授权正式模型评测。
+最小 runtime probe 已确认响应 `model=deepseek-flash`，实际返回 token/cache usage 字段且没有 provider 字段；seed 支持、正式运行时版本仍未观测。官方文档说明默认开启思考模式；首轮 APP-001 是否显式关闭仍需负责人确认，且必须在云端配置与本地对照协议中清楚记录。此 ADR 不改变 ADR-0010 的共同解码设置，不授权正式模型评测。该待确认项由后续 ADR-0012 解决。
+
+## ADR-0012：APP-001 首轮 DeepSeek 基线显式关闭思考模式
+
+- 日期：2026-11-05
+- 状态：accepted（首轮云端配置）
+- 决策人：项目负责人 + Codex
+- 关联：ADR-0010、ADR-0011；`docs/coordination/APP-001-baseline-contract.md`
+
+### 决策
+
+首轮 DeepSeek `deepseek-flash` 基线显式设置 `thinking: {"type":"disabled"}`。API 默认开启思考模式，因此每个请求必须发送该参数并将有效值写入运行记录，禁止依赖默认值。此选择固定云端基线配置；不把 DeepSeek 专属请求字段直接套用于 Ollama。本地 `qwen3:8b` 的运行模式应根据 Ollama 模板/运行配置核验并记录；若无法建立行为等价设置，清楚标注两模型的差别，不声称解码配置完全等价。seed 能力仍待探测，temperature/top_p/max token 等既有设置不变。
+
+### 边界
+
+本决策仅确定首轮思考模式，不冻结最终 Prompt/验收集，不构成 APP-001 正式运行放行，也不产生模型效果结论。
 

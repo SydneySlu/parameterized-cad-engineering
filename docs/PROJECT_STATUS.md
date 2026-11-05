@@ -47,7 +47,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
-| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | 官方配置及最小 runtime probe 已确认响应 `model=deepseek-flash` 和 usage/cache 字段（ADR-0011）；待确认正式思考模式、seed 能力、冻结最终 Prompt/样例；未运行正式模型或端到端测量 |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | 官方配置及最小 probe 已确认响应 model/usage；首轮云端显式关闭思考模式已记录（ADR-0012）；待确认 seed 能力、冻结最终 Prompt/样例及核对本地运行模式；未运行正式评测 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 审查通过后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入确定性链后测 |
 
 ## 阻塞项

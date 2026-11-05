@@ -24,9 +24,9 @@
 
 北京时间工作日（中国法定节假日除外）09:00–12:00、14:00–18:00 为高峰；其余时间（含周末和法定节假日）为空闲。成本回算必须依据请求时间、响应中的缓存命中/未命中/输出 token 数和该次运行所引用的价目表快照；价目可能变化，不能把本表视为永久费率。
 
-官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。seed 能力仍待运行时探测；思考模式是否关闭仍待负责人确认，不能静默改变 ADR-0010 的共同设置或把 API 默认值误记为实验配置。
+官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。项目负责人已确认首轮云端基线显式关闭思考模式，请求必须包含 `thinking: {"type":"disabled"}`，不能依赖服务默认值。每条运行记录保存实际发送的 thinking setting。seed 能力仍待运行时探测。此项只固定云端 DeepSeek API 参数；本地 Ollama 的运行模式需按其运行时配置单独记录，不得将 DeepSeek API 参数伪装成 Ollama 参数。
 
-2026-11-05 已完成一次最小 runtime probe：请求配置 `deepseek-flash`，响应 `model=deepseek-flash`；响应包含 usage token 与 cache 字段、无 provider 字段；JSON 模式请求正常结束。探测时以 thinking disabled 作低成本 capability probe，该设置只属于本次探测，不代表 APP-001 已选择该模式。seed 未测试。完整元数据见 [`runtime-probe-2026-11-05.json`](../../agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json)。未保存回复正文或密钥。
+2026-11-05 已完成一次最小 runtime probe：请求配置 `deepseek-flash`，响应 `model=deepseek-flash`；响应包含 usage token 与 cache 字段、无 provider 字段；JSON 模式请求正常结束。探测使用 thinking disabled；项目负责人随后确认首轮正式云端基线也显式关闭该模式。seed 未测试。完整元数据见 [`runtime-probe-2026-11-05.json`](../../agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json)。未保存回复正文或密钥。
 
 MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和成本探索，但必须单独记录操作系统、CPU、运行时、量化方式和线程配置，不能与 Mac 基线合并计算延迟或吞吐。
 

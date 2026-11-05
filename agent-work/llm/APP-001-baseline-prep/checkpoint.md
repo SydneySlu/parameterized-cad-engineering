@@ -7,7 +7,7 @@ work_root=/Users/syd/Desktop/参数化 cad 工程辅助设计
 changed=APP-001 model-baselines YAML and prompt/output contract; baseline contract; ADR-0011; PROJECT_STATUS/TASKS; checkpoint/handoff; WORKLOG append; root .env.example
 commands=official docs fetched read-only; YAML syntax parse, JSON parse, .env ignore/template checks, and git diff --check recorded in WORKLOG; no API request and no secret value read
 confirmed=DeepSeek request ID and runtime response model deepseek-flash; one non-evaluation JSON/usage probe passed; response usage/cache fields observed and provider field absent; dated price schedule and secret file location documented; no formal model/downstream metric run
-unresolved=seed support and production runtime versions; owner selection of formal thinking mode; final prompt/sample freeze; independent review of run adapter/logger
+unresolved=seed support and production runtime versions; verify/log Ollama runtime mode; final prompt/sample freeze; independent review of run adapter/logger
 next_agent_focus=probe and log configured/runtime cloud identity without exposing credentials; verify applied decoding values; complete sample freeze review; preserve not_measured until approved runs
 ```
 
@@ -47,4 +47,4 @@ Technical artifact review completed. The project owner confirmed initial extract
 
 ### Official DeepSeek API details update (2026-11-05)
 
-Configured request and runtime response model are both `deepseek-flash` at `https://api.deepseek.com`; docs label the served version `DeepSeek-V4.1-Flash-1017`. One non-evaluation probe confirmed JSON response and usage/cache metadata; seed remains untested. The dated rate card and secret setup are recorded in the baseline contract and ADR-0011. No key or response body was saved. Thinking-mode selection, prompt/sample freeze and final adapter review remain; APP-001-PREP stays `review`.
+Configured request and runtime response model are both `deepseek-flash` at `https://api.deepseek.com`; docs label the served version `DeepSeek-V4.1-Flash-1017`. One non-evaluation probe confirmed JSON response and usage/cache metadata; seed remains untested. ADR-0012 records the owner decision to explicitly disable DeepSeek thinking in the first formal cloud baseline. The dated rate card and secret setup are recorded in the baseline contract and ADR-0011. No key or response body was saved. Ollama runtime mode, prompt/sample freeze and final adapter review remain; APP-001-PREP stays `review`.

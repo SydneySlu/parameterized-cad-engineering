@@ -676,3 +676,9 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 探测参数：temperature=0、top_p=1、max_tokens=24、thinking disabled、stream=false。thinking disabled 仅用于本次小型探测，未冻结为 APP-001 正式配置。没有调用验收集或运行 C0/C1、Schema、CAD、STEP 指标；未保存模型回复正文。所有正式指标仍 `not_measured`。
 - 交付：`agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json`；更新 YAML、契约、checkpoint/handoff 和状态板。
 - 下一步：负责人确认正式思考模式（API 默认开启，建议首轮显式关闭）；测试/记录 seed 能力与运行时版本；冻结 Prompt、验收集及执行适配器后，另行审查放行正式 APP-001。
+
+[2026-11-05] agent=Codex task=APP-001-thinking-mode status=review
+- 动作：项目负责人确认首轮 DeepSeek 云端基线显式关闭思考模式；将选择追加为 ADR-0012 并同步 API 基线、Prompt/output contract、checkpoint/handoff 与状态板。
+- 决策：每次 DeepSeek 请求显式发送 `thinking: {"type":"disabled"}` 并记录有效参数，不依赖默认开启的 API 行为。该选项不直接移植到 Ollama；需核验本地 qwen3:8b 运行模式并记录差异，不能宣称 provider 级参数完全相同。
+- 边界：seed 能力、Ollama 模式、Prompt/验收集最终冻结及执行适配器审查仍未完成；APP-001 未获正式运行放行，所有正式指标保持 `not_measured`。
+- 下一步：检查 Ollama 运行配置与可控的思考/输出模式；探测 seed 支持（若会产生额外正式样本成本，先用最小 probe）；完成验收集/Prompt 冻结和中枢审查。
