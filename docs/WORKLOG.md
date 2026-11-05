@@ -682,3 +682,9 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 决策：每次 DeepSeek 请求显式发送 `thinking: {"type":"disabled"}` 并记录有效参数，不依赖默认开启的 API 行为。该选项不直接移植到 Ollama；需核验本地 qwen3:8b 运行模式并记录差异，不能宣称 provider 级参数完全相同。
 - 边界：seed 能力、Ollama 模式、Prompt/验收集最终冻结及执行适配器审查仍未完成；APP-001 未获正式运行放行，所有正式指标保持 `not_measured`。
 - 下一步：检查 Ollama 运行配置与可控的思考/输出模式；探测 seed 支持（若会产生额外正式样本成本，先用最小 probe）；完成验收集/Prompt 冻结和中枢审查。
+
+[2026-11-05] agent=Codex task=APP-001-PREP-R2-prompt status=review
+- 动作：在项目负责人 push APP-001-PREP 基线提交后，核对主线同步状态、最新决策与已有 handoff，编写续任准备任务 Prompt。
+- 结果：明确执行 seed 最小能力核验、Ollama Qwen3 思考模式/解码参数核验、验收集与 Prompt 冻结候选、运行契约检查和三层交接；严格禁止正式验收集运行、正式对照或 APP-001 放行。
+- 交付：`docs/coordination/prompts/APP-001-PREP-R2-agent.md`。
+- 下一步：项目负责人将该 Prompt 发给续任 APP-001-PREP Agent；其提交结果后由 Codex 中枢独立验收。
