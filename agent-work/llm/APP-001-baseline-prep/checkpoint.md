@@ -1,6 +1,6 @@
 # APP-001-PREP checkpoint
 
-> Current authority (2026-11-05): protocol `app001-io.v1` / Prompt `app001-extraction.v2` and evaluator-only `acceptance-set-v0` are frozen by ADR-0013. Explicit model claims are separate from adapter-generated CAD-003 payloads. Formal evaluation remains blocked pending adapter/logger implementation and review plus explicit owner authorization. The earlier M0-M3 sections below document the pre-freeze candidate history.
+> Current authority (2026-11-05): protocol `app001-io.v1` / Prompt `app001-extraction.v2` and evaluator-only `acceptance-set-v0` are frozen by ADR-0013. Explicit model claims are separate from adapter-generated CAD-003 payloads. Adapter/logger implementation and review are complete; APP-001-PREP remains `review` pending this document status closeout and Codex final review. Formal runs still require separate project-owner authorization. Earlier M0-M3 sections below document historical preparation evidence.
 
 ```text
 task=APP-001-PREP
@@ -54,9 +54,9 @@ prompt evaluator-label leak scan (PASS)
 
 No acceptance sample, formal C0/C1, cloud/local comparison, Schema/IR/CAD/STEP run, or performance conclusion was produced. No API key, Authorization header, response body, hidden reasoning, or full provider error was stored.
 
-## Earlier Codex hub decisions (resolved by ADR-0013)
+## Earlier Codex hub decisions (historical; resolved by ADR-0013)
 
-The protocol/prompt/label review is resolved by ADR-0013. Remaining work is adapter/logger implementation and review; keep `APP-001-PREP=review`, `APP-001=planned`, and the formal evaluation gate false until explicit approval.
+Historical note: the protocol/prompt/label review was resolved by ADR-0013. The then-current statement that adapter/logger implementation and review remained is superseded by the later `APP-001-ADAPTER-R3-FIX` acceptance. Current status and remaining gates are recorded in `APP-001-PREP-FINAL-FIX` below.
 
 ## APP-001-PREP-R2 document consistency correction
 
@@ -66,9 +66,18 @@ The protocol/prompt/label review is resolved by ADR-0013. Remaining work is adap
 - No JSON/YAML files were modified in this correction, so no parser rerun was required. `git diff --check HEAD^ HEAD` was run for the correction commit; no model/API requests or acceptance samples were run.
 - Prior delivery commit recorded for traceability: `c255d4e`. Status remains `APP-001-PREP=review`, `APP-001=planned`, `formal_evaluation_allowed=false`.
 
-## ADR-0013 current freeze checkpoint
+## ADR-0013 freeze checkpoint (historical; before adapter R3-FIX acceptance)
 
 - Frozen model contract: `app001-io.v1`; frozen prompt: `app001-extraction.v2`; frozen evaluator-only case set: `acceptance-set-v0` (9 cases).
 - Model output preserves explicit claims in `extracted_parameters` and unsupported requests separately; deterministic adapter generates the CAD-003 projection and validation record. Extraction, dialogue/safety, CAD-003, and downstream CAD/STEP outcomes have separate scoring stages.
 - A01 labels only its three user-stated dimensions as extraction truth. Explicit `second_screw` claims in A06/A09 are retained for deterministic rule checking. A04/A05/A07/A09 preserve claims even though they cannot proceed to construction.
-- Formal evaluation gate remains false until adapter/logger is implemented and reviewed and the owner separately authorizes execution. No model call or acceptance-set run was made for this freeze.
+- Historical gate statement: formal evaluation was blocked pending adapter/logger implementation and review plus separate owner authorization. The adapter/logger condition was later satisfied by the accepted `APP-001-ADAPTER-R3-FIX`; explicit owner authorization is still required before any formal run. No model call or acceptance-set run was made for this freeze.
+
+## APP-001-PREP-FINAL-FIX
+
+- `APP-001-ADAPTER-R3-FIX` 已由 Codex 中枢验收通过；`APP-001-ADAPTER=done`。adapter/logger 已完成，并经 170 个 LLM 测试、17 个 Schema 测试验证。
+- `APP-001-PREP` 当前仍为 `review`；`APP-001` 当前仍为 `planned`；`formal_evaluation_allowed=false`。
+- 九条 evaluator-only 样例仍未运行；真实 DeepSeek/Ollama 正式运行仍未进行。
+- 正式字段、Schema、CAD、STEP、费用和延迟指标仍为 `not_measured`；IR → Typed CAD IR 映射仍未冻结。
+- 本阶段剩余事项是本次文档状态收尾和 Codex 最终复核；最终模型运行仍需项目负责人单独授权。
+- 历史记录说明：下文早期阶段的 gate 描述反映当时状态，不代表当前 adapter 未完成。原句 `Remaining gate: implement and review the execution adapter/logger` 是历史记录，现已由 `APP-001-ADAPTER-R3-FIX` 验收结果取代。

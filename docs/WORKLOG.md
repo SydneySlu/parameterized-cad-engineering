@@ -848,3 +848,12 @@ next=Codex 中枢 R3-FIX 复核；通过后项目负责人可授权正式 APP-00
 - 结论：契约和实现证据基本通过，但 PREP handoff 的当前 ADR-0013 段仍写 adapter/logger 尚未实现和审查，与 `APP-001-ADAPTER=done` 不一致。详见 `agent-work/reviews/APP-001-PREP-FINAL-REVIEW.md`。
 - 边界：APP-001-PREP 保持 `review`，APP-001 保持 `planned`，formal gate 关闭；正式字段/Schema/CAD/STEP/成本/延迟指标均未测量。
 - 下一步：原 PREP Agent 只追加状态收尾，明确 adapter 已完成、剩余仅 owner authorization；完成后中枢重新复核。
+
+[2026-11-05] agent=Codex task=APP-001-PREP-FINAL-FIX status=review
+task=APP-001-PREP-FINAL-FIX
+status=review
+changed=checkpoint/handoff 状态同步
+result=adapter 已完成；PREP 仍等待 Codex 最终复核和 owner authorization
+limits=未调用真实模型；未运行九条样例；正式指标 not_measured；IR mapping 未冻结
+next=Codex 中枢最终复核
+- 结论=`APP-001-ADAPTER-R3-FIX` 已由中枢验收，`APP-001-ADAPTER=done`；旧的 adapter/logger remaining-gate 文字保留为历史记录。APP-001-PREP 继续 review，APP-001 继续 planned，formal_evaluation_allowed=false。

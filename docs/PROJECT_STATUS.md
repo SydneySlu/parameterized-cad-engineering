@@ -47,7 +47,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
-| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | 冻结契约、模型配置、输入隔离和指标口径已通过静态复核；handoff 仍把已完成的 adapter/logger 写成未完成，需文档收尾后再标记 done；详见 `agent-work/reviews/APP-001-PREP-FINAL-REVIEW.md` |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | 冻结契约、模型配置、输入隔离和指标口径已通过静态复核；adapter/logger 已由中枢验收并标记 done；本次完成交接状态收尾，仍待 Codex 最终复核；正式运行另需负责人授权。正式指标 not_measured，IR → Typed CAD IR 映射未冻结；详见 `agent-work/reviews/APP-001-PREP-FINAL-REVIEW.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过：篡改 artifact 与 symlink 越界测试真实执行，README/状态同步，LLM 170 tests 与 Schema 17 tests 通过；详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md`。正式 APP-001 仍未授权 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 最终前置审查通过且负责人单独授权后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入已批准确定性链后测 |
 
