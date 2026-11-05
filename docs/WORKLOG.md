@@ -858,3 +858,10 @@ limits=未调用真实模型；未运行九条样例；正式指标 not_measured
 next=Codex 中枢最终复核
 - 结论=`APP-001-ADAPTER-R3-FIX` 已由中枢验收，`APP-001-ADAPTER=done`；旧的 adapter/logger remaining-gate 文字保留为历史记录。APP-001-PREP 继续 review，APP-001 继续 planned，formal_evaluation_allowed=false。
 - commit=cb87815
+
+[2026-11-05] agent=Codex task=APP-001-PREP-FINAL-ACCEPTANCE status=done
+- 动作：复核 PREP-FINAL-FIX 的 checkpoint/handoff 状态收尾，并独立复跑 JSON、YAML、LLM 与 Schema 检查。
+- 验证：acceptance JSON、baseline YAML、LLM 170/170、Schema 17/17、`git diff --check` 全部通过；旧 adapter/logger remaining-gate 已标为历史。
+- 结论：`APP-001-PREP` 最终验收通过并标记 `done`。详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md`。
+- 边界：APP-001 仍为 `planned`，formal gate 仍关闭；真实模型、九条样例、正式字段/Schema/CAD/STEP/费用/延迟指标未运行；IR 映射未冻结。
+- 下一步：等待项目负责人单独授权正式 APP-001。
