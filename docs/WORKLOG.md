@@ -710,3 +710,4 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 验证=9 条 JSON 标签结构及参数字段断言通过；验收 JSON 解析通过；Ruby YAML 解析通过；协议版本交叉核对、Prompt 占位符数检查、评测门关闭断言通过；`git diff --check` 通过。未调用 DeepSeek/Ollama，未运行验收样例或正式评测。
 - 限制=执行 adapter/logger 尚未实现及审查；APP-001-PREP 保持 review，APP-001 保持 planned，formal_evaluation_allowed=false。
 - 下一步=实现并审查 adapter/logger，确认原始模型输出、显式抽取、CAD-003 投影/验证及下游 CAD/STEP 分阶段记录；完成后另向项目负责人申请正式运行授权。
+- 交付提交=`88cdea7`（本次冻结契约、Prompt、样例标签及同步状态文档）。
