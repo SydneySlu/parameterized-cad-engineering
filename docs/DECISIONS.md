@@ -217,3 +217,20 @@ APP-001 使用 DeepSeek v4.1 Flash 1017 作为云端主效果基线，使用 Oll
 
 此 ADR 冻结首轮运行策略，不代表云端 API 的真实 model ID、provider、seed 能力或费用已经验证。验收集与 Prompt 在通过最终复核前仍为草案；不得据此生成正式测量结果。若 provider 不接受某项共同解码参数，必须记录实际生效值并暂停公平对照复核，不能静默移除或替换。
 
+## ADR-0011：DeepSeek Flash API 配置、价格记录与密钥注入
+
+- 日期：2026-11-05
+- 状态：accepted（配置资料；不代表已完成运行时探测或放行正式评测）
+- 决策人：项目负责人 + Codex
+- 关联：ADR-0009/0010；`docs/coordination/APP-001-baseline-contract.md`
+
+### 决策
+
+1. 云端请求配置使用 provider `DeepSeek`、模型 ID `deepseek-flash`、OpenAI 兼容 Base URL `https://api.deepseek.com`。官方文档将该请求模型标为 `DeepSeek-V4.1-Flash-1017`；每次运行仍保存 API 响应中的 `model` 字段。官方 Chat Completions 示例没有返回 provider 字段，未实际观测前记录 `runtime_returned_provider=not_exposed`。
+2. 云端记录响应中的 prompt/completion/total tokens 及缓存命中/未命中 token；费用依据官方价格快照和请求时段计算并记录快照日期、来源、币种和公式。2026-11-05 核对的费率为 CNY/百万 token：空闲输入缓存命中/未命中/输出分别 ¥0.02/¥1/¥4，高峰分别 ¥0.04/¥2/¥8。高峰为北京时间工作日（法定节假日除外）09:00–12:00、14:00–18:00；其余为闲时。费率变化时必须更新快照，不能把费率当作永久常量。
+3. API 密钥由本机仓库根目录 `.env` 中的 `DEEPSEEK_API_KEY` 提供，或通过同名 shell 环境变量提供。`.env` 已由 Git 忽略；跟踪的 `.env.example` 只含占位文本。密钥不得出现在 Git、命令输出、运行日志或聊天内容。
+
+### 尚待运行时确认
+
+没有发送 API 请求，因此响应 `model`、seed 支持、usage 的实际可用字段及 API/客户端版本尚未观测。官方文档说明思考模式默认开启并支持关闭；首轮 APP-001 是否显式关闭仍需负责人确认，且必须在云端配置与本地对照协议中清楚记录。此 ADR 不改变 ADR-0010 的共同解码设置，不授权正式模型评测。
+

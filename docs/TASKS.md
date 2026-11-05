@@ -25,7 +25,7 @@
 | RET-001 | 检索样本 manifest | DSH + CC + Codex | done | CAD-006 | 15 个首族目录行的 manifest、IR、构造、验证、来源和 hash 可追溯；中枢复核通过，限制见 `agent-work/reviews/RET-001-codex-review.md` |
 | RET-002 | 单族确定性检索基线 | CC + DSH + Codex | done | RET-001 | 单族参数距离、候选角色、稳定排序和结构化失败路径通过中枢复核；策略范围修正已验收，限制见 `agent-work/reviews/RET-002-codex-review.md` |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | RET-001 | 里程碑 1 协议已通过复审；当前仅允许 C1 检索级诊断；公平端到端比较待 APP-001，公平 C2 尚未定义 |
-| APP-001-PREP | 冻结模型基线、输入输出契约与小型验收集 | LLM Agent + Codex + 用户 | review | 已接受 ADR-0009/0010、CAD-003/IR/CAD 主链 | 初始抽取、confidence、重试、云端/本地计量策略已记录；仍需最终 Prompt/样例冻结及运行时 provider/model、seed 能力核验；本阶段不运行正式模型评测 |
+| APP-001-PREP | 冻结模型基线、输入输出契约与小型验收集 | LLM Agent + Codex + 用户 | review | 已接受 ADR-0009/0010/0011、CAD-003/IR/CAD 主链 | DeepSeek 请求 ID/Base URL/费率与密钥位置已记录；仍需确认思考模式、冻结 Prompt/样例及 API runtime probe（model/seed/usage）；本阶段不运行正式模型评测 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | APP-001-PREP | 冻结模型、Prompt、输入集和解码参数；可复现字段/追问/Schema 结果，并记录模型身份 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
 

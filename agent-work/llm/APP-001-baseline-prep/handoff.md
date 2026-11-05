@@ -14,15 +14,15 @@ Work root: `/Users/syd/Desktop/参数化 cad 工程辅助设计`
 
 ## Confirmed and not confirmed
 
-Confirmed from project records: DeepSeek v4.1 Flash 1017 is the cloud label; Ollama `qwen3:8b` digest/ID is `500a1f067a9f`; first local baseline device is MacBook Air M5, 16 GB RAM, 512 GB SSD; CAD-003's sole required selector is `bore_d`; catalog-derived fields and the strict `second_screw == 1 iff bore_d > 70` rule; RET-003 candidates are references, not answers. API-returned identity was **not** retrieved: common environment-variable presence check found no configured key, no request was made, and the artifact uses `model_id_pending_runtime_probe`.
+Confirmed from project records and official DeepSeek docs: request model ID `deepseek-flash`, documented served version `DeepSeek-V4.1-Flash-1017`, OpenAI-compatible Base URL `https://api.deepseek.com`; Ollama `qwen3:8b` digest/ID is `500a1f067a9f`; first local baseline device is MacBook Air M5, 16 GB RAM, 512 GB SSD; CAD-003's sole required selector is `bore_d`; catalog-derived fields and the strict `second_screw == 1 iff bore_d > 70` rule; RET-003 candidates are references, not answers. Actual API response identity/usage were **not** retrieved because no request was made. `.env.example` documents the `DEEPSEEK_API_KEY` variable; enter the real key only in a local ignored root `.env` or export it in the shell.
 
 Project-owner initial choices: output only user-explicit parameters; confidence is not used in decisions; retry only transient call faults, at most two retries after the initial request; log cloud tokens/fees and local elapsed time; preserve configured and runtime-returned provider/model identities separately. The contract sets temperature 0, top_p 1, max output 512 tokens and seed-if-supported; verify applied settings in each run record.
 
-Still requiring runtime/freeze work: configured cloud provider/endpoint label and returned provider/model fields; seed support and runtime versions; final prompt/sample freeze; Codex review of the execution adapter/logger. API credentials were not read or stored.
+Still requiring runtime/freeze work: returned `model`, seed support, actual usage fields and runtime versions; final prompt/sample freeze; Codex review of the execution adapter/logger. The documented response example has no provider field. Official price snapshot observed 2026-11-05 is recorded in the YAML and baseline contract. Thinking defaults to enabled per docs; the selected mode remains pending owner confirmation. API credentials were not read or stored.
 
 ## Verification and limits
 
-Commands and results are recorded in `docs/WORKLOG.md`. This work only drafts and inspects protocol materials. No formal cloud/local comparison, no model output, and no C0/C1, Schema, IR, CAD, geometry or STEP performance result was generated. No API key was read, written or committed. All outcome metrics remain `not_measured`.
+Commands and results are recorded in `docs/WORKLOG.md`. This work only drafts and inspects protocol materials. No formal cloud/local comparison, no model output, and no C0/C1, Schema, IR, CAD, geometry or STEP performance result was generated. No API key was read or written; `.env.example` contains only a placeholder. All outcome metrics remain `not_measured`.
 
 ## Handoff self-check
 

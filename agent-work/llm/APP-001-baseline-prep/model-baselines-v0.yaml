@@ -7,20 +7,49 @@ freeze_gate:
   c2_definition: out_of_scope
 baselines:
   cloud_primary_effect:
-    label: DeepSeek v4.1 Flash 1017
-    configured_provider: pending_runtime_probe
-    configured_model_name: DeepSeek v4.1 Flash 1017
+    label: DeepSeek-V4.1-Flash-1017
+    configured_provider: DeepSeek
+    configured_model_name: deepseek-flash
+    configured_model_version_from_official_docs: DeepSeek-V4.1-Flash-1017
+    base_url: https://api.deepseek.com
+    api_style: openai_compatible
     provider:
-      status: pending_runtime_probe
-      name: unknown
-      endpoint_label: unknown_non_secret
+      status: configured_by_project_owner
+      name: DeepSeek
+      endpoint_label: api.deepseek.com
     api_returned_identity:
-      provider: pending_runtime_probe
-      model: model_id_pending_runtime_probe
+      provider: not_exposed_in_documented_chat_completion_response
+      model: pending_runtime_probe
       captured_at: null
       request_id: null
+    api_capabilities_from_official_docs:
+      json_mode: supported
+      seed: pending_runtime_probe
+      thinking_modes: [enabled, disabled]
+      default_thinking_mode: enabled
+      selected_thinking_mode: pending_owner_confirmation
+    credential:
+      environment_variable: DEEPSEEK_API_KEY
+      local_file: .env
+      template_file: .env.example
+      secret_committed: false
     role: primary_effect_baseline
     runtime: cloud_api
+    price_reference:
+      source: https://api-docs.deepseek.com/zh-cn/quick_start/pricing/
+      observed_date: 2026-11-05
+      currency: CNY
+      unit: CNY_per_1M_tokens
+      peak_beijing_weekdays_excluding_china_public_holidays:
+        input_cache_hit: 0.04
+        input_cache_miss: 2.00
+        output: 8.00
+      off_peak_including_weekends_and_china_public_holidays:
+        input_cache_hit: 0.02
+        input_cache_miss: 1.00
+        output: 4.00
+      peak_windows_beijing_time: ["Mon-Fri 09:00-12:00", "Mon-Fri 14:00-18:00"]
+      note: Prices can change; retain this dated rate-card snapshot in each cost calculation record.
   local_deployment_cost_latency:
     label: Ollama qwen3:8b
     provider:
@@ -82,6 +111,8 @@ shared_run_fields:
     - software_versions
     - latency_ms
     - cloud_input_tokens_if_applicable
+    - cloud_cached_input_tokens_if_applicable
+    - cloud_cache_miss_input_tokens_if_applicable
     - cloud_output_tokens_if_applicable
     - cloud_total_tokens_if_applicable
     - cloud_cost_amount_and_currency_if_available
@@ -98,7 +129,8 @@ security:
   record_secret_values: false
   record_only_secret_presence: false
 notes:
-  - Cloud API configuration was not available through the checked environment variables; no request was made.
-  - The API-returned model identity is unknown until a permitted runtime probe is performed.
+  - Official API docs identify the request model as deepseek-flash and its documented model version as DeepSeek-V4.1-Flash-1017; runtime response.model still must be captured during a permitted probe.
+  - The documented Chat Completion response has model and usage fields but no provider field; store configured_provider=DeepSeek and runtime_returned_provider=not_exposed unless actual responses expose one elsewhere.
+  - No API request has been made. The documented API default enables thinking; selected_thinking_mode remains pending owner confirmation so it is not silently treated as disabled.
   - Initial decoding/retry choices are recorded in ADR-0010 and APP-001 contract; actual provider capability and applied values must be recorded per run.
-  - Never estimate a cloud fee without a dated, versioned price source; use not_available if usage or price is unavailable.
+  - Price reference is the official rate card observed on 2026-11-05; use response usage cache-hit/cache-miss counts and the rate period applicable to the request timestamp. Never estimate if those inputs are unavailable.

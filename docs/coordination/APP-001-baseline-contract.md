@@ -6,10 +6,25 @@
 
 | 条件 | 模型 | 作用 | 首期环境 |
 |---|---|---|---|
-| 云端 | DeepSeek v4.1 Flash 1017（以 API 响应中的 `model` 字段为最终身份） | 主效果基线 | 稳定可调用的现有 API |
+| 云端 | 请求模型 ID `deepseek-flash`；官方文档标注版本 `DeepSeek-V4.1-Flash-1017`（运行时仍记录响应 `model`） | 主效果基线 | `https://api.deepseek.com`，OpenAI 兼容 Chat Completions |
 | 本地 | Ollama `qwen3:8b`，digest/ID `500a1f067a9f` | 本地部署、成本和延迟对照 | MacBook Air M5，16 GB RAM，512 GB SSD |
 
-云端运行必须分别记录配置的 provider、配置模型名、API 返回的 provider（若有）和 API 返回的 `model` 字段、请求日期、解码参数和客户端版本。endpoint 只记非敏感标识，不记录密钥。若运行时身份与配置标签不一致，保留两者并进入 `review`，不得猜测或静默改名。
+云端运行必须分别记录配置的 provider、配置模型名、API 返回的 provider（若有）和 API 返回的 `model` 字段、请求日期、解码参数和客户端版本。当前官方 Chat Completions 示例使用 `model: deepseek-flash`，响应包含 `model`、`usage.prompt_tokens`、`usage.completion_tokens`、`usage.total_tokens`、`usage.prompt_cache_hit_tokens`、`usage.prompt_cache_miss_tokens` 及 `usage.prompt_tokens_details.cached_tokens`；文档示例没有 provider 响应字段，故运行记录中 `runtime_returned_provider` 应为 `not_exposed`，除非实际响应另有提供。endpoint 只记非敏感标识，不记录密钥。若运行时身份与配置标签不一致，保留两者并进入 `review`，不得猜测或静默改名。
+
+密钥只通过环境变量 `DEEPSEEK_API_KEY` 提供。本机开发时可在仓库根目录 `.env` 中填写；该文件由 `.gitignore` 排除。模板为根目录 `.env.example`，模板只含变量名和占位说明，绝不填真实密钥。程序通过 `python-dotenv`（或等效环境加载器）读取 `.env`，API 客户端只从 `os.environ["DEEPSEEK_API_KEY"]` 取值；日志不得打印密钥、Authorization header 或完整请求头。
+
+### DeepSeek API 价目表与调用能力（官方文档快照）
+
+官方价目表于 2026-11-05 核对，价格单位为 CNY/百万 token：
+
+| 时段 | 输入缓存命中 | 输入缓存未命中 | 输出 |
+|---|---:|---:|---:|
+| 空闲 | ¥0.02 | ¥1.00 | ¥4.00 |
+| 高峰 | ¥0.04 | ¥2.00 | ¥8.00 |
+
+北京时间工作日（中国法定节假日除外）09:00–12:00、14:00–18:00 为高峰；其余时间（含周末和法定节假日）为空闲。成本回算必须依据请求时间、响应中的缓存命中/未命中/输出 token 数和该次运行所引用的价目表快照；价目可能变化，不能把本表视为永久费率。
+
+官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。seed 能力仍待运行时探测；思考模式是否关闭仍待负责人确认，不能静默改变 ADR-0010 的共同设置或把 API 默认值误记为实验配置。
 
 MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和成本探索，但必须单独记录操作系统、CPU、运行时、量化方式和线程配置，不能与 Mac 基线合并计算延迟或吞吐。
 
@@ -71,7 +86,7 @@ MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和�
 - 关键字段识别：缺失 `bore_d` 时是否追问/拒绝；
 - 冲突处理：目录冲突、阈值冲突和越界是否拒绝；
 - Schema 通过率：模型输出进入 Schema/规则层后通过的样本数 / 总样本数；
-- 追问正确率与失败类型。云端记录每次请求及样本汇总的 input/output/total tokens、费用和币种；费用必须来自响应的权威 usage/cost，或按明确版本/日期的 provider 价目表及 token 用量计算并注明来源，无法核实时记 `not_available`，不估算。本地记录每样本墙钟耗时、尝试次数和总耗时，不与云端 token/费用口径混为一项。
+- 追问正确率与失败类型。云端记录每次请求及样本汇总的 input/output/total tokens、缓存命中/未命中 input tokens、费用和币种；费用必须来自响应的权威 usage/cost，或按明确版本/日期的 DeepSeek 价目表、请求时段和 token 用量计算并注明来源，无法核实时记 `not_available`，不估算。本地记录每样本墙钟耗时、尝试次数和总耗时，不与云端 token/费用口径混为一项。
 
 ### APP-001 输出接入后：测 CAD 和 STEP
 

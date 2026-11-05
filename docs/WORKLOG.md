@@ -661,3 +661,11 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 交付：更新 APP-001 基线契约、YAML 基线和 Prompt/输出契约；追加 ADR-0010。checkpoint/handoff 移除已解决的项目负责人决策项。
 - 边界：API 实际 provider/model、endpoint 非敏感标签、seed 支持、运行时版本和云端费率来源需在 runtime probe/正式运行记录；验收集和最终 Prompt 尚未冻结，未调用模型，所有指标仍 `not_measured`。
 - 下一步：完成验收集与输出适配器终审，探测并记录 API 返回身份（不读取或记录密钥），再审查是否放行正式 APP-001。
+
+[2026-11-05] agent=Codex task=APP-001-deepseek-api-config status=review
+- 动作：根据项目负责人提供的 DeepSeek 模型名和官方文档，核对 API 请求模型 ID、Base URL、响应 usage 字段、JSON/思考模式能力及价格时段；补齐 APP-001 云端基线配置和本机密钥填写说明。
+- 结果：确认请求 ID `deepseek-flash`、文档服务版本 `DeepSeek-V4.1-Flash-1017`、OpenAI 兼容 Base URL `https://api.deepseek.com`；官方响应示例提供 model 和 token usage（含缓存命中/未命中）但无 provider 字段。记录 2026-11-05 官方价目表（CNY/百万 token）及峰谷时段，成本需要按请求时间和缓存 token 数回算。
+- 安全：新增根目录 `.env.example`，只含 `DEEPSEEK_API_KEY=replace_with_your_key` 占位内容；真实密钥应填写在 Git 忽略的本机根目录 `.env` 或通过 shell 环境变量提供。未读取、请求或保存密钥，未发起 API 请求。
+- 未决：实际响应 model/usage、seed 能力和运行时版本仍须在已配置密钥的本机 probe；DeepSeek 文档默认开启思考模式，首轮是否关闭需负责人明确，APP-001-PREP 继续 review，正式实验未放行。
+- 交付：ADR-0011、APP-001 基线契约、model-baselines-v0.yaml、Prompt/output contract、checkpoint/handoff、项目状态/任务板更新。
+- 下一步：负责人将真实 key 放入本机 `.env`；确认 thinking mode 选择后，进行最小化 runtime probe，只记录响应身份与 usage 元数据，不记录 key 或敏感内容；之后再做验收集/Prompt 最终冻结和 APP-001 放行审查。

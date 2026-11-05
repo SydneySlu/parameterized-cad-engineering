@@ -10,6 +10,7 @@ Status: `review`. The project owner has confirmed the initial extraction, confid
 - Acceptance set: `acceptance-set-v0` (draft/review only).
 - A run must record model identity, provider/runtime, prompt and input hashes, decoding settings, relevant software versions, condition, latency and available token/cost data. A changed identity or protocol starts a new run batch and requires review.
 - Record configured provider/model name separately from provider/model returned at runtime. Do not collapse aliases or silently rewrite mismatches.
+- DeepSeek cloud request configuration: provider `DeepSeek`, model ID `deepseek-flash`, OpenAI-compatible base URL `https://api.deepseek.com`; the official docs label this served version `DeepSeek-V4.1-Flash-1017`. Preserve the response `model` field. The documented Chat Completions response has no provider field, so record runtime provider as `not_exposed` unless the actual response supplies one.
 - C0/C1 can only be compared when model, Prompt, natural-language payloads, decoding parameters, output contract and post-processing are identical. C1's retrieved material is separately recorded as reference context. Fair C2 is outside this task and remains undefined.
 
 ## Common input
@@ -86,6 +87,10 @@ At most 2 retries are allowed after the initial attempt (3 total attempts), only
 Stages are `input`, `model_request`, `json_parse`, `contract_validation`, `schema`, `typed_cad_ir`, `cad_build`, `geometry_rules`, `step_export`, and `step_readback`. Error codes should be stable and stage-local; keep `fields` empty if no parameter field applies. Distinguish `TIMEOUT`, `RATE_LIMIT`, `PROVIDER_ERROR`, `INVALID_JSON`, `CONTRACT_ERROR`, and downstream validation/build errors. Do not store secrets, authorization headers, private raw prompts/responses beyond approved sample data, or provider error bodies that may contain sensitive content. Missing cloud token/cost metadata is `null`/`not_available`, never estimated.
 
 For cloud requests, record per-attempt input/output/total tokens and cost/currency when supplied. If cost is calculated, include the dated/versioned provider price source and calculation. For local Ollama runs, record per-sample inference wall time, attempt count and total elapsed time; cloud token/fee fields are not applicable. Keep configured provider/model name separate from runtime-returned provider/model fields.
+
+- For DeepSeek costs, retain `prompt_cache_hit_tokens` and `prompt_cache_miss_tokens` (and `prompt_tokens_details.cached_tokens` when present), plus request timestamp. The official price card observed 2026-11-05 lists CNY/1M tokens with peak/off-peak rates; use the versioned rate card matching the request period rather than applying a single flat price.
+- DeepSeek documentation says thinking is enabled by default and supports disabled mode. Do not assume the selected mode; record the actual request setting after owner confirmation. `seed` support remains a runtime-probe item.
+- Secret setup: place the real key only in the repository-root `.env` as `DEEPSEEK_API_KEY=...`, or export that environment variable in the shell. `.env` is ignored by Git. Never place a real key in `.env.example`, tracked config, command history, logs, reports, or chat.
 
 ## Measurement order and status
 
