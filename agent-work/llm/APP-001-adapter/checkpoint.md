@@ -312,3 +312,74 @@ APP-001=planned
 formal_evaluation_allowed=false
 commit=2a324f7 (fix: address APP-001-ADAPTER Codex review R1 corrections [APP-001-ADAPTER-R1])
 ```
+
+---
+
+## APP-001-ADAPTER-R2 corrections (2026-11-05)
+
+Codex review `APP-001-ADAPTER-R1-codex-review.md` flagged 3 remaining issues.
+All 3 have been addressed.
+
+### Fixes applied
+
+**4.1 Gate exact type check (R1 → R2):**
+- Changed gate from `isinstance(transport, MockTransport)` to
+  `type(self.transport) is FakeTransport`.
+- Any MockTransport subclass, duck-type, or anonymous transport is refused
+  before `send()`; only exact `FakeTransport` type is allowed.
+- Existing tests updated to add `verify_frozen_prompt=False` where needed
+  (all synthetic-prompt tests bypass prompt verification as intended).
+
+**4.2 Retention path fixed to work/app001-runs/:**
+- Added `_resolve_canonical_path()` that validates paths against
+  `work/app001-runs/` before any write.
+- `RetentionPolicy.validate_for_production()` raises
+  `RETENTION_PATH_OUTSIDE_IGNORED_DIR` for out-of-bounds paths.
+- Added `RetentionPolicy.for_test(base_dir)` factory (test-only; raises
+  `RETENTION_TEST_ONLY_POLICY` if `validate_for_production()` is called).
+- `_retain_response()` now uses `_allow_test_path` flag for test-only paths.
+
+**4.3 Frozen prompt artifact verification:**
+- New module `src/llm/prompt_loader.py`:
+  - `load_frozen_prompt()` reads `prompt-v2.md`, verifies version marker,
+    extracts system prompt (prose) and user template (fenced block).
+  - Normalizes `{{placeholder}}` → `{placeholder}` for Python .format().
+  - `verify_adapter_input()` checks system prompt + user template hash.
+  - `FrozenPromptMismatchError` raised on artifact missing/unreadable/mismatch.
+- `Adapter.run()` calls `verify_adapter_input()` before `send()` by default.
+- `verify_frozen_prompt=False` available for test-only synthetic prompts.
+- `_prompt_loader_path` test parameter for pointing at custom artifact files.
+
+### New test files
+
+`tests/llm/test_r2_regression.py`: 22 tests covering:
+- 4.1: MockTransport subclass refused (send_calls=0); duck-type refused;
+  FakeTransport exact type passes; FakeTransport subclass refused; gate
+  fires before env read.
+- 4.2: Production policy external path rejected; path traversal rejected;
+  for_test() writes to tempdir; test-only policy rejected by validate_for_production;
+  write failure recorded not swallowed; default no-write behavior.
+- 4.3: Correct frozen prompt passes; modified system/template rejected; missing
+  artifact rejected; send_calls=0 on all failure paths; prompt text not in record;
+  hashes match frozen artifact.
+
+### Verification commands
+
+```text
+PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 143 tests, OK
+PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+git diff --check → PASS
+secret scan → no real credentials
+```
+
+### Status
+
+```text
+task=APP-001-ADAPTER-R2
+status=review
+APP-001-PREP=review
+APP-001=planned
+formal_evaluation_allowed=false
+commit=pending
+```

@@ -780,3 +780,15 @@ next=Codex 中枢 R1 只读复核；通过后项目负责人可明确授权正�
 - 结论：R1 部分有效但不验收通过。prompt artifact 核验明确属于 R1 范围而未完成；IR 映射则按原任务边界属后续/不同范围，不应由 CC 在此臆造。
 - 交付：`agent-work/reviews/APP-001-ADAPTER-R1-codex-review.md`；任务保持 `review`，APP-001 不放行。
 - 下一步：定点修复 transport gate、retention root 限制和 frozen prompt artifact 核验，然后中枢再审。
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-R2 status=review
+scope=修复 R1 Codex 复核发现的 3 项问题（4.1 评测门精确类型、4.2 Retention 路径约束、4.3 冻结 Prompt artifact 核验）
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 143 tests, OK (原121+新增22)
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+  git diff --check → PASS
+  secret scan → no real credentials
+result=3 项 R2 修正全部完成；143 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
+limits=IR 映射仍未冻结；正式 APP-001 仍未授权；真实 provider/样例/正式指标均未运行
+next=Codex 中枢 R2 只读复核；通过后项目负责人可授权正式 APP-001 运行

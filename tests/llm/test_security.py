@@ -79,7 +79,7 @@ class GateTests(unittest.TestCase):
         custom = CountingTransport()
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=lambda s: None)
         with self.assertRaises(FormalEvaluationBlockedError):
-            adapter.run(_input(), run_id="g1")
+            adapter.run(_input(), verify_frozen_prompt=False, run_id="g1")
         # send() must NOT have been called -- gate fires before transport
         self.assertEqual(custom.send_calls, 0)
 
@@ -88,7 +88,7 @@ class GateTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40}))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
-        result = adapter.run(_input(), run_id="g2")
+        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="g2")
         self.assertTrue(result.record.construction_ready)
 
 
@@ -103,7 +103,7 @@ class SecretScanTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash" if provider == DEEPSEEK_PROVIDER else None, None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10} if provider == DEEPSEEK_PROVIDER else None))
         adapter = Adapter(provider=provider, transport=transport, sleeper=lambda s: None)
-        result = adapter.run(_input(), run_id="sec1")
+        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="sec1")
         return result.record.to_json()
 
     def test_no_secrets_in_deepseek_record(self):
@@ -122,7 +122,7 @@ class SecretScanTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
-        text = adapter.run(_input(), run_id="sec2").record.to_json()
+        text = adapter.run(_input(), verify_frozen_prompt=False, run_id="sec2").record.to_json()
         # No authorization values should appear anywhere in the record.
         self.assertNotIn("Bearer ", text)
         self.assertNotIn("sk-test", text)
@@ -138,7 +138,7 @@ class SecretScanTests(unittest.TestCase):
             transport = FakeTransport()
             transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
             adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
-            result = adapter.run(_input(), run_id="sec3")
+            result = adapter.run(_input(), verify_frozen_prompt=False, run_id="sec3")
             self.assertTrue(result.record.construction_ready)
             # The stored request must have no authorization.
             req = transport.last_call()
@@ -170,7 +170,7 @@ class RunRecordSerializationTests(unittest.TestCase):
     def test_record_has_contract_and_prompt_versions(self):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
-        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), run_id="r1").record
+        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), verify_frozen_prompt=False, run_id="r1").record
         self.assertEqual(rec.contract_version, CONTRACT_VERSION)
         self.assertEqual(rec.prompt_version, PROMPT_VERSION)
         self.assertEqual(rec.adapter_version, ADAPTER_VERSION)
@@ -178,7 +178,7 @@ class RunRecordSerializationTests(unittest.TestCase):
     def test_ir_cad_geometry_step_all_honest(self):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
-        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), run_id="r2").record
+        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), verify_frozen_prompt=False, run_id="r2").record
         self.assertEqual(rec.stage_status("ir"), "blocked")
         self.assertEqual(rec.stage_status("cad"), "not_run")
         self.assertEqual(rec.stage_status("geometry"), "not_run")
@@ -187,7 +187,7 @@ class RunRecordSerializationTests(unittest.TestCase):
     def test_no_step_pass_claim_in_json(self):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
-        text = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), run_id="r3").record.to_json()
+        text = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None).run(_input(), verify_frozen_prompt=False, run_id="r3").record.to_json()
         data = json.loads(text)
         for st in data["stages"]:
             if st["stage"] in ("cad", "geometry", "step"):
@@ -205,7 +205,7 @@ class NoNetworkTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(200, _body(), "deepseek-flash", None, {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 10}))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=lambda s: None)
-        result = adapter.run(_input(), run_id="nn1")
+        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="nn1")
         self.assertTrue(result.record.construction_ready)
         self.assertEqual(transport.call_count, 1)
 

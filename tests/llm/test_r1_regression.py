@@ -156,7 +156,7 @@ class CostNotAvailableTests(unittest.TestCase):
             # no prompt_cache_hit_tokens or prompt_cache_miss_tokens
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        rec = adapter.run(_input(), run_id="r1").record
+        rec = adapter.run(_input(), verify_frozen_prompt=False, run_id="r1").record
         self.assertIsNone(rec.cloud_cost_amount)
 
 
@@ -282,7 +282,7 @@ class RetentionPolicyTests(unittest.TestCase):
             sleeper=_NoSleep(),
             retention_policy=policy,
         )
-        return adapter.run(_input(), run_id="ret1")
+        return adapter.run(_input(), verify_frozen_prompt=False, run_id="ret1")
 
     def test_default_policy_does_not_retain(self):
         result = self._run_adapter()
@@ -306,7 +306,7 @@ class RetentionPolicyTests(unittest.TestCase):
             "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40,
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        record_json = adapter.run(_input(), run_id="ret2").record.to_json()
+        record_json = adapter.run(_input(), verify_frozen_prompt=False, run_id="ret2").record.to_json()
         # The response body content must not appear in the record.
         self.assertNotIn("app001-io.v1", record_json.split('"contract_version"')[0] if '"contract_version"' in record_json else "")
         # More precisely: the full raw body should not be embedded as a field value.
@@ -321,7 +321,7 @@ class RetentionPolicyTests(unittest.TestCase):
 
     def test_opt_in_retention_writes_to_ignored_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
-            policy = RetentionPolicy(retain_raw=True, base_dir=tmp)
+            policy = RetentionPolicy.for_test(base_dir=tmp)
             result = self._run_adapter(policy=policy)
             meta = result.record.raw_response_retention
             self.assertTrue(meta.get("retained"))
@@ -332,7 +332,7 @@ class RetentionPolicyTests(unittest.TestCase):
 
     def test_opt_in_retention_path_error_handled(self):
         """Retention failure must be recorded, not silently swallowed."""
-        policy = RetentionPolicy(retain_raw=True, base_dir="/nonexistent/path/that/does/not/exist")
+        policy = RetentionPolicy.for_test(base_dir="/nonexistent/path/that/does/not/exist")
         result = self._run_adapter(policy=policy)
         meta = result.record.raw_response_retention
         # Should indicate failure, not success.
@@ -353,7 +353,7 @@ class PromptHashTests(unittest.TestCase):
             "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40,
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        result = adapter.run(_input(system=system, template=template), run_id="ph1")
+        result = adapter.run(_input(system=system, template=template), verify_frozen_prompt=False, run_id="ph1")
         return result.record.prompt_hashes
 
     def test_prompt_hashes_are_present(self):
@@ -394,7 +394,7 @@ class PromptHashTests(unittest.TestCase):
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
         ai = _input(system="unique_system_prompt_text_xyz")
-        record_json = adapter.run(ai, run_id="ph2").record.to_json()
+        record_json = adapter.run(ai, verify_frozen_prompt=False, run_id="ph2").record.to_json()
         # The actual system prompt text must NOT appear in the record.
         self.assertNotIn("unique_system_prompt_text_xyz", record_json)
 

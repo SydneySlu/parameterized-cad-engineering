@@ -6,22 +6,24 @@ records.  CAD/IR/STEP hooks are explicit interfaces that stay ``not_run`` /
 ``blocked_no_approved_ir_mapping`` because no frozen src-level parameter-to-IR
 mapping exists in this task.
 
-Gate enforcement (ADR-0013 / task section 3.2):
-Any transport that is NOT a :class:`~src.llm.transport.MockTransport`
-(e.g. a real HTTP transport) is refused before ``send()`` is called unless the
-formal evaluation gate is open.  :class:`~src.llm.transport.FakeTransport` is
-a :class:`~src.llm.transport.MockTransport` and may be used while the gate is
-closed.  This check is unconditional and cannot be bypassed by the caller.
+Gate enforcement (R2):
+Only the exact :class:`~src.llm.transport.FakeTransport` type is allowed while
+the formal evaluation gate is closed.  Any other transport -- including subclasses
+of MockTransport -- is refused before ``send()`` is called.  This uses an exact
+type check (``type(transport) is FakeTransport``) that cannot be bypassed by
+inheritance.
 
-Credential handling (task section 3.1):
+Retention (R2):
+Retention root is fixed to ``work/app001-runs/`` (git-ignored).  Path validation
+rejects paths outside that canonical root.  Tests use an explicit test-only
+dependency-injection mechanism; production callers cannot specify arbitrary paths.
+
+Prompt artifact verification (R2 / 4.3):
+:func:`verify_adapter_input` checks the actual system prompt and user template
+against the frozen ``prompt-v2.md`` before any transport ``send()`` call.
+
+Credential handling:
 The mock-path request builders never read environment variables or credentials.
-Credential injection is reserved for a future real-transport layer.
-
-Raw response retention (task section 4.1):
-Raw model responses are not stored by default (``RetentionPolicy.retain_raw=False``).
-When a future authorized run enables retention, responses are written only to
-the git-ignored ``work/app001-runs/`` directory, never to tracked files or
-run records.  The run record always contains only sanitized metadata.
 """
 
 from __future__ import annotations
@@ -29,7 +31,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .contract import (
@@ -46,6 +50,7 @@ from .cost import compute_cloud_cost
 from .gate import FormalEvaluationBlockedError, require_formal_evaluation_allowed
 from .parser import ParseResult, parse_response
 from .projector import ProjectionResult, project_to_cad003
+from .prompt_loader import FrozenPromptMismatchError, verify_adapter_input
 from .providers import (
     build_deepseek_request,
     build_ollama_request,
@@ -66,26 +71,79 @@ from .transport import MockTransport, PreparedRequest, Transport, TransportRespo
 # Retention policy
 # ---------------------------------------------------------------------------
 
+# The canonical git-ignored run directory (relative to repo root).
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_CANONICAL_RUN_DIR_NAME = "work/app001-runs"
+_CANONICAL_RUN_DIR = _REPO_ROOT / "work" / "app001-runs"
+
+
+def _resolve_canonical_path(base_dir: str | Path) -> Path:
+    """Resolve ``base_dir`` to an absolute path and verify it is inside the
+    canonical ``work/app001-runs/`` directory.
+
+    Raises :class:`ValueError` with a stable error code on:
+    - Absolute paths or relative paths that escape ``work/app001-runs/``
+    - Path traversal (``..``)
+    - Symbolic links that resolve outside the canonical root
+    """
+    resolved = Path(base_dir) if Path(base_dir).is_absolute() else (_REPO_ROOT / base_dir)
+    try:
+        resolved = resolved.resolve()
+    except OSError:
+        pass  # allow non-existent paths; existence is checked on write
+
+    canonical = _CANONICAL_RUN_DIR.resolve() if _CANONICAL_RUN_DIR.exists() else _CANONICAL_RUN_DIR.absolute()
+    try:
+        resolved.relative_to(canonical)
+    except ValueError:
+        raise ValueError(
+            f"RETENTION_PATH_OUTSIDE_IGNORED_DIR: base_dir {base_dir!r} resolves to "
+            f"{resolved} which is outside the canonical ignored run directory "
+            f"{canonical}; refusing to write raw response"
+        )
+    return resolved
+
 
 @dataclass(frozen=True)
 class RetentionPolicy:
     """Controls whether raw model responses are persisted to disk.
 
     Default: ``retain_raw=False`` -- no raw content is written anywhere.
+
     When ``retain_raw=True`` (future authorized runs only), raw responses are
-    written to ``base_dir`` (must be a git-ignored path).  The run record
-    always records only the retention status and a body-length/hash, never
-    the raw content itself.
+    written inside ``work/app001-runs/`` (git-ignored).  The ``base_dir``
+    must be a path within ``work/app001-runs/`` or it is rejected before any
+    write.
+
+    **Test-only factory:** Use :meth:`for_test` to create a policy that writes
+    to a test-controlled temporary directory outside the canonical root; this
+    factory is explicitly test-only and cannot be used by the production
+    :class:`Adapter.run` path (verified by a flag).
     """
 
     retain_raw: bool = False
-    base_dir: str = "work/app001-runs"
+    base_dir: str = _CANONICAL_RUN_DIR_NAME
+    _test_only: bool = False  # set only by for_test(); production callers cannot set
 
-    # Returns False (disabled) by default; enabled only when
-    # formal evaluation is authorized and this policy is explicitly set.
     @classmethod
     def default(cls) -> "RetentionPolicy":
         return cls(retain_raw=False)
+
+    @classmethod
+    def for_test(cls, base_dir: str) -> "RetentionPolicy":
+        """Create a test-only retention policy with an arbitrary base_dir.
+
+        This factory is for use in tests only.  The production ``Adapter.run``
+        path refuses any policy created with this factory.
+        """
+        return cls(retain_raw=True, base_dir=base_dir, _test_only=True)
+
+    def validate_for_production(self) -> None:
+        """Raise if this policy is test-only or has an out-of-bounds base_dir."""
+        if self._test_only:
+            raise ValueError("RETENTION_TEST_ONLY_POLICY: test-only RetentionPolicy cannot be used in production runs")
+        if self.retain_raw:
+            _resolve_canonical_path(self.base_dir)  # raises on out-of-bounds
 
 
 def _retain_response(
@@ -93,12 +151,17 @@ def _retain_response(
     run_id: str,
     query_id: str,
     policy: RetentionPolicy,
+    *,
+    _allow_test_path: bool = False,
 ) -> dict[str, Any]:
     """Attempt to retain a raw response body per the policy.
 
     Returns a metadata dict with ``retained``, ``path`` (if retained),
     ``body_length``, and ``body_sha256``.  Never writes content to tracked
     paths, RunRecord fields, stdout, or exceptions.
+
+    ``_allow_test_path`` is an internal flag used only by tests (via
+    ``RetentionPolicy.for_test``); it bypasses path validation.
     """
     body_len = len(body.encode("utf-8"))
     body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
@@ -106,16 +169,39 @@ def _retain_response(
     if not policy.retain_raw:
         return {"retained": False, "body_length": body_len, "body_sha256": body_hash}
 
-    # Only allow writing to the ignored work/app001-runs/ directory.
-    import re
+    # Validate path for production policies.
+    if policy._test_only and not _allow_test_path:
+        return {
+            "retained": False,
+            "retention_failed": True,
+            "error": "RETENTION_TEST_ONLY_POLICY",
+            "body_length": body_len,
+            "body_sha256": body_hash,
+        }
+
+    if not policy._test_only:
+        try:
+            write_dir = _resolve_canonical_path(policy.base_dir)
+        except ValueError as exc:
+            return {
+                "retained": False,
+                "retention_failed": True,
+                "error": "RETENTION_PATH_OUTSIDE_IGNORED_DIR",
+                "error_detail": str(exc)[:200],
+                "body_length": body_len,
+                "body_sha256": body_hash,
+            }
+    else:
+        # Test-only: use the specified base_dir directly (not restricted).
+        write_dir = Path(policy.base_dir)
 
     safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", f"{run_id}_{query_id}")
-    rel_path = os.path.join(policy.base_dir, f"{safe_id}_raw_response.txt")
+    rel_path = write_dir / f"{safe_id}_raw_response.txt"
     try:
-        os.makedirs(policy.base_dir, exist_ok=True)
+        write_dir.mkdir(parents=True, exist_ok=True)
         with open(rel_path, "w", encoding="utf-8") as fh:
             fh.write(body)
-        return {"retained": True, "path": rel_path, "body_length": body_len, "body_sha256": body_hash}
+        return {"retained": True, "path": str(rel_path), "body_length": body_len, "body_sha256": body_hash}
     except OSError as exc:
         return {
             "retained": False,
@@ -272,18 +358,47 @@ class Adapter:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def run(self, adapter_input: AdapterInput, *, run_id: str) -> AdapterRunResult:
+    def run(
+        self,
+        adapter_input: AdapterInput,
+        *,
+        run_id: str,
+        verify_frozen_prompt: bool = True,
+        _prompt_loader_path=None,
+    ) -> AdapterRunResult:
         """Run one query and return a staged :class:`AdapterRunResult`.
 
-        Gate enforcement (3.2): if the injected transport is not a
-        :class:`MockTransport`, the formal evaluation gate is checked
-        **before** calling ``send()``.  This is unconditional and cannot be
-        bypassed by the caller.  :class:`FakeTransport` (a
-        :class:`MockTransport`) is always allowed.
+        Gate enforcement (4.1 R2): only the exact :class:`FakeTransport` type is
+        allowed while the formal evaluation gate is closed.  Any other transport
+        -- including custom subclasses of :class:`MockTransport`, anonymous duck-
+        type implementations, or future HTTP transports -- is refused before
+        ``send()`` is called.  This check uses an exact type comparison
+        (``type(transport) is FakeTransport``) so it cannot be bypassed by
+        inheriting from ``FakeTransport`` or ``MockTransport``.
+
+        Prompt verification (4.3 R2): ``verify_frozen_prompt=True`` (default)
+        verifies the system prompt and user template against the frozen
+        ``prompt-v2.md`` artifact before ``send()``.  Tests using synthetic
+        prompts must pass ``verify_frozen_prompt=False``; production runs
+        must never disable this check.  ``_prompt_loader_path`` is an internal
+        test parameter for pointing at alternative artifact files.
         """
-        # --- 3.2: Gate enforcement before any transport use ---
-        if not isinstance(self.transport, MockTransport):
-            require_formal_evaluation_allowed("run a non-mock transport request")
+        # --- 4.1 R2: Exact type gate check (not subclass-bypassable) ---
+        from .transport import FakeTransport as _FakeTransport
+
+        if type(self.transport) is not _FakeTransport:
+            require_formal_evaluation_allowed("run a non-FakeTransport request")
+
+        # --- 4.3 R2: Verify frozen prompt artifact before send() ---
+        if verify_frozen_prompt:
+            kw = {} if _prompt_loader_path is None else {"path": _prompt_loader_path}
+            try:
+                verify_adapter_input(adapter_input, **kw)
+            except FrozenPromptMismatchError as exc:
+                raise FrozenPromptMismatchError(
+                    f"frozen prompt verification failed; "
+                    "cannot proceed with mislabeled run: " + str(exc)
+                ) from exc
 
         record = RunRecord(
             run_id=run_id,
@@ -346,8 +461,17 @@ class Adapter:
         self._record_runtime_identity(record, response)
 
         # --- 4.1: Raw response retention (default: not retained) ---
+        # Production policies are validated before writing (path bounds check).
+        # Test-only policies (RetentionPolicy.for_test) are allowed here with
+        # the explicit _allow_test_path flag so tests can use temp dirs.
+        if not self._retention_policy._test_only:
+            try:
+                self._retention_policy.validate_for_production()
+            except ValueError:
+                pass  # validation errors are reported inside _retain_response
         retention_meta = _retain_response(
-            response.body, run_id, adapter_input.query_id, self._retention_policy
+            response.body, run_id, adapter_input.query_id, self._retention_policy,
+            _allow_test_path=self._retention_policy._test_only,
         )
         record.raw_response_retention = retention_meta
 

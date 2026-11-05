@@ -218,3 +218,75 @@ handoff_self_check:
 ### APP-001 formal evaluation status
 
 `APP-001` remains `planned`.  No formal model run is authorized.
+
+---
+
+## APP-001-ADAPTER-R2 corrections
+
+Date: 2026-11-05
+Task: `APP-001-ADAPTER-R2`
+
+All 3 issues from `APP-001-ADAPTER-R1-codex-review.md` addressed.
+
+```text
+handoff_self_check:
+  changed=
+    src/llm/adapter.py         (exact type gate check; prompt verification; retention path bounds)
+    src/llm/prompt_loader.py   (new: frozen prompt loader and verifier)
+    tests/llm/test_adapter.py  (add verify_frozen_prompt=False to synthetic tests)
+    tests/llm/test_security.py (add verify_frozen_prompt=False to synthetic tests)
+    tests/llm/test_r1_regression.py (add verify_frozen_prompt=False; use for_test() factory)
+    tests/llm/test_r2_regression.py (new: 22 R2 regression tests)
+    agent-work/llm/APP-001-adapter/checkpoint.md (R2 section appended)
+    agent-work/llm/APP-001-adapter/handoff.md (this section)
+    docs/WORKLOG.md (append-only R2 entry)
+  commands=
+    PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+    PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 143 tests, OK
+    PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+    git diff --check → PASS
+    secret scan (grep patterns) → no real credentials found
+  confirmed=
+    4.1 MockTransport subclass: send_calls==0 confirmed by
+        test_r2_regression.GateExactTypeTests.test_mock_transport_subclass_refused_before_send
+        and test_fake_transport_subclass_refused (FakeTransport subclass also refused).
+        Duck-type (plain class with send()) also refused (send_calls==0).
+        FakeTransport exact type still passes. Gate fires before env read.
+        All confirmed via mock; no real network.
+    4.2 Retention path: external absolute path and path traversal raise
+        RETENTION_PATH_OUTSIDE_IGNORED_DIR at validate_for_production() time.
+        for_test() factory writes to tempdir correctly and cannot be used in
+        production validate. Write failure recorded, not swallowed.
+        Confirmed by test_r2_regression.RetentionPathTests.
+    4.3 Frozen prompt: correct frozen prompt passes with send_calls > 0.
+        Modified system/template raise FrozenPromptMismatchError with send_calls==0.
+        Missing artifact raises FrozenPromptMismatchError with send_calls==0.
+        Prompt text not in RunRecord JSON; SHA-256 hashes present and match artifact.
+        Confirmed by test_r2_regression.FrozenPromptVerificationTests.
+    No real API/Ollama calls. No real credentials read. No frozen samples run.
+    APP-001-PREP=review, APP-001=planned, formal_evaluation_allowed=false.
+  unresolved=
+    - IR mapping: no frozen src-level parameter->IR adapter; IR/CAD/STEP blocked/not_run.
+      This is correct behavior per original task Prompt; not a blocker for adapter review.
+    - Real DeepSeek/Ollama runtime: not executed; not authorized.
+    - Nine acceptance samples: not run; labels not read.
+    - Formal performance metrics (cost/latency/schema/CAD/STEP): all not_measured.
+  next_agent_focus=
+    - Codex hub: verify 4.1 gate exact type check (MockTransport subclass send_calls==0),
+      4.2 retention path bounds (external path rejected before write),
+      4.3 frozen prompt artifact (missing/modified rejected before send).
+    - If all R2 fixes verified and accepted, project owner may authorize formal APP-001 run.
+    - Remaining dependency: IR src-level mapping must be frozen before CAD/STEP can be claimed.
+```
+
+### Checks not executed (R2)
+
+- Real DeepSeek API call (gate closed; not attempted).
+- Real Ollama inference (gate closed; not attempted).
+- Frozen acceptance-set evaluation (labels not read; not run).
+- Formal C0/C1/C2 metrics (all not_measured).
+- IR/CAD/geometry/STEP pipeline (no frozen src-level mapping; all not_run/blocked).
+
+### APP-001 formal evaluation status
+
+`APP-001` remains `planned`.  No formal model run is authorized.
