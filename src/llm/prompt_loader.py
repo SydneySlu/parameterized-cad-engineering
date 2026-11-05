@@ -45,6 +45,16 @@ FROZEN_PROMPT_VERSION = "app001-extraction.v2"
 # Known version string that must appear in the artifact.
 _VERSION_MARKER = "app001-extraction.v2"
 
+# R3-A: Fixed SHA-256 anchor of the frozen prompt-v2.md file content (bytes).
+# This is a separate integrity check from the parsed system_prompt/user_template
+# hashes.  If the file is modified (even preserving the version string), the
+# file-level hash will not match and loading fails closed.
+#
+# Update procedure: when a new frozen prompt version is approved via ADR,
+# replace this constant with the new file's SHA-256 and update
+# FROZEN_PROMPT_VERSION.  Do NOT change this value to match a modified file.
+FROZEN_PROMPT_FILE_SHA256 = "d95f853d325e05d9b045921da994256c7b8656336b5be02d75ced20d22755eac"
+
 # Regex to extract fenced Markdown code block content.
 # Captures the text between ```...``` fences (the first code block found).
 _FENCED_BLOCK = re.compile(r"```(?:[^\n]*)?\n(.*?)```", re.DOTALL)
@@ -178,6 +188,21 @@ def load_frozen_prompt(*, path: Path = FROZEN_PROMPT_PATH) -> FrozenPromptArtifa
         raise FrozenPromptMismatchError(
             f"frozen prompt artifact unreadable at {path}: {type(exc).__name__}"
         )
+
+    # R3-A: Verify the file-level SHA-256 anchor.  This catches modifications
+    # that preserve the version string but change the content.  Only the
+    # canonical FROZEN_PROMPT_PATH is anchored; alternative paths (used only
+    # by the loader's pure-function unit tests) skip this check.
+    if path == FROZEN_PROMPT_PATH:
+        file_bytes = path.read_bytes()
+        actual_file_hash = hashlib.sha256(file_bytes).hexdigest()
+        if actual_file_hash != FROZEN_PROMPT_FILE_SHA256:
+            raise FrozenPromptMismatchError(
+                f"frozen prompt artifact file hash mismatch at {path}: "
+                f"expected {FROZEN_PROMPT_FILE_SHA256!r}, "
+                f"got {actual_file_hash!r}; "
+                "the file has been modified and cannot be used as the frozen prompt"
+            )
 
     if _VERSION_MARKER not in text:
         raise FrozenPromptMismatchError(

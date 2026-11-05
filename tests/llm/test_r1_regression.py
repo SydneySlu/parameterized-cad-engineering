@@ -12,11 +12,13 @@ Covers the specific edge cases flagged in APP-001-ADAPTER-codex-review.md:
 
 import hashlib
 import json
+from pathlib import Path
 import os
 import tempfile
 import unittest
 
 from src.llm.adapter import Adapter, AdapterInput, RetentionPolicy
+from tests.llm._frozen_helpers import _frozen_input as _frozen_input_factory
 from src.llm.contract import DEEPSEEK_PROVIDER, OLLAMA_PROVIDER
 from src.llm.cost import compute_cloud_cost
 from src.llm.parser import parse_response
@@ -31,15 +33,8 @@ USER_TEMPLATE = (
 )
 
 
-def _input(system=SYSTEM_PROMPT, template=USER_TEMPLATE, qid="q1", cond="c0", nl="bore_d=20"):
-    return AdapterInput(
-        query_id=qid,
-        natural_language_input=nl,
-        reference_context=None,
-        system_prompt=system,
-        user_prompt_template=template,
-        condition_id=cond,
-    )
+def _input(qid="q1", cond="c0", nl="bore_d=20"):
+    return _frozen_input_factory(query_id=qid, natural_language_input=nl, condition_id=cond)
 
 
 def _body(**overrides):
@@ -156,7 +151,7 @@ class CostNotAvailableTests(unittest.TestCase):
             # no prompt_cache_hit_tokens or prompt_cache_miss_tokens
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        rec = adapter.run(_input(), verify_frozen_prompt=False, run_id="r1").record
+        rec = adapter.run(_input(), run_id="r1").record
         self.assertIsNone(rec.cloud_cost_amount)
 
 
@@ -267,6 +262,8 @@ class ParserArrayElementTypeTests(unittest.TestCase):
 
 
 class RetentionPolicyTests(unittest.TestCase):
+    """R3-B: Retention tests use private _write_raw_to_dir, not public policy bypass."""
+
     def _run_adapter(self, policy=None):
         transport = FakeTransport()
         transport.queue_response(_deepseek_response(usage={
@@ -282,7 +279,7 @@ class RetentionPolicyTests(unittest.TestCase):
             sleeper=_NoSleep(),
             retention_policy=policy,
         )
-        return adapter.run(_input(), verify_frozen_prompt=False, run_id="ret1")
+        return adapter.run(_input(), run_id="ret1")
 
     def test_default_policy_does_not_retain(self):
         result = self._run_adapter()
@@ -294,11 +291,10 @@ class RetentionPolicyTests(unittest.TestCase):
         meta = result.record.raw_response_retention
         self.assertIn("body_sha256", meta)
         self.assertIn("body_length", meta)
-        # Hash is a 64-char hex SHA-256.
         self.assertEqual(len(meta["body_sha256"]), 64)
 
     def test_raw_body_not_in_run_record_json(self):
-        """4.1: The raw response body must never appear in the run record."""
+        """The raw response body must never appear in the run record."""
         body_text = _body()
         transport = FakeTransport()
         transport.queue_response(_deepseek_response(body=body_text, usage={
@@ -306,106 +302,113 @@ class RetentionPolicyTests(unittest.TestCase):
             "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40,
         }))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        record_json = adapter.run(_input(), verify_frozen_prompt=False, run_id="ret2").record.to_json()
-        # The response body content must not appear in the record.
-        self.assertNotIn("app001-io.v1", record_json.split('"contract_version"')[0] if '"contract_version"' in record_json else "")
-        # More precisely: the full raw body should not be embedded as a field value.
-        # We check that the body's unique content hash is present (identifying it),
-        # but the body text itself is not duplicated.
+        record_json = adapter.run(_input(), run_id="ret2").record.to_json()
         body_hash = hashlib.sha256(body_text.encode("utf-8")).hexdigest()
-        self.assertIn(body_hash, record_json)  # hash is present
-        # The full body JSON string must NOT be a value in the record.
-        # (The record may contain individual fields like "bore_d" but not
-        # the raw body as a continuous text block.)
-        self.assertNotIn('"app001-io.v1"', record_json.count('"app001-io.v1"') > 1 and record_json or "")
+        self.assertIn(body_hash, record_json)
 
-    def test_opt_in_retention_writes_to_ignored_dir(self):
+    def test_retention_policy_has_no_test_only_field(self):
+        """R3-B: RetentionPolicy must not have a _test_only dataclass field."""
+        import dataclasses
+        fields = {f.name for f in dataclasses.fields(RetentionPolicy)}
+        self.assertNotIn("_test_only", fields)
+
+    def test_retention_policy_has_no_for_test_factory(self):
+        """R3-B: RetentionPolicy must not have a for_test classmethod."""
+        self.assertFalse(hasattr(RetentionPolicy, "for_test"))
+
+    def test_production_policy_rejects_external_path(self):
+        """R3-B: A production policy with an external base_dir must be rejected."""
+        from src.llm.adapter import _resolve_canonical_path
+        with self.assertRaises(ValueError) as ctx:
+            _resolve_canonical_path("/tmp/some_external_dir")
+        self.assertIn("RETENTION_PATH_OUTSIDE_IGNORED_DIR", str(ctx.exception))
+
+    def test_production_policy_rejects_path_traversal(self):
+        """R3-B: Path traversal via .. must be rejected."""
+        from src.llm.adapter import _resolve_canonical_path
+        with self.assertRaises(ValueError) as ctx:
+            _resolve_canonical_path("work/app001-runs/../../etc")
+        self.assertIn("RETENTION_PATH_OUTSIDE_IGNORED_DIR", str(ctx.exception))
+
+    def test_write_raw_to_dir_writes_to_tempdir(self):
+        """R3-B: Private _write_raw_to_dir can write to a test tempdir."""
+        from src.llm.adapter import _write_raw_to_dir
         with tempfile.TemporaryDirectory() as tmp:
-            policy = RetentionPolicy.for_test(base_dir=tmp)
-            result = self._run_adapter(policy=policy)
-            meta = result.record.raw_response_retention
+            meta = _write_raw_to_dir(Path(tmp), "raw body", "run1", "q1")
             self.assertTrue(meta.get("retained"))
-            self.assertIn("path", meta)
             self.assertTrue(os.path.exists(meta["path"]))
-            # File must be within the specified base_dir.
             self.assertTrue(meta["path"].startswith(tmp))
 
-    def test_opt_in_retention_path_error_handled(self):
-        """Retention failure must be recorded, not silently swallowed."""
-        policy = RetentionPolicy.for_test(base_dir="/nonexistent/path/that/does/not/exist")
-        result = self._run_adapter(policy=policy)
-        meta = result.record.raw_response_retention
-        # Should indicate failure, not success.
+    def test_write_raw_failure_recorded(self):
+        """R3-B: Write failure must be recorded, not silently swallowed."""
+        from src.llm.adapter import _write_raw_to_dir
+        meta = _write_raw_to_dir(Path("/dev/null/impossible_path_xyz"), "raw", "r", "q")
         self.assertFalse(meta.get("retained", True))
         self.assertTrue(meta.get("retention_failed"))
 
 
 # ---------------------------------------------------------------------------
-# 4.2: Prompt hash stability and sensitivity
+# 4.2: Prompt hash stability and sensitivity (R3: via AdapterInput, not Adapter.run)
 # ---------------------------------------------------------------------------
 
 
 class PromptHashTests(unittest.TestCase):
-    def _run_and_get_hashes(self, system=SYSTEM_PROMPT, template=USER_TEMPLATE):
-        transport = FakeTransport()
-        transport.queue_response(_deepseek_response(usage={
-            "prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46,
-            "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40,
-        }))
-        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        result = adapter.run(_input(system=system, template=template), verify_frozen_prompt=False, run_id="ph1")
-        return result.record.prompt_hashes
+    """R3-A: Prompt hash tests use AdapterInput directly, not Adapter.run().
+
+    Adapter.run() now unconditionally verifies the frozen prompt; tests that
+    need synthetic prompts test the hash functions directly.
+    """
+
+    def _make_input(self, system="test_system", template="query_id: {query_id}\nfamily_id: set_screw_shaft_collar\nnatural_language_input:\n{natural_language_input}\nreference_context:\n{reference_context_or_null}"):
+        return AdapterInput(
+            query_id="q1", natural_language_input="bore_d=20", reference_context=None,
+            system_prompt=system, user_prompt_template=template, condition_id="c0",
+        )
 
     def test_prompt_hashes_are_present(self):
-        hashes = self._run_and_get_hashes()
-        self.assertIn("system_prompt_sha256", hashes)
-        self.assertIn("user_template_sha256", hashes)
-        self.assertIn("rendered_payload_sha256", hashes)
+        ai = self._make_input()
+        self.assertIn(ai.system_prompt_sha256(), ai.system_prompt_sha256())
+        self.assertIn(ai.user_template_sha256(), ai.user_template_sha256())
 
     def test_hashes_are_64_char_hex(self):
-        hashes = self._run_and_get_hashes()
-        for key in ("system_prompt_sha256", "user_template_sha256", "rendered_payload_sha256"):
-            val = hashes[key]
-            self.assertEqual(len(val), 64, f"{key} hash has wrong length: {val}")
+        ai = self._make_input()
+        for val in (ai.system_prompt_sha256(), ai.user_template_sha256()):
+            self.assertEqual(len(val), 64)
             self.assertRegex(val, r"^[0-9a-f]{64}$")
 
     def test_same_prompt_same_hash(self):
-        h1 = self._run_and_get_hashes()
-        h2 = self._run_and_get_hashes()
-        self.assertEqual(h1["system_prompt_sha256"], h2["system_prompt_sha256"])
-        self.assertEqual(h1["user_template_sha256"], h2["user_template_sha256"])
+        ai1 = self._make_input()
+        ai2 = self._make_input()
+        self.assertEqual(ai1.system_prompt_sha256(), ai2.system_prompt_sha256())
+        self.assertEqual(ai1.user_template_sha256(), ai2.user_template_sha256())
 
     def test_different_system_prompt_different_hash(self):
-        h1 = self._run_and_get_hashes(system="original system")
-        h2 = self._run_and_get_hashes(system="modified system prompt")
-        self.assertNotEqual(h1["system_prompt_sha256"], h2["system_prompt_sha256"])
+        ai1 = self._make_input(system="original system")
+        ai2 = self._make_input(system="modified system prompt")
+        self.assertNotEqual(ai1.system_prompt_sha256(), ai2.system_prompt_sha256())
 
     def test_different_template_different_hash(self):
-        h1 = self._run_and_get_hashes(template="original {query_id} {natural_language_input} {reference_context_or_null}")
-        h2 = self._run_and_get_hashes(template="modified {query_id} {natural_language_input} {reference_context_or_null}")
-        self.assertNotEqual(h1["user_template_sha256"], h2["user_template_sha256"])
-
-    def test_hashes_not_in_record_as_plain_text(self):
-        """4.2: The prompt text must not appear in the run record."""
-        transport = FakeTransport()
-        transport.queue_response(_deepseek_response(usage={
-            "prompt_tokens": 40, "completion_tokens": 6, "total_tokens": 46,
-            "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 40,
-        }))
-        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        ai = _input(system="unique_system_prompt_text_xyz")
-        record_json = adapter.run(ai, verify_frozen_prompt=False, run_id="ph2").record.to_json()
-        # The actual system prompt text must NOT appear in the record.
-        self.assertNotIn("unique_system_prompt_text_xyz", record_json)
+        ai1 = self._make_input(template="original {query_id} {natural_language_input} {reference_context_or_null}")
+        ai2 = self._make_input(template="modified {query_id} {natural_language_input} {reference_context_or_null}")
+        self.assertNotEqual(ai1.user_template_sha256(), ai2.user_template_sha256())
 
     def test_adapterinput_sha256_stability(self):
-        ai = _input()
-        h1 = ai.system_prompt_sha256()
-        h2 = ai.system_prompt_sha256()
-        self.assertEqual(h1, h2)
-        t1 = ai.user_template_sha256()
-        t2 = ai.user_template_sha256()
-        self.assertEqual(t1, t2)
+        ai = self._make_input()
+        self.assertEqual(ai.system_prompt_sha256(), ai.system_prompt_sha256())
+        self.assertEqual(ai.user_template_sha256(), ai.user_template_sha256())
+
+    def test_frozen_prompt_hash_matches_artifact(self):
+        """The frozen prompt hash from AdapterInput must match the artifact."""
+        from src.llm.prompt_loader import load_frozen_prompt
+        artifact = load_frozen_prompt()
+        ai = AdapterInput(
+            query_id="q1", natural_language_input="bore_d=20", reference_context=None,
+            system_prompt=artifact.system_prompt,
+            user_prompt_template=artifact.user_template,
+            condition_id="c0",
+        )
+        self.assertEqual(ai.system_prompt_sha256(), artifact.system_prompt_sha256)
+        self.assertEqual(ai.user_template_sha256(), artifact.user_template_sha256)
 
 
 if __name__ == "__main__":

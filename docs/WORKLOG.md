@@ -799,3 +799,17 @@ next=Codex 中枢 R2 只读复核；通过后项目负责人可授权正式 APP-
 - 结论：R2 部分有效但不验收通过。评测门精确类型与 canonical path resolver 有效；Prompt 校验和 Retention test-only 机制均可由普通调用者绕过。具体证据见 `agent-work/reviews/APP-001-ADAPTER-R2-codex-review.md`。
 - 边界：没有真实网络、密钥、模型、冻结验收样例或正式指标；IR 映射仍未冻结并属于后续依赖。
 - 下一步：窄范围 R3 修复上述两个可绕过入口，保持 APP-001=planned 和正式评测门关闭。
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-R3 status=review
+scope=修复 R2 复核确认的 2 项可绕过入口：A 移除 verify_frozen_prompt/_prompt_loader_path 参数并加文件 hash 锚点；B 移除 _test_only/for_test/validate_for_production 并拆分私有 writer
+verified=
+  PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 167 tests, OK
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+  git diff --check → PASS
+  git ls-files work/ → (empty; no run artifacts committed)
+  inspect.signature(Adapter.run) 确认无 verify_frozen_prompt 或 _prompt_loader_path
+  RetentionPolicy 无 _test_only 字段、无 for_test 工厂、无 validate_for_production
+result=2 项 R3 修正完成；167 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
+limits=IR 映射未冻结；正式 APP-001 未授权；prompt loader 两次读文件存在理论 TOCTOU
+next=Codex 中枢 R3 只读复核；通过后项目负责人可授权正式 APP-001 运行

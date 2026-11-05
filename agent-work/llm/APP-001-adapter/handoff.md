@@ -290,3 +290,73 @@ handoff_self_check:
 ### APP-001 formal evaluation status
 
 `APP-001` remains `planned`.  No formal model run is authorized.
+
+---
+
+## APP-001-ADAPTER-R3 corrections
+
+Date: 2026-11-05
+Task: `APP-001-ADAPTER-R3`
+
+```text
+handoff_self_check:
+  changed=
+    src/llm/prompt_loader.py    (add FROZEN_PROMPT_FILE_SHA256 anchor; file hash check)
+    src/llm/adapter.py          (remove verify_frozen_prompt/_prompt_loader_path params;
+                                  remove _test_only/_for_test_/validate_for_production/
+                                  _allow_test_path; extract _write_raw_to_dir; fix
+                                  _retain_response to always use canonical root)
+    tests/llm/_frozen_helpers.py (new: _frozen_input helper using real frozen artifact)
+    tests/llm/test_r3_regression.py (new: 19 R3 tests)
+    tests/llm/test_adapter.py    (use _frozen_input(); remove verify_frozen_prompt=False)
+    tests/llm/test_security.py   (use _frozen_input(); remove verify_frozen_prompt=False)
+    tests/llm/test_r1_regression.py (use _frozen_input(); remove for_test/test_only)
+    tests/llm/test_r2_regression.py (use _frozen_input(); remove for_test/bypass tests)
+    agent-work/llm/APP-001-adapter/checkpoint.md (R3 section appended)
+    agent-work/llm/APP-001-adapter/handoff.md (this section)
+    docs/WORKLOG.md (append-only R3 entry)
+  commands=
+    PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+    PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 167 tests, OK
+    PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+    git diff --check → PASS
+    git ls-files work/ → (empty)
+    git status --short → clean except staged R3 changes
+  confirmed=
+    A. Prompt bypass removed: inspect.signature(Adapter.run) confirms no
+       verify_frozen_prompt or _prompt_loader_path. Synthetic prompt → raises
+       FrozenPromptMismatchError, transport.call_count == 0. Real frozen prompt
+       (via _frozen_input) reaches send() successfully. File hash anchor
+       FROZEN_PROMPT_FILE_SHA256 matches actual prompt-v2.md bytes.
+       Confirmed by test_r3_regression.PromptVerificationBypassRemovedTests.
+    B. Retention bypass removed: RetentionPolicy dataclass has no _test_only
+       field, no for_test factory, no validate_for_production method. External
+       absolute path to _retain_response produces retention_failed immediately,
+       no file written. Test tempdir accessible via _write_raw_to_dir() directly.
+       Confirmed by test_r3_regression.RetentionBypassRemovedTests.
+    R2 transport gate regression: FakeTransport exact type gate unmodified;
+       MockTransport subclass still refused (verified by existing R2 tests).
+    No real API/Ollama calls. No real credentials read. No frozen samples run.
+    git ls-files work/ confirms no run artifacts committed.
+  unresolved=
+    - IR mapping: no frozen src-level parameter->IR adapter; IR/CAD/STEP blocked/not_run.
+    - Real DeepSeek/Ollama runtime: not executed; not authorized.
+    - Nine acceptance samples: not run; labels not read.
+    - Formal performance metrics: all not_measured.
+    - Note on file hash TOCTOU: prompt_loader reads the file twice (text + bytes) for
+      hash checking; a concurrent replacement between those reads is theoretically
+      possible but is the same OS file path, so both reads see the same inode in
+      practice. A future improvement would read bytes once and decode.
+  next_agent_focus=
+    - Codex hub: verify (1) Adapter.run signature has no bypass params, (2) synthetic
+      prompt raises with send_calls==0, (3) _test_only not in RetentionPolicy fields,
+      (4) _retain_response rejects external paths, (5) integration test with real
+      frozen prompt succeeds.
+    - If R3 verified, project owner may authorize formal APP-001 run.
+    - IR src-level mapping must be frozen before CAD/STEP can be claimed.
+```
+
+### APP-001 status
+
+`APP-001` remains `planned`. No formal model run authorized.
+APP-001-ADAPTER status: `review`, awaiting Codex R3 review.

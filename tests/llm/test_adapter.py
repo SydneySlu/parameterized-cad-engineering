@@ -1,6 +1,9 @@
 """Adapter integration tests with fake transport, staged records, and the
 construction gate. Covers normal/missing/conflict/unsupported/ask/refuse paths,
 usage/cost, local timing, construction gate, and IR/CAD/STEP staying not_run.
+
+R3: tests use the real frozen prompt artifact via _frozen_input(); no
+verify_frozen_prompt bypass.
 """
 
 import json
@@ -21,31 +24,11 @@ from src.llm.transport import (
     TransportError,
     TransportResponse,
 )
-
-
-SYSTEM_PROMPT = (
-    "You extract only parameters explicitly stated by the user. "
-    "Return exactly one UTF-8 JSON object."
-)
-USER_TEMPLATE = (
-    "query_id: {query_id}\n"
-    "family_id: set_screw_shaft_collar\n"
-    "natural_language_input:\n"
-    "{natural_language_input}\n"
-    "reference_context:\n"
-    "{reference_context_or_null}"
-)
+from tests.llm._frozen_helpers import _frozen_input
 
 
 def _input(nl="轴孔直径 20 mm 的紧定螺钉轴环", ref=None, qid="q1", cond="c0"):
-    return AdapterInput(
-        query_id=qid,
-        natural_language_input=nl,
-        reference_context=ref,
-        system_prompt=SYSTEM_PROMPT,
-        user_prompt_template=USER_TEMPLATE,
-        condition_id=cond,
-    )
+    return _frozen_input(natural_language_input=nl, reference_context=ref, query_id=qid, condition_id=cond)
 
 
 def _envelope_body(**overrides):
@@ -98,7 +81,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
 
     def test_normal_answer_passes_to_construction_gate(self):
         self.transport.queue_response(_deepseek_response())
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r1")
+        result = self._adapter().run(_input(), run_id="r1")
         rec = result.record
         self.assertTrue(rec.construction_ready)
         self.assertEqual(rec.stage_status("model_call"), "pass")
@@ -123,7 +106,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                                      missing_fields=["bore_d"], questions=["bore?"])
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r2")
+        result = self._adapter().run(_input(), run_id="r2")
         rec = result.record
         self.assertFalse(rec.construction_ready)
         self.assertEqual(rec.stage_status("schema"), "fail")
@@ -137,7 +120,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                 body=_envelope_body(extracted_parameters={"bore_d": 20, "outer_d": 99})
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r3")
+        result = self._adapter().run(_input(), run_id="r3")
         rec = result.record
         self.assertFalse(rec.construction_ready)
         self.assertEqual(rec.stage_status("schema"), "fail")
@@ -152,7 +135,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                 body=_envelope_body(extracted_parameters={"bore_d": 20, "color": "red"})
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r4")
+        result = self._adapter().run(_input(), run_id="r4")
         rec = result.record
         # Parser rejects unknown field already; projection never reached.
         self.assertEqual(rec.stage_status("parse"), "fail")
@@ -167,7 +150,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                 )
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r5")
+        result = self._adapter().run(_input(), run_id="r5")
         rec = result.record
         # Schema passes but construction gate fails due to unsupported_requests.
         self.assertEqual(rec.stage_status("schema"), "pass")
@@ -182,7 +165,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                                      questions=["out of scope"])
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r6")
+        result = self._adapter().run(_input(), run_id="r6")
         rec = result.record
         self.assertFalse(rec.construction_ready)
         self.assertEqual(rec.stage_status("construction_gate"), "fail")
@@ -191,7 +174,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
         self.transport.queue_response(
             TransportResponse(status=200, body="```json\n" + _envelope_body() + "\n```")
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r7")
+        result = self._adapter().run(_input(), run_id="r7")
         rec = result.record
         self.assertEqual(rec.stage_status("parse"), "fail")
         self.assertFalse(rec.construction_ready)
@@ -202,7 +185,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
         self.transport.queue_error(TransportError(COND_HTTP_429, 429, "rate"))
         self.transport.queue_response(_deepseek_response())
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=lambda s: sleeps.append(s))
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="r8")
+        result = adapter.run(_input(), run_id="r8")
         rec = result.record
         self.assertTrue(rec.construction_ready)
         self.assertEqual(rec.attempt_count, 2)
@@ -213,7 +196,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
 
         self.transport.queue_error(TransportError(COND_AUTH_PERMISSION, 401, "auth"))
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep())
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="r9")
+        result = adapter.run(_input(), run_id="r9")
         rec = result.record
         self.assertEqual(rec.stage_status("model_call"), "fail")
         self.assertEqual(rec.attempt_count, 1)
@@ -230,7 +213,7 @@ class DeepSeekAdapterTests(unittest.TestCase):
                 # prompt_cache_hit_tokens and prompt_cache_miss_tokens are absent
             )
         )
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="r10")
+        result = self._adapter().run(_input(), run_id="r10")
         rec = result.record
         # Cost must be None (not_available) because cache fields are missing.
         self.assertIsNone(rec.cloud_cost_amount)
@@ -245,7 +228,7 @@ class OllamaAdapterTests(unittest.TestCase):
 
     def test_local_run_records_wall_time_no_cloud_tokens(self):
         self.transport.queue_response(_ollama_response())
-        result = self._adapter().run(_input(), verify_frozen_prompt=False, run_id="o1")
+        result = self._adapter().run(_input(), run_id="o1")
         rec = result.record
         self.assertTrue(rec.construction_ready)
         self.assertEqual(rec.configured_provider, OLLAMA_PROVIDER)
@@ -257,7 +240,7 @@ class OllamaAdapterTests(unittest.TestCase):
     def test_ollama_no_think_field_in_request(self):
         self.transport.queue_response(_ollama_response())
         adapter = self._adapter()
-        adapter.run(_input(), verify_frozen_prompt=False, run_id="o2")
+        adapter.run(_input(), run_id="o2")
         req = self.transport.last_call()
         self.assertEqual(req.provider, OLLAMA_PROVIDER)
         self.assertFalse(req.body["think"])
@@ -269,7 +252,7 @@ class RunRecordTests(unittest.TestCase):
     def test_record_serializes_to_json(self):
         self.transport = FakeTransport()
         self.transport.queue_response(_deepseek_response())
-        result = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), verify_frozen_prompt=False, run_id="s1")
+        result = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), run_id="s1")
         text = result.record.to_json()
         data = json.loads(text)
         self.assertEqual(data["run_id"], "s1")
@@ -280,7 +263,7 @@ class RunRecordTests(unittest.TestCase):
     def test_stage_status_lookup(self):
         self.transport = FakeTransport()
         self.transport.queue_response(_deepseek_response())
-        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), verify_frozen_prompt=False, run_id="s2").record
+        rec = Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep()).run(_input(), run_id="s2").record
         self.assertEqual(rec.stage_status("model_call"), "pass")
         self.assertIsNone(rec.stage_status("nonexistent_stage"))
 

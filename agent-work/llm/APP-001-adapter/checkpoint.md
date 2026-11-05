@@ -383,3 +383,57 @@ APP-001=planned
 formal_evaluation_allowed=false
 commit=c9abdcb
 ```
+
+---
+
+## APP-001-ADAPTER-R3 corrections (2026-11-05)
+
+Codex review `APP-001-ADAPTER-R2-codex-review.md` flagged 2 remaining issues.
+Both addressed.
+
+### Fixes applied
+
+**A. Prompt verification bypass removed:**
+- Removed `verify_frozen_prompt` and `_prompt_loader_path` parameters from
+  `Adapter.run()`. Verification is now unconditional.
+- Added `FROZEN_PROMPT_FILE_SHA256` constant to `prompt_loader.py`:
+  SHA-256 of frozen `prompt-v2.md` bytes. File hash is checked when loading
+  from the canonical path; modified content (even if version string is
+  preserved) raises `FrozenPromptMismatchError`.
+- All tests that needed synthetic prompts now use `_frozen_input()` from the
+  new `tests/llm/_frozen_helpers.py` (loads the real frozen artifact content).
+
+**B. Retention `_test_only` bypass removed:**
+- Removed `_test_only` dataclass field from `RetentionPolicy`.
+- Removed `for_test()` factory from `RetentionPolicy`.
+- Removed `validate_for_production()` method from `RetentionPolicy`.
+- Removed `_allow_test_path` parameter from `_retain_response()`.
+- Extracted `_write_raw_to_dir()` as a private function that tests can call
+  directly with a tempdir; production `Adapter` always uses canonical root.
+- `_retain_response()` now always resolves via `policy.resolved_dir()` which
+  calls `_resolve_canonical_path()` and rejects external paths.
+
+### Test additions
+
+- `tests/llm/_frozen_helpers.py`: shared `_frozen_input()` helper.
+- `tests/llm/test_r3_regression.py`: 19 new R3 regression tests.
+- Updated `test_adapter.py`, `test_security.py`, `test_r1_regression.py`,
+  `test_r2_regression.py` to use `_frozen_input()` and remove bypasses.
+
+### Verification
+
+```text
+PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+PYTHONPATH=src python3 -m unittest discover -s tests/llm -v → 167 tests, OK
+PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar → 17 tests, OK
+git diff --check → PASS
+git ls-files work/ → (empty; no run artifacts committed)
+```
+
+### Status
+
+```text
+task=APP-001-ADAPTER-R3
+status=review
+commit=pending
+```

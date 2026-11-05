@@ -113,92 +113,61 @@ class RetentionPolicy:
     When ``retain_raw=True`` (future authorized runs only), raw responses are
     written inside ``work/app001-runs/`` (git-ignored).  The ``base_dir``
     must be a path within ``work/app001-runs/`` or it is rejected before any
-    write.
+    write.  There is no public parameter to specify an arbitrary directory
+    outside the canonical root.
 
-    **Test-only factory:** Use :meth:`for_test` to create a policy that writes
-    to a test-controlled temporary directory outside the canonical root; this
-    factory is explicitly test-only and cannot be used by the production
-    :class:`Adapter.run` path (verified by a flag).
+    R3-B: There is no ``_test_only`` field.  Tests that need to exercise the
+    writer use the private :func:`_write_raw_to_dir` function directly with a
+    test-controlled temporary directory; the production :class:`Adapter` always
+    uses the fixed canonical root.
     """
 
     retain_raw: bool = False
     base_dir: str = _CANONICAL_RUN_DIR_NAME
-    _test_only: bool = False  # set only by for_test(); production callers cannot set
 
     @classmethod
     def default(cls) -> "RetentionPolicy":
         return cls(retain_raw=False)
 
-    @classmethod
-    def for_test(cls, base_dir: str) -> "RetentionPolicy":
-        """Create a test-only retention policy with an arbitrary base_dir.
-
-        This factory is for use in tests only.  The production ``Adapter.run``
-        path refuses any policy created with this factory.
-        """
-        return cls(retain_raw=True, base_dir=base_dir, _test_only=True)
-
-    def validate_for_production(self) -> None:
-        """Raise if this policy is test-only or has an out-of-bounds base_dir."""
-        if self._test_only:
-            raise ValueError("RETENTION_TEST_ONLY_POLICY: test-only RetentionPolicy cannot be used in production runs")
-        if self.retain_raw:
-            _resolve_canonical_path(self.base_dir)  # raises on out-of-bounds
+    def resolved_dir(self) -> Path:
+        """Return the resolved canonical directory, raising on out-of-bounds."""
+        return _resolve_canonical_path(self.base_dir)
 
 
-def _retain_response(
+def _write_raw_to_dir(
+    write_dir: Path,
     body: str,
     run_id: str,
     query_id: str,
-    policy: RetentionPolicy,
-    *,
-    _allow_test_path: bool = False,
 ) -> dict[str, Any]:
-    """Attempt to retain a raw response body per the policy.
+    """Write a raw response body to ``write_dir``.  Private; for tests and
+    the production writer.
 
-    Returns a metadata dict with ``retained``, ``path`` (if retained),
-    ``body_length``, and ``body_sha256``.  Never writes content to tracked
-    paths, RunRecord fields, stdout, or exceptions.
-
-    ``_allow_test_path`` is an internal flag used only by tests (via
-    ``RetentionPolicy.for_test``); it bypasses path validation.
+    Returns metadata dict.  Caller is responsible for ensuring ``write_dir``
+    is a safe location (canonical root or a test tempdir).
     """
     body_len = len(body.encode("utf-8"))
     body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
-
-    if not policy.retain_raw:
-        return {"retained": False, "body_length": body_len, "body_sha256": body_hash}
-
-    # Validate path for production policies.
-    if policy._test_only and not _allow_test_path:
-        return {
-            "retained": False,
-            "retention_failed": True,
-            "error": "RETENTION_TEST_ONLY_POLICY",
-            "body_length": body_len,
-            "body_sha256": body_hash,
-        }
-
-    if not policy._test_only:
-        try:
-            write_dir = _resolve_canonical_path(policy.base_dir)
-        except ValueError as exc:
-            return {
-                "retained": False,
-                "retention_failed": True,
-                "error": "RETENTION_PATH_OUTSIDE_IGNORED_DIR",
-                "error_detail": str(exc)[:200],
-                "body_length": body_len,
-                "body_sha256": body_hash,
-            }
-    else:
-        # Test-only: use the specified base_dir directly (not restricted).
-        write_dir = Path(policy.base_dir)
-
     safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", f"{run_id}_{query_id}")
     rel_path = write_dir / f"{safe_id}_raw_response.txt"
     try:
         write_dir.mkdir(parents=True, exist_ok=True)
+        # Re-check that the actual write path (after mkdir) is still inside
+        # the intended directory.  This catches TOCTOU symlink replacement
+        # between resolve() and the actual write, though it cannot prevent
+        # all concurrent races.
+        resolved_path = rel_path.resolve()
+        resolved_dir = write_dir.resolve()
+        try:
+            resolved_path.relative_to(resolved_dir)
+        except ValueError:
+            return {
+                "retained": False,
+                "retention_failed": True,
+                "error": "RETENTION_PATH_ESCAPED_AFTER_RESOLVE",
+                "body_length": body_len,
+                "body_sha256": body_hash,
+            }
         with open(rel_path, "w", encoding="utf-8") as fh:
             fh.write(body)
         return {"retained": True, "path": str(rel_path), "body_length": body_len, "body_sha256": body_hash}
@@ -210,6 +179,44 @@ def _retain_response(
             "body_length": body_len,
             "body_sha256": body_hash,
         }
+
+
+def _retain_response(
+    body: str,
+    run_id: str,
+    query_id: str,
+    policy: RetentionPolicy,
+) -> dict[str, Any]:
+    """Attempt to retain a raw response body per the policy.
+
+    Returns a metadata dict with ``retained``, ``path`` (if retained),
+    ``body_length``, and ``body_sha256``.  Never writes content to tracked
+    paths, RunRecord fields, stdout, or exceptions.
+
+    R3-B: The production path always uses the canonical root.  There is no
+    test-only bypass flag.  Tests that need a tempdir call ``_write_raw_to_dir``
+    directly.
+    """
+    body_len = len(body.encode("utf-8"))
+    body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    if not policy.retain_raw:
+        return {"retained": False, "body_length": body_len, "body_sha256": body_hash}
+
+    # Resolve and validate the canonical path before writing.
+    try:
+        write_dir = policy.resolved_dir()
+    except ValueError as exc:
+        return {
+            "retained": False,
+            "retention_failed": True,
+            "error": "RETENTION_PATH_OUTSIDE_IGNORED_DIR",
+            "error_detail": str(exc)[:200],
+            "body_length": body_len,
+            "body_sha256": body_hash,
+        }
+
+    return _write_raw_to_dir(write_dir, body, run_id, query_id)
 
 
 # ---------------------------------------------------------------------------
@@ -363,8 +370,6 @@ class Adapter:
         adapter_input: AdapterInput,
         *,
         run_id: str,
-        verify_frozen_prompt: bool = True,
-        _prompt_loader_path=None,
     ) -> AdapterRunResult:
         """Run one query and return a staged :class:`AdapterRunResult`.
 
@@ -376,12 +381,11 @@ class Adapter:
         (``type(transport) is FakeTransport``) so it cannot be bypassed by
         inheriting from ``FakeTransport`` or ``MockTransport``.
 
-        Prompt verification (4.3 R2): ``verify_frozen_prompt=True`` (default)
-        verifies the system prompt and user template against the frozen
-        ``prompt-v2.md`` artifact before ``send()``.  Tests using synthetic
-        prompts must pass ``verify_frozen_prompt=False``; production runs
-        must never disable this check.  ``_prompt_loader_path`` is an internal
-        test parameter for pointing at alternative artifact files.
+        Prompt verification (R3-A): the frozen prompt artifact is always loaded
+        and verified against the ``adapter_input``'s system prompt and user
+        template before ``send()``.  There is no parameter to skip, replace, or
+        bypass this check.  Tests that need synthetic prompts must test the
+        loader/verifier directly, not via ``Adapter.run()``.
         """
         # --- 4.1 R2: Exact type gate check (not subclass-bypassable) ---
         from .transport import FakeTransport as _FakeTransport
@@ -389,16 +393,14 @@ class Adapter:
         if type(self.transport) is not _FakeTransport:
             require_formal_evaluation_allowed("run a non-FakeTransport request")
 
-        # --- 4.3 R2: Verify frozen prompt artifact before send() ---
-        if verify_frozen_prompt:
-            kw = {} if _prompt_loader_path is None else {"path": _prompt_loader_path}
-            try:
-                verify_adapter_input(adapter_input, **kw)
-            except FrozenPromptMismatchError as exc:
-                raise FrozenPromptMismatchError(
-                    f"frozen prompt verification failed; "
-                    "cannot proceed with mislabeled run: " + str(exc)
-                ) from exc
+        # --- R3-A: Verify frozen prompt artifact unconditionally before send() ---
+        try:
+            verify_adapter_input(adapter_input)
+        except FrozenPromptMismatchError as exc:
+            raise FrozenPromptMismatchError(
+                f"frozen prompt verification failed; "
+                "cannot proceed with mislabeled run: " + str(exc)
+            ) from exc
 
         record = RunRecord(
             run_id=run_id,
@@ -461,17 +463,9 @@ class Adapter:
         self._record_runtime_identity(record, response)
 
         # --- 4.1: Raw response retention (default: not retained) ---
-        # Production policies are validated before writing (path bounds check).
-        # Test-only policies (RetentionPolicy.for_test) are allowed here with
-        # the explicit _allow_test_path flag so tests can use temp dirs.
-        if not self._retention_policy._test_only:
-            try:
-                self._retention_policy.validate_for_production()
-            except ValueError:
-                pass  # validation errors are reported inside _retain_response
+        # R3-B: production path always uses canonical root; no test-only bypass.
         retention_meta = _retain_response(
             response.body, run_id, adapter_input.query_id, self._retention_policy,
-            _allow_test_path=self._retention_policy._test_only,
         )
         record.raw_response_retention = retention_meta
 

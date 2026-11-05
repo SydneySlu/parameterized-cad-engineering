@@ -53,6 +53,7 @@ from src.llm.prompt_loader import (
     clear_cache,
 )
 from src.llm.transport import FakeTransport, MockTransport, TransportResponse
+from tests.llm._frozen_helpers import _frozen_input
 
 
 SYSTEM_PROMPT = "s"
@@ -60,16 +61,7 @@ USER_TEMPLATE = "query_id: {query_id}\nfamily_id: set_screw_shaft_collar\nnatura
 
 
 def _input(**kw):
-    defaults = dict(
-        query_id="q1",
-        natural_language_input="bore_d=20",
-        reference_context=None,
-        system_prompt=SYSTEM_PROMPT,
-        user_prompt_template=USER_TEMPLATE,
-        condition_id="c0",
-    )
-    defaults.update(kw)
-    return AdapterInput(**defaults)
+    return _frozen_input(**kw)
 
 
 def _body():
@@ -123,7 +115,7 @@ class GateExactTypeTests(unittest.TestCase):
         custom = self._counting_transport(inherit_from=MockTransport)
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=_NoSleep())
         with self.assertRaises(FormalEvaluationBlockedError):
-            adapter.run(_input(), verify_frozen_prompt=False, run_id="g1")
+            adapter.run(_input(), run_id="g1")
         self.assertEqual(custom.send_calls, 0, "send() was called despite gate being closed")
 
     def test_duck_type_transport_refused_before_send(self):
@@ -131,7 +123,7 @@ class GateExactTypeTests(unittest.TestCase):
         custom = self._counting_transport(inherit_from=object)
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=_NoSleep())
         with self.assertRaises(FormalEvaluationBlockedError):
-            adapter.run(_input(), verify_frozen_prompt=False, run_id="g2")
+            adapter.run(_input(), run_id="g2")
         self.assertEqual(custom.send_calls, 0)
 
     def test_fake_transport_exact_type_still_runs(self):
@@ -139,7 +131,7 @@ class GateExactTypeTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(_deepseek_response())
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="g3")
+        result = adapter.run(_input(), run_id="g3")
         self.assertTrue(result.record.construction_ready)
         self.assertEqual(transport.call_count, 1)
 
@@ -151,7 +143,7 @@ class GateExactTypeTests(unittest.TestCase):
         custom.queue_response(_deepseek_response())
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=_NoSleep())
         with self.assertRaises(FormalEvaluationBlockedError):
-            adapter.run(_input(), verify_frozen_prompt=False, run_id="g4")
+            adapter.run(_input(), run_id="g4")
         # send() must not have been called.
         self.assertEqual(custom.call_count, 0)
 
@@ -164,7 +156,7 @@ class GateExactTypeTests(unittest.TestCase):
         try:
             adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=custom, sleeper=_NoSleep())
             with self.assertRaises(FormalEvaluationBlockedError):
-                adapter.run(_input(), verify_frozen_prompt=False, run_id="g5")
+                adapter.run(_input(), run_id="g5")
             self.assertEqual(custom.send_calls, 0)
         finally:
             if saved is None:
@@ -183,67 +175,58 @@ class RetentionPathTests(unittest.TestCase):
         transport = FakeTransport()
         transport.queue_response(_deepseek_response())
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="rp1")
+        result = adapter.run(_input(), run_id="rp1")
         meta = result.record.raw_response_retention
         self.assertFalse(meta.get("retained", True))
 
-    def test_for_test_factory_writes_to_tempdir(self):
+    def test_production_policy_external_path_rejected(self):
+        """R3-B: Production RetentionPolicy cannot write outside work/app001-runs/."""
         with tempfile.TemporaryDirectory() as tmp:
-            transport = FakeTransport()
-            transport.queue_response(_deepseek_response())
-            adapter = Adapter(
-                provider=DEEPSEEK_PROVIDER, transport=transport,
-                sleeper=_NoSleep(),
-                retention_policy=RetentionPolicy.for_test(base_dir=tmp),
-            )
-            result = adapter.run(_input(), verify_frozen_prompt=False, run_id="rp2")
-            meta = result.record.raw_response_retention
-            self.assertTrue(meta.get("retained"))
-            self.assertTrue(os.path.exists(meta["path"]))
-            self.assertTrue(meta["path"].startswith(tmp))
-
-    def test_production_policy_external_absolute_path_rejected(self):
-        """Production RetentionPolicy cannot write outside work/app001-runs/."""
-        with tempfile.TemporaryDirectory() as tmp:
-            # Try to create a production policy with an external absolute path.
             with self.assertRaises(ValueError) as ctx:
-                policy = RetentionPolicy(retain_raw=True, base_dir=tmp)
-                policy.validate_for_production()
+                _resolve_canonical_path(tmp)
             self.assertIn("RETENTION_PATH_OUTSIDE_IGNORED_DIR", str(ctx.exception))
 
     def test_path_traversal_rejected(self):
-        """Path traversal via .. must be rejected."""
+        """R3-B: Path traversal via .. must be rejected."""
         with self.assertRaises(ValueError) as ctx:
-            policy = RetentionPolicy(retain_raw=True, base_dir="work/app001-runs/../../etc")
-            policy.validate_for_production()
+            _resolve_canonical_path("work/app001-runs/../../etc")
         self.assertIn("RETENTION_PATH_OUTSIDE_IGNORED_DIR", str(ctx.exception))
 
     def test_canonical_path_resolution(self):
         """work/app001-runs/ itself is accepted by the path resolver."""
         from src.llm.adapter import _CANONICAL_RUN_DIR_NAME
         resolved = _resolve_canonical_path(_CANONICAL_RUN_DIR_NAME)
-        # Should not raise; resolved path is under work/app001-runs/
         self.assertIn("app001-runs", str(resolved))
 
-    def test_test_only_policy_not_usable_in_production_validate(self):
-        """for_test() policies are rejected by validate_for_production()."""
+    def test_retention_policy_no_test_only_field(self):
+        """R3-B: RetentionPolicy dataclass must not have a _test_only field."""
+        import dataclasses
+        fields = {f.name for f in dataclasses.fields(RetentionPolicy)}
+        self.assertNotIn("_test_only", fields)
+
+    def test_retention_policy_no_for_test_factory(self):
+        """R3-B: RetentionPolicy must not have a for_test classmethod."""
+        self.assertFalse(hasattr(RetentionPolicy, "for_test"))
+
+    def test_retention_policy_no_validate_for_production(self):
+        """R3-B: RetentionPolicy must not have a validate_for_production method
+        (path validation is done internally by resolved_dir)."""
+        # validate_for_production was removed; tests verify via _resolve_canonical_path
+        self.assertFalse(hasattr(RetentionPolicy, "validate_for_production"))
+
+    def test_write_raw_to_dir_writes_to_tempdir(self):
+        """R3-B: Private _write_raw_to_dir writes to a test tempdir."""
+        from src.llm.adapter import _write_raw_to_dir
         with tempfile.TemporaryDirectory() as tmp:
-            policy = RetentionPolicy.for_test(base_dir=tmp)
-            with self.assertRaises(ValueError) as ctx:
-                policy.validate_for_production()
-            self.assertIn("RETENTION_TEST_ONLY_POLICY", str(ctx.exception))
+            meta = _write_raw_to_dir(Path(tmp), "raw body", "run1", "q1")
+            self.assertTrue(meta.get("retained"))
+            self.assertTrue(os.path.exists(meta["path"]))
+            self.assertTrue(meta["path"].startswith(tmp))
 
     def test_write_failure_recorded_not_silently_swallowed(self):
-        """If writing fails, retention_failed must be recorded."""
-        policy = RetentionPolicy.for_test(base_dir="/dev/null/impossible_path_xyz")
-        transport = FakeTransport()
-        transport.queue_response(_deepseek_response())
-        adapter = Adapter(
-            provider=DEEPSEEK_PROVIDER, transport=transport,
-            sleeper=_NoSleep(), retention_policy=policy,
-        )
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="rp3")
-        meta = result.record.raw_response_retention
+        """R3-B: If writing fails, retention_failed must be recorded."""
+        from src.llm.adapter import _write_raw_to_dir
+        meta = _write_raw_to_dir(Path("/dev/null/impossible_path_xyz"), "raw", "r", "q")
         self.assertFalse(meta.get("retained", True))
         self.assertTrue(meta.get("retention_failed"))
 
@@ -328,24 +311,21 @@ class FrozenPromptVerificationTests(unittest.TestCase):
             adapter.run(ai, run_id="pv2")
         self.assertEqual(transport.call_count, 0)
 
-    def test_missing_artifact_file_rejected_before_send(self):
-        """Missing artifact file must cause FrozenPromptMismatchError before send()."""
+    def test_synthetic_prompt_rejected_by_default_run(self):
+        """R3-A: Adapter.run() with a synthetic (non-frozen) prompt must raise.
+        verify_frozen_prompt is no longer a parameter; verification is unconditional."""
         transport = FakeTransport()
         transport.queue_response(_deepseek_response())
         adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        ai = _input()
+        ai = AdapterInput(
+            query_id="q1", natural_language_input="bore_d=20", reference_context=None,
+            system_prompt="synthetic not frozen",
+            user_prompt_template="query_id: {query_id}\nnatural: {natural_language_input}\nref: {reference_context_or_null}",
+            condition_id="c0",
+        )
         with self.assertRaises(FrozenPromptMismatchError):
-            adapter.run(ai, run_id="pv3", _prompt_loader_path=Path("/nonexistent/prompt.md"))
+            adapter.run(ai, run_id="pv3")
         self.assertEqual(transport.call_count, 0)
-
-    def test_verify_false_skips_check_for_synthetic_tests(self):
-        """verify_frozen_prompt=False allows synthetic prompts (test-only path)."""
-        transport = FakeTransport()
-        transport.queue_response(_deepseek_response())
-        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport, sleeper=_NoSleep())
-        # Synthetic prompt would normally fail; verify=False bypasses check.
-        result = adapter.run(_input(), verify_frozen_prompt=False, run_id="pv4")
-        self.assertTrue(result.record.construction_ready)
 
     def test_prompt_text_not_in_run_record(self):
         """Frozen prompt text must not appear in run record JSON."""
