@@ -773,3 +773,10 @@ verified=
 result=所有 7 项审查问题已修复；121 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
 limits=IR 映射仍未冻结；正式 APP-001 仍未授权；Prompt artifact 哈希验证（运行时核对冻结文件）尚未实现
 next=Codex 中枢 R1 只读复核；通过后项目负责人可明确授权正式 APP-001 运行
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-R1-review status=review
+- 动作：独立复核 `2a324f7` 与 `a491c94`，对照 R1 prompt 检查逐项要求并复跑测试。
+- 验证：LLM 测试 121/121、Schema 回归 17/17、`py_compile` 与 `git diff --check` 通过；合成 `MockTransport` 子类仍能在 gate 关闭时调用 `send()`；合成 retention 可写到配置的任意目录；确认无冻结 prompt artifact 运行时核验。
+- 结论：R1 部分有效但不验收通过。prompt artifact 核验明确属于 R1 范围而未完成；IR 映射则按原任务边界属后续/不同范围，不应由 CC 在此臆造。
+- 交付：`agent-work/reviews/APP-001-ADAPTER-R1-codex-review.md`；任务保持 `review`，APP-001 不放行。
+- 下一步：定点修复 transport gate、retention root 限制和 frozen prompt artifact 核验，然后中枢再审。
