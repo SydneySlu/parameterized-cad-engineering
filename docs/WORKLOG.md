@@ -834,3 +834,10 @@ verified=
 result=R3-FIX 收尾完成；篡改 artifact 测试和 symlink 越界测试已补齐；README 已同步；170 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
 limits=IR 映射未冻结；正式 APP-001 未授权；真实 provider/样例/正式指标均未运行；prompt_loader 两次读文件存在理论 TOCTOU
 next=Codex 中枢 R3-FIX 复核；通过后项目负责人可授权正式 APP-001 运行
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-R3-FIX-review status=done
+- 动作：独立复核 `c0543d6`/`78e9e4a`，复跑 LLM/Schema/编译检查，并确认篡改 artifact 与 symlink 越界测试真实执行。
+- 验证：LLM 170/170、Schema 17/17、`py_compile`、`git diff --check` 通过；篡改文件被 `_verify_file_hash()` 拒绝；两个 symlink 测试通过且外部目录无文件；README/状态描述与实现一致。
+- 结论：`APP-001-ADAPTER-R3-FIX` 验收通过，`APP-001-ADAPTER` 标记 `done`。审查记录见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md`。
+- 边界：APP-001-PREP 仍为 `review`，APP-001 仍为 `planned`；正式评测门关闭；真实模型、九条样例、正式字段/CAD/STEP 指标未运行；IR 映射仍未冻结。
+- 下一步：完成 APP-001-PREP 最终前置审查，之后由项目负责人单独授权正式 APP-001。
