@@ -857,3 +857,4 @@ result=adapter 已完成；PREP 仍等待 Codex 最终复核和 owner authorizat
 limits=未调用真实模型；未运行九条样例；正式指标 not_measured；IR mapping 未冻结
 next=Codex 中枢最终复核
 - 结论=`APP-001-ADAPTER-R3-FIX` 已由中枢验收，`APP-001-ADAPTER=done`；旧的 adapter/logger remaining-gate 文字保留为历史记录。APP-001-PREP 继续 review，APP-001 继续 planned，formal_evaluation_allowed=false。
+- commit=cb87815
