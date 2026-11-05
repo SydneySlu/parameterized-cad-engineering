@@ -117,8 +117,7 @@ All tests use `FakeTransport`. Covered:
   docs/WORKLOG.md
 ```
 
-Commit will be created with message:
-`feat: implement APP-001 dual-baseline execution adapter with mock transport [APP-001-ADAPTER]`
+Commit: `e496ac0` (`feat: implement APP-001 dual-baseline execution adapter with mock transport [APP-001-ADAPTER]`)
 
 **No push. No merge.** Status remains `review`. Awaiting Codex hub read-only review.
 

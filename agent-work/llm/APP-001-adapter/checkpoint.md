@@ -223,4 +223,5 @@ status=review
 APP-001-PREP=review
 APP-001=planned
 formal_evaluation_allowed=false
+commit=e496ac0 (feat: implement APP-001 dual-baseline execution adapter with mock transport [APP-001-ADAPTER])
 ```
