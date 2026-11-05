@@ -754,3 +754,10 @@ verified=
 result=APP-001-ADAPTER implementation complete and submitted for review; 85 tests pass with FakeTransport only; no real API calls, no credential reads, no acceptance-sample runs; IR/CAD/geometry/STEP stages honestly not_run/blocked; formal evaluation gate closed
 limits=IR mapping not frozen at src level; real provider runs not executed; all formal metrics not_measured; formal evaluation not authorized; APP-001-PREP=review, APP-001=planned
 next=Codex hub read-only review; if passing, project owner authorizes formal APP-001 run
+
+[2026-11-05] agent=Codex task=APP-001-ADAPTER-R1 status=planned
+- 动作：根据中枢独立审查报告生成 CC 窄范围修正 Prompt，覆盖凭据隔离、fail-closed transport 门、usage 费用、重试总耗时、JSON 严格校验、原始响应保留与 Prompt hash。
+- 验证：对照 `agent-work/reviews/APP-001-ADAPTER-codex-review.md`、原始执行 Prompt 和冻结 APP-001 契约；确认 `work/app001-runs/` 被 `.gitignore` 排除；`git diff --check` 通过。
+- 交付：`docs/coordination/prompts/APP-001-ADAPTER-R1-correction-cc-agent.md`，commit `a834c3e`。
+- 边界：未修改实现、未调用真实 API、未读取凭据、未运行冻结验收样例；`APP-001-ADAPTER=review`、`APP-001=planned`、正式评测门关闭。
+- 下一步：项目负责人 push 后将该 Prompt 交给 CC；完成后由 Codex 中枢独立复核。
