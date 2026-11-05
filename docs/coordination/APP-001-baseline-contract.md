@@ -1,6 +1,6 @@
 # APP-001 基线与评测契约（草案）
 
-状态：`review`；项目负责人已确认本页的初始策略。正式运行前仍需验证 API 返回身份、冻结验收集并记录运行环境。
+状态：`review`；模型输出契约 `app001-io.v1`、Prompt `app001-extraction.v2` 和 evaluator-only `acceptance-set-v0` 已由 Codex 中枢审查并经项目负责人确认冻结。正式运行仍需 adapter/logger 实现及审查、记录运行环境，并由项目负责人明确授权。
 
 ## 基线
 
@@ -24,9 +24,9 @@
 
 北京时间工作日（中国法定节假日除外）09:00–12:00、14:00–18:00 为高峰；其余时间（含周末和法定节假日）为空闲。成本回算必须依据请求时间、响应中的缓存命中/未命中/输出 token 数和该次运行所引用的价目表快照；价目可能变化，不能把本表视为永久费率。
 
-官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。项目负责人已确认首轮云端基线显式关闭思考模式，请求必须包含 `thinking: {"type":"disabled"}`，不能依赖服务默认值。每条运行记录保存实际发送的 thinking setting。seed 能力仍待运行时探测。此项只固定云端 DeepSeek API 参数；本地 Ollama 的运行模式需按其运行时配置单独记录，不得将 DeepSeek API 参数伪装成 Ollama 参数。
+官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。项目负责人已确认首轮云端基线显式关闭思考模式，请求必须包含 `thinking: {"type":"disabled"}`，不能依赖服务默认值。每条运行记录保存实际发送的 thinking setting。seed 已由两次最小运行时探测确认被 API 接受，但这不是输出确定性保证。此项只固定云端 DeepSeek API 参数；本地 Ollama 的运行模式需按其运行时配置单独记录，不得将 DeepSeek API 参数伪装成 Ollama 参数。
 
-2026-11-05 已完成一次最小 runtime probe：请求配置 `deepseek-flash`，响应 `model=deepseek-flash`；响应包含 usage token 与 cache 字段、无 provider 字段；JSON 模式请求正常结束。探测使用 thinking disabled；项目负责人随后确认首轮正式云端基线也显式关闭该模式。seed 未测试。完整元数据见 [`runtime-probe-2026-11-05.json`](../../agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json)。未保存回复正文或密钥。
+2026-11-05 已完成最小 runtime probes：请求配置 `deepseek-flash`，响应 `model=deepseek-flash`；响应包含 usage token 与 cache 字段、无 provider 字段；JSON 模式正常；两次短 seed 探测均被接受。Ollama 0.33.2 的 `/api/chat` 与 `/api/generate` 均接受 `think=false` 和 JSON 输出设置。以上只是能力探测，不是模型质量、时延基准或确定性结论；没有保存回复正文或密钥。详见 [`runtime-probe-2026-11-05.json`](../../agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json)。
 
 MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和成本探索，但必须单独记录操作系统、CPU、运行时、量化方式和线程配置，不能与 Mac 基线合并计算延迟或吞吐。
 
@@ -34,13 +34,15 @@ MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和�
 
 每条输入固定保存：自然语言需求、可选参考图像的文件哈希、是否注入检索示例、Prompt 版本、模型身份和解码参数。模型只能输出结构化意图/参数候选，不输出自由 CAD 代码。
 
-外部结构化输出至少包含：
+已冻结的模型输出协议版本为 `app001-io.v1` / `app001-extraction.v2`，完整契约见 [`prompt-output-contract-v1.md`](../../agent-work/llm/APP-001-baseline-prep/prompt-output-contract-v1.md)。模型只返回显式参数抽取结果，不生成可直接送入 CAD 的 `cad_parameters`：
 
 ```json
 {
-  "schema_version": "set_screw_shaft_collar.v0",
-  "family_id": "set_screw_shaft_collar",
-  "parameters": {},
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v2",
+  "decision": "answer",
+  "extracted_parameters": {},
+  "unsupported_requests": [],
   "evidence": [],
   "missing_fields": [],
   "questions": [],
@@ -48,7 +50,9 @@ MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和�
 }
 ```
 
-模型只抽取用户明确表达的参数；`parameters` 中每个值必须能追溯到输入证据。目录派生值由 Schema/规则层补齐并标记来源。模型不得把未知关键尺寸编造成默认值。`bore_d` 缺失时必须追问或拒绝，不能直接进入 CAD 构造。`confidence` 可省略或置为 `null`；即使模型返回数值，也不得用于追问/拒绝路由、Schema/CAD 放行、评分或模型选择。
+模型只抽取用户明确表达的 CAD-003 参数；`extracted_parameters` 中每个值必须能追溯到输入证据，包括显式但冲突或越界的主张。目录派生值不得由模型生成。用户明确表达的 `second_screw` 主张也须保留，由确定性规则核验；仅在用户未提供时才由阈值规则派生。模型在缺少 `bore_d` 时须追问/拒绝，但仍保留其他显式参数。随后适配器将 `extracted_parameters` 投影为严格 CAD-003 输入并记录独立的验证结果；只有 `decision=answer`、无不支持请求且 CAD-003 通过时才允许继续 Typed CAD IR/CAD。`confidence` 可省略或置为 `null`；不得用于路由、放行或评分。
+
+九条人工验收样例已冻结为 evaluator-only `acceptance-set-v0`。字段抽取只与显式用户主张标签比较；目录/阈值派生结果、追问/拒绝行为和 CAD-003 验证结果分别评分。正式模型运行仍需 adapter/logger 实现并经审查，且由项目负责人另行授权。
 
 ## 解码与调用重试
 
@@ -107,5 +111,5 @@ MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和�
 
 ## 设备与结果边界
 
-首期结论只覆盖固定模型配置和实际运行设备。模型版本、API 行为、Ollama 版本、量化方式、操作系统或 CAD 运行时变化时，必须新建运行批次并重新记录，不能覆盖旧结果。初始选择已记录在 ADR-0010；验收集的标签和样本内容仍需审查冻结。
+首期结论只覆盖固定模型配置和实际运行设备。模型版本、API 行为、Ollama 版本、量化方式、操作系统或 CAD 运行时变化时，必须新建运行批次并重新记录，不能覆盖旧结果。初始选择已记录在 ADR-0010；输出分层与验收标签冻结见 ADR-0013。正式评测仍被 adapter/logger 实现与审查门及负责人授权门阻止。
 

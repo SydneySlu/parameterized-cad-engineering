@@ -704,3 +704,9 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 动作=修正 `prompt-output-contract-v0.md` 输出示例中的过期 `app001-extraction.v0-draft`，统一为当前候选 `app001-extraction.v1`；移除 `prompt-v1.md` 末尾多余空行；未改历史日志、模型策略、验收标签或正式状态。
 - 验证=检查 Prompt、output contract、baseline artifact 的当前版本标识一致；无 JSON/YAML 改动，按要求不重复解析；未运行 DeepSeek/Ollama 请求、验收样例或质量评测；提交后 `git diff --check HEAD^ HEAD` 通过。
 - 交付提交=窄范围修正 commit `f877b0c`；保持 APP-001-PREP=review、APP-001=planned、formal_evaluation_allowed=false，交 Codex 中枢复核。
+
+[2026-11-05] agent=Codex task=APP-001-PREP-contract-freeze status=review
+- 动作=按项目负责人确认新增 ADR-0013；将 LLM 显式抽取与 CAD-003 投影/校验分层；冻结 `app001-io.v1`、`app001-extraction.v2` 与 9 条 evaluator-only `acceptance-set-v0`；修正 A01 抽取真值、A02 派生说明及三占位符描述；同步基线、状态、计划、checkpoint/handoff。
+- 验证=9 条 JSON 标签结构及参数字段断言通过；验收 JSON 解析通过；Ruby YAML 解析通过；协议版本交叉核对、Prompt 占位符数检查、评测门关闭断言通过；`git diff --check` 通过。未调用 DeepSeek/Ollama，未运行验收样例或正式评测。
+- 限制=执行 adapter/logger 尚未实现及审查；APP-001-PREP 保持 review，APP-001 保持 planned，formal_evaluation_allowed=false。
+- 下一步=实现并审查 adapter/logger，确认原始模型输出、显式抽取、CAD-003 投影/验证及下游 CAD/STEP 分阶段记录；完成后另向项目负责人申请正式运行授权。

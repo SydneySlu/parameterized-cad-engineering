@@ -1,4 +1,6 @@
-# APP-001 Prompt / output contract v0 (draft)
+# APP-001 Prompt / output contract v0 (superseded draft)
+
+Superseded before any formal model run by [`prompt-output-contract-v1.md`](prompt-output-contract-v1.md). Retained as historical review material; do not use for APP-001.
 
 Status: `review`; candidate freeze prepared, formal evaluation remains disallowed. The project owner has confirmed the initial extraction, confidence, retry, and cost/latency policy. The acceptance labels and exact run batch still require Codex review/freeze; do not run formal evaluation before that gate.
 

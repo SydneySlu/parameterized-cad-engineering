@@ -1,4 +1,6 @@
-# APP-001 extraction prompt v1 (candidate freeze)
+# APP-001 extraction prompt v1 (superseded candidate)
+
+Superseded before any formal model run by [`prompt-v2.md`](prompt-v2.md), which separates explicit extraction claims from deterministic CAD-003 projection. Retained as historical review material; do not use for APP-001.
 
 Status: `review`; candidate for Codex hub and project-owner confirmation. This file is a prompt artifact only. It does not authorize formal evaluation.
 

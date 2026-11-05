@@ -3,7 +3,9 @@ status: review
 artifact_version: model-baselines-v0
 freeze_gate:
   required: [codex_hub_review, project_owner_confirmation]
-  formal_runs_allowed_before_freeze: false
+  prompt_and_acceptance_set_frozen: true
+  formal_runs_allowed: false
+  remaining_execution_gate: [adapter_logger_implemented_and_reviewed, explicit_project_owner_run_authorization]
   c2_definition: out_of_scope
 baselines:
   cloud_primary_effect:
@@ -76,8 +78,9 @@ baselines:
       status: separate_exploration_only
       merge_with_mac_baseline: false
 shared_run_fields:
-  prompt_version: app001-extraction.v1 (candidate)
-  acceptance_set_version: acceptance-set-v0 (candidate; review)
+  contract_version: app001-io.v1 (frozen)
+  prompt_version: app001-extraction.v2 (frozen)
+  acceptance_set_version: acceptance-set-v0 (frozen evaluator-only labels)
   decoding_parameters:
     temperature: 0
     top_p: 1

@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-04
+更新时间：2026-11-05
 
 ## 当前结论
 
@@ -47,7 +47,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
-| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | DeepSeek seed 参数已由两次非评测请求确认接受；Ollama qwen3:8b `think=false` JSON 能力已核对；候选 Prompt/样例已版本化但待中枢/负责人确认；未运行正式评测 |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | `app001-io.v1` / `app001-extraction.v2` 与 9 条 evaluator-only 样例已由中枢/负责人冻结；显式抽取与 CAD-003 投影分层；adapter/logger 尚待实现及审查，正式评测未放行 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 审查通过后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入确定性链后测 |
 
 ## 阻塞项
@@ -56,7 +56,7 @@
 
 ## 下一步
 
-1. 休整并保留当前验证基线；如近期需要跨设备协作，再执行一次 clone/pull 验证。
-2. 用户 push `443f534` 与 `48a658e` 后，启动 APP-001-PREP，冻结 LLM 输入输出契约、解码参数和小型验收集；执行 Prompt 见 `docs/coordination/prompts/APP-001-baseline-freeze-agent.md`。
-3. APP-001 完成后，再设计端到端 C0/C1 比较；公平 C2 另行定义并经审查后才能纳入。
+1. 完成 APP-001 执行 adapter/logger，实现模型原始输出、显式参数抽取、CAD-003 投影/校验和后续 CAD/STEP 结果的分阶段记录，并由中枢审查。
+2. adapter/logger 审查通过后，由项目负责人明确授权正式运行 APP-001；在此之前不调用九条冻结验收样例。
+3. APP-001 完成后，再设计端到端 C0/C1 下游比较；公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。

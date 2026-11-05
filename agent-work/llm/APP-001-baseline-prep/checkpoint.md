@@ -1,5 +1,7 @@
 # APP-001-PREP checkpoint
 
+> Current authority (2026-11-05): protocol `app001-io.v1` / Prompt `app001-extraction.v2` and evaluator-only `acceptance-set-v0` are frozen by ADR-0013. Explicit model claims are separate from adapter-generated CAD-003 payloads. Formal evaluation remains blocked pending adapter/logger implementation and review plus explicit owner authorization. The earlier M0-M3 sections below document the pre-freeze candidate history.
+
 ```text
 task=APP-001-PREP
 status=review
@@ -52,9 +54,9 @@ prompt evaluator-label leak scan (PASS)
 
 No acceptance sample, formal C0/C1, cloud/local comparison, Schema/IR/CAD/STEP run, or performance conclusion was produced. No API key, Authorization header, response body, hidden reasoning, or full provider error was stored.
 
-## Required Codex hub decisions
+## Earlier Codex hub decisions (resolved by ADR-0013)
 
-Review `prompt-v1.md`, the nine evaluator-only labels, adapter/logger implementation boundary, and whether the recorded Ollama no-think configuration is sufficient for a future fair comparison. Keep `APP-001-PREP=review`, `APP-001=planned`, and the formal evaluation gate false until explicit approval.
+The protocol/prompt/label review is resolved by ADR-0013. Remaining work is adapter/logger implementation and review; keep `APP-001-PREP=review`, `APP-001=planned`, and the formal evaluation gate false until explicit approval.
 
 ## APP-001-PREP-R2 document consistency correction
 
@@ -63,3 +65,10 @@ Review `prompt-v1.md`, the nine evaluator-only labels, adapter/logger implementa
 - Repository search confirmed current Prompt version references in the Prompt, output contract, and baseline artifact are all `app001-extraction.v1`; historical records were not changed.
 - No JSON/YAML files were modified in this correction, so no parser rerun was required. `git diff --check HEAD^ HEAD` was run for the correction commit; no model/API requests or acceptance samples were run.
 - Prior delivery commit recorded for traceability: `c255d4e`. Status remains `APP-001-PREP=review`, `APP-001=planned`, `formal_evaluation_allowed=false`.
+
+## ADR-0013 current freeze checkpoint
+
+- Frozen model contract: `app001-io.v1`; frozen prompt: `app001-extraction.v2`; frozen evaluator-only case set: `acceptance-set-v0` (9 cases).
+- Model output preserves explicit claims in `extracted_parameters` and unsupported requests separately; deterministic adapter generates the CAD-003 projection and validation record. Extraction, dialogue/safety, CAD-003, and downstream CAD/STEP outcomes have separate scoring stages.
+- A01 labels only its three user-stated dimensions as extraction truth. Explicit `second_screw` claims in A06/A09 are retained for deterministic rule checking. A04/A05/A07/A09 preserve claims even though they cannot proceed to construction.
+- Formal evaluation gate remains false until adapter/logger is implemented and reviewed and the owner separately authorizes execution. No model call or acceptance-set run was made for this freeze.

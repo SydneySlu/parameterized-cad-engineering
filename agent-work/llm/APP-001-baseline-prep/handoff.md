@@ -1,5 +1,7 @@
 # APP-001-PREP handoff
 
+> Current authority (2026-11-05): see the ADR-0013 section at the end. The v1 prompt/output contract described in earlier sections was an unrun candidate and is superseded; current frozen artifacts are `prompt-v2.md`, `prompt-output-contract-v1.md`, and `acceptance-set-v0.json`. No formal model/evaluation run is authorized.
+
 Date: 2026-11-05
 Task: `APP-001-PREP`
 Status: `review`
@@ -52,3 +54,10 @@ handoff_self_check:
 - Checked current Prompt version references across `prompt-v1.md`, `prompt-output-contract-v0.md`, and `model-baselines-v0.yaml`; all agree on `app001-extraction.v1`. Historical records were left unchanged.
 - No JSON/YAML was changed. Validation is limited to the version-consistency check and `git diff --check HEAD^ HEAD`; no model calls, acceptance samples, or quality measurements were run.
 - Handoff remains `review`; Codex hub review is required before any APP-001 release decision.
+
+## ADR-0013 freeze and current handoff
+
+- Frozen: `app001-io.v1`, `app001-extraction.v2`, and nine evaluator-only `acceptance-set-v0` cases. Model explicit claims are scored separately from the deterministic CAD-003 projection.
+- A01 now scores only user-explicit fields as model extraction; catalog/rule values are evaluated after deterministic projection. The prompt template accurately describes three placeholders; family ID is fixed text.
+- Validation performed: JSON parse for the acceptance set; YAML parse for the baseline; protocol/version consistency and evaluator-label isolation checks; `git diff --check`. No LLM/API calls and no sample evaluation were run.
+- Remaining gate: implement and review the execution adapter/logger, then request explicit project-owner authorization before any formal run. Task remains `APP-001-PREP=review`; `APP-001=planned`.

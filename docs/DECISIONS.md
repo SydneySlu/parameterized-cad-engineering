@@ -249,3 +249,29 @@ APP-001 使用 DeepSeek v4.1 Flash 1017 作为云端主效果基线，使用 Oll
 
 本决策仅确定首轮思考模式，不冻结最终 Prompt/验收集，不构成 APP-001 正式运行放行，也不产生模型效果结论。
 
+## ADR-0013：分离 LLM 显式参数抽取与 CAD-003 构造输入
+
+- 日期：2026-11-05
+- 状态：accepted
+- 决策人：项目负责人 + Codex
+- 关联：ADR-0009/0010/0012；`docs/coordination/APP-001-baseline-contract.md`
+
+### 决策
+
+模型输出只保存用户显式参数主张、证据、缺失字段、问题和不支持请求，不包含 `cad_parameters`。显式主张即使缺少必填字段、超出目录或与目录/阈值冲突，也必须保留在 `extracted_parameters` 中供抽取评分与审计；用户明确提出的 `second_screw` 主张同样保留，由确定性规则验证，未明确提供时再按规则派生。
+
+适配器将模型原始响应独立保存，再将 `extracted_parameters` 投影为 CAD-003 严格输入并记录校验结果。只有 `decision=answer`、没有不支持请求且 CAD-003 校验通过时，才允许将结果传入 Typed CAD IR/CAD。追问/拒绝、unsupported 或校验失败都不进入几何构造。抽取指标、对话决策/安全指标、CAD-003 指标分层评分，不把目录派生字段记作模型抽取能力。
+
+采用 `app001-io.v1`、`app001-extraction.v2` 和九条 evaluator-only `acceptance-set-v0`。Prompt 与验收标签经 Codex 中枢审查及项目负责人确认后冻结；正式评测仍需 adapter/logger 实现并审查，以及项目负责人另行授权。
+
+### 原因
+
+若用同一个 `cad_parameters` 字段同时表达模型抽取和可构造输入，缺少 `bore_d` 或存在显式冲突时只能置为 `null`，会丢失用户实际给出的字段，无法在失败/追问案例中独立评估抽取质量。分层后，原始主张可审计和评分，CAD-003 仍是构造前的确定性安全门。
+
+### 影响与边界
+
+- 旧 `prompt-v1.md` 与 `prompt-output-contract-v0.md` 仅作为未运行的历史候选保留；APP-001 使用 v2/v1 冻结协议。
+- A01 只将用户明示的 `bore_d`、`outer_d`、`width` 作为模型抽取真值；目录/规则值在后处理阶段评估。
+- 九条验收标签已冻结，但不得在正式评测门打开前调用模型或宣称测得任何性能结果。
+- DeepSeek disabled thinking 与 Ollama `think=false` 是不同运行时控制；比较报告不得宣称二者完全等价。
+
