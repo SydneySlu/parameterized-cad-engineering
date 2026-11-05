@@ -435,5 +435,5 @@ git ls-files work/ → (empty; no run artifacts committed)
 ```text
 task=APP-001-ADAPTER-R3
 status=review
-commit=pending
+commit=750897d
 ```
