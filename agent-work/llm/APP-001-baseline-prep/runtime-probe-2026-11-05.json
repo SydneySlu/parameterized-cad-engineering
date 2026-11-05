@@ -35,8 +35,67 @@
     "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
   },
   "finish_reason": "stop",
-  "seed_support": "not_tested",
+  "seed_support": "supported",
   "response_body_saved": false,
   "api_key_saved_or_logged": false,
-  "note": "Single low-token connectivity/capability probe only. No acceptance sample or CAD pipeline was run; no performance claim is made."
+  "note": "Two additional identical short seed capability requests were accepted; this remains non-evaluation evidence and does not establish deterministic output.",
+  "seed_probe": {
+    "status": "supported",
+    "probe_type": "minimal_capability_only_non_evaluation",
+    "request_count": 2,
+    "request_parameters": {
+      "seed": 271828,
+      "temperature": 0,
+      "top_p": 1,
+      "max_tokens": 8,
+      "response_format": "json_object",
+      "thinking": {
+        "type": "disabled"
+      },
+      "stream": false
+    },
+    "same_prompt_and_seed": true,
+    "attempts": [
+      {
+        "http_status": 200,
+        "accepted": true,
+        "runtime_model": "deepseek-flash",
+        "runtime_provider": "not_exposed",
+        "response_id_present": true,
+        "usage": {
+          "prompt_tokens": 38,
+          "completion_tokens": 5,
+          "total_tokens": 43,
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 38,
+          "prompt_tokens_details_cached_tokens": 0
+        }
+      },
+      {
+        "http_status": 200,
+        "accepted": true,
+        "runtime_model": "deepseek-flash",
+        "runtime_provider": "not_exposed",
+        "response_id_present": true,
+        "usage": {
+          "prompt_tokens": 38,
+          "completion_tokens": 5,
+          "total_tokens": 43,
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 38,
+          "prompt_tokens_details_cached_tokens": 0
+        }
+      }
+    ],
+    "cost_calculation": {
+      "amount": 0.000232,
+      "currency": "CNY",
+      "rate_card_observed_date": "2026-11-05",
+      "rate_period": "peak_beijing_time",
+      "formula": "(76 input_cache_miss_tokens * CNY 2.00 + 10 output_tokens * CNY 8.00) / 1000000",
+      "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
+    },
+    "reply_saved": false,
+    "determinism_claim": "not_established; parameter acceptance and two observations do not provide an API determinism guarantee"
+  }
 }

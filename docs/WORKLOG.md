@@ -688,3 +688,13 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 结果：明确执行 seed 最小能力核验、Ollama Qwen3 思考模式/解码参数核验、验收集与 Prompt 冻结候选、运行契约检查和三层交接；严格禁止正式验收集运行、正式对照或 APP-001 放行。
 - 交付：`docs/coordination/prompts/APP-001-PREP-R2-agent.md`。
 - 下一步：项目负责人将该 Prompt 发给续任 APP-001-PREP Agent；其提交结果后由 Codex 中枢独立验收。
+
+[2026-11-05] agent=APP-001-PREP-R2 task=APP-001-PREP status=review
+- 动作=按续任 Prompt 完成启动复核；核对共享仓库/干净工作树、APP-001 基线契约、CAD-003 Schema、RET-003 reference-only 边界和前序 checkpoint/handoff；未运行任何正式验收集或对照。
+- M0=Python 3.9.6、Darwin 25.6.0 arm64、Ollama CLI/API 0.33.2；服务可达；`qwen3:8b` 列表 ID `500a1f067a9f` 与冻结值一致；`/api/show` 为 qwen3 8.2B Q4_K_M 且有模板；`.env` 仅做存在性检查并通过 ignore，未读取/输出 key。
+- M1=DeepSeek 官方 Chat Completions 页面未明确列出 seed，因此按上限执行两次相同短提示能力探测：`seed=271828`、temperature=0、top_p=1、max_tokens=8、JSON mode、thinking disabled、stream=false；两次 HTTP 200、接受 seed、响应 model=deepseek-flash、provider 未暴露、request ID 存在但未保存、usage/cache=38/5/43 与 cache miss 38。回复、headers 和 key 未保存；按 2026-11-05 高峰价目表计算两次实际 usage 的费用为 CNY 0.000232。结论仅为参数 supported，不是确定性或质量结论。
+- M2=执行两个独立 Ollama 短 probe（`/api/chat`、`/api/generate`），均使用 `think=false`、format=json、temperature=0、top_p=1、num_predict=8、seed=271828、stream=false；均 HTTP 200、有效 JSON、无 thinking 字段。仅保留脱敏运行元数据；不宣称与 DeepSeek 思考模式等价；不计入正式延迟/性能。
+- M3=新增候选 `prompt-v1.md`；将九条验收样例标记 candidate freeze 但维持 review、formal_evaluation_allowed=false；更新 output contract、运行记录字段和 seed/local 模式证据；Prompt 标签泄漏扫描通过，CAD-003 正常/失败样例分别通过和返回 MISSING_REQUIRED。
+- 验证=Ruby YAML parse、两份 JSON parse、`git diff --check`、`git check-ignore -v .env`、Prompt evaluator-label scan、secret/index scan 均通过；未修改 ADR-0009 至 ADR-0012，未修改 CAD-003/IR/CAD/RET-003 实现。
+- 限制=候选 Prompt/样例、adapter/logger 和本地/云端模式公平性仍待 Codex 中枢/负责人审核；APP-001-PREP 保持 review，APP-001 保持 planned，formal evaluation gate=false；所有正式字段/Schema/IR/CAD/STEP/成本/延迟结果仍 not_measured。
+- 下一步=中枢独立审查 `prompt-v1.md` 的真值隔离、严格 CAD-003 投影和运行记录适配器，确认后另行决定是否放行 APP-001；本提交不 push、不合并。

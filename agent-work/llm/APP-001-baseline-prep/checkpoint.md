@@ -4,47 +4,54 @@
 task=APP-001-PREP
 status=review
 work_root=/Users/syd/Desktop/参数化 cad 工程辅助设计
-changed=APP-001 model-baselines YAML and prompt/output contract; baseline contract; ADR-0011; PROJECT_STATUS/TASKS; checkpoint/handoff; WORKLOG append; root .env.example
-commands=official docs fetched read-only; YAML syntax parse, JSON parse, .env ignore/template checks, and git diff --check recorded in WORKLOG; no API request and no secret value read
-confirmed=DeepSeek request ID and runtime response model deepseek-flash; one non-evaluation JSON/usage probe passed; response usage/cache fields observed and provider field absent; dated price schedule and secret file location documented; no formal model/downstream metric run
-unresolved=seed support and production runtime versions; verify/log Ollama runtime mode; final prompt/sample freeze; independent review of run adapter/logger
-next_agent_focus=probe and log configured/runtime cloud identity without exposing credentials; verify applied decoding values; complete sample freeze review; preserve not_measured until approved runs
+formal_evaluation_gate=false
+changed=prompt-v1.md; acceptance-set-v0.json candidate-freeze metadata; model-baselines-v0.yaml; prompt-output-contract-v0.md; runtime-probe-2026-11-05.json; this checkpoint/handoff; PROJECT_STATUS/TASKS; append-only WORKLOG
 ```
 
-## Validation and limitations
+## M0 environment and handoff successor check
 
-Validation is limited to source/document consistency and syntax/label checks listed in the appended WORKLOG entry. API configuration availability was checked only by presence of common environment variable names; no key values were accessed or printed, and no network request was made. This is not an API identity probe. Gold labels are evaluator-only draft data, not model-visible output. The acceptance set is not frozen and must not be used for formal evaluation.
+- Git root is the requested project root; startup `git status --short --branch` was clean on `main...origin/main`.
+- Runtime: Python 3.9.6; Darwin 25.6.0; arm64; Ollama CLI/API 0.33.2; Ollama service reachable at `127.0.0.1:11434`.
+- `ollama list` reports `qwen3:8b` ID `500a1f067a9f`, matching the frozen local tag/digest. `/api/show` reports family `qwen3`, 8.2B, Q4_K_M and a template.
+- Root `.env` exists and `DEEPSEEK_API_KEY` is present only as an existence check; the value was never printed, copied, logged, or committed. `git check-ignore -v .env` passes and `.env` is absent from the index.
+- Normal CAD-003 case: strict envelope with `bore_d=24` passed and normalized catalog fields. Failure case: strict envelope without `bore_d` returned `MISSING_REQUIRED`; no default was supplied.
 
-## Three-layer handoff
+## M1 DeepSeek seed capability
 
-### Handoff agent self-check
+- Official Chat Completions page checked 2026-11-05; it documents temperature/top_p/thinking but does not clearly document `seed`, so runtime capability was probed.
+- Exactly two identical short, non-evaluation requests were sent with `seed=271828`, `temperature=0`, `top_p=1`, `max_tokens=8`, JSON mode, `thinking: {"type":"disabled"}`, and `stream=false`.
+- Both returned HTTP 200, accepted the parameter, reported `model=deepseek-flash`, no exposed provider, request ID present (not saved), and usage/cache metadata. Reply content and headers were not saved.
+- YAML/runtime record classifies `seed` as `supported` at runtime. This is parameter acceptance only; it is not a determinism guarantee and produced no model-quality or repetition result. Calculated cost from actual usage and the dated rate card is recorded as CNY 0.000232 for the two requests; the earlier identity probe remains CNY 0.000128.
+
+## M2 Ollama capability
+
+- Two independent short probes used `think=false`, `format=json`, `temperature=0`, `top_p=1`, `num_predict=8`, `seed=271828`, and `stream=false`, one through `/api/chat` and one through `/api/generate`.
+- Both returned HTTP 200, valid JSON, and no thinking field. Runtime metadata was retained without response text. This establishes a usable no-think configuration for this Ollama runtime, but does not claim provider-level equivalence with DeepSeek.
+- Local cost is not applicable; probe wall times were runtime metadata only and are not formal latency results.
+
+## M3 candidate freeze
+
+- `prompt-v1.md` is a versioned system/user template. It strictly separates explicit extraction from deterministic catalog/rule derivation, makes retrieval context untrusted, and excludes evaluator truth from model input.
+- The nine-case `acceptance-set-v0.json` remains evaluator-only and `review`; `candidate_freeze=true` and `formal_evaluation_allowed=false` are explicit. Labels were not injected into any probe.
+- `prompt-output-contract-v0.md` now points to `app001-extraction.v1` and retains the strict CAD-003 projection, failure denominator, retry, cost, and latency rules. All formal outcomes remain `not_measured`.
+- DeepSeek formal requests must send `thinking: {"type":"disabled"}`. Ollama uses the separately verified `think=false` runtime setting; comparison remains mode-not-fully-equivalent pending hub review.
+
+## Validation commands
+
+Passed:
 
 ```text
-changed=the five artifacts above plus append-only WORKLOG entry
-commands=see WORKLOG; parse/structural checks recorded only if actually run
-confirmed=contract adheres to current ADR-0009, CAD-003 and RET-003 boundaries by document inspection
-unresolved=runtime API identity and seed capability; final sample/prompt freeze; execution adapter/logger review
-next_agent_focus=preserve configured vs returned identity; verify actual decode settings; no formal evaluation before freeze gate
+PYTHONPATH=src python3 <normal/failure CAD-003 static check>
+ruby -e 'require "yaml"; YAML.parse_file("agent-work/llm/APP-001-baseline-prep/model-baselines-v0.yaml")'
+python3 -m json.tool agent-work/llm/APP-001-baseline-prep/acceptance-set-v0.json >/dev/null
+python3 -m json.tool agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json >/dev/null
+git diff --check
+git check-ignore -v .env
+prompt evaluator-label leak scan (PASS)
 ```
 
-### Successor check
+No acceptance sample, formal C0/C1, cloud/local comparison, Schema/IR/CAD/STEP run, or performance conclusion was produced. No API key, Authorization header, response body, hidden reasoning, or full provider error was stored.
 
-```text
-predecessor=APP-001-PREP, this checkpoint and handoff, draft commit 0bfc75b (follow-up log commit d7486e7)
-files_format=to be checked by successor
-core_rerun=not_run
-normal_case=not_run
-failure_case=not_run
-interface=to be checked against strict CAD-003 envelope and RET-003 reference-only policy
-limits=API identity pending; draft is review only; no experiment results; owner initial policy decisions recorded in ADR-0010
-result=review
-blocking_issue=final prompt/sample freeze and runtime identity probe remain
-```
+## Required Codex hub decisions
 
-### Codex hub review
-
-Technical artifact review completed. The project owner confirmed initial extraction, confidence, retry, cost/latency and model identity logging choices; acceptance-set freeze and runtime identity probe remain before formal APP-001.
-
-### Official DeepSeek API details update (2026-11-05)
-
-Configured request and runtime response model are both `deepseek-flash` at `https://api.deepseek.com`; docs label the served version `DeepSeek-V4.1-Flash-1017`. One non-evaluation probe confirmed JSON response and usage/cache metadata; seed remains untested. ADR-0012 records the owner decision to explicitly disable DeepSeek thinking in the first formal cloud baseline. The dated rate card and secret setup are recorded in the baseline contract and ADR-0011. No key or response body was saved. Ollama runtime mode, prompt/sample freeze and final adapter review remain; APP-001-PREP stays `review`.
+Review `prompt-v1.md`, the nine evaluator-only labels, adapter/logger implementation boundary, and whether the recorded Ollama no-think configuration is sufficient for a future fair comparison. Keep `APP-001-PREP=review`, `APP-001=planned`, and the formal evaluation gate false until explicit approval.

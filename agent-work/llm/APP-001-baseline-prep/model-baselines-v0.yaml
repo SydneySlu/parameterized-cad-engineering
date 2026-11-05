@@ -25,10 +25,15 @@ baselines:
       request_id_observed: true
     api_capabilities_from_official_docs:
       json_mode: supported
-      seed: pending_runtime_probe
+      seed: not_verified
       thinking_modes: [enabled, disabled]
       default_thinking_mode: enabled
       selected_thinking_mode: disabled
+    api_capabilities_from_runtime_probe:
+      seed: supported
+      seed_probe_requests: 2
+      seed_value: 271828
+      determinism_guarantee: false
     credential:
       environment_variable: DEEPSEEK_API_KEY
       local_file: .env
@@ -65,19 +70,21 @@ baselines:
       label: MacBook Air M5
       memory_gb: 16
       storage_gb: 512
-      os_version: pending_runtime_record
+      os_version: Darwin 25.6.0 (arm64)
     future_migration_exploration:
       label: Windows CPU device
       status: separate_exploration_only
       merge_with_mac_baseline: false
 shared_run_fields:
-  prompt_version: pending_freeze
-  acceptance_set_version: acceptance-set-v0
+  prompt_version: app001-extraction.v1 (candidate)
+  acceptance_set_version: acceptance-set-v0 (candidate; review)
   decoding_parameters:
     temperature: 0
     top_p: 1
     max_output_tokens: 512
-    seed: fixed_if_supported_else_record_unsupported
+    seed:
+      value: 271828
+      if_unsupported: record_unsupported
     stop_sequences: none
   retry_policy:
     max_retries_after_initial_attempt: 2
@@ -87,10 +94,10 @@ shared_run_fields:
     non_retryable: [authentication_or_permission, malformed_request, context_overflow, invalid_json, contract_error, schema_or_rule_rejection, cad_or_geometry_failure]
     backoff_seconds: [1, 2]
   versions:
-    client_or_adapter: pending_runtime_record
+    client_or_adapter: Python 3.9.6 urllib probe; Ollama CLI/API 0.33.2
     provider_api_or_runtime: pending_runtime_record
-    ollama_version: pending_runtime_record
-    operating_system: pending_runtime_record
+    ollama_version: 0.33.2
+    operating_system: Darwin 25.6.0 arm64
     schema_version: set_screw_shaft_collar.v0
     typed_cad_ir_version: pending_downstream_run
     cad_compiler_version: pending_downstream_run
@@ -130,6 +137,8 @@ security:
   record_secret_values: false
   record_only_secret_presence: false
 notes:
+  - DeepSeek seed was accepted in two identical short non-evaluation requests (HTTP 200); this records parameter support only and does not establish deterministic output guarantees.
+  - Ollama 0.33.2 `/api/show` confirmed qwen3:8b family, 8.2B, Q4_K_M and a template; two short probes accepted `think: false`, JSON format, `temperature=0`, `top_p=1`, `num_predict=8`, and `seed=271828`, returned valid JSON, and exposed no thinking field. This is capability evidence only; no reply text was saved.
   - Official API docs identify the request model as deepseek-flash and its documented model version as DeepSeek-V4.1-Flash-1017; runtime response.model still must be captured during a permitted probe.
   - The documented Chat Completion response has model and usage fields but no provider field; store configured_provider=DeepSeek and runtime_returned_provider=not_exposed unless actual responses expose one elsewhere.
   - One minimal non-evaluation runtime probe was made with thinking disabled. The project owner has now selected thinking disabled for the first formal cloud baseline; every request must explicitly send this setting because the API default is enabled.

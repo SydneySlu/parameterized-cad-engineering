@@ -1,13 +1,13 @@
 # APP-001 Prompt / output contract v0 (draft)
 
-Status: `review`. The project owner has confirmed the initial extraction, confidence, retry, and cost/latency policy. The acceptance labels and exact run batch still require Codex review/freeze; do not run formal evaluation before that gate.
+Status: `review`; candidate freeze prepared, formal evaluation remains disallowed. The project owner has confirmed the initial extraction, confidence, retry, and cost/latency policy. The acceptance labels and exact run batch still require Codex review/freeze; do not run formal evaluation before that gate.
 
 ## Version and run boundary
 
 - Contract version: `app001-io.v0-draft`.
-- Prompt version: `app001-extraction.v0-draft` (content still requires owner review).
+- Prompt version: `app001-extraction.v1` (candidate; see `prompt-v1.md`) (content still requires owner review).
 - Family: `set_screw_shaft_collar`; schema target: `set_screw_shaft_collar.v0`.
-- Acceptance set: `acceptance-set-v0` (draft/review only).
+- Acceptance set: `acceptance-set-v0` (candidate/review only).
 - A run must record model identity, provider/runtime, prompt and input hashes, decoding settings, relevant software versions, condition, latency and available token/cost data. A changed identity or protocol starts a new run batch and requires review.
 - Record configured provider/model name separately from provider/model returned at runtime. Do not collapse aliases or silently rewrite mismatches.
 - DeepSeek cloud request configuration: provider `DeepSeek`, model ID `deepseek-flash`, OpenAI-compatible base URL `https://api.deepseek.com`; the official docs label this served version `DeepSeek-V4.1-Flash-1017`. Preserve the response `model` field. The documented Chat Completions response has no provider field, so record runtime provider as `not_exposed` unless the actual response supplies one.
@@ -108,4 +108,4 @@ Current values for all language, Schema, IR, CAD, geometry, STEP, latency and co
 - Record cloud token usage and traceable fees separately from local elapsed inference time.
 - Record configured provider/model name and runtime-returned provider/model fields separately.
 
-Remaining freeze checks: prompt wording, sample labels and sufficiency, provider/API runtime identity, applied decoding values and seed support, and technical review of the run logger/output adapter.
+Remaining hub checks: confirm `prompt-v1.md`, candidate sample labels and sufficiency, and the execution adapter/output logger. Runtime seed and Ollama capability evidence are recorded as non-evaluation probes; formal evaluation remains disallowed until the gate is explicitly released.
