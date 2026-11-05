@@ -669,3 +669,10 @@ next=项目负责人 push 后休整；重新启动时先冻结 APP-001 的模型
 - 未决：实际响应 model/usage、seed 能力和运行时版本仍须在已配置密钥的本机 probe；DeepSeek 文档默认开启思考模式，首轮是否关闭需负责人明确，APP-001-PREP 继续 review，正式实验未放行。
 - 交付：ADR-0011、APP-001 基线契约、model-baselines-v0.yaml、Prompt/output contract、checkpoint/handoff、项目状态/任务板更新。
 - 下一步：负责人将真实 key 放入本机 `.env`；确认 thinking mode 选择后，进行最小化 runtime probe，只记录响应身份与 usage 元数据，不记录 key 或敏感内容；之后再做验收集/Prompt 最终冻结和 APP-001 放行审查。
+
+[2026-11-05] agent=Codex task=APP-001-runtime-probe status=review
+- 动作：在本机 `.env` 中检测并使用 `DEEPSEEK_API_KEY` 发起一次最小、非评测 Chat Completions 请求；密钥仅用于 Authorization 请求头，未打印或写入文件。请求以 JSON mode 验证接口，并仅输出非敏感响应元数据。
+- 验证：HTTP 请求成功；配置模型 `deepseek-flash` 与响应 `model=deepseek-flash` 一致；响应 ID 存在但未记录；provider 字段未暴露；usage 返回 prompt/completion/total=40/6/46，缓存命中/未命中=0/40，`finish_reason=stop`。JSON mode 成功。按 2026-11-05 北京高峰价目表计算探测请求费用为 ¥0.000128。seed 未测试。
+- 探测参数：temperature=0、top_p=1、max_tokens=24、thinking disabled、stream=false。thinking disabled 仅用于本次小型探测，未冻结为 APP-001 正式配置。没有调用验收集或运行 C0/C1、Schema、CAD、STEP 指标；未保存模型回复正文。所有正式指标仍 `not_measured`。
+- 交付：`agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json`；更新 YAML、契约、checkpoint/handoff 和状态板。
+- 下一步：负责人确认正式思考模式（API 默认开启，建议首轮显式关闭）；测试/记录 seed 能力与运行时版本；冻结 Prompt、验收集及执行适配器后，另行审查放行正式 APP-001。

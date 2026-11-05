@@ -26,6 +26,8 @@
 
 官方文档称 API 支持 JSON 输出及思考/非思考模式，默认开启思考模式。seed 能力仍待运行时探测；思考模式是否关闭仍待负责人确认，不能静默改变 ADR-0010 的共同设置或把 API 默认值误记为实验配置。
 
+2026-11-05 已完成一次最小 runtime probe：请求配置 `deepseek-flash`，响应 `model=deepseek-flash`；响应包含 usage token 与 cache 字段、无 provider 字段；JSON 模式请求正常结束。探测时以 thinking disabled 作低成本 capability probe，该设置只属于本次探测，不代表 APP-001 已选择该模式。seed 未测试。完整元数据见 [`runtime-probe-2026-11-05.json`](../../agent-work/llm/APP-001-baseline-prep/runtime-probe-2026-11-05.json)。未保存回复正文或密钥。
+
 MacBook Air M5 是首期本地基线。未来 Windows CPU 设备可做迁移和成本探索，但必须单独记录操作系统、CPU、运行时、量化方式和线程配置，不能与 Mac 基线合并计算延迟或吞吐。
 
 ## 共同输入和输出

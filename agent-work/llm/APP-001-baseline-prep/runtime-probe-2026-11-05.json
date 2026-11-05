@@ -1,0 +1,42 @@
+{
+  "task_id": "APP-001-PREP",
+  "probe_type": "minimal_runtime_identity_and_usage_probe",
+  "formal_evaluation": false,
+  "timestamp_utc": "2026-11-05T08:06:33Z",
+  "configured_provider": "DeepSeek",
+  "configured_model": "deepseek-flash",
+  "runtime_model": "deepseek-flash",
+  "runtime_provider": "not_exposed",
+  "base_url": "https://api.deepseek.com",
+  "response_id_present": true,
+  "response_id_recorded": false,
+  "request_parameters": {
+    "temperature": 0,
+    "top_p": 1,
+    "max_tokens": 24,
+    "response_format": "json_object",
+    "thinking": "disabled (probe-only; not frozen for APP-001)",
+    "stream": false
+  },
+  "usage": {
+    "prompt_tokens": 40,
+    "completion_tokens": 6,
+    "total_tokens": 46,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 40,
+    "prompt_tokens_details_cached_tokens": 0
+  },
+  "cost_calculation": {
+    "amount": 0.000128,
+    "currency": "CNY",
+    "rate_card_observed_date": "2026-11-05",
+    "rate_period": "peak_beijing_time",
+    "formula": "(40 input_cache_miss_tokens * CNY 2.00 + 6 output_tokens * CNY 8.00) / 1000000",
+    "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
+  },
+  "finish_reason": "stop",
+  "seed_support": "not_tested",
+  "response_body_saved": false,
+  "api_key_saved_or_logged": false,
+  "note": "Single low-token connectivity/capability probe only. No acceptance sample or CAD pipeline was run; no performance claim is made."
+}

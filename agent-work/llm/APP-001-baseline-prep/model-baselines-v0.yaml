@@ -19,9 +19,10 @@ baselines:
       endpoint_label: api.deepseek.com
     api_returned_identity:
       provider: not_exposed_in_documented_chat_completion_response
-      model: pending_runtime_probe
-      captured_at: null
+      model: deepseek-flash
+      captured_at: "2026-11-05T08:06:33Z"
       request_id: null
+      request_id_observed: true
     api_capabilities_from_official_docs:
       json_mode: supported
       seed: pending_runtime_probe
@@ -131,6 +132,7 @@ security:
 notes:
   - Official API docs identify the request model as deepseek-flash and its documented model version as DeepSeek-V4.1-Flash-1017; runtime response.model still must be captured during a permitted probe.
   - The documented Chat Completion response has model and usage fields but no provider field; store configured_provider=DeepSeek and runtime_returned_provider=not_exposed unless actual responses expose one elsewhere.
-  - No API request has been made. The documented API default enables thinking; selected_thinking_mode remains pending owner confirmation so it is not silently treated as disabled.
+  - One minimal non-evaluation runtime probe was made with thinking disabled for probe purposes only; this does not freeze the APP-001 thinking-mode setting. See runtime-probe-2026-11-05.json.
+  - The documented API default enables thinking; selected_thinking_mode remains pending owner confirmation so it is not silently treated as disabled.
   - Initial decoding/retry choices are recorded in ADR-0010 and APP-001 contract; actual provider capability and applied values must be recorded per run.
   - Price reference is the official rate card observed on 2026-11-05; use response usage cache-hit/cache-miss counts and the rate period applicable to the request timestamp. Never estimate if those inputs are unavailable.

@@ -18,11 +18,11 @@ Confirmed from project records and official DeepSeek docs: request model ID `dee
 
 Project-owner initial choices: output only user-explicit parameters; confidence is not used in decisions; retry only transient call faults, at most two retries after the initial request; log cloud tokens/fees and local elapsed time; preserve configured and runtime-returned provider/model identities separately. The contract sets temperature 0, top_p 1, max output 512 tokens and seed-if-supported; verify applied settings in each run record.
 
-Still requiring runtime/freeze work: returned `model`, seed support, actual usage fields and runtime versions; final prompt/sample freeze; Codex review of the execution adapter/logger. The documented response example has no provider field. Official price snapshot observed 2026-11-05 is recorded in the YAML and baseline contract. Thinking defaults to enabled per docs; the selected mode remains pending owner confirmation. API credentials were not read or stored.
+Still requiring runtime/freeze work: seed support and production runtime versions; final prompt/sample freeze; Codex review of the execution adapter/logger. One minimal probe returned `model=deepseek-flash` and usage/cache fields, with no provider response field; its response body was not saved. Official price snapshot observed 2026-11-05 is recorded in the YAML and baseline contract. Thinking defaults to enabled per docs; the probe used disabled mode only for that request, while the selected APP-001 mode remains pending owner confirmation. API credentials were not logged or stored.
 
 ## Verification and limits
 
-Commands and results are recorded in `docs/WORKLOG.md`. This work only drafts and inspects protocol materials. No formal cloud/local comparison, no model output, and no C0/C1, Schema, IR, CAD, geometry or STEP performance result was generated. No API key was read or written; `.env.example` contains only a placeholder. All outcome metrics remain `not_measured`.
+Commands and results are recorded in `docs/WORKLOG.md`. This work includes one minimal non-evaluation API probe; no acceptance sample, formal cloud/local comparison, or C0/C1, Schema, IR, CAD, geometry or STEP performance result was generated. No API key was logged or stored; `.env.example` contains only a placeholder, and the response body was not saved. All outcome metrics remain `not_measured`.
 
 ## Handoff self-check
 
