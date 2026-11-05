@@ -360,3 +360,67 @@ handoff_self_check:
 
 `APP-001` remains `planned`. No formal model run authorized.
 APP-001-ADAPTER status: `review`, awaiting Codex R3 review.
+
+---
+
+## APP-001-ADAPTER-R3-FIX
+
+Date: 2026-11-05
+Task: `APP-001-ADAPTER-R3-FIX`
+
+R3 代码主体已完成；本轮只补齐 R3 审查要求的证据和文档同步。
+
+```text
+handoff_self_check:
+  changed=
+    src/llm/prompt_loader.py     (add private _verify_file_hash; refactor load to use it)
+    src/llm/README.md            (sync gate, retention, prompt verification to R3 rules)
+    tests/llm/test_r3_regression.py (fix tampered artifact test; add symlink escape tests)
+    agent-work/llm/APP-001-adapter/checkpoint.md (R3-FIX section appended)
+    agent-work/llm/APP-001-adapter/handoff.md (this section)
+    docs/PROJECT_STATUS.md (update APP-001-ADAPTER row to R3-FIX)
+    docs/WORKLOG.md (append-only R3-FIX entry)
+  commands=
+    PYTHONPATH=src python3 -m unittest discover -s tests/llm -q → 170 tests, OK
+    PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar -q → 17 tests, OK
+    PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+    git diff --check → PASS
+    git ls-files work/ → (empty)
+    inspect.signature(Adapter.run) → no verify_frozen_prompt or _prompt_loader_path
+    RetentionPolicy fields → no _test_only; no for_test()
+  confirmed=
+    1. 篡改 artifact 测试: test_tampered_artifact_rejected_by_file_hash 现在创建
+       临时篡改文件（保留版本标记），调用 _verify_file_hash() 断言抛出
+       FrozenPromptMismatchError。test_tampered_file_hash_differs_from_anchor
+       验证篡改 hash 与锚点不同。不修改仓库内 prompt-v2.md。
+    2. symlink 越界测试: test_symlink_escape_rejected 在 work/app001-runs/ 下
+       创建指向外部目录的 symlink，断言 _resolve_canonical_path() 抛出
+       RETENTION_PATH_OUTSIDE_IGNORED_DIR 且外部目录为空。
+       test_symlink_escape_rejected_by_retain_response 验证 _retain_response()
+       同样拒绝且无文件产生。两个测试实际执行（非手工探针）。
+    3. README: 评测门规则更新为精确 FakeTransport 类型检查；Retention 说明
+       更新为 canonical root 约束 + symlink 拒绝 + 私有 writer 边界；Prompt
+       验证说明更新为无条件核验无绕过。
+    Adapter.run() 仍无 verify_frozen_prompt 或 _prompt_loader_path。
+    RetentionPolicy 仍无 _test_only 或 for_test()。
+    没有真实网络、真实密钥、冻结样例或正式指标。
+    没有向 work/ 之外写入响应文件。
+  unresolved=
+    - IR 映射: 无 src 级参数→IR 适配器；IR/CAD/STEP blocked/not_run。不属本任务。
+    - 真实 DeepSeek/Ollama: 未执行；未授权。
+    - 九条验收样例: 未运行；标签未读取。
+    - 正式性能指标: 全部 not_measured。
+    - prompt_loader 两次读文件存在理论 TOCTOU（read_bytes + read_text）；future improvement。
+  next_agent_focus=
+    - Codex 中枢: 复核 (1) 篡改 artifact 测试真实加载篡改文件并断言拒绝，
+      (2) symlink 越界测试实际执行且外部目录无文件，
+      (3) README 评测门/Retention/Prompt 验证规则与 R3 实现一致。
+    - 如果 R3-FIX 验收通过，项目负责人可授权正式 APP-001 运行。
+    - IR src 级映射仍需冻结后才能声称 CAD/STEP 端到端已测。
+```
+
+### APP-001 status
+
+`APP-001` remains `planned`.  No formal model run authorized.
+`APP-001-ADAPTER` status: `review`, awaiting Codex R3-FIX review.
+`formal_evaluation_allowed=false`.

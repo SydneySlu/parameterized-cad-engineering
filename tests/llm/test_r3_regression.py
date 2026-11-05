@@ -21,6 +21,7 @@ import hashlib
 import inspect
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -125,35 +126,53 @@ class PromptVerificationBypassRemovedTests(unittest.TestCase):
         self.assertEqual(transport.call_count, 1)
 
     def test_tampered_artifact_rejected_by_file_hash(self):
-        """R3-A: Modifying artifact content (preserving version string) must fail.
+        """R3-A: A tampered file (version string preserved, content changed)
+        must be rejected by the file-level SHA-256 anchor.
 
-        We test the loader directly with a tampered file that preserves the
-        version marker but changes content.  The file-level SHA-256 anchor must
-        catch this.
+        We create a temporary file with the original content, then a second
+        file with tampered content (version string preserved).  We call
+        ``_verify_file_hash`` on the tampered file using the original file's
+        hash as the expected value, proving that any content change is caught
+        even when the version marker is intact.
         """
-        original = FROZEN_PROMPT_PATH.read_text(encoding="utf-8")
-        # Insert a modification that preserves the version string
-        tampered = original.replace("APP-001", "APP-001-TAMPERED", 1)
-        self.assertNotEqual(original, tampered)
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
-            f.write(tampered)
+        from src.llm.prompt_loader import _verify_file_hash
+
+        original_bytes = FROZEN_PROMPT_PATH.read_bytes()
+        original_hash = hashlib.sha256(original_bytes).hexdigest()
+        # Sanity: the anchor matches the current file.
+        self.assertEqual(original_hash, FROZEN_PROMPT_FILE_SHA256)
+
+        # Create a tampered copy that preserves the version string.
+        original_text = original_bytes.decode("utf-8")
+        tampered_text = original_text.replace("APP-001", "APP-001-TAMPERED", 1)
+        self.assertNotEqual(original_text, tampered_text)
+        self.assertIn(FROZEN_PROMPT_VERSION, tampered_text)  # version string preserved
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(tampered_text)
             tampered_path = Path(f.name)
         try:
-            # The tampered file preserves the version string but has different content.
-            # load_frozen_prompt with a non-canonical path skips file hash check,
-            # but verify_adapter_input will fail because the parsed content differs.
-            clear_cache()
-            # Directly test: loading from the canonical path after tampering it on disk
-            # would require modifying the real file, which we must not do.
-            # Instead, test that the file hash anchor logic works by calling
-            # load_frozen_prompt with the canonical path and confirming the hash matches.
-            artifact = load_frozen_prompt()
-            self.assertEqual(artifact.version, FROZEN_PROMPT_VERSION)
-            # The file hash must match the anchor.
-            actual_hash = hashlib.sha256(FROZEN_PROMPT_PATH.read_bytes()).hexdigest()
-            self.assertEqual(actual_hash, FROZEN_PROMPT_FILE_SHA256)
+            # The tampered file's hash must differ from the original.
+            tampered_hash = hashlib.sha256(tampered_path.read_bytes()).hexdigest()
+            self.assertNotEqual(tampered_hash, original_hash)
+            # _verify_file_hash must reject the tampered file.
+            with self.assertRaises(FrozenPromptMismatchError) as ctx:
+                _verify_file_hash(tampered_path, original_hash)
+            self.assertIn("hash mismatch", str(ctx.exception))
         finally:
             tampered_path.unlink(missing_ok=True)
+
+    def test_tampered_file_hash_differs_from_anchor(self):
+        """R3-A: A file with changed content must have a different SHA-256
+        than the frozen anchor, confirming the anchor catches tampering."""
+        original_text = FROZEN_PROMPT_PATH.read_text(encoding="utf-8")
+        tampered_text = original_text.replace("set_screw", "set_screw_TAMPERED", 1)
+        self.assertNotEqual(original_text, tampered_text)
+        self.assertIn(FROZEN_PROMPT_VERSION, tampered_text)
+        tampered_hash = hashlib.sha256(tampered_text.encode("utf-8")).hexdigest()
+        self.assertNotEqual(tampered_hash, FROZEN_PROMPT_FILE_SHA256)
 
     def test_file_hash_anchor_is_documented_constant(self):
         """R3-A: FROZEN_PROMPT_FILE_SHA256 must be a 64-char hex string."""
@@ -286,6 +305,69 @@ class RetentionBypassRemovedTests(unittest.TestCase):
             self.assertFalse(meta.get("retained", True))
             # No file should exist in tmp.
             self.assertEqual(os.listdir(tmp), [])
+
+    def test_symlink_escape_rejected(self):
+        """R3-FIX: A symlink inside work/app001-runs/ pointing to an external
+        directory must be rejected by _resolve_canonical_path.
+
+        No raw response file should appear in the external directory.
+        If the platform does not support symlinks, skip with an explicit reason.
+        """
+        external_dir = tempfile.mkdtemp(prefix="r3_symlink_external_")
+        # Create a symlink inside work/app001-runs/ pointing to external_dir.
+        canonical_root = _resolve_canonical_path("work/app001-runs")
+        canonical_root.mkdir(parents=True, exist_ok=True)
+        link_name = canonical_root / "escape_link"
+        try:
+            os.symlink(external_dir, link_name)
+        except (OSError, NotImplementedError):
+            # Platform does not support symlinks.
+            shutil.rmtree(external_dir, ignore_errors=True)
+            link_name.unlink(missing_ok=True)
+            self.skipTest("symlinks not supported on this platform")
+            return
+        try:
+            # _resolve_canonical_path on the symlink must reject it because
+            # .resolve() follows the link to the external directory.
+            with self.assertRaises(ValueError) as ctx:
+                _resolve_canonical_path(link_name)
+            self.assertIn("RETENTION_PATH_OUTSIDE_IGNORED_DIR", str(ctx.exception))
+            # No raw response file should exist in the external directory.
+            self.assertEqual(os.listdir(external_dir), [])
+        finally:
+            if link_name.is_symlink() or link_name.exists():
+                link_name.unlink(missing_ok=True)
+            shutil.rmtree(external_dir, ignore_errors=True)
+
+    def test_symlink_escape_rejected_by_retain_response(self):
+        """R3-FIX: _retain_response must not write through a symlink that
+        escapes the canonical root."""
+        external_dir = tempfile.mkdtemp(prefix="r3_symlink_retain_")
+        canonical_root = _resolve_canonical_path("work/app001-runs")
+        canonical_root.mkdir(parents=True, exist_ok=True)
+        link_name = canonical_root / "retain_escape_link"
+        try:
+            os.symlink(external_dir, link_name)
+        except (OSError, NotImplementedError):
+            import shutil
+            shutil.rmtree(external_dir, ignore_errors=True)
+            link_name.unlink(missing_ok=True)
+            self.skipTest("symlinks not supported on this platform")
+            return
+        try:
+            # Policy pointing through the symlink must be rejected.
+            policy = RetentionPolicy(retain_raw=True, base_dir=str(link_name))
+            meta = _retain_response("raw body", "run1", "q1", policy)
+            self.assertFalse(meta.get("retained", True))
+            self.assertTrue(meta.get("retention_failed"))
+            self.assertEqual(meta.get("error"), "RETENTION_PATH_OUTSIDE_IGNORED_DIR")
+            # No file should appear in the external directory.
+            self.assertEqual(os.listdir(external_dir), [])
+        finally:
+            if link_name.is_symlink() or link_name.exists():
+                link_name.unlink(missing_ok=True)
+            import shutil
+            shutil.rmtree(external_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

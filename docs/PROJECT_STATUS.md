@@ -48,7 +48,7 @@
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | review | `app001-io.v1` / `app001-extraction.v2` 与 9 条 evaluator-only 样例已由中枢/负责人冻结；显式抽取与 CAD-003 投影分层；等待 adapter/logger 实现与中枢审查 |
-| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | R3 已关闭公开 Prompt/Retention 绕过，167 个 LLM 回归与 17 个 Schema 测试通过；中枢复核仍要求补齐真实篡改 artifact、symlink 越界测试并同步 README/状态文档，详见 `agent-work/reviews/APP-001-ADAPTER-R3-codex-review.md`，不放行正式 APP-001 |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | R3-FIX 完成：篡改 artifact 测试真实加载篡改文件并断言拒绝、symlink 越界测试实际执行并验证外部目录无文件、README 同步到 R3 规则；170 tests OK；等待 Codex 中枢 R3-FIX 复核 |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 adapter/logger 审查通过且负责人另行授权后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入已批准确定性链后测 |
 
 ## 阻塞项

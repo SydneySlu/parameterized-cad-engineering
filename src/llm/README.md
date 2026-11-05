@@ -60,25 +60,37 @@ network calls, no credential reads, no writes to tracked outputs.
 
 ## Formal evaluation gate
 
-Any transport that is **not** a subclass of `MockTransport` is refused before
+Any transport that is **not the exact type** `FakeTransport` is refused before
 `send()` is called, regardless of the gate state argument:
 
 ```python
-# FakeTransport (MockTransport subclass) -- always allowed:
+# FakeTransport (exact type) -- always allowed:
 adapter = Adapter(provider="DeepSeek", transport=FakeTransport(), ...)
 adapter.run(...)  # OK
 
-# Custom/real transport -- refused while gate is closed:
-class MyHttpTransport:
-    def send(self, req): ...  # NOT a MockTransport
+# MockTransport subclass -- refused (not exact FakeTransport type):
+class MyMock(MockTransport):
+    def send(self, req): ...
+adapter = Adapter(provider="DeepSeek", transport=MyMock(), ...)
+adapter.run(...)  # raises FormalEvaluationBlockedError BEFORE send()
 
-adapter = Adapter(provider="DeepSeek", transport=MyHttpTransport(), ...)
-adapter.run(...)  # raises FormalEvaluationBlockedError BEFORE send() is called
+# FakeTransport subclass -- also refused (exact type check):
+class MyFake(FakeTransport):
+    pass
+adapter = Adapter(provider="DeepSeek", transport=MyFake(), ...)
+adapter.run(...)  # raises FormalEvaluationBlockedError BEFORE send()
+
+# Duck-type transport (plain class with send()) -- refused:
+class HttpTransport:
+    def send(self, req): ...  # NOT a MockTransport at all
+adapter = Adapter(provider="DeepSeek", transport=HttpTransport(), ...)
+adapter.run(...)  # raises FormalEvaluationBlockedError BEFORE send()
 ```
 
-This check is unconditional and cannot be bypassed by a caller argument or
-environment variable.  To use a real transport, the formal evaluation gate
-must be opened via a new ADR and explicit project-owner authorization.
+This check uses `type(transport) is FakeTransport` (exact type comparison), so
+it **cannot be bypassed by inheritance**.  To use a real transport, the formal
+evaluation gate must be opened via a new ADR and explicit project-owner
+authorization.
 
 ```python
 from src.llm.gate import formal_evaluation_allowed, require_formal_evaluation_allowed
@@ -122,7 +134,27 @@ same complete wall clock, including any backoff on retried requests).
 
 ---
 
-## Prompt hash recording
+## Prompt artifact verification (R3)
+
+`Adapter.run()` **unconditionally** loads and verifies the frozen prompt
+artifact (`agent-work/llm/APP-001-baseline-prep/prompt-v2.md`) before any
+transport `send()` call.  There is **no parameter** to skip, replace, or bypass
+this check -- `verify_frozen_prompt` and `_prompt_loader_path` were removed in
+R3.
+
+Verification checks:
+
+1. **File-level SHA-256 anchor** (`FROZEN_PROMPT_FILE_SHA256`): the file bytes
+   must match the pinned hash.  A tampered file that preserves the version
+   string but changes content is rejected.
+2. **Version marker**: the file must contain `app001-extraction.v2`.
+3. **Parsed system prompt**: must match the `AdapterInput.system_prompt`.
+4. **Parsed user template**: must match the `AdapterInput.user_prompt_template`
+   (after `{{placeholder}}` → `{placeholder}` normalization).
+
+Any mismatch raises `FrozenPromptMismatchError` before `send()` is called.
+Tests that need synthetic prompts test the loader/verifier functions directly,
+not via `Adapter.run()`.
 
 Every `RunRecord` includes `prompt_hashes` with deterministic SHA-256 hashes
 of:
@@ -131,14 +163,7 @@ of:
 - `user_template_sha256`: SHA-256(user_prompt_template.encode("utf-8"))
 - `rendered_payload_sha256`: SHA-256(JSON of {system_prompt, user_message})
 
-These hashes allow auditing whether the actual prompt used matches the frozen
-artifact, independent of the version label.  **The prompt text itself is never
-stored in the run record.**
-
-The `prompt_version` field still records the frozen version label
-(`app001-extraction.v2`).  A formal run entry point must verify the actual
-prompt hash against the frozen artifact hash; if they do not match, it must
-fail closed or record the discrepancy.
+**The prompt text itself is never stored in the run record.**
 
 ---
 
@@ -152,12 +177,23 @@ always contains non-sensitive metadata:
 - `body_sha256`: SHA-256 hash of the response body (for integrity tracking)
 
 **Opt-in retention** (future authorized runs only):
-When `RetentionPolicy(retain_raw=True, base_dir="work/app001-runs")` is passed
-to the adapter, the raw body is written to the git-ignored `work/app001-runs/`
-directory.  The record then contains `retained: true` and the path.
+When `RetentionPolicy(retain_raw=True)` is used, raw responses are written inside
+the canonical git-ignored `work/app001-runs/` directory.  The `base_dir` field
+on `RetentionPolicy` defaults to `"work/app001-runs"` and **must** resolve to a
+path inside that canonical root.  External absolute paths, path traversal
+(`..`), and symlink escapes are all rejected before any write via
+`_resolve_canonical_path()`.
 
-If writing fails (permission error, disk full, etc.), `retention_failed: true`
-is recorded; the run is **not** silently marked as fully retained.
+There is **no public parameter** to specify an arbitrary directory outside the
+canonical root.  There is no `_test_only` field, no `for_test()` factory, and
+no `validate_for_production()` method on `RetentionPolicy`.  The private
+`_write_raw_to_dir()` function is used internally by the production writer and
+by tests (with a test-controlled tempdir); it is **not** a production bypass
+interface.
+
+If writing fails (permission error, disk full, path escape after resolve
+detected via TOCTOU re-check, etc.), `retention_failed: true` is recorded; the
+run is **not** silently marked as fully retained.
 
 The raw body is never written to `RunRecord` fields, stdout, exceptions,
 checkpoints, or tracked Git files.  `work/app001-runs/` is confirmed

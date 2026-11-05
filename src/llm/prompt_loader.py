@@ -194,15 +194,7 @@ def load_frozen_prompt(*, path: Path = FROZEN_PROMPT_PATH) -> FrozenPromptArtifa
     # canonical FROZEN_PROMPT_PATH is anchored; alternative paths (used only
     # by the loader's pure-function unit tests) skip this check.
     if path == FROZEN_PROMPT_PATH:
-        file_bytes = path.read_bytes()
-        actual_file_hash = hashlib.sha256(file_bytes).hexdigest()
-        if actual_file_hash != FROZEN_PROMPT_FILE_SHA256:
-            raise FrozenPromptMismatchError(
-                f"frozen prompt artifact file hash mismatch at {path}: "
-                f"expected {FROZEN_PROMPT_FILE_SHA256!r}, "
-                f"got {actual_file_hash!r}; "
-                "the file has been modified and cannot be used as the frozen prompt"
-            )
+        _verify_file_hash(path, FROZEN_PROMPT_FILE_SHA256)
 
     if _VERSION_MARKER not in text:
         raise FrozenPromptMismatchError(
@@ -277,3 +269,30 @@ def clear_cache() -> None:
     """Clear the module-level artifact cache (for testing only)."""
     global _CACHED_ARTIFACT
     _CACHED_ARTIFACT = None
+
+
+def _verify_file_hash(path: Path, expected_sha256: str) -> None:
+    """Private: verify that the file at ``path`` has the expected SHA-256.
+
+    Raises :class:`FrozenPromptMismatchError` if the hash does not match.
+    This is a pure function used by tests to verify tampered files without
+    touching the canonical artifact.  It is NOT exposed as an Adapter bypass;
+    the production loader always uses the fixed ``FROZEN_PROMPT_FILE_SHA256``.
+    """
+    try:
+        file_bytes = path.read_bytes()
+    except FileNotFoundError:
+        raise FrozenPromptMismatchError(
+            f"frozen prompt artifact not found at {path}"
+        )
+    except OSError as exc:
+        raise FrozenPromptMismatchError(
+            f"frozen prompt artifact unreadable at {path}: {type(exc).__name__}"
+        )
+    actual = hashlib.sha256(file_bytes).hexdigest()
+    if actual != expected_sha256:
+        raise FrozenPromptMismatchError(
+            f"frozen prompt artifact file hash mismatch at {path}: "
+            f"expected {expected_sha256!r}, got {actual!r}; "
+            "the file has been modified and cannot be used as the frozen prompt"
+        )

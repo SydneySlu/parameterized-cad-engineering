@@ -820,3 +820,17 @@ next=Codex 中枢 R3 只读复核；通过后项目负责人可授权正式 APP-
 - 结论：R3 代码行为条件性通过，但不作最终验收。篡改 artifact 测试没有真正加载篡改文件，symlink 越界测试未固化；README 与 PROJECT_STATUS 仍有 R2/旧规则表述。具体证据见 `agent-work/reviews/APP-001-ADAPTER-R3-codex-review.md`。
 - 边界：IR 映射仍未冻结；正式 APP-001、真实 provider、九条样例和正式指标均未授权或运行。
 - 下一步：给原 R3 Agent 窄范围收尾修正，完成两项测试证据和文档同步后再复审。
+
+[2026-11-05] agent=CC task=APP-001-ADAPTER-R3-FIX status=review
+scope=补齐 R3 审查要求的证据和文档：篡改 artifact 测试真实加载篡改文件、symlink 越界测试实际执行、README/PROJECT_STATUS 同步到 R3 规则
+verified=
+  PYTHONPATH=src python3 -m unittest discover -s tests/llm -q → 170 tests, OK
+  PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar -q → 17 tests, OK
+  PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+  git diff --check → PASS
+  git ls-files work/ → (empty)
+  inspect.signature(Adapter.run) → no verify_frozen_prompt or _prompt_loader_path
+  RetentionPolicy fields → no _test_only; no for_test()
+result=R3-FIX 收尾完成；篡改 artifact 测试和 symlink 越界测试已补齐；README 已同步；170 项测试通过；无真实 API/Ollama 调用；无凭据读取；评测门关闭
+limits=IR 映射未冻结；正式 APP-001 未授权；真实 provider/样例/正式指标均未运行；prompt_loader 两次读文件存在理论 TOCTOU
+next=Codex 中枢 R3-FIX 复核；通过后项目负责人可授权正式 APP-001 运行

@@ -437,3 +437,63 @@ task=APP-001-ADAPTER-R3
 status=review
 commit=750897d
 ```
+
+---
+
+## APP-001-ADAPTER-R3-FIX (2026-11-05)
+
+R3 代码主体已完成；本轮补齐 R3 审查要求的证据和文档同步。
+
+### Fixes applied
+
+1. **篡改 artifact 测试修正:**
+   - `test_tampered_artifact_rejected_by_file_hash` 现在真正创建临时篡改文件
+     （保留 `app001-extraction.v2` 版本标记，修改正文内容），调用私有
+     `_verify_file_hash()` 函数加载并断言抛出 `FrozenPromptMismatchError`。
+   - 新增 `test_tampered_file_hash_differs_from_anchor` 验证篡改内容 hash 与
+     锚点不同。
+   - 新增私有 `_verify_file_hash()` 辅助函数到 `prompt_loader.py`，不暴露
+     为 Adapter 公开参数。
+
+2. **symlink 越界测试补齐:**
+   - `test_symlink_escape_rejected`: 在 `work/app001-runs/` 下创建指向临时
+     外部目录的 symlink，调用 `_resolve_canonical_path()` 断言抛出
+     `RETENTION_PATH_OUTSIDE_IGNORED_DIR`，并验证外部目录无文件。
+   - `test_symlink_escape_rejected_by_retain_response`: 通过 `_retain_response()`
+     验证 symlink 越界被拒绝且外部目录无 raw response 文件。
+   - 不支持 symlink 的平台使用 `skipTest` 明确跳过。
+
+3. **README 同步:**
+   - 评测门规则更新为：只允许精确类型 `FakeTransport`；MockTransport 子类、
+     FakeTransport 子类和 duck-type 均拒绝。
+   - Retention 说明更新为：生产路径固定 canonical `work/app001-runs/`；
+     `base_dir` 越界、路径穿越和 symlink 越界均拒绝；私有
+     `_write_raw_to_dir()` 不是生产绕过接口。
+   - Prompt 验证说明更新为：`Adapter.run()` 无条件核验，无绕过参数。
+
+### Verification
+
+```text
+PYTHONPATH=src python3 -m unittest discover -s tests/llm -q → 170 tests, OK
+PYTHONPATH=src python3 -m unittest tests.schema.test_set_screw_shaft_collar -q → 17 tests, OK
+PYTHONPATH=src python3 -m py_compile src/llm/*.py tests/llm/*.py → OK
+git diff --check → PASS
+git ls-files work/ → (empty)
+git status --short → clean except staged R3-FIX changes
+inspect.signature(Adapter.run) → no verify_frozen_prompt or _prompt_loader_path
+RetentionPolicy fields → no _test_only; no for_test() factory
+```
+
+### Status
+
+```text
+task=APP-001-ADAPTER-R3-FIX
+status=review
+APP-001-PREP=review
+APP-001=planned
+formal_evaluation_allowed=false
+commit=pending
+```
+
+真实模型、九条冻结样例、正式字段/CAD/STEP 指标均未运行。
+IR → Typed CAD IR 映射仍未冻结，不属本任务。
