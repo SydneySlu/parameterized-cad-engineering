@@ -42,3 +42,8 @@ Python: `/opt/homebrew/Cellar/python@3.11/3.11.18/Frameworks/Python.framework/Ve
 - No formal APP-001 run or real DeepSeek request was made.
 - `FORMAL_EVALUATION_ALLOWED=False` remains unchanged.
 - APP-001 remains planned pending independent review of this repair and the full controlled runner.
+
+## Commit
+
+- `ecc3163` — `fix: bind APP-001 runs to budget ledger [APP-001-RUNNER-R2]`
+- Status remains `review`; not pushed.

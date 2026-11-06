@@ -901,4 +901,4 @@ scope=修复 APP-001-RUNNER-R1 中枢验收发现的两个阻塞边界：正式 
 verified=Python 3.11.18；tests.llm.test_runner_r1 50 项通过；tests.llm 全量 326 项通过（1 skipped）；Schema 17 项通过；py_compile、git diff --check 通过；dry_run 生成 36 项、0 次尝试、FORMAL_EVALUATION_ALLOWED=False；直接自定义 transport、伪造 FakeTransport budget wrapper、provider/model 交叉、run_id 不匹配、qwen3:14b、family-only、重复 exact tag、错误摘要和响应 model 不匹配均拒绝
 limits=没有真实 DeepSeek 或 Ollama 调用；Ollama live /api/tags 与 /api/chat 行为尚待获授权运行时确认；APP-001 仍保持 planned，正式批次尚未启动
 next=Codex 中枢独立复核 R2 代码与测试；保持 review，不 push，复核通过后由项目负责人按既有授权流程推进
-commit=not_created（等待中枢复核）
+commit=ecc3163（本地提交，保持 review，未 push）
