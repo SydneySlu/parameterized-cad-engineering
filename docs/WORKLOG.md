@@ -1131,3 +1131,17 @@ verified=
 limits=验证使用 Python 3.10.12；用户须在 Mac 复核；VM 无 GitHub 凭据，推送需用户在本机执行；未运行真实模型，未读取用户 DEEPSEEK_API_KEY
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
 commit=待提交
+[2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-02-REVIEW status=review
+scope=在 `APP-001-PHASE1-FIX` 合入 main 后运行第二个唯一正式批次并审查结果
+动作=
+  1) 将 `cc/APP-001-PHASE1-FIX` 合入 `main`，生成并推送 merge commit `641b4b7`；Python 3.11.18 下主线 LLM 415 项通过、8 项 FUSE skip，Schema 17 项通过；
+  2) 用已授权 ADR-0014 范围和冻结 RET-002 RetrievalIndex 启动 `app001-phase1-20261107-02`，不运行 C2/IR/CAD/geometry/STEP；
+  3) 核对 36 条 JSONL、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP、32 个原始响应和预算账本；确认旧批次 `-01` 未覆盖；
+  4) 新建 `agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md`，同步 PROJECT_STATUS/PROJECT_PLAN。
+verified=
+  DeepSeek 16 次 chat、Ollama 16 次 tags + 16 次 chat；总物理 HTTP 48/108，provider 计数 DeepSeek 16、Ollama 32/54；无重试；
+  16 条 DeepSeek usage/token/费用字段已落盘，16 条 Ollama 本地耗时已落盘；32 条模型调用均为 model_call pass，但 parse 均为 `MISSING_ENVELOPE_KEY`；
+  主线回归：Python 3.11.18，tests/llm 415 passed、8 skipped，tests/schema 17 passed，py_compile 和 git diff --check 通过。
+limits=响应 envelope 仍不符合冻结契约；A04 C1 无安全 bore_d，A07 C1 的 CAD-003 envelope 被 Schema 拒绝；未发布字段抽取、Schema、CAD 或模型质量指标。
+next=先修复/冻结响应 envelope 契约并明确 A04/A07 C1 覆盖口径；中枢审查通过后才允许新批次，保留两个旧批次作为诊断证据。
+commit=待本次文档同步提交

@@ -44,7 +44,7 @@
 
 - [x] 实现并审查云端/本地 LLM adapter/logger（APP-001-ADAPTER；已通过 R3-FIX 中枢验收）
 - [x] 实现并合入 APP-001 第一阶段受控 runner（APP-001-RUNNER-001/R1/R2；R2-R6 修复合入 `main`，中枢独立复核通过）
-- [x] 按 ADR-0014 运行 APP-001 第一阶段首个正式批次（`app001-phase1-20261107-01`：36 条逻辑记录、最多 108 次物理 HTTP；IR/CAD/geometry/STEP 禁用）；结果审查见 [`agent-work/reviews/APP-001-phase1-20261107-01-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-01-codex-review.md)，因 C1 契约和 usage/token/费用缺口保持 `review`，修复后需新批次重跑
+- [x] 按 ADR-0014 运行 APP-001 第一阶段批次（`app001-phase1-20261107-01`、`app001-phase1-20261107-02`；每批 36 条逻辑运行、物理 HTTP 未超过 108；IR/CAD/geometry/STEP 禁用）；第二批次 usage/cost 已恢复但 envelope 解析仍未通过，详见 [`agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md)，保持 `review`
 - [ ] 实现有限验证和字段修复循环（APP-002）
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）
