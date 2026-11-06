@@ -908,3 +908,4 @@ commit=ecc3163（本地提交，保持 review，未 push）
 - 结果：APP-001-PREP 与 APP-001-ADAPTER 保持 done；APP-001-RUNNER 标为 review；APP-001 保持 planned。既有 Phase 1 授权范围已记录，R2 独立只读安全复核是正式运行前唯一放行门。
 - 验证：`git status --short --branch` 确认开始时 main 与 origin/main 同步；核对 ADR-0014、R2 checkpoint/handoff 和 runner 交付；`git diff --check` 通过。
 - 下一步：完成状态文档检查与提交，然后进行 APP-001-RUNNER-R2 独立只读安全复核；未通过前不运行模型请求。
+- commit：`0ce39f4`（文档状态同步；本地提交，未 push）
