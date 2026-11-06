@@ -1086,3 +1086,27 @@ verified=
 limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
 commit=待提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
+scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
+动作=
+  1) 新建 tests/llm/test_deepseek_usage_fixture.py（8 项）：
+     Tier 1（transport 层）：DeepSeekTransport._parse_response() 从脱敏 fixture 提取 5 个 usage 字段 + runtime model；缺 cache 字段返回 None；不一致 cache 值原样透传给 cost 层；
+     Tier 2（adapter 层）：FakeTransport + TransportResponse.usage 模拟 DeepSeekTransport 输出格式，经 Adapter._record_cloud_usage_and_cost() 传入 RunRecord：
+       - 完整 cache → RunRecord.cloud_* 全部填充 + cost 可计算 + cost_source 有值
+       - 缺 cache → tokens 填充、cost=None
+       - cache 不一致 → tokens 填充、cost=None
+       - parse 失败 → usage 仍被记录（验证 parse 前记录修复）
+       - 无 usage → 所有 cloud 字段 None
+  2) fixture 不含真实密钥、Authorization 或用户数据；不读取 .env 或 DEEPSEEK_API_KEY；无网络请求
+  3) 不改 src/ 生产代码、正式批次 app001-phase1-20261107-01、冻结样例、Prompt 或 ADR
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_deepseek_usage_fixture -v` → Ran 8, OK
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 414, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile` 未变更源文件，无需运行
+  `git diff --check` → CLEAN
+  实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
+limits=验证使用 Python 3.10.12；用户须在 Mac 复核；未修改正式批次；未运行真实模型
+next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
+commit=待提交
