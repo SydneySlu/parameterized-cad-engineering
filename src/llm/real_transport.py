@@ -65,6 +65,21 @@ class BudgetBypassError(RuntimeError):
     """
 
 
+class OllamaTagsPreflightError(TransportError):
+    """Raised when the Ollama /api/tags preflight verification fails.
+
+    Marker subclass of TransportError.  Signals to BudgetAwareTransport that
+    the /api/tags HTTP request failed and the /api/chat request was therefore
+    never sent.  BudgetAwareTransport must record outcomes independently:
+      - tags reservation  → the actual failure outcome (non_retryable etc.)
+      - chat reservation  → "blocked"  (chat was not sent, not the same failure)
+
+    This class is intentionally not raised for /api/chat failures; that path
+    continues to use plain TransportError.
+    """
+    pass
+
+
 def _require_authorization(auth: FormalRunAuthorization | None, label: str) -> None:
     """Raise if authorization is None (fail-closed)."""
     if auth is None:
@@ -88,9 +103,22 @@ class _BudgetReservationToken:
     R3-B enhancement: Token binds to authorization batch_id, logical_run_id,
     provider, model, and endpoint to prevent forgery, reuse, and mismatch attacks.
     Each token can only be consumed once by verifying transport.
+
+    R3-B-2 (FIX-R2): Token additionally holds a weak reference to the originating
+    BudgetLedger.  consume() verifies that a matching pending reservation record
+    actually exists in the ledger before allowing a network call.  Tokens created
+    outside BudgetAwareTransport (i.e. without a live ledger reference) are
+    rejected at consume() time, proving zero urlopen calls for any forged token.
+
+    R3-FIX-R5 (Issue A): The class-level ``_consumed_tokens`` set (id-based) has
+    been removed because Python's GC may reuse object addresses, causing a freshly
+    created valid token to be mis-rejected if a prior token with the same id() was
+    consumed.  Same-object replay is now caught solely by the ``_consumed`` instance
+    flag.  Cross-object duplicate-consumption is caught by the ledger's
+    ``_claim_pending_reservation`` which atomically marks the record ``claimed=True``
+    under the file lock, preventing any second token from consuming the same slot.
     """
     _PRIVATE_KEY = object()
-    _consumed_tokens: set[int] = set()  # Track consumed token IDs by id()
 
     def __init__(
         self,
@@ -101,7 +129,8 @@ class _BudgetReservationToken:
         provider: str,
         model: str,
         endpoint: str,
-        attempt_number: int
+        attempt_number: int,
+        ledger: "object | None" = None,
     ):
         if key is not self._PRIVATE_KEY:
             raise BudgetBypassError(
@@ -114,6 +143,11 @@ class _BudgetReservationToken:
         self.endpoint = endpoint
         self.attempt_number = attempt_number
         self._consumed = False
+        if ledger is not None:
+            import weakref
+            self._ledger_ref: "weakref.ref | None" = weakref.ref(ledger)
+        else:
+            self._ledger_ref = None
 
     @classmethod
     def _create_for_budget_transport(
@@ -124,9 +158,16 @@ class _BudgetReservationToken:
         provider: str,
         model: str,
         endpoint: str,
-        attempt_number: int
+        attempt_number: int,
+        ledger: "object | None" = None,
     ) -> "_BudgetReservationToken":
-        """Private factory used only by BudgetAwareTransport."""
+        """Private factory used only by BudgetAwareTransport.
+
+        ``ledger`` must be the live BudgetLedger that holds the matching pending
+        reservation.  Omitting it produces a token that is rejected at consume()
+        time, which is useful for the field-mismatch tests that never reach the
+        ledger check.
+        """
         return cls(
             cls._PRIVATE_KEY,
             batch_id=batch_id,
@@ -134,7 +175,8 @@ class _BudgetReservationToken:
             provider=provider,
             model=model,
             endpoint=endpoint,
-            attempt_number=attempt_number
+            attempt_number=attempt_number,
+            ledger=ledger,
         )
 
     def consume(
@@ -145,21 +187,29 @@ class _BudgetReservationToken:
         model: str,
         endpoint: str
     ) -> None:
-        """Consume this token, verifying it matches the request.
+        """Consume this token, verifying it matches the request and a real
+        pending reservation exists in the originating BudgetLedger.
 
-        Raises BudgetBypassError if:
-        - Token already consumed
-        - batch_id, provider, model, or endpoint mismatch
+        Check order (all before urlopen):
+          1. consumed-state check  — catches same-object replay without ledger access
+          2. field-binding checks  — catches provider/model/endpoint/batch mismatch
+          3. ledger atomic claim   — atomically marks the reservation as claimed,
+                                     preventing any second token from consuming it
+
+        Raises BudgetBypassError if any check fails.
+
+        R3-FIX-R5 (Issue A): The class-level id()-based ``_consumed_tokens`` set has
+        been replaced by a ledger-side atomic claim.  Same-object replay is caught by
+        ``self._consumed``; cross-object duplicate consumption is caught by
+        ``ledger._claim_pending_reservation`` which writes ``claimed=True`` under the
+        file lock and rejects any second attempt on the same reservation record.
         """
-        token_id = id(self)
-        if token_id in self._consumed_tokens:
-            raise BudgetBypassError(
-                f"budget token already consumed for {self.logical_run_id}"
-            )
+        # Step 1: same-object replay detection (no ledger access required)
         if self._consumed:
             raise BudgetBypassError(
                 f"budget token already consumed for {self.logical_run_id}"
             )
+        # Step 2: field binding
         if self.batch_id != batch_id:
             raise BudgetBypassError(
                 f"token batch_id mismatch: token={self.batch_id!r}, request={batch_id!r}"
@@ -176,8 +226,24 @@ class _BudgetReservationToken:
             raise BudgetBypassError(
                 f"token endpoint mismatch: token={self.endpoint!r}, request={endpoint!r}"
             )
+        # Step 3: ledger atomic claim — token must correspond to a real, unclaimed reservation
+        ledger = self._ledger_ref() if self._ledger_ref is not None else None
+        if ledger is None:
+            raise BudgetBypassError(
+                "budget token has no live ledger reference; "
+                "tokens must be obtained through BudgetAwareTransport, "
+                "not constructed directly"
+            )
+        # Atomically mark the reservation as claimed under the file lock.
+        # Raises BudgetBypassError if no unclaimed pending record is found.
+        ledger._claim_pending_reservation(
+            logical_run_id=self.logical_run_id,
+            provider=self.provider,
+            attempt_number=self.attempt_number,
+            endpoint=self.endpoint,
+        )
+        # All checks passed — mark this object consumed (blocks same-object replay)
         self._consumed = True
-        self._consumed_tokens.add(token_id)
 
 
 # ---------------------------------------------------------------------------
@@ -412,22 +478,55 @@ class OllamaTransport:
     def authorization(self) -> FormalRunAuthorization:
         return self._auth
 
+    def _execute_tags_preflight(
+        self,
+        tags_token: "_BudgetReservationToken",
+        model: str,
+    ) -> None:
+        """Execute the /api/tags preflight network call with an already-reserved token.
+
+        Called by BudgetAwareTransport BEFORE the chat reservation is created.
+        Consumes the tags token, makes the urlopen call, and sets _verified_digest.
+        Raises OllamaTagsPreflightError (wrapping the inner TransportError) on any
+        failure so BudgetAwareTransport can record the correct outcome and NOT create
+        a chat reservation.
+
+        This method is private to the transport/budget layer; callers outside
+        BudgetAwareTransport must not invoke it directly (they hold no reservation).
+        """
+        if not isinstance(tags_token, _BudgetReservationToken):
+            raise BudgetBypassError("invalid tags budget reservation token type")
+        tags_token.consume(
+            batch_id=self._auth.batch_id,
+            provider="Ollama",
+            model=model,
+            endpoint="/api/tags",
+        )
+        try:
+            self._verify_model_digest()
+        except TransportError as tags_err:
+            raise OllamaTagsPreflightError(
+                condition=tags_err.condition,
+                http_status=tags_err.http_status,
+                message=f"[tags-preflight] {tags_err.message}",
+            ) from tags_err
+
     def send(
         self,
         request: PreparedRequest,
         *,
         _budget_token: "_BudgetReservationToken | None" = None,
-        _tags_budget_token: "_BudgetReservationToken | None" = None
     ) -> TransportResponse:
         """Send the request to the local Ollama /api/chat endpoint.
 
-        R3-B/C: Requires a valid budget reservation token before making any
-        network call (including the /api/tags identity check). Direct calls
-        without BudgetAwareTransport wrapping are rejected before urlopen().
-        Token is verified and consumed.
+        R3-B: Requires a valid budget reservation token (_budget_token) for the
+        /api/chat call.  Direct calls without BudgetAwareTransport wrapping are
+        rejected before urlopen().
 
-        _tags_budget_token: Optional separate token for /api/tags verification.
-        If provided and digest not yet verified, it will be consumed for the tags call.
+        The /api/tags preflight is no longer handled here; it is executed by
+        BudgetAwareTransport via _execute_tags_preflight() BEFORE this method is
+        called, so that the chat reservation is only created after tags succeeds.
+        By the time send() is called, _verified_digest is always True.
         """
         # R3-B: Require budget reservation token before any network call
         if _budget_token is None:
@@ -439,31 +538,20 @@ class OllamaTransport:
             raise BudgetBypassError(
                 "invalid budget reservation token type"
             )
-        # R3-B: Verify and consume token before urlopen
+        # Tags preflight must have been executed by BudgetAwareTransport
+        # before the chat reservation (and thus this call) was made.
+        if not self._verified_digest:
+            raise BudgetBypassError(
+                "OllamaTransport.send() called before /api/tags preflight; "
+                "BudgetAwareTransport must call _execute_tags_preflight() first"
+            )
+        # Consume the chat token — all binding checks run inside consume().
         _budget_token.consume(
             batch_id=self._auth.batch_id,
             provider=request.provider,
             model=request.model,
-            endpoint=request.endpoint
+            endpoint=request.endpoint,
         )
-        # R3-C: If digest not verified yet, need a separate tags token
-        if not self._verified_digest:
-            if _tags_budget_token is None:
-                raise BudgetBypassError(
-                    "OllamaTransport first send requires _tags_budget_token for /api/tags verification"
-                )
-            if not isinstance(_tags_budget_token, _BudgetReservationToken):
-                raise BudgetBypassError(
-                    "invalid tags budget reservation token type"
-                )
-            # Consume tags token for /api/tags GET request
-            _tags_budget_token.consume(
-                batch_id=self._auth.batch_id,
-                provider="Ollama",
-                model=request.model,
-                endpoint="/api/tags"
-            )
-            self._verify_model_digest()
         url = f"{self._host}{request.endpoint}"
         body_bytes = request.body_json().encode("utf-8")
         headers = {"Content-Type": "application/json"}

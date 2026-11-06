@@ -253,7 +253,6 @@ class App001Runner:
         from retrieval import RetrievalIndex
         from retrieval.config import (
             MANIFEST_REL_PATH as _FROZEN_MANIFEST_REL_PATH,
-            RETRIEVAL_VERSION as _FROZEN_RETRIEVAL_VERSION,
             POLICY_ID as _FROZEN_POLICY_ID,
         )
         if not isinstance(self._retrieval_index, RetrievalIndex):
@@ -264,14 +263,16 @@ class App001Runner:
         # R3-D: Verify frozen manifest identity (sha256, path, version, policy)
         # These checks use only already-validated attributes on RetrievalIndex,
         # not just duck-typed attributes that a Mock could fake.
+        # Check order: type → path → version → sha256 file match → policy validate
         idx = self._retrieval_index
-        # manifest_sha256 must be a non-empty 64-hex string
+        # (a) manifest_sha256 must be a non-empty 64-hex string (structural check only here;
+        #     actual value is verified against the real file below)
         if not isinstance(idx.manifest_sha256, str) or len(idx.manifest_sha256) != 64:
             raise FormalEvaluationBlockedError(
                 "retrieval_index.manifest_sha256 must be a 64-hex string; "
                 "use RetrievalIndex.from_manifest() with the frozen manifest"
             )
-        # manifest_path must resolve to the frozen relative path
+        # (b) manifest_path must resolve to the frozen relative path
         from pathlib import Path as _Path
         _repo_root = _Path(__file__).resolve().parents[2]
         try:
@@ -284,16 +285,36 @@ class App001Runner:
                 f"retrieval_index.manifest_path does not match frozen RET-002 path; "
                 f"expected {_FROZEN_MANIFEST_REL_PATH!r}, got {_actual_rel_str!r}"
             )
-        # manifest_version must match frozen version
+        # (c) manifest_version must exactly equal the frozen manifest format version string
+        from retrieval.config import (
+            DEFAULT_CONFIG_REL_PATH as _FROZEN_CONFIG_REL_PATH,
+            MANIFEST_FORMAT_VERSION as _FROZEN_MANIFEST_FORMAT_VERSION,
+            RetrievalConfig as _FrozenRetrievalConfig,
+        )
         _manifest_version = getattr(idx, "manifest_version", None)
-        if not isinstance(_manifest_version, str) or not _manifest_version.startswith("retrieval-manifest"):
+        if _manifest_version != _FROZEN_MANIFEST_FORMAT_VERSION:
             raise FormalEvaluationBlockedError(
-                f"retrieval_index.manifest_version must match frozen manifest version; "
+                f"retrieval_index.manifest_version must exactly equal "
+                f"{_FROZEN_MANIFEST_FORMAT_VERSION!r}; "
                 f"got {_manifest_version!r}"
             )
-        # policy must have the frozen POLICY_ID (via the DistancePolicy object)
-        # We don't check an explicit policy_id attribute because DistancePolicy
-        # is a domain object; instead we confirm a real policy object is present.
+        # (d) manifest_sha256 must match the SHA-256 recorded in the frozen RET-002
+        # config.  RetrievalConfig.from_path() loads the frozen config and
+        # internally verifies the actual manifest file SHA-256 equals the digest
+        # recorded in the config JSON, so loading it establishes both:
+        #   1. The manifest file on disk matches the frozen config's expected SHA-256.
+        #   2. idx.manifest_sha256 matches that same frozen expected SHA-256.
+        _frozen_config = _FrozenRetrievalConfig.from_path(
+            _repo_root / _FROZEN_CONFIG_REL_PATH, repo_root=_repo_root
+        )
+        if idx.manifest_sha256 != _frozen_config.manifest_sha256:
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.manifest_sha256 does not match the SHA-256 "
+                "recorded in the frozen RET-002 config; the index may have been "
+                "built from a different or modified manifest"
+            )
+        # (e) policy must be a real DistancePolicy whose ranges and weights pass
+        # the full frozen policy validation (not just a type check)
         _policy = getattr(idx, "policy", None)
         if _policy is None:
             raise FormalEvaluationBlockedError(
@@ -305,6 +326,50 @@ class App001Runner:
             raise FormalEvaluationBlockedError(
                 "retrieval_index.policy is not a retrieval.distance.DistancePolicy; "
                 "use RetrievalIndex.from_config() with the frozen config"
+            )
+        # Validate frozen policy identity (ranges, weights, policy_id)
+        try:
+            _policy.validate()
+        except Exception as _policy_err:
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index.policy failed frozen identity validation: {_policy_err}"
+            ) from _policy_err
+        # (f) candidate_roles must exactly match the frozen RET-002 config
+        _idx_candidate_roles = getattr(idx, "candidate_roles", None)
+        if _idx_candidate_roles is None:
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.candidate_roles is missing; "
+                "use RetrievalIndex.from_config() with the frozen RET-002 config"
+            )
+        if not isinstance(_idx_candidate_roles, (tuple, list)):
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.candidate_roles must be a tuple or list, "
+                f"got {type(_idx_candidate_roles).__name__}; "
+                "use RetrievalIndex.from_config() with the frozen RET-002 config"
+            )
+        if tuple(_idx_candidate_roles) != tuple(_frozen_config.candidate_roles):
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index.candidate_roles does not match the frozen RET-002 config; "
+                f"expected {list(_frozen_config.candidate_roles)!r}, "
+                f"got {list(_idx_candidate_roles)!r}"
+            )
+        # (g) default_top_k must exactly match the frozen RET-002 config
+        _idx_default_top_k = getattr(idx, "default_top_k", None)
+        if _idx_default_top_k is None:
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.default_top_k is missing; "
+                "use RetrievalIndex.from_config() with the frozen RET-002 config"
+            )
+        if isinstance(_idx_default_top_k, bool) or not isinstance(_idx_default_top_k, int):
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.default_top_k must be an integer, "
+                f"got {type(_idx_default_top_k).__name__}; "
+                "use RetrievalIndex.from_config() with the frozen RET-002 config"
+            )
+        if _idx_default_top_k != _frozen_config.default_top_k:
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index.default_top_k does not match the frozen RET-002 config; "
+                f"expected {_frozen_config.default_top_k}, got {_idx_default_top_k}"
             )
         # Validate batch directory
         batch_dir = self._resolve_batch_dir(authorization.batch_id)

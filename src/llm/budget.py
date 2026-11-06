@@ -105,6 +105,13 @@ class BudgetLedger:
         self._ledger_path = self._batch_dir / "budget_ledger.json"
         self._lock_path = self._batch_dir / "budget_ledger.lock"
         self._locked = False
+        # R3-FIX-R6: In-process mutex for read-modify-write operations.
+        # Prevents concurrent threads from racing through _claim_pending_reservation,
+        # reserve_attempt, record_outcome, or record_run_result simultaneously.
+        # The existing _locked / acquire_lock() mechanism guards against *cross-process*
+        # concurrent runs; this RLock guards against *intra-process* (thread-level) races.
+        import threading
+        self._thread_lock = threading.RLock()
 
     def _verify_canonical_batch_path(self) -> None:
         """Verify batch_dir is the canonical path for authorization.batch_id.
@@ -237,7 +244,9 @@ class BudgetLedger:
         - scope_hash matches the authorization
         - total_attempts_used == len(attempts)
         - sum of provider_attempts_used == len(attempts)
-        - each run's attempt count <= max_attempts_per_run
+        - each run's MODEL-CALL attempt count <= max_attempts_per_run
+          (HTTP-only attempts such as Ollama /api/tags are excluded from the
+           per-run model-call limit but still counted in the provider/batch totals)
         """
         if data.get("scope_hash") != self._auth.scope_hash():
             raise BudgetIntegrityError(
@@ -264,21 +273,26 @@ class BudgetLedger:
                     f"provider_attempts_used[{prov}] ({stored_provider.get(prov)}) "
                     f"!= actual count ({count})"
                 )
-        run_counts: dict[str, int] = {}
+        # Only model-call attempts count toward the per-run limit.
+        # Records without an explicit is_model_call field default to True for
+        # backward compatibility with ledgers written before this field existed.
+        run_model_counts: dict[str, int] = {}
         for rec in attempts:
-            rid = rec.get("logical_run_id", "")
-            run_counts[rid] = run_counts.get(rid, 0) + 1
+            if rec.get("is_model_call", True):
+                rid = rec.get("logical_run_id", "")
+                run_model_counts[rid] = run_model_counts.get(rid, 0) + 1
         stored_run = data.get("run_attempts_used", {})
-        for rid, count in run_counts.items():
+        for rid, count in run_model_counts.items():
             if count > self._auth.max_attempts_per_run:
                 raise BudgetIntegrityError(
-                    f"run {rid} has {count} attempts > max {self._auth.max_attempts_per_run}"
+                    f"run {rid} has {count} model-call attempts "
+                    f"> max {self._auth.max_attempts_per_run}"
                 )
-        for rid, count in run_counts.items():
+        for rid, count in run_model_counts.items():
             if stored_run.get(rid, -1) != count:
                 raise BudgetIntegrityError(
                     f"run_attempts_used[{rid}] ({stored_run.get(rid)}) "
-                    f"!= actual count ({count})"
+                    f"!= actual model-call count ({count})"
                 )
 
     def _write_ledger_atomic(self, data: dict[str, Any]) -> None:
@@ -295,17 +309,32 @@ class BudgetLedger:
     # ------------------------------------------------------------------
 
     def reserve_attempt(
-        self, *, logical_run_id: str, provider: str
+        self, *, logical_run_id: str, provider: str,
+        is_model_call: bool = True, endpoint: str = "",
     ) -> AttemptReservation:
         """Atomically reserve one attempt before a network call.
 
-        Checks all budgets (per-run, per-provider, total).  If all pass,
-        appends a new attempt record to the ledger and updates counters.
+        ``is_model_call`` distinguishes model-call HTTP requests (POST to
+        /api/chat or /chat/completions) from auxiliary HTTP requests that are
+        still subject to the batch/provider budget but do NOT consume the
+        per-run model-call quota.  Currently the only non-model-call request
+        is the Ollama ``GET /api/tags`` identity pre-check.
 
-        Returns the :class:`AttemptReservation` with the attempt number.
+        - ``is_model_call=True``:  checks and updates all three limits
+          (total, provider, per-run).
+        - ``is_model_call=False``: checks and updates total + provider limits
+          only; the per-run model-call limit is untouched.
+
+        ``endpoint`` is stored in the attempt record for cross-validation by
+        ``_verify_pending_reservation``.
+
+        For HTTP-only (tags) reservations the ``attempt_number`` in the
+        returned ``AttemptReservation`` is a negative serial:
+        -1 for the first, -2 for the second, etc.  Model-call attempt numbers
+        are positive (1, 2, 3).
 
         Raises:
-            BudgetExhausted: if any budget is exceeded.
+            BudgetExhausted: if any applicable budget is exceeded.
             BudgetIntegrityError: if the ledger is corrupted.
             BudgetConcurrentRunError: if the lock is not held.
         """
@@ -317,51 +346,73 @@ class BudgetLedger:
             raise BudgetExhausted(
                 f"provider {provider!r} not in authorized scope"
             )
-        data = self._read_ledger()
-        run_count = data["run_attempts_used"].get(logical_run_id, 0)
-        if run_count == 0 and len(data["run_attempts_used"]) >= self._auth.max_logical_runs:
-            raise BudgetExhausted(
-                f"batch already used {len(data['run_attempts_used'])} logical runs "
-                f"(max {self._auth.max_logical_runs})"
+        with self._thread_lock:
+            data = self._read_ledger()
+
+            if is_model_call:
+                run_count = data["run_attempts_used"].get(logical_run_id, 0)
+                if run_count == 0 and len(data["run_attempts_used"]) >= self._auth.max_logical_runs:
+                    raise BudgetExhausted(
+                        f"batch already used {len(data['run_attempts_used'])} logical runs "
+                        f"(max {self._auth.max_logical_runs})"
+                    )
+                if run_count >= self._auth.max_attempts_per_run:
+                    raise BudgetExhausted(
+                        f"run {logical_run_id} already used {run_count} model-call attempts "
+                        f"(max {self._auth.max_attempts_per_run})"
+                    )
+
+            prov_count = data["provider_attempts_used"].get(provider, 0)
+            if prov_count >= self._auth.max_provider_attempts:
+                raise BudgetExhausted(
+                    f"provider {provider} already used {prov_count} attempts "
+                    f"(max {self._auth.max_provider_attempts})"
+                )
+            total = data["total_attempts_used"]
+            if total >= self._auth.max_batch_attempts:
+                raise BudgetExhausted(
+                    f"batch already used {total} attempts "
+                    f"(max {self._auth.max_batch_attempts})"
+                )
+
+            # Compute attempt_number:
+            # - Model calls: 1-based within the logical run
+            # - HTTP-only:   negative serial (-1, -2, ...) to clearly separate from
+            #                model-call attempts and enable per-record uniqueness
+            if is_model_call:
+                attempt_number = data["run_attempts_used"].get(logical_run_id, 0) + 1
+            else:
+                existing_http_only = sum(
+                    1 for rec in data["attempts"]
+                    if not rec.get("is_model_call", True)
+                    and rec.get("logical_run_id") == logical_run_id
+                    and rec.get("provider") == provider
+                )
+                attempt_number = -(existing_http_only + 1)
+
+            record = {
+                "logical_run_id": logical_run_id,
+                "provider": provider,
+                "attempt_number": attempt_number,
+                "endpoint": endpoint,
+                "is_model_call": is_model_call,
+                "reserved_at_utc": _utc_now_iso(),
+                "outcome": None,
+            }
+            data["attempts"].append(record)
+            data["total_attempts_used"] = total + 1
+            data["provider_attempts_used"][provider] = prov_count + 1
+            if is_model_call:
+                run_count = data["run_attempts_used"].get(logical_run_id, 0)
+                data["run_attempts_used"][logical_run_id] = run_count + 1
+            self._write_ledger_atomic(data)
+            return AttemptReservation(
+                logical_run_id=logical_run_id,
+                provider=provider,
+                attempt_number=attempt_number,
+                remaining_batch=self._auth.max_batch_attempts - (total + 1),
+                remaining_provider=self._auth.max_provider_attempts - (prov_count + 1),
             )
-        if run_count >= self._auth.max_attempts_per_run:
-            raise BudgetExhausted(
-                f"run {logical_run_id} already used {run_count} attempts "
-                f"(max {self._auth.max_attempts_per_run})"
-            )
-        prov_count = data["provider_attempts_used"].get(provider, 0)
-        if prov_count >= self._auth.max_provider_attempts:
-            raise BudgetExhausted(
-                f"provider {provider} already used {prov_count} attempts "
-                f"(max {self._auth.max_provider_attempts})"
-            )
-        total = data["total_attempts_used"]
-        if total >= self._auth.max_batch_attempts:
-            raise BudgetExhausted(
-                f"batch already used {total} attempts "
-                f"(max {self._auth.max_batch_attempts})"
-            )
-        # Reserve
-        attempt_number = run_count + 1
-        record = {
-            "logical_run_id": logical_run_id,
-            "provider": provider,
-            "attempt_number": attempt_number,
-            "reserved_at_utc": _utc_now_iso(),
-            "outcome": None,
-        }
-        data["attempts"].append(record)
-        data["total_attempts_used"] = total + 1
-        data["provider_attempts_used"][provider] = prov_count + 1
-        data["run_attempts_used"][logical_run_id] = run_count + 1
-        self._write_ledger_atomic(data)
-        return AttemptReservation(
-            logical_run_id=logical_run_id,
-            provider=provider,
-            attempt_number=attempt_number,
-            remaining_batch=self._auth.max_batch_attempts - (total + 1),
-            remaining_provider=self._auth.max_provider_attempts - (prov_count + 1),
-        )
 
     def record_outcome(
         self,
@@ -378,22 +429,23 @@ class BudgetLedger:
         """
         if not self._locked:
             raise BudgetConcurrentRunError("lock not acquired")
-        data = self._read_ledger()
-        for rec in reversed(data["attempts"]):
-            if (
-                rec.get("logical_run_id") == logical_run_id
-                and rec.get("provider") == provider
-                and rec.get("attempt_number") == attempt_number
-                and rec.get("outcome") is None
-            ):
-                rec["outcome"] = outcome
-                rec["completed_at_utc"] = _utc_now_iso()
-                break
-        else:
-            raise BudgetIntegrityError(
-                f"no pending attempt found for {logical_run_id}/{provider}/attempt {attempt_number}"
-            )
-        self._write_ledger_atomic(data)
+        with self._thread_lock:
+            data = self._read_ledger()
+            for rec in reversed(data["attempts"]):
+                if (
+                    rec.get("logical_run_id") == logical_run_id
+                    and rec.get("provider") == provider
+                    and rec.get("attempt_number") == attempt_number
+                    and rec.get("outcome") is None
+                ):
+                    rec["outcome"] = outcome
+                    rec["completed_at_utc"] = _utc_now_iso()
+                    break
+            else:
+                raise BudgetIntegrityError(
+                    f"no pending attempt found for {logical_run_id}/{provider}/attempt {attempt_number}"
+                )
+            self._write_ledger_atomic(data)
 
     def record_run_result(
         self, *, logical_run_id: str, result: str
@@ -405,9 +457,64 @@ class BudgetLedger:
         """
         if not self._locked:
             raise BudgetConcurrentRunError("lock not acquired")
-        data = self._read_ledger()
-        data["run_results"][logical_run_id] = result
-        self._write_ledger_atomic(data)
+        with self._thread_lock:
+            data = self._read_ledger()
+            data["run_results"][logical_run_id] = result
+            self._write_ledger_atomic(data)
+
+    def _claim_pending_reservation(
+        self,
+        *,
+        logical_run_id: str,
+        provider: str,
+        attempt_number: int,
+        endpoint: str,
+    ) -> None:
+        """Atomically claim a pending (outcome=None, claimed=False) attempt record.
+
+        Called by ``_BudgetReservationToken.consume()`` before any urlopen.
+        Finds the matching unclaimed record, sets ``claimed=True``, and writes
+        the ledger atomically.  This prevents any second token from consuming
+        the same reservation: a subsequent call for the same record will find
+        ``claimed=True`` and raise :class:`~llm.real_transport.BudgetBypassError`.
+
+        Requires the batch lock to be held (BudgetAwareTransport.send() already
+        holds it via ``with ledger:`` for the duration of each send call).
+
+        Raises :class:`~llm.real_transport.BudgetBypassError` if no matching
+        unclaimed record is found.
+
+        R3-FIX-R5 (Issue A): Replaces the former read-only
+        ``_verify_pending_reservation`` which could not prevent two independent
+        tokens from both passing the verification step.  The atomic write here
+        ensures each reservation is consumed at most once.
+        """
+        if not self._locked:
+            raise BudgetConcurrentRunError(
+                "lock not acquired; _claim_pending_reservation requires the lock"
+            )
+        from .real_transport import BudgetBypassError
+        with self._thread_lock:
+            data = self._read_ledger()
+            for rec in data.get("attempts", []):
+                if (
+                    rec.get("logical_run_id") == logical_run_id
+                    and rec.get("provider") == provider
+                    and rec.get("attempt_number") == attempt_number
+                    and rec.get("endpoint") == endpoint
+                    and rec.get("outcome") is None
+                    and not rec.get("claimed", False)  # unclaimed
+                ):
+                    rec["claimed"] = True
+                    self._write_ledger_atomic(data)
+                    return  # claimed successfully
+            raise BudgetBypassError(
+                f"no pending reservation in ledger for "
+                f"run={logical_run_id!r} provider={provider!r} "
+                f"attempt={attempt_number} endpoint={endpoint!r}; "
+                "reservation is missing, already claimed by another token, "
+                "or outcome was already recorded"
+            )
 
     # ------------------------------------------------------------------
     # Read-only queries
@@ -591,48 +698,45 @@ class BudgetAwareTransport:
     def send(self, request) -> object:
         """Reserve a budget slot, call inner.send(), record outcome.
 
-        R3-B/C: Creates a budget reservation token and passes it to the real
-        transport's send() method. For Ollama, also reserves budget for the
-        identity pre-check (/api/tags) on the first send().
+        For Ollama (first call, before digest is verified):
+          1. Reserve tags slot (is_model_call=False, endpoint="/api/tags")
+          2. Create tags token
+          3. Call _inner._execute_tags_preflight(tags_token) — urlopen for /api/tags
+          4. Record tags outcome
+          If tags fails → record tags failure, do NOT create chat reservation, re-raise
+          5. Reserve chat slot (is_model_call=True, endpoint=request.endpoint)
+          6. Create chat token
+          7. Call _inner.send(request, _budget_token=chat_token)
+          8. Record chat outcome
+
+        This guarantees that a failed /api/tags never produces a chat reservation,
+        never increments run_attempts_used, and never inflates provider/batch HTTP counts
+        beyond the single tags request that was actually sent.
+
+        For DeepSeek and FakeTransport:
+          Reserve slot → create token → send → record outcome (unchanged).
+
+        R3-B-2: All tokens carry a weak reference to this ledger for cross-validation.
         """
-        # R3-C: For Ollama, reserve budget for the /api/tags identity check
-        # on the first call (when digest not yet verified)
-        from .real_transport import DeepSeekTransport, OllamaTransport, _BudgetReservationToken
-
-        needs_ollama_tags_reservation = (
-            type(self._inner) is OllamaTransport
-            and not self._inner._verified_digest
+        from .real_transport import (
+            DeepSeekTransport, OllamaTransport,
+            _BudgetReservationToken, OllamaTagsPreflightError,
         )
+        from .transport import TransportError
 
-        tags_reservation = None
-        tags_budget_token = None
-        if needs_ollama_tags_reservation:
-            # Reserve budget for the /api/tags GET request
-            tags_reservation = self._ledger.reserve_attempt(
-                logical_run_id=self._logical_run_id,
-                provider=self._provider,
-            )
-            # Create token for tags request with /api/tags endpoint
-            tags_budget_token = _BudgetReservationToken._create_for_budget_transport(
-                batch_id=self._ledger._auth.batch_id,
-                logical_run_id=self._logical_run_id,
-                provider=self._provider,
-                model=self._model,
-                endpoint="/api/tags",
-                attempt_number=tags_reservation.attempt_number,
-            )
-            # Note: we don't append to attempt_numbers yet because the tags call
-            # happens inside inner.send() and we can't separately track its outcome
-            # If inner.send() fails during tags, we'll record the outcome for this reservation
+        if type(self._inner) is OllamaTransport and not self._inner._verified_digest:
+            return self._send_ollama_with_tags_preflight(request)
 
-        # Reserve budget for the main request (POST /api/chat or DeepSeek POST)
+        # ----------------------------------------------------------------
+        # DeepSeek path (or Ollama with digest already verified, or Fake)
+        # ----------------------------------------------------------------
         reservation = self._ledger.reserve_attempt(
             logical_run_id=self._logical_run_id,
             provider=self._provider,
+            is_model_call=True,
+            endpoint=request.endpoint,
         )
         self._attempt_numbers.append(reservation.attempt_number)
-
-        # R3-B: Create budget token to prove reservation, binding to batch_id, provider, model, endpoint
         budget_token = _BudgetReservationToken._create_for_budget_transport(
             batch_id=self._ledger._auth.batch_id,
             logical_run_id=self._logical_run_id,
@@ -640,40 +744,25 @@ class BudgetAwareTransport:
             model=self._model,
             endpoint=request.endpoint,
             attempt_number=reservation.attempt_number,
+            ledger=self._ledger,
         )
-
-        from .transport import TransportError
-
         try:
-            # Pass the budget token to the real transport
-            if type(self._inner) is OllamaTransport:
-                response = self._inner.send(
-                    request,
-                    _budget_token=budget_token,
-                    _tags_budget_token=tags_budget_token
-                )
-            elif type(self._inner) is DeepSeekTransport:
+            if type(self._inner) is DeepSeekTransport:
+                response = self._inner.send(request, _budget_token=budget_token)
+            elif type(self._inner) is OllamaTransport:
+                # digest already verified — no tags needed
                 response = self._inner.send(request, _budget_token=budget_token)
             else:
-                # FakeTransport doesn't take _budget_token
+                # FakeTransport
                 response = self._inner.send(request)
         except TransportError as exc:
             outcome = "transient_retryable" if exc.is_retryable() else "non_retryable"
-            # Record outcome for the main reservation
             self._ledger.record_outcome(
                 logical_run_id=self._logical_run_id,
                 provider=self._provider,
                 attempt_number=reservation.attempt_number,
                 outcome=outcome,
             )
-            # If Ollama tags reservation was made, also record its outcome
-            if needs_ollama_tags_reservation:
-                self._ledger.record_outcome(
-                    logical_run_id=self._logical_run_id,
-                    provider=self._provider,
-                    attempt_number=tags_reservation.attempt_number,
-                    outcome=outcome,
-                )
             raise
         except Exception:
             self._ledger.record_outcome(
@@ -682,28 +771,126 @@ class BudgetAwareTransport:
                 attempt_number=reservation.attempt_number,
                 outcome="non_retryable",
             )
-            if needs_ollama_tags_reservation:
-                self._ledger.record_outcome(
-                    logical_run_id=self._logical_run_id,
-                    provider=self._provider,
-                    attempt_number=tags_reservation.attempt_number,
-                    outcome="non_retryable",
-                )
             raise
-        # Success: record outcomes for both reservations
         self._ledger.record_outcome(
             logical_run_id=self._logical_run_id,
             provider=self._provider,
             attempt_number=reservation.attempt_number,
             outcome="success",
         )
-        if needs_ollama_tags_reservation:
+        return response
+
+    def _send_ollama_with_tags_preflight(self, request) -> object:
+        """Ollama path when /api/tags digest is not yet verified.
+
+        Sequence:
+          1. Reserve tags slot → tags token
+          2. Execute /api/tags via _inner._execute_tags_preflight()
+          3. Record tags outcome
+          If tags fails → record failure, raise — NO chat reservation created
+          4. Reserve chat slot → chat token
+          5. Execute /api/chat via _inner.send()
+          6. Record chat outcome
+        """
+        from .real_transport import (
+            OllamaTransport,
+            _BudgetReservationToken, OllamaTagsPreflightError,
+        )
+        from .transport import TransportError
+
+        # Step 1: Reserve tags slot (HTTP-only, not a model call)
+        tags_reservation = self._ledger.reserve_attempt(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            is_model_call=False,
+            endpoint="/api/tags",
+        )
+        tags_token = _BudgetReservationToken._create_for_budget_transport(
+            batch_id=self._ledger._auth.batch_id,
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            model=self._model,
+            endpoint="/api/tags",
+            attempt_number=tags_reservation.attempt_number,
+            ledger=self._ledger,
+        )
+
+        # Step 2-3: Execute /api/tags preflight — sets _inner._verified_digest on success
+        try:
+            self._inner._execute_tags_preflight(tags_token, self._model)
+        except OllamaTagsPreflightError as exc:
+            # Record actual failure for the tags reservation
+            tags_outcome = "transient_retryable" if exc.is_retryable() else "non_retryable"
             self._ledger.record_outcome(
                 logical_run_id=self._logical_run_id,
                 provider=self._provider,
                 attempt_number=tags_reservation.attempt_number,
-                outcome="success",
+                outcome=tags_outcome,
             )
-            # Now record the tags attempt number
-            self._attempt_numbers.insert(0, tags_reservation.attempt_number)
+            # Do NOT create a chat reservation — re-raise so caller sees the error.
+            # run_attempts_used is NOT incremented (no is_model_call=True reservation).
+            raise
+        except Exception:
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=tags_reservation.attempt_number,
+                outcome="non_retryable",
+            )
+            raise
+
+        # Tags succeeded — record it
+        self._ledger.record_outcome(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            attempt_number=tags_reservation.attempt_number,
+            outcome="success",
+        )
+        # Tags attempt number is negative; prepend to attempt_numbers list
+        self._attempt_numbers.insert(0, tags_reservation.attempt_number)
+
+        # Step 4: Reserve chat slot — only reached if tags succeeded
+        reservation = self._ledger.reserve_attempt(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            is_model_call=True,
+            endpoint=request.endpoint,
+        )
+        self._attempt_numbers.append(reservation.attempt_number)
+        budget_token = _BudgetReservationToken._create_for_budget_transport(
+            batch_id=self._ledger._auth.batch_id,
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            model=self._model,
+            endpoint=request.endpoint,
+            attempt_number=reservation.attempt_number,
+            ledger=self._ledger,
+        )
+
+        # Step 5-6: Execute /api/chat — _verified_digest is now True
+        try:
+            response = self._inner.send(request, _budget_token=budget_token)
+        except TransportError as exc:
+            outcome = "transient_retryable" if exc.is_retryable() else "non_retryable"
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=reservation.attempt_number,
+                outcome=outcome,
+            )
+            raise
+        except Exception:
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=reservation.attempt_number,
+                outcome="non_retryable",
+            )
+            raise
+        self._ledger.record_outcome(
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            attempt_number=reservation.attempt_number,
+            outcome="success",
+        )
         return response

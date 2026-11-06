@@ -931,3 +931,109 @@ verified=
 limits=2 个 pre-existing FUSE symlink 错误（test_r3_regression）；8 个 FUSE lock 删除限制 skip（原生文件系统可运行）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
 next=Codex 中枢独立审查；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
 commit=待创建（尝试 git add 后提交）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
+scope=继续修复 APP-001-RUNNER-R3-FIX-R2 四项未解决问题：token 须对应真实 BudgetLedger 预留、物理 HTTP 与模型调用预算分离、C1 索引完整身份验证（精确值）、如实记录验证结果并修复 FUSE 测试
+动作=
+  1) token 真实预留验证：_BudgetReservationToken 新增 weakref 指向原始 BudgetLedger；consume() 新增 step-3 调用 ledger._verify_pending_reservation() 跨对照真实 pending 记录，forged/replayed/mismatch token 均在 urlopen 前被 BudgetBypassError 拒绝；
+  2) HTTP 与模型调用预算分离：reserve_attempt() 增加 is_model_call 和 endpoint 参数；is_model_call=False（Ollama /api/tags）仅消耗批次/provider 计数，不消耗每 run 的 3 次模型调用额度；tags 保留负数 attempt_number 序列与 chat 区分；_verify_integrity() 仅对 is_model_call=True 记录计入 run_attempts_used；BudgetAwareTransport.send() 对 tags 使用 is_model_call=False；
+  3) C1 精确身份验证：runner.run_formal() 验证顺序改为 type→path→version（exact）→sha256 文件比较→policy.validate()；manifest_version 须精确等于 MANIFEST_FORMAT_VERSION="retrieval-manifest.v0"（新增常量至 retrieval/config.py）；manifest_sha256 须精确等于磁盘文件 SHA-256；policy.validate() 须全量通过（ranges/weights）；
+  4) 修复 FUSE 测试错误：test_r3_regression.py 两个 symlink 测试改为时间戳唯一 link_name，try/except OSError 包裹 finally 中的 unlink；新增 6 个测试（forged token 0 urlopen、ledger 无 record 拒绝、valid-length wrong sha256 拒绝、tags 不消耗模型调用额度、tags 计入 provider 总数、tags 与 chat 分别记账）；test_r3_fixes.py 共 25 项测试
+verified=
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 363, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py src/retrieval/config.py` → OK
+  `git diff --check` → OK (no trailing whitespace in new/changed lines)
+  test_r3_fixes.py 25/25 通过
+limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件系统可运行；test_r3_regression 两个 symlink 测试现在通过，已转为 skip-on-FUSE 模式）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
+next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
+commit=待提交
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
+scope=Git commit 阻塞记录
+动作=尝试 git add / git commit，发现 .git/index.lock 存在（0 字节，本进程所有，18:27 由 git status 留下，FUSE 无法清理）
+结果=git add 失败，fatal: Unable to create .git/index.lock — File exists。按约束停止所有 Git 写操作，不删除 lock 文件，不尝试绕过
+limits=.git/index.lock 阻塞 commit；用户需在本机手动删除 .git/index.lock 后运行 git commit；所有源码修改已写入工作树，状态与 R3-FIX-R2-checkpoint.md 一致
+next=用户在本机执行 `rm .git/index.lock && git add <files> && git commit -m "fix: ..."`；见 R3-FIX-R2-checkpoint.md 的文件清单
+commit=未完成（index.lock 阻塞）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R3 status=review
+scope=完成 R3-FIX-R2 三项剩余窄范围修正：Issue-1 token/run 错配需 transport 级 urlopen=0 测试；Issue-2 Ollama tags/chat token 消耗顺序错误及 tags 失败时 outcome 混写；Issue-3 runner 使用文件实时 sha256 而非冻结配置 sha256
+动作=
+  1) Issue-2（Ollama tags/chat 分离）：real_transport.py 新增 OllamaTagsPreflightError(TransportError) 标记子类；OllamaTransport.send() 重排 token 消耗顺序为 consume(tags)→_verify_model_digest()→consume(chat)；tags 失败时抛 OllamaTagsPreflightError（chat token 未消耗，chat 未发送）；budget.py BudgetAwareTransport.send() 新增 except OllamaTagsPreflightError（优先于 except TransportError）：记录 tags=实际失败 outcome、chat=blocked（不同的记录，不伪造 chat 已发送）；原 except TransportError（chat 失败）现记录 tags=success（tags 已通过才能到达 chat 阶段）；
+  2) Issue-3（冻结配置 sha256）：runner.py run_formal() step-(d) 改为加载冻结配置 RetrievalConfig.from_path(DEFAULT_CONFIG_REL_PATH)（内部已校验磁盘文件 sha256 与配置值一致），再比较 idx.manifest_sha256 与 config.manifest_sha256；移除不再使用的 sha256_file 导入，新增 DEFAULT_CONFIG_REL_PATH/RetrievalConfig 导入；
+  3) Issue-1（transport 级 urlopen=0 测试）：test_r3_fixes.py 新增 TestR3Fix1TransportLevelMismatch（5 项）：batch/provider/model/endpoint 错配及 token 重放均通过 transport.send() 调用、@patch urlopen、断言 call_count=0；
+  4) Issue-2 tests：新增 TestR3Fix2OllamaTagsFailChatBlocked（2 项）：tags 失败时 urlopen 恰好调用 1 次（tags only）；ledger 中 tags=non_retryable、chat=blocked 且 endpoint/attempt_number 各自独立；
+  5) Issue-3 tests：新增 TestR3Fix3C1PolicyDetails（3 项）：错误 ranges/错误 weights/validate() 抛出时均被拒绝，message 含 policy 关键字
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_r3_fixes -q` → Ran 35, OK
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_runner_r3 -q` → Ran 12, OK
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -p 'test_*.py' -q` → Ran 373, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -p 'test_*.py' -q` → Ran 17, OK
+  `/usr/bin/python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py src/retrieval/config.py` → OK
+  `git diff --check` → OK
+limits=验证使用 Python 3.10（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 再次运行验证命令确认一致；.git/index.lock 仍存在，commit 阻塞；8 个 FUSE lock skip 保持（原生文件系统可运行）；未运行正式评测，未访问真实 API
+next=用户在本机：rm .git/index.lock → 运行 python3.11 验证 → git commit；Codex 中枢独立审查；通过后按 ADR-0014 放行 APP-001
+commit=待提交（index.lock 阻塞）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R4 status=review
+scope=R3-FIX-R3 续任；仅补齐 Ollama tags/chat 预算记账顺序的集成测试，不修改生产代码
+动作=
+  1) 确认工作区状态：分支 cc/APP-001-RUNNER-R3，HEAD 4a0ae3e，存在 R3-FIX-R2/R3 的未提交修改，不丢弃不覆盖；
+  2) 读取 budget.py / real_transport.py 实际代码与 HEAD diff，确认 _send_ollama_with_tags_preflight 已实现 tags 先行、chat 后置、tags 失败不创建 chat reservation 的语义；
+  3) 新增 TestR4OllamaTagsChatIntegration（5 项集成测试）覆盖 R4 要求的四个场景：
+     - test_tags_success_chat_success_full_flow：2 次 HTTP，2 条 ledger 记录，tags(is_model=False/num=-1)→chat(is_model=True/num=1)，run_attempts_used=1，total/provider 各 +2
+     - test_tags_success_chat_fail_outcomes_independent：tags=success、chat=transient_retryable（HTTP 5xx 按 RETRYABLE_CONDITIONS），tags 记录不受 chat 失败影响
+     - test_tags_retry_each_creates_new_reservation：tags 失败→tags 成功→chat 成功，3 次 HTTP，3 条记录，两次 tags 各有独立负数 attempt_number，run_attempts_used=1
+     - test_tags_budget_exhausted_before_urlopen：provider 配额满时 tags reservation 在 urlopen 前失败，无新记录
+     - test_tags_ok_chat_budget_exhausted_no_chat_attempt：tags 成功（消耗第 54 槽）后 chat reservation 失败，urlopen 仅 1 次，run-new run_attempts_used=0
+  4) 新增 _FakeHttpResp 辅助类替代 unittest.Mock() 作为 urlopen 返回值（Python 3.10 unittest 错误报告与 frozen dataclass 交互时触发 FrozenInstanceError，真实类可回避）；
+  5) setUp 中清理 _BudgetReservationToken._consumed_tokens 类变量，防止 id() 复用导致的测试间污染；
+  6) 发现 R3-FIX-R3 checkpoint 描述（chat=blocked）与实际代码（不创建 chat reservation）不一致，实际代码已超越 checkpoint 描述，完全符合 R4 要求
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_r3_fixes -q` → Ran 40, OK（35 原有 + 5 新增）
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 378, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py src/retrieval/config.py` → OK
+  `git diff --check` → CLEAN
+limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 再次运行验证命令确认一致；.git/index.lock 仍存在，commit 阻塞；8 个 FUSE lock skip 保持；未运行正式评测，未访问真实 API
+next=用户在本机：rm .git/index.lock → 运行 python3.11 验证 → git commit；Codex 中枢独立审查
+commit=待提交（index.lock 阻塞）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R5 status=review
+scope=修复 Codex 独立验收发现的两个阻塞问题：Issue A（预算预留原子化）和 Issue B（C1 candidate_roles/top-k 验证）
+动作=
+  Issue A（预算预留原子化）：
+  1) budget.py: _verify_pending_reservation（只读）改名重写为 _claim_pending_reservation，原子写入 claimed=True；第二个 token 调用时找不到 claimed=False 记录，抛出 BudgetBypassError；保留 "no pending reservation" 子串兼容现有测试；新增 _locked 检查防御未加锁调用；
+  2) real_transport.py: 删除 _consumed_tokens 类变量（id() 复用 bug）；consume() 步骤 1 只用 self._consumed（实例标志）检查同对象重放；步骤 3 调用 _claim_pending_reservation 替代原只读 verify；
+  3) tests: 新增 TestR5IssueAReservationAtomicity（4项）：同一 reservation 两 token 只有一个成功且 urlopen≤1；同一 token 重放被拒；并发竞争恰好一个成功；正常 DeepSeek 流程仍可工作且 claimed=True 写入 ledger；更新 TestR4.setUp 注释；
+
+  Issue B（C1 candidate_roles/top-k 验证）：
+  4) runner.py: run_formal() step-(e) 之后新增 step-(f) 和 step-(g)；(f) 精确比较 idx.candidate_roles 与冻结配置值（缺失/类型错/成员不符均 fail-closed）；(g) 精确比较 idx.default_top_k 与冻结配置值（3）；错误消息分别含 candidate_roles / default_top_k 关键字；
+  5) tests: 新增 TestR5IssueBCandidateRolesTopK（5项）：正确值通过；错误/缺失 candidate_roles 和 default_top_k 各自被拒并含正确关键字
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_r3_fixes -q` → Ran 49, OK（40 原有 + 9 新增）
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 387, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py src/retrieval/config.py` → OK
+  `git diff --check` → CLEAN
+limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 再次运行验证命令确认一致；.git/index.lock 仍存在（FUSE 无法清理），commit 阻塞；8 个 FUSE lock skip 保持；未运行正式评测，未访问真实 API
+next=用户在本机：rm .git/index.lock → 运行 python3.11 验证 → git commit；Codex 中枢独立审查
+commit=待提交（index.lock 阻塞）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R6 status=review
+scope=修复 BudgetLedger 进程内并发领取同一 reservation 的竞态问题
+动作=
+  1) budget.py __init__ 新增 self._thread_lock = threading.RLock()；
+  2) reserve_attempt / _claim_pending_reservation / record_outcome / record_run_result 四个 read-modify-write 方法各自加 with self._thread_lock: 保护；
+  3) tests: 新增 TestR6TrueConcurrentClaimAtomicity（2项）：两个线程各持独立 token、同一 reservation、threading.Barrier(2) 同时进入 claim 路径；断言恰好一个成功、另一个抛 BudgetBypassError；ledger 仍合法 JSON、至多一条 claimed=True；urlopen=0（consume 在 HTTP 前拒绝）
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_r3_fixes -q` → Ran 51, OK（49 原有 + 2 新增）
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 389, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/budget.py src/llm/real_transport.py` → OK
+  `git diff --check` → CLEAN
+  `git add` 成功（12 文件暂存），`.git/index.lock` 由 FUSE 残留，commit 阻塞
+limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；.git/index.lock 阻塞 commit；8 个 FUSE lock skip 保持；未运行正式评测，未访问真实 API，未读取密钥
+next=用户在本机：rm .git/index.lock → git add R3-FIX-R6-checkpoint.md → python3.11 验证 → git commit；Codex 中枢独立审查
+commit=待提交（index.lock 阻塞，12 文件已暂存）

@@ -48,6 +48,7 @@ DEFAULT_CANDIDATE_ROLES: tuple[str, ...] = ("retrieval_source",)
 DEFAULT_EXCLUDED_ROLES: tuple[str, ...] = ("development", "heldout_evaluation")
 
 MANIFEST_REL_PATH = "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl"
+MANIFEST_FORMAT_VERSION = "retrieval-manifest.v0"
 DEFAULT_CONFIG_REL_PATH = "agent-work/integration/RET-002-retrieval-baseline/retrieval-config.json"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

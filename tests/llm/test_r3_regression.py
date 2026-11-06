@@ -317,14 +317,20 @@ class RetentionBypassRemovedTests(unittest.TestCase):
         # Create a symlink inside work/app001-runs/ pointing to external_dir.
         canonical_root = _resolve_canonical_path("work/app001-runs")
         canonical_root.mkdir(parents=True, exist_ok=True)
-        link_name = canonical_root / "escape_link"
+        # Use a unique link name to avoid collisions with prior runs that left
+        # undeletable symlinks on FUSE filesystems.
+        import time as _time
+        link_name = canonical_root / f"escape_link_{int(_time.time() * 1000) % 9999999}"
         try:
             os.symlink(external_dir, link_name)
         except (OSError, NotImplementedError):
-            # Platform does not support symlinks.
+            # Platform does not support symlinks, or link already exists.
             shutil.rmtree(external_dir, ignore_errors=True)
-            link_name.unlink(missing_ok=True)
-            self.skipTest("symlinks not supported on this platform")
+            try:
+                link_name.unlink(missing_ok=True)
+            except OSError:
+                pass  # FUSE: cannot delete symlinks; skip
+            self.skipTest("symlinks not supported or link creation failed on this platform")
             return
         try:
             # _resolve_canonical_path on the symlink must reject it because
@@ -336,7 +342,10 @@ class RetentionBypassRemovedTests(unittest.TestCase):
             self.assertEqual(os.listdir(external_dir), [])
         finally:
             if link_name.is_symlink() or link_name.exists():
-                link_name.unlink(missing_ok=True)
+                try:
+                    link_name.unlink(missing_ok=True)
+                except OSError:
+                    pass  # FUSE: cannot delete symlinks; silently ignore
             shutil.rmtree(external_dir, ignore_errors=True)
 
     def test_symlink_escape_rejected_by_retain_response(self):
@@ -345,14 +354,20 @@ class RetentionBypassRemovedTests(unittest.TestCase):
         external_dir = tempfile.mkdtemp(prefix="r3_symlink_retain_")
         canonical_root = _resolve_canonical_path("work/app001-runs")
         canonical_root.mkdir(parents=True, exist_ok=True)
-        link_name = canonical_root / "retain_escape_link"
+        # Use a unique link name to avoid collisions with prior runs that left
+        # undeletable symlinks on FUSE filesystems.
+        import time as _time
+        link_name = canonical_root / f"retain_escape_link_{int(_time.time() * 1000) % 9999999}"
         try:
             os.symlink(external_dir, link_name)
         except (OSError, NotImplementedError):
             import shutil
             shutil.rmtree(external_dir, ignore_errors=True)
-            link_name.unlink(missing_ok=True)
-            self.skipTest("symlinks not supported on this platform")
+            try:
+                link_name.unlink(missing_ok=True)
+            except OSError:
+                pass  # FUSE: cannot delete symlinks; skip
+            self.skipTest("symlinks not supported or link creation failed on this platform")
             return
         try:
             # Policy pointing through the symlink must be rejected.
@@ -365,7 +380,10 @@ class RetentionBypassRemovedTests(unittest.TestCase):
             self.assertEqual(os.listdir(external_dir), [])
         finally:
             if link_name.is_symlink() or link_name.exists():
-                link_name.unlink(missing_ok=True)
+                try:
+                    link_name.unlink(missing_ok=True)
+                except OSError:
+                    pass  # FUSE: cannot delete symlinks; silently ignore
             import shutil
             shutil.rmtree(external_dir, ignore_errors=True)
 
