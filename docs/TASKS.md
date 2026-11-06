@@ -25,9 +25,10 @@
 | RET-001 | 检索样本 manifest | DSH + CC + Codex | done | CAD-006 | 15 个首族目录行的 manifest、IR、构造、验证、来源和 hash 可追溯；中枢复核通过，限制见 `agent-work/reviews/RET-001-codex-review.md` |
 | RET-002 | 单族确定性检索基线 | CC + DSH + Codex | done | RET-001 | 单族参数距离、候选角色、稳定排序和结构化失败路径通过中枢复核；策略范围修正已验收，限制见 `agent-work/reviews/RET-002-codex-review.md` |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | RET-001 | 里程碑 1 协议已通过复审；当前仅允许 C1 检索级诊断；公平端到端比较待 APP-001，公平 C2 尚未定义 |
-| APP-001-PREP | 冻结模型基线、输入输出契约与小型验收集 | LLM Agent + Codex + 用户 | review | 已接受 ADR-0009/0010/0011/0012/0013、CAD-003/IR/CAD 主链 | `app001-io.v1` / `app001-extraction.v2` 和 9 条 evaluator-only 样例已冻结；adapter/logger 尚待实现及审查；正式模型评测仍关闭 |
-| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | review | APP-001-PREP 冻结契约 | R1 `2a324f7` 的基础修正与 121 项测试通过，但仍有 MockTransport 子类门控绕过、raw retention 路径未锁定和 frozen prompt artifact 未校验；见 `agent-work/reviews/APP-001-ADAPTER-R1-codex-review.md`，修正前不放行 APP-001 |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | APP-001-PREP | 冻结模型、Prompt、输入集和解码参数；可复现字段/追问/Schema 结果，并记录模型身份 |
+| APP-001-PREP | 冻结模型基线、输入输出契约与小型验收集 | LLM Agent + Codex + 用户 | done | ADR-0009/0010/0011/0012/0013、CAD-003/IR/CAD 主链 | 冻结 `app001-io.v1` / `app001-extraction.v2` 和 9 条 evaluator-only 样例；最终中枢验收通过 |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | APP-001-PREP 冻结契约 | R3-FIX 已中枢验收；详情见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
+| APP-001-RUNNER | 第一阶段受控运行入口与预算/模型身份边界 | CC + Codex | review | APP-001-PREP、APP-001-ADAPTER、ADR-0014 | `APP-001-RUNNER-001`、R1、R2 已推送；R2 等待独立只读安全复核。复核前不得启动正式请求；交接见 `agent-work/llm/APP-001-runner-R2/` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照（Phase 1） | Codex + 用户 | planned | APP-001-RUNNER-R2 复核通过 | 用户已授权 9 样例×C0/C1×双模型，共 36 逻辑运行、最多 108 次请求；IR/CAD/geometry/STEP 禁用。待 runner 安全复核通过后启动 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
 
 ## 认领格式

@@ -902,3 +902,9 @@ verified=Python 3.11.18；tests.llm.test_runner_r1 50 项通过；tests.llm 全�
 limits=没有真实 DeepSeek 或 Ollama 调用；Ollama live /api/tags 与 /api/chat 行为尚待获授权运行时确认；APP-001 仍保持 planned，正式批次尚未启动
 next=Codex 中枢独立复核 R2 代码与测试；保持 review，不 push，复核通过后由项目负责人按既有授权流程推进
 commit=ecc3163（本地提交，保持 review，未 push）
+
+[2026-11-06] agent=Codex task=APP-001-STATUS-SYNC status=review
+- 动作：R2 push 后核对 main 与 origin/main 同步，发现 PROJECT_STATUS、PROJECT_PLAN、TASKS 仍引用过时 PREP/adapter 状态，并误称正式 APP-001 仍等待用户授权；依据 ADR-0014 和已推送 runner 交付同步三份状态文档。
+- 结果：APP-001-PREP 与 APP-001-ADAPTER 保持 done；APP-001-RUNNER 标为 review；APP-001 保持 planned。既有 Phase 1 授权范围已记录，R2 独立只读安全复核是正式运行前唯一放行门。
+- 验证：`git status --short --branch` 确认开始时 main 与 origin/main 同步；核对 ADR-0014、R2 checkpoint/handoff 和 runner 交付；`git diff --check` 通过。
+- 下一步：完成状态文档检查与提交，然后进行 APP-001-RUNNER-R2 独立只读安全复核；未通过前不运行模型请求。

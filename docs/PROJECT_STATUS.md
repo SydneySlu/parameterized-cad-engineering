@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-05
+更新时间：2026-11-06
 
 ## 当前结论
 
@@ -47,17 +47,19 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | in_progress | C1 检索级诊断已在固定环境运行并经中枢验收；3 个主查询、2 个接口诊断、1 个失败诊断通过，5/5 跨进程确定性检查通过；RET-001/002 回归通过。端到端下游收益仍 not_measured，等待 APP-001 和新的评测放行 |
-| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过：冻结契约、模型配置、输入隔离、指标口径和 adapter/logger 前置条件均已确认；正式 APP-001 仍需负责人单独授权，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
-| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过：篡改 artifact 与 symlink 越界测试真实执行，README/状态同步，LLM 170 tests 与 Schema 17 tests 通过；详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md`。正式 APP-001 仍未授权 |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 等 APP-001-PREP 最终前置审查通过且负责人单独授权后执行；字段/Schema 指标在模型运行后测，CAD/STEP 指标在同一输出接入已批准确定性链后测 |
+| APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
+| APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
+| APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | review | `APP-001-RUNNER-001`、R1、R2 已推送到 main；R2 修复预算路径绕过与 Ollama 精确身份核验。326 项 LLM 测试（1 项跳过）及 17 项 Schema 测试通过；等待独立只读安全复核。详见 `agent-work/llm/APP-001-runner-R2/` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | planned | 第一阶段 9 样例、C0/C1、双模型、36 逻辑运行及最多 108 次请求已由负责人授权（ADR-0014）；待 APP-001-RUNNER 复核通过后才能启动。IR/CAD/geometry/STEP 本阶段禁用，字段/Schema/token/费用/延迟为测量范围 |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
+- APP-001 第一阶段正式评测暂缓启动，直至 APP-001-RUNNER-R2 的独立安全复核通过。不得把代码测试通过等同于正式运行放行。
 
 ## 下一步
 
-1. 由项目负责人确认运行批次、成本预算和模型配置后，单独授权正式 APP-001。
-2. 授权前不调用九条冻结验收样例，继续保持正式评测门关闭。
-3. APP-001 完成后，再设计端到端 C0/C1 下游比较；公平 C2 另行定义并经审查后才能纳入。
+1. 完成 APP-001-RUNNER-R2 独立只读安全复核，重点确认预算不可绕过、36 组合和请求上限、冻结样例隔离、Ollama 身份校验及失败路径。
+2. 复核通过后，在已授权范围内运行 APP-001 第一阶段；不要扩大到 C2 或 IR/CAD/geometry/STEP。
+3. 第一阶段结果验收后，再设计端到端 C0/C1 下游比较；公平 C2 另行定义并经审查后才能纳入。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
