@@ -109,3 +109,15 @@ Ollama 极限场景分析（与前次相同）：
 ## 结果
 
 APP-001-RUNNER-R3-FIX-R2 四项修复已全部实现并通过测试。状态保持 review，等待 Codex 中枢独立验收。未 push。
+
+## Codex 中枢独立审查交接（R6）
+
+- 日期：2026-11-07
+- 任务：`APP-001-RUNNER-R3-FIX-R6-CODEX-REVIEW`
+- 审查 commit：`9d83219`
+- 结论：R2-R6 代码修复通过中枢独立审查；任务仍为 `review`，待该 commit 推送并合入 `main`。
+- 独立复跑（Python 3.11.18）：`test_r3_fixes` 51 项通过；`test_r3_regression` 22 项通过；`tests/llm` 389 项通过、8 项跳过；`tests/schema` 17 项通过；相关 `py_compile` 与 `git diff --check` 通过。
+- 抽查：正常 DeepSeek 预算领取、Ollama tags→chat 记账和冻结 RetrievalIndex 通过；同一 reservation 的两线程竞争恰好一个成功，错误 candidate_roles/default_top_k 在正式运行前被拒绝。
+- 限制：8 项 skip 属于当前 FUSE lock 清理限制，不计作通过；本次未访问真实模型、未读取密钥、未运行正式 APP-001。
+- Git：审查时 `.git/index.lock` 不存在；未删除仍被 VM 持有的 maintenance lock。审查记录见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md`。
+- 下一步：用户将 `9d83219` 推送并合入 `main` 后，按 ADR-0014 既有授权运行第一阶段；保持 C2 与 IR/CAD/geometry/STEP 禁用。

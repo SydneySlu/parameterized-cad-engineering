@@ -1037,3 +1037,15 @@ verified=
 limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；.git/index.lock 阻塞 commit；8 个 FUSE lock skip 保持；未运行正式评测，未访问真实 API，未读取密钥
 next=用户在本机：rm .git/index.lock → git add R3-FIX-R6-checkpoint.md → python3.11 验证 → git commit；Codex 中枢独立审查
 commit=待提交（index.lock 阻塞，12 文件已暂存）
+[2026-11-07] agent=Codex task=APP-001-RUNNER-R3-FIX-R6-CODEX-REVIEW status=review
+scope=对 CC 的 R6 修复及 R2-R6 累积交付做本机独立审查，并同步项目状态/计划/交接记录
+动作=
+  1) 按 handoff-review-protocol 检查 R6 checkpoint、handoff、提交和实际仓库状态；确认审查对象为本地 commit 9d83219；
+  2) 使用 Python 3.11.18 重跑核心和全量测试，并检查正常预算领取、Ollama tags/chat 路径、冻结 RetrievalIndex 以及并发/错误配置拒绝路径；
+  3) 确认 8 项 FUSE lock skip 仍是环境限制，未计入通过；未调用真实模型、未读取密钥、未运行正式 APP-001；
+  4) 将审查结论写入 agent-work/reviews/APP-001-RUNNER-R6-codex-review.md，并同步 PROJECT_STATUS、PROJECT_PLAN 和 runner handoff。
+verified=
+  Python 3.11.18：test_r3_fixes 51 passed；test_r3_regression 22 passed；tests/llm 389 passed、8 skipped；tests/schema 17 passed；相关 py_compile 与 git diff --check passed
+limits=9d83219 尚未 push/合入 main，APP-001-RUNNER 保持 review；8 项 FUSE skip 未解除；未进行正式模型调用或评测
+next=用户 push 并合入 9d83219 后，按 ADR-0014 运行 APP-001 第一阶段授权范围；C2 和 IR/CAD/geometry/STEP 仍禁用
+commit=待本次文档同步提交
