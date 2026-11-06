@@ -401,16 +401,31 @@ class Adapter:
 
         if type(self.transport) is not _FakeTransport:
             if formal_authorization is not None:
-                # Narrow-scope formal run authorization path (ADR-0014).
+                # Formal execution must use the exact budget-aware wrapper
+                # built for this authorization, provider/model, logical input,
+                # and adapter run ID. A generic authorized transport is not
+                # sufficient because it could bypass the durable attempt ledger.
                 from .authorization import FormalRunAuthorization as _FRA
+                from .budget import BudgetAwareTransport as _BAT
 
-                if not isinstance(formal_authorization, _FRA):
-                    require_formal_evaluation_allowed(
-                        "run with invalid formal_authorization type"
+                expected_model = self._configured_model_name()
+                if (
+                    not isinstance(formal_authorization, _FRA)
+                    or type(self.transport) is not _BAT
+                    or not self.transport.uses_real_transport
+                    or self.transport.authorization is not formal_authorization
+                    or self.transport.provider != self.provider
+                    or self.transport.model != expected_model
+                    or not formal_authorization.provider_model_is_allowed(
+                        self.provider, expected_model
                     )
-                # FormalRunAuthorization validates scope in __post_init__; no
-                # further check needed here -- scope mismatch would have raised
-                # AuthorizationScopeError at construction time.
+                    or self.transport.adapter_run_id != run_id
+                    or self.transport.query_id != adapter_input.query_id
+                    or self.transport.condition_id != adapter_input.condition_id
+                ):
+                    require_formal_evaluation_allowed(
+                        "formal run must use a runner-bound, budget-aware real transport"
+                    )
             else:
                 # No authorization and not FakeTransport: fail-closed.
                 require_formal_evaluation_allowed("run a non-FakeTransport request")

@@ -97,6 +97,10 @@ class DeepSeekTransport:
         self._timeout = timeout_seconds
         self._runtime_version: str | None = None
 
+    @property
+    def authorization(self) -> FormalRunAuthorization:
+        return self._auth
+
     def send(self, request: PreparedRequest) -> TransportResponse:
         """Send the request to the DeepSeek API.
 
@@ -268,6 +272,10 @@ class OllamaTransport:
         self._actual_digest: str | None = None
         self._actual_model_name: str | None = None
 
+    @property
+    def authorization(self) -> FormalRunAuthorization:
+        return self._auth
+
     def send(self, request: PreparedRequest) -> TransportResponse:
         """Send the request to the local Ollama /api/chat endpoint."""
         if not self._verified_digest:
@@ -318,12 +326,12 @@ class OllamaTransport:
         Records the actual model name and digest from the API response.
         Raises a non-retryable :class:`TransportError` on any mismatch.
         """
-        url = f"{self._host}/api/show"
-        body_bytes = json.dumps({"name": OLLAMA_MODEL}).encode("utf-8")
-        headers = {"Content-Type": "application/json"}
-        req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
+        # /api/show reports the model family (for example "qwen3") but may
+        # not expose the exact tag. /api/tags provides the installed name
+        # ("qwen3:8b") together with its digest, so verify that exact entry.
+        url = f"{self._host}/api/tags"
         try:
-            with urllib.request.urlopen(req, timeout=30.0) as resp:
+            with urllib.request.urlopen(url, timeout=30.0) as resp:
                 raw = resp.read().decode("utf-8")
                 data = json.loads(raw)
         except Exception:
@@ -331,7 +339,7 @@ class OllamaTransport:
                 condition=COND_OTHER_NON_RETRYABLE,
                 http_status=None,
                 message=(
-                    "Ollama is not running or /api/show failed; "
+                    "Ollama is not running or /api/tags failed; "
                     "ensure Ollama is running with qwen3:8b loaded"
                 ),
             )
@@ -339,31 +347,47 @@ class OllamaTransport:
             raise TransportError(
                 condition=COND_OTHER_NON_RETRYABLE,
                 http_status=None,
-                message="Ollama /api/show returned non-object response",
+                message="Ollama /api/tags returned non-object response",
             )
-        # Verify model name
-        returned_model = data.get("model_info", {}).get("general.basename") or data.get("model") or ""
-        # Also check modelfile header and details
-        details = data.get("details", {}) if isinstance(data, dict) else {}
-        # Accept if any of the model name indicators match "qwen3"
-        family = details.get("family", "") or ""
-        if not ("qwen3" in str(returned_model).lower() or "qwen3" in str(family).lower()):
+        self._verify_model_inventory(data)
+
+    def _verify_model_inventory(self, data: dict[str, Any]) -> None:
+        """Validate the `/api/tags` inventory and record exact runtime identity."""
+        if not isinstance(data, dict):
+            raise TransportError(
+                condition=COND_OTHER_NON_RETRYABLE,
+                http_status=None,
+                message="Ollama /api/tags returned non-object response",
+            )
+        models = data.get("models")
+        if not isinstance(models, list):
+            raise TransportError(
+                condition=COND_OTHER_NON_RETRYABLE,
+                http_status=None,
+                message="Ollama /api/tags response has no models list",
+            )
+        matching = [
+            item for item in models
+            if isinstance(item, dict) and item.get("name") == OLLAMA_MODEL
+        ]
+        if len(matching) != 1:
+            found = [
+                item.get("name") for item in models
+                if isinstance(item, dict) and isinstance(item.get("name"), str)
+            ]
             raise TransportError(
                 condition=COND_OTHER_NON_RETRYABLE,
                 http_status=None,
                 message=(
-                    f"Ollama model name mismatch: expected qwen3:8b, "
-                    f"got model={returned_model!r}, family={family!r}"
+                    f"Ollama exact model tag mismatch: expected {OLLAMA_MODEL!r}; "
+                    f"matching_entries={len(matching)}, installed_names={found!r}"
                 ),
             )
-        # Verify digest with strict prefix matching
-        digest_field = (
-            data.get("digest")
-            or details.get("digest")
-            or ""
-        )
+        model_info = matching[0]
+        digest_field = model_info.get("digest", "")
         actual_digest = str(digest_field).strip()
-        if not actual_digest.startswith(OLLAMA_DIGEST):
+        digest_for_check = actual_digest.removeprefix("sha256:")
+        if not digest_for_check.startswith(OLLAMA_DIGEST):
             raise TransportError(
                 condition=COND_OTHER_NON_RETRYABLE,
                 http_status=None,
@@ -375,7 +399,7 @@ class OllamaTransport:
             )
         self._verified_digest = True
         self._actual_digest = actual_digest  # actual runtime value
-        self._actual_model_name = str(returned_model) if returned_model else OLLAMA_MODEL
+        self._actual_model_name = model_info["name"]
         self._ollama_version = data.get("version", "unknown")
 
     def _parse_response(
@@ -397,12 +421,21 @@ class OllamaTransport:
             )
         message = data.get("message", {})
         body = message.get("content", "") if isinstance(message, dict) else ""
-        # Runtime identity — actual values from /api/show (not frozen constants)
-        runtime_model = data.get("model", OLLAMA_MODEL)
+        # Runtime identity — actual values from /api/chat (not frozen constants)
+        runtime_model = data.get("model")
+        if runtime_model != OLLAMA_MODEL:
+            raise TransportError(
+                condition=COND_OTHER_NON_RETRYABLE,
+                http_status=status,
+                message=(
+                    f"Ollama response model mismatch: expected {OLLAMA_MODEL!r}, "
+                    f"got {runtime_model!r}"
+                ),
+            )
         usage: dict = {
             "local_wall_time_seconds": wall_time_s,
             "ollama_runtime": self._ollama_version,
-            # Actual digest from /api/show verification — NOT the frozen expected value
+            # Actual digest from /api/tags verification — NOT the frozen expected value
             "local_actual_digest": self._actual_digest,
             "local_actual_model_name": self._actual_model_name,
             "cloud_tokens": "not_applicable",

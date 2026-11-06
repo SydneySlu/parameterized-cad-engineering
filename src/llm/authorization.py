@@ -190,7 +190,14 @@ class FormalRunAuthorization:
 
     def provider_model_is_allowed(self, provider: str, model: str) -> bool:
         """Check whether a (provider, model) pair is in the authorized scope."""
-        return provider in self.providers and model in self.models
+        # The frozen scope contains two specific pairs, not the Cartesian
+        # product of provider and model sets.
+        from .contract import DEEPSEEK_MODEL, OLLAMA_MODEL
+
+        return (provider, model) in {
+            (DEEPSEEK_PROVIDER, DEEPSEEK_MODEL),
+            (OLLAMA_PROVIDER, OLLAMA_MODEL),
+        }
 
     def condition_is_allowed(self, condition: str) -> bool:
         return condition in self.conditions

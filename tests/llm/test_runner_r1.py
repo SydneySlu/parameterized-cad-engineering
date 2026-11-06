@@ -401,6 +401,43 @@ class BudgetAwareTransportTests(unittest.TestCase):
         snap = BudgetLedger(self._batch_dir, auth).snapshot()
         self.assertEqual(snap["total_attempts_used"], 3)
 
+    def test_max_logical_run_count_is_enforced(self):
+        auth = _auth()
+        ledger = BudgetLedger(self._batch_dir, auth)
+        with ledger:
+            from src.llm.providers import build_deepseek_request
+            request = build_deepseek_request(system_prompt="s", user_prompt="u")
+            for idx in range(auth.max_logical_runs):
+                first_inner = FakeTransport()
+                first_inner.queue_response(_fake_ok())
+                first = BudgetAwareTransport(
+                    first_inner, ledger=ledger, logical_run_id=f"run-{idx}",
+                    provider=DEEPSEEK_PROVIDER,
+                )
+                first.send(request)
+            second_inner = FakeTransport()
+            second_inner.queue_response(_fake_ok())
+            second = BudgetAwareTransport(
+                second_inner, ledger=ledger, logical_run_id="run-over-limit",
+                provider=DEEPSEEK_PROVIDER,
+            )
+            with self.assertRaises(BudgetExhausted):
+                second.send(request)
+            self.assertEqual(second_inner.call_count, 0)
+
+    def test_wrapper_rejects_mismatched_provider_model(self):
+        auth = authorize_phase1_run(batch_id="pair-mismatch")
+        ledger = BudgetLedger(self._batch_dir, auth)
+        from src.llm.real_transport import DeepSeekTransport
+        from src.llm.contract import OLLAMA_MODEL
+        with ledger:
+            with self.assertRaises(BudgetExhausted):
+                BudgetAwareTransport(
+                    DeepSeekTransport(auth), ledger=ledger, authorization=auth,
+                    logical_run_id="pair", provider=DEEPSEEK_PROVIDER,
+                    model=OLLAMA_MODEL,
+                )
+
 
 # ---------------------------------------------------------------------------
 # 3. C1: bore_d extraction from NLI
@@ -591,153 +628,166 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
 
 
 class OllamaDigestTests(unittest.TestCase):
-    """Test OllamaTransport._verify_model_digest() with injected responses."""
+    """Test exact Ollama model tag and digest checks without network access."""
 
     def setUp(self):
         self._auth = authorize_phase1_run(batch_id="ollama-test")
 
-    def _make_show_response(self, model="qwen3:8b", digest=None, family="qwen3", missing_digest=False):
-        """Build a fake /api/show response dict.
+    def _tags(self, model="qwen3:8b", digest=None):
+        item = {"name": model}
+        if digest is not None:
+            item["digest"] = digest
+        return {"models": [item], "version": "0.4.0"}
 
-        Pass missing_digest=True to omit the digest field entirely.
-        Pass digest=None to use a valid default (OLLAMA_DIGEST + "abc123").
-        Pass digest="" to explicitly test empty digest.
-        """
-        if missing_digest:
-            d = {}
-        elif digest is None:
-            d = OLLAMA_DIGEST + "abc123"
-        else:
-            d = digest
-        if missing_digest:
-            return {
-                "model": model,
-                "details": {"family": family},
-                "version": "0.33.2",
-            }
-        return {
-            "model": model,
-            "details": {"family": family, "digest": d},
-            "digest": d,
-            "version": "0.33.2",
-        }
-
-    def _patch_transport(self, transport, show_response):
-        """Patch _verify_model_digest to use a synthetic response."""
-        import json as _json
-        original = transport._verify_model_digest
-
-        def patched():
-            data = show_response
-            details = data.get("details", {})
-            # Verify model name (qwen3 family)
-            returned_model = data.get("model", "")
-            family = details.get("family", "")
-            if not ("qwen3" in str(returned_model).lower() or "qwen3" in str(family).lower()):
-                from src.llm.transport import TransportError, COND_OTHER_NON_RETRYABLE
-                raise TransportError(
-                    condition=COND_OTHER_NON_RETRYABLE,
-                    http_status=None,
-                    message=f"model name mismatch: {returned_model}",
-                )
-            digest_field = data.get("digest") or details.get("digest") or ""
-            actual = str(digest_field).strip()
-            if not actual.startswith(OLLAMA_DIGEST):
-                from src.llm.transport import TransportError, COND_OTHER_NON_RETRYABLE
-                raise TransportError(
-                    condition=COND_OTHER_NON_RETRYABLE,
-                    http_status=None,
-                    message=f"digest mismatch: {actual[:20]}",
-                )
-            transport._verified_digest = True
-            transport._actual_digest = actual
-            transport._actual_model_name = str(returned_model)
-            transport._ollama_version = data.get("version", "unknown")
-
-        transport._verify_model_digest = patched
+    def _verify(self, payload):
+        transport = OllamaTransport(self._auth)
+        transport._verify_model_inventory(payload)
+        return transport
 
     def test_correct_model_and_digest_accepted(self):
-        """Correct model name and digest prefix → verification passes."""
-        t = OllamaTransport(self._auth)
-        self._patch_transport(t, self._make_show_response(
-            model="qwen3:8b",
-            digest=OLLAMA_DIGEST + "abc123",
-            family="qwen3",
-        ))
-        t._verify_model_digest()
+        t = self._verify(self._tags(digest=OLLAMA_DIGEST + "abc123"))
         self.assertTrue(t._verified_digest)
         self.assertTrue(t._actual_digest.startswith(OLLAMA_DIGEST))
+        self.assertEqual(t._actual_model_name, "qwen3:8b")
 
-    def test_wrong_model_name_rejected(self):
-        """Non-qwen3 model name raises TransportError before send."""
+    def test_wrong_qwen3_tag_rejected(self):
         from src.llm.transport import TransportError
-        t = OllamaTransport(self._auth)
-        self._patch_transport(t, self._make_show_response(
-            model="llama3:8b",
-            digest=OLLAMA_DIGEST + "abc123",
-            family="llama",
-        ))
-        raised = False
-        try:
-            t._verify_model_digest()
-        except TransportError:
-            raised = True
-        self.assertTrue(raised, "Expected TransportError for wrong model name")
+        with self.assertRaises(TransportError):
+            self._verify(self._tags(model="qwen3:14b", digest=OLLAMA_DIGEST + "abc123"))
+
+    def test_family_only_name_rejected(self):
+        from src.llm.transport import TransportError
+        with self.assertRaises(TransportError):
+            self._verify(self._tags(model="qwen3", digest=OLLAMA_DIGEST + "abc123"))
+
+    def test_duplicate_exact_model_entries_rejected(self):
+        from src.llm.transport import TransportError
+        payload = self._tags(digest=OLLAMA_DIGEST + "abc123")
+        payload["models"].append(dict(payload["models"][0]))
+        with self.assertRaises(TransportError):
+            self._verify(payload)
 
     def test_digest_contains_but_not_prefix_rejected(self):
-        """Digest containing the expected prefix but not starting with it is rejected."""
         from src.llm.transport import TransportError
-        t = OllamaTransport(self._auth)
-        # Put the expected prefix in the middle, not at start
-        bad_digest = "abc123" + OLLAMA_DIGEST + "xyz"
-        self._patch_transport(t, self._make_show_response(
-            model="qwen3:8b",
-            digest=bad_digest,
-            family="qwen3",
-        ))
-        raised = False
-        try:
-            t._verify_model_digest()
-        except TransportError:
-            raised = True
-        self.assertTrue(raised, "Expected TransportError for contains-but-not-prefix digest")
+        with self.assertRaises(TransportError):
+            self._verify(self._tags(digest="abc123" + OLLAMA_DIGEST + "xyz"))
 
     def test_missing_digest_rejected(self):
-        """Empty/None digest raises TransportError."""
         from src.llm.transport import TransportError
-        t = OllamaTransport(self._auth)
-        self._patch_transport(t, self._make_show_response(
-            model="qwen3:8b",
-            missing_digest=True,
-            family="qwen3",
-        ))
-        raised = False
-        try:
-            t._verify_model_digest()
-        except TransportError:
-            raised = True
-        self.assertTrue(raised, "Expected TransportError for missing digest")
+        with self.assertRaises(TransportError):
+            self._verify(self._tags())
 
     def test_actual_digest_recorded_not_frozen_constant(self):
-        """After verification, _actual_digest is the real API value, not just the prefix."""
-        t = OllamaTransport(self._auth)
         full_digest = OLLAMA_DIGEST + "deadbeef1234567890abcdef"
-        self._patch_transport(t, self._make_show_response(
-            model="qwen3:8b",
-            digest=full_digest,
-            family="qwen3",
-        ))
-        t._verify_model_digest()
-        # Should be the full digest, not just OLLAMA_DIGEST prefix
+        t = self._verify(self._tags(digest=full_digest))
         self.assertEqual(t._actual_digest, full_digest)
-        self.assertGreater(len(t._actual_digest), len(OLLAMA_DIGEST))
+        self.assertEqual(t._ollama_version, "0.4.0")
+
+    def test_ollama_sha256_tag_prefix_is_normalized_for_comparison(self):
+        full_digest = "sha256:" + OLLAMA_DIGEST + "deadbeef"
+        t = self._verify(self._tags(digest=full_digest))
+        self.assertEqual(t._actual_digest, full_digest)
+
+    def test_chat_response_with_different_model_tag_is_rejected(self):
+        from src.llm.transport import TransportError
+        transport = OllamaTransport(self._auth)
+        transport._actual_model_name = "qwen3:8b"
+        with self.assertRaises(TransportError):
+            transport._parse_response(
+                200,
+                '{"model":"qwen3:14b","message":{"content":"{}"}}',
+                0.01,
+            )
 
     def test_deepseek_transport_does_not_use_ollama_digest(self):
-        """DeepSeekTransport must not have _actual_digest or verify digest."""
-        auth = authorize_phase1_run(batch_id="ds-test")
-        t = DeepSeekTransport(auth)
+        t = DeepSeekTransport(authorize_phase1_run(batch_id="ds-test"))
         self.assertFalse(hasattr(t, "_actual_digest"))
         self.assertFalse(hasattr(t, "_verified_digest"))
+
+
+class FormalAdapterBoundaryTests(unittest.TestCase):
+    """A formal authorization alone must never bypass runner budgeting."""
+
+    def test_direct_custom_transport_rejected_before_send(self):
+        from src.llm.adapter import Adapter
+        from src.llm.gate import FormalEvaluationBlockedError
+        from tests.llm._frozen_helpers import _frozen_input
+
+        class CountingTransport:
+            def __init__(self):
+                self.calls = 0
+
+            def send(self, request):
+                self.calls += 1
+                raise AssertionError("must not send")
+
+        auth = authorize_phase1_run(batch_id="direct-transport-rejected")
+        transport = CountingTransport()
+        adapter = Adapter(provider=DEEPSEEK_PROVIDER, transport=transport)
+        with self.assertRaises(FormalEvaluationBlockedError):
+            adapter.run(
+                _frozen_input(query_id="APP001-A01-complete-description", condition_id="C0"),
+                run_id="direct-run",
+                formal_authorization=auth,
+            )
+        self.assertEqual(transport.calls, 0)
+
+    def test_authorization_rejects_crossed_provider_model_pair(self):
+        auth = authorize_phase1_run(batch_id="pair-check")
+        self.assertTrue(auth.provider_model_is_allowed(DEEPSEEK_PROVIDER, DEEPSEEK_MODEL))
+        self.assertFalse(auth.provider_model_is_allowed(DEEPSEEK_PROVIDER, OLLAMA_MODEL))
+        self.assertFalse(auth.provider_model_is_allowed(OLLAMA_PROVIDER, DEEPSEEK_MODEL))
+
+    def test_fake_budget_wrapper_is_not_accepted_for_formal_adapter(self):
+        import tempfile
+        from pathlib import Path
+        from src.llm.adapter import Adapter
+        from src.llm.budget import BudgetAwareTransport, BudgetLedger
+        from src.llm.gate import FormalEvaluationBlockedError
+        from src.llm.transport import FakeTransport
+        from tests.llm._frozen_helpers import _frozen_input
+
+        auth = authorize_phase1_run(batch_id="fake-wrapper-rejected")
+        with tempfile.TemporaryDirectory() as td:
+            with BudgetLedger(Path(td), auth) as ledger:
+                wrapped = BudgetAwareTransport(
+                    FakeTransport(), ledger=ledger, authorization=auth,
+                    logical_run_id="APP001-A01-complete-description__C0__DeepSeek__deepseek-flash", provider=DEEPSEEK_PROVIDER,
+                    model=DEEPSEEK_MODEL, adapter_run_id="run",
+                    query_id="APP001-A01-complete-description", condition_id="C0",
+                )
+                with self.assertRaises(FormalEvaluationBlockedError):
+                    Adapter(provider=DEEPSEEK_PROVIDER, transport=wrapped).run(
+                        _frozen_input(query_id="APP001-A01-complete-description", condition_id="C0"),
+                        run_id="run", formal_authorization=auth,
+                    )
+
+    def test_real_budget_wrapper_must_match_adapter_binding(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from src.llm.adapter import Adapter
+        from src.llm.budget import BudgetAwareTransport, BudgetLedger
+        from src.llm.gate import FormalEvaluationBlockedError
+        from src.llm.real_transport import DeepSeekTransport
+        from tests.llm._frozen_helpers import _frozen_input
+
+        auth = authorize_phase1_run(batch_id="binding-check")
+        with tempfile.TemporaryDirectory() as td:
+            with BudgetLedger(Path(td), auth) as ledger:
+                inner = DeepSeekTransport(auth)
+                wrapped = BudgetAwareTransport(
+                    inner, ledger=ledger, authorization=auth,
+                    logical_run_id="APP001-A01-complete-description__C0__DeepSeek__deepseek-flash", provider=DEEPSEEK_PROVIDER,
+                    model=DEEPSEEK_MODEL, adapter_run_id="expected-run",
+                    query_id="APP001-A01-complete-description", condition_id="C0",
+                )
+                with patch.object(inner, "send", side_effect=AssertionError("must not send")):
+                    with self.assertRaises(FormalEvaluationBlockedError):
+                        Adapter(provider=DEEPSEEK_PROVIDER, transport=wrapped).run(
+                            _frozen_input(query_id="APP001-A01-complete-description", condition_id="C0"),
+                            run_id="different-run", formal_authorization=auth,
+                        )
 
 
 if __name__ == "__main__":

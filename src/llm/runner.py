@@ -393,11 +393,17 @@ class App001Runner:
             )
         # Build real transport and wrap it with BudgetAwareTransport
         inner_transport = self._build_transport(combo.provider, authorization)
+        run_id = _safe(f"{authorization.batch_id}__{lrid}")
         budget_transport = BudgetAwareTransport(
             inner_transport,
             ledger=ledger,
+            authorization=authorization,
             logical_run_id=lrid,
             provider=combo.provider,
+            model=combo.model,
+            adapter_run_id=run_id,
+            query_id=combo.query_id,
+            condition_id=combo.condition_id,
         )
         retention = RetentionPolicy(
             retain_raw=True,
@@ -417,7 +423,6 @@ class App001Runner:
             user_prompt_template=prompt_artifact.user_template,
             condition_id=combo.condition_id,
         )
-        run_id = _safe(f"{authorization.batch_id}__{lrid}")
         result_record = None
         final_outcome = "non_retryable_error"
         attempt_count = 0

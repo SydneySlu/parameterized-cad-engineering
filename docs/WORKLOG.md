@@ -894,3 +894,11 @@ not_run=正式九条样例评测未运行；未发起真实 DeepSeek 或 Ollama 
 python_env=Python 3.10.12 / Linux aarch64（Linux sandbox 仅有此版本）；macOS venv python3.11 symlink 在 Linux FUSE 下无法访问；新代码使用 typing.Optional 兼容 3.10
 known_limits=C1 对 A04/A07/A09（NLI 无 bore_d）阻塞，符合规范；中断运行 fail-closed；Ollama digest 测试使用 monkey-patch；TOCTOU 继承自 R3
 next=Codex 中枢独立审查 SHA-256 强制校验、per-attempt 预算计数、C1 bore_d 提取、Ollama 严格 digest、316 tests 通过；确认 C1-blocked 对 A04/A07/A09 可接受；通过后项目负责人单独授权正式 APP-001；本任务保持 review，未 push
+
+[2026-11-06] agent=Codex task=APP-001-RUNNER-R2 status=review
+scope=修复 APP-001-RUNNER-R1 中枢验收发现的两个阻塞边界：正式 Adapter 调用绕过预算账本、Ollama 模型身份只做家族子串判断；未执行正式模型/API 调用
+动作=Adapter.run 仅接受与授权对象、real transport、provider/model、query、condition、run_id 一致的精确 BudgetAwareTransport；FormalRunAuthorization 采用精确 provider/model 配对；BudgetAwareTransport 校验真实 transport 类型/授权/运行绑定，BudgetLedger 强制 36 逻辑运行上限；Ollama 从 /api/tags 精确查找唯一 qwen3:8b 与摘要，并要求 /api/chat 返回模型标签一致；README 与 R2 checkpoint/handoff 更新
+verified=Python 3.11.18；tests.llm.test_runner_r1 50 项通过；tests.llm 全量 326 项通过（1 skipped）；Schema 17 项通过；py_compile、git diff --check 通过；dry_run 生成 36 项、0 次尝试、FORMAL_EVALUATION_ALLOWED=False；直接自定义 transport、伪造 FakeTransport budget wrapper、provider/model 交叉、run_id 不匹配、qwen3:14b、family-only、重复 exact tag、错误摘要和响应 model 不匹配均拒绝
+limits=没有真实 DeepSeek 或 Ollama 调用；Ollama live /api/tags 与 /api/chat 行为尚待获授权运行时确认；APP-001 仍保持 planned，正式批次尚未启动
+next=Codex 中枢独立复核 R2 代码与测试；保持 review，不 push，复核通过后由项目负责人按既有授权流程推进
+commit=not_created（等待中枢复核）

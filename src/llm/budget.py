@@ -98,6 +98,10 @@ class BudgetLedger:
         self._lock_path = self._batch_dir / "budget_ledger.lock"
         self._locked = False
 
+    @property
+    def authorization(self) -> FormalRunAuthorization:
+        return self._auth
+
     # ------------------------------------------------------------------
     # Lock management
     # ------------------------------------------------------------------
@@ -257,6 +261,11 @@ class BudgetLedger:
             )
         data = self._read_ledger()
         run_count = data["run_attempts_used"].get(logical_run_id, 0)
+        if run_count == 0 and len(data["run_attempts_used"]) >= self._auth.max_logical_runs:
+            raise BudgetExhausted(
+                f"batch already used {len(data['run_attempts_used'])} logical runs "
+                f"(max {self._auth.max_logical_runs})"
+            )
         if run_count >= self._auth.max_attempts_per_run:
             raise BudgetExhausted(
                 f"run {logical_run_id} already used {run_count} attempts "
@@ -436,14 +445,86 @@ class BudgetAwareTransport:
         inner,
         *,
         ledger: BudgetLedger,
+        authorization: FormalRunAuthorization | None = None,
         logical_run_id: str,
         provider: str,
+        model: str | None = None,
+        adapter_run_id: str | None = None,
+        query_id: str | None = None,
+        condition_id: str | None = None,
     ) -> None:
+        authorization = authorization or ledger.authorization
+        if model is None:
+            from .contract import DEEPSEEK_MODEL, OLLAMA_MODEL
+            model = {
+                "DeepSeek": DEEPSEEK_MODEL,
+                "Ollama": OLLAMA_MODEL,
+            }.get(provider)
+        # Keep this wrapper tied to the exact authorization and provider/model
+        # pair that created the ledger and real transport.
+        if ledger.authorization is not authorization:
+            raise BudgetIntegrityError("transport authorization does not match ledger")
+        if not authorization.provider_model_is_allowed(provider, model):
+            raise BudgetExhausted("provider/model pair is outside authorized scope")
+        if condition_id is not None and not authorization.condition_is_allowed(condition_id):
+            raise BudgetExhausted("condition is outside authorized scope")
+        if query_id is not None and logical_run_id != (
+            f"{query_id}__{condition_id}__{provider}__{model}"
+        ):
+            raise BudgetExhausted("logical run ID does not match its query/condition/provider/model binding")
+        from .real_transport import DeepSeekTransport, OllamaTransport
+        from .transport import FakeTransport
+
+        expected_type = {
+            "DeepSeek": DeepSeekTransport,
+            "Ollama": OllamaTransport,
+        }.get(provider)
+        if expected_type is None or (
+            type(inner) is not expected_type and type(inner) is not FakeTransport
+        ):
+            raise BudgetExhausted("inner transport type does not match provider")
+        if type(inner) is not FakeTransport and inner.authorization is not authorization:
+            raise BudgetIntegrityError("transport authorization does not match inner transport")
         self._inner = inner
         self._ledger = ledger
+        self.authorization = authorization
         self._logical_run_id = logical_run_id
         self._provider = provider
+        self._model = model
+        self._adapter_run_id = adapter_run_id
+        self._query_id = query_id
+        self._condition_id = condition_id
         self._attempt_numbers: list[int] = []
+
+    @property
+    def provider(self) -> str:
+        return self._provider
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    @property
+    def logical_run_id(self) -> str:
+        return self._logical_run_id
+
+    @property
+    def adapter_run_id(self) -> str | None:
+        return self._adapter_run_id
+
+    @property
+    def query_id(self) -> str | None:
+        return self._query_id
+
+    @property
+    def condition_id(self) -> str | None:
+        return self._condition_id
+
+    @property
+    def uses_real_transport(self) -> bool:
+        from .real_transport import DeepSeekTransport, OllamaTransport
+
+        return type(self._inner) in (DeepSeekTransport, OllamaTransport)
 
     @property
     def attempt_numbers(self) -> list[int]:

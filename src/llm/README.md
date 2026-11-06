@@ -1,7 +1,8 @@
 # APP-001 LLM Execution Adapter (`src/llm/`)
 
-**Status:** `APP-001-ADAPTER-R1` corrected; pending Codex hub review.
-`APP-001 = planned`. Formal evaluation is **not authorized**.
+**Status:** APP-001 adapter and runner implementation are in review.
+`APP-001 = planned`. The project owner has authorized a bounded Phase 1 run,
+but no formal run starts until the runner safety review is complete.
 
 This package implements the injectable adapter layer for the frozen APP-001
 extraction protocol (`app001-io.v1` / `app001-extraction.v2`, ADR-0013).  It
@@ -22,8 +23,8 @@ mock path, and the formal evaluation gate is always closed in this task.
 | `retry.py` | Transient-fault retry with injectable clock/sleeper; total_elapsed_ms includes backoff |
 | `runrecord.py` | Versioned, staged run-record; includes prompt_hashes and raw_response_retention |
 | `cost.py` | DeepSeek cost from actual usage + dated rate card; not_available on any missing/invalid field |
-| `gate.py` | Default-off formal evaluation gate (always closed); non-MockTransport refused before send() |
-| `adapter.py` | Orchestrating adapter with RetentionPolicy, prompt hash recording, gate enforcement |
+| `gate.py` | Default-off global gate; direct non-FakeTransport calls fail closed |
+| `adapter.py` | Orchestrating adapter with RetentionPolicy, prompt hashes, and runner-bound authorization checks |
 
 ---
 
@@ -47,10 +48,11 @@ network calls, no credential reads, no writes to tracked outputs.
 - `FakeTransport.calls` stores sanitized copies (authorization cleared),
   so assertion on stored calls cannot leak credential values.
 
-**Future real-transport path (not yet authorized):**
-- Credential injection is the responsibility of a real transport
-  implementation that must only be instantiated *after* the formal evaluation
-  gate is open (see Gate section below).
+**Authorized Phase 1 real-transport path:**
+- Real transports are only permitted through `App001Runner.run_formal()` with
+  the exact `FormalRunAuthorization` scope recorded in ADR-0014.
+- Each physical `send()` is wrapped by `BudgetAwareTransport`, which reserves
+  and records a durable budget slot before the request.
 - The adapter never reads credentials itself; credentials are injected at the
   transport boundary only.
 - Credentials must never appear in `RunRecord` JSON, stdout, exceptions,
@@ -61,7 +63,9 @@ network calls, no credential reads, no writes to tracked outputs.
 ## Formal evaluation gate
 
 Any transport that is **not the exact type** `FakeTransport` is refused before
-`send()` is called, regardless of the gate state argument:
+`send()` unless it is the runner-bound `BudgetAwareTransport` carrying the
+matching Phase 1 authorization, exact provider/model, query, condition, run ID,
+and real transport type. An arbitrary authorized custom transport is refused.
 
 ```python
 # FakeTransport (exact type) -- always allowed:
@@ -85,12 +89,15 @@ class HttpTransport:
     def send(self, req): ...  # NOT a MockTransport at all
 adapter = Adapter(provider="DeepSeek", transport=HttpTransport(), ...)
 adapter.run(...)  # raises FormalEvaluationBlockedError BEFORE send()
+
+# Real calls are only allowed through App001Runner.run_formal(), which builds
+# a matching real transport wrapped by BudgetAwareTransport.
 ```
 
-This check uses `type(transport) is FakeTransport` (exact type comparison), so
-it **cannot be bypassed by inheritance**.  To use a real transport, the formal
-evaluation gate must be opened via a new ADR and explicit project-owner
-authorization.
+This check uses exact type comparisons for `FakeTransport` and the controlled
+wrapper, so a subclass or duck-typed transport cannot skip the budget ledger.
+`FORMAL_EVALUATION_ALLOWED` remains `False`; ADR-0014 provides the narrow,
+explicitly authorized Phase 1 path without opening the global gate.
 
 ```python
 from src.llm.gate import formal_evaluation_allowed, require_formal_evaluation_allowed
