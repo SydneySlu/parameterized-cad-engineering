@@ -1065,3 +1065,24 @@ limits=
   C1 因 `conditions.py` 只提供 `bore_d` 而 RET-002 flat query 要求六字段全部阻塞；C0 多数缺冻结 envelope；所有 token/费用字段为空；C2 和 IR/CAD/geometry/STEP 未运行。
 next=先由编程 Agent 窄范围修复 C1 查询契约和 usage/token/费用传递并补 fixture 测试；中枢审查通过后新建唯一批次重跑，保留本批次诊断证据。
 commit=待本次文档同步提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-FIX status=review
+scope=修复 C1 查询契约（envelope form）和 DeepSeek usage/cost 传递链（parse 前记录）
+动作=
+  Part 1（C1 查询契约）：
+  1) conditions.py assemble_c1() 改用 CAD-003 envelope 形式 {schema_version, family_id, parameters:{bore_d}} 替代 flat_parameters {bore_d}，让 Schema 从 bore_d 推导其余五个字段；
+  2) 新建 tests/llm/test_conditions.py（10项）：C0 无 reference、C1 有效 bore_d 成功、C1 缺 bore_d 阻塞、C1 无 index 阻塞、evaluator 标签不污染查询、Chinese NLI 提取、envelope 形式验证；
+  3) test_runner_r1.py 3 个 mock 适配 envelope 形式；
+
+  Part 2（DeepSeek usage/cost）：
+  4) adapter.py 将 _record_cloud_usage_and_cost() 和 local_wall_time_ms 记录从 parse 之后移到 model_call pass 之后、parse 之前，确保 parse 失败时仍捕获 token/费用；
+  5) 新增 DeepSeekUsagePropagationTests（5项）：parse 失败仍记录 usage、完整 usage 有 cost、缺 cache cost=None、cache 不一致 cost=None、无 usage 字段全 None；
+  6) 新增 OllamaUsageUnavailableTests（2项）：cloud 字段始终 None、local_wall_time_ms 在 parse 失败时仍记录
+verified=
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 406, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/conditions.py src/llm/adapter.py` → OK
+  `git diff --check` → CLEAN
+limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
+next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
+commit=待提交

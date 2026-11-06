@@ -268,5 +268,160 @@ class RunRecordTests(unittest.TestCase):
         self.assertIsNone(rec.stage_status("nonexistent_stage"))
 
 
+class DeepSeekUsagePropagationTests(unittest.TestCase):
+    """APP-001-PHASE1-FIX Part 2: usage/token/cost fields recorded before parse gate."""
+
+    def setUp(self):
+        self.transport = FakeTransport()
+
+    def _adapter(self):
+        return Adapter(provider=DEEPSEEK_PROVIDER, transport=self.transport, sleeper=_NoSleep())
+
+    def test_usage_captured_when_parse_fails(self):
+        """cloud_input_tokens populated even when parse stage fails."""
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body="not a valid json envelope",  # parse will fail
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage={
+                    "prompt_tokens": 100,
+                    "completion_tokens": 25,
+                    "total_tokens": 125,
+                    "prompt_cache_hit_tokens": 80,
+                    "prompt_cache_miss_tokens": 20,
+                },
+            )
+        )
+        result = self._adapter().run(_input(), run_id="u1")
+        rec = result.record
+        self.assertEqual(rec.stage_status("model_call"), "pass")
+        self.assertEqual(rec.stage_status("parse"), "fail")
+        self.assertEqual(rec.cloud_input_tokens, 100)
+        self.assertEqual(rec.cloud_output_tokens, 25)
+        self.assertEqual(rec.cloud_total_tokens, 125)
+        self.assertEqual(rec.cloud_cached_input_tokens, 80)
+        self.assertEqual(rec.cloud_cache_miss_input_tokens, 20)
+
+    def test_usage_complete_with_full_cache_fields(self):
+        """Full usage + cache fields → cost is computed (not not_available)."""
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body=_envelope_body(),
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage={
+                    "prompt_tokens": 200,
+                    "completion_tokens": 50,
+                    "total_tokens": 250,
+                    "prompt_cache_hit_tokens": 150,
+                    "prompt_cache_miss_tokens": 50,
+                },
+            )
+        )
+        result = self._adapter().run(_input(), run_id="u2")
+        rec = result.record
+        self.assertEqual(rec.cloud_input_tokens, 200)
+        self.assertEqual(rec.cloud_output_tokens, 50)
+        self.assertEqual(rec.cloud_cached_input_tokens, 150)
+        self.assertEqual(rec.cloud_cache_miss_input_tokens, 50)
+        self.assertIsNotNone(rec.cloud_cost_amount)
+
+    def test_missing_cache_fields_yields_none_cost_not_guessed(self):
+        """Missing cache fields → cost is None (not_available), not guessed."""
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body=_envelope_body(),
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage={
+                    "prompt_tokens": 100,
+                    "completion_tokens": 30,
+                    "total_tokens": 130,
+                },
+            )
+        )
+        result = self._adapter().run(_input(), run_id="u3")
+        rec = result.record
+        self.assertEqual(rec.cloud_input_tokens, 100)
+        self.assertIsNone(rec.cloud_cached_input_tokens)
+        self.assertIsNone(rec.cloud_cache_miss_input_tokens)
+        self.assertIsNone(rec.cloud_cost_amount)
+
+    def test_inconsistent_cache_counts_yield_none_cost(self):
+        """cache_hit + cache_miss != prompt_tokens → cost is None, not guessed."""
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body=_envelope_body(),
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage={
+                    "prompt_tokens": 100,
+                    "completion_tokens": 30,
+                    "total_tokens": 130,
+                    "prompt_cache_hit_tokens": 60,
+                    "prompt_cache_miss_tokens": 60,  # 60+60=120 != 100
+                },
+            )
+        )
+        result = self._adapter().run(_input(), run_id="u4")
+        rec = result.record
+        self.assertEqual(rec.cloud_cached_input_tokens, 60)
+        self.assertEqual(rec.cloud_cache_miss_input_tokens, 60)
+        self.assertIsNone(rec.cloud_cost_amount)
+
+    def test_no_usage_in_response_yields_none_fields(self):
+        """When usage is absent from response, all cloud fields must stay None."""
+        self.transport.queue_response(
+            TransportResponse(
+                status=200,
+                body=_envelope_body(),
+                runtime_returned_model=DEEPSEEK_MODEL,
+                usage=None,
+            )
+        )
+        result = self._adapter().run(_input(), run_id="u5")
+        rec = result.record
+        self.assertIsNone(rec.cloud_input_tokens)
+        self.assertIsNone(rec.cloud_output_tokens)
+        self.assertIsNone(rec.cloud_cost_amount)
+
+
+class OllamaUsageUnavailableTests(unittest.TestCase):
+    """Ollama usage is not_applicable; cloud fields stay None."""
+
+    def setUp(self):
+        self.transport = FakeTransport()
+
+    def _adapter(self):
+        return Adapter(provider=OLLAMA_PROVIDER, transport=self.transport, sleeper=_NoSleep())
+
+    def test_ollama_cloud_fields_always_none(self):
+        """Ollama runs never have cloud token/cost fields."""
+        self.transport.queue_response(
+            TransportResponse(status=200, body=_envelope_body(),
+                              runtime_returned_model=None, usage=None)
+        )
+        result = self._adapter().run(_input(), run_id="o10")
+        rec = result.record
+        self.assertIsNone(rec.cloud_input_tokens)
+        self.assertIsNone(rec.cloud_output_tokens)
+        self.assertIsNone(rec.cloud_total_tokens)
+        self.assertIsNone(rec.cloud_cached_input_tokens)
+        self.assertIsNone(rec.cloud_cache_miss_input_tokens)
+        self.assertIsNone(rec.cloud_cost_amount)
+
+    def test_ollama_local_wall_time_captured_even_on_parse_fail(self):
+        """local_wall_time_ms recorded before parse; captured on parse fail too."""
+        self.transport.queue_response(
+            TransportResponse(status=200, body="not a valid json envelope",
+                              runtime_returned_model=None, usage=None)
+        )
+        result = self._adapter().run(_input(), run_id="o11")
+        rec = result.record
+        self.assertEqual(rec.stage_status("parse"), "fail")
+        self.assertIsNotNone(rec.local_wall_time_ms)
+
+
 if __name__ == "__main__":
     unittest.main()

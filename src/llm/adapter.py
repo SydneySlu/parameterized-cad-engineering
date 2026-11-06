@@ -506,6 +506,19 @@ class Adapter:
         )
         record.raw_response_retention = retention_meta
 
+        # --- Cloud usage / cost (DeepSeek only) ---
+        # Recorded immediately after model_call succeeds, before parse, so that
+        # token counts and cost are captured even when the response body fails
+        # to parse (e.g. MISSING_ENVELOPE_KEY).  Without this, an early return
+        # in the parse stage would leave all usage fields as None.
+        if self.provider == DEEPSEEK_PROVIDER:
+            self._record_cloud_usage_and_cost(record, response)
+
+        # --- Local timing (Ollama only) ---
+        # Likewise recorded before parse so wall-time is always present.
+        if self.provider == OLLAMA_PROVIDER:
+            record.local_wall_time_ms = total_elapsed_ms
+
         # --- Stage: parse ---
         parse_result = parse_response(response.body)
         if not parse_result.ok:
@@ -518,14 +531,6 @@ class Adapter:
         record.add_stage(stage("contract", "pass"))
 
         envelope = parse_result.envelope
-
-        # --- Cloud usage / cost (DeepSeek only) ---
-        if self.provider == DEEPSEEK_PROVIDER:
-            self._record_cloud_usage_and_cost(record, response)
-
-        # --- Local timing (Ollama only) ---
-        if self.provider == OLLAMA_PROVIDER:
-            record.local_wall_time_ms = total_elapsed_ms
 
         # --- Stage: projection ---
         projection = project_to_cad003(envelope.extracted_parameters)
