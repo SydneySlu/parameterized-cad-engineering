@@ -9,6 +9,7 @@ No acceptance-set evaluator labels in any output.
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -393,7 +394,24 @@ class ProviderParamIsolationTests(unittest.TestCase):
 
 class RunnerBudgetIntegrationTests(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.mkdtemp()
+        import time as _time
+        self._batch_id = f"runner-budget-{int(_time.time() * 1000000)}"
+        self._batch_dir = Path(__file__).resolve().parents[2] / "work" / "app001-runs" / self._batch_id
+        if self._batch_dir.exists():
+            shutil.rmtree(self._batch_dir)
+
+    def tearDown(self):
+        if self._batch_dir.exists():
+            lock_file = self._batch_dir / "budget_ledger.lock"
+            if lock_file.exists():
+                try:
+                    lock_file.unlink()
+                except (PermissionError, OSError):
+                    pass
+            try:
+                shutil.rmtree(self._batch_dir)
+            except (PermissionError, OSError):
+                pass
 
     def test_dry_run_does_not_touch_budget(self):
         """dry_run() must not create a budget ledger."""
@@ -401,14 +419,13 @@ class RunnerBudgetIntegrationTests(unittest.TestCase):
         summary = runner.dry_run()
         self.assertEqual(summary.total_attempts, 0)
         # No work/app001-runs/ directory should be created
-        canonical = Path(self._tmp)
-        self.assertFalse((canonical / "budget_ledger.json").exists())
+        self.assertFalse((self._batch_dir / "budget_ledger.json").exists())
 
     def test_budget_reserved_before_send(self):
         """Verify budget reservation happens before network call via ledger."""
         # We test this by checking that a run with budget=0 fails before send
-        auth = authorize_phase1_run(batch_id="budget-zero-test")
-        batch_dir = Path(self._tmp) / "budget-zero-test"
+        auth = authorize_phase1_run(batch_id=self._batch_id)
+        batch_dir = self._batch_dir
         ledger = BudgetLedger(batch_dir, auth)
         # Exhaust the budget for one provider by tampering the ledger
         with ledger:

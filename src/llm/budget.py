@@ -85,6 +85,12 @@ class BudgetLedger:
     If the ledger does not exist, it is created fresh.  If it exists but
     is corrupted, :class:`BudgetIntegrityError` is raised and no further
     reservations are possible.
+
+    R3-A: The ledger is bound to the unique canonical batch directory
+    ``work/app001-runs/<authorization.batch_id>/``.  The same authorization
+    cannot be used with multiple different directories to obtain independent
+    budget quotas.  Path traversal, symlinks, and non-canonical paths are
+    rejected at construction time (fail-closed).
     """
 
     def __init__(
@@ -94,9 +100,61 @@ class BudgetLedger:
     ) -> None:
         self._batch_dir = Path(batch_dir)
         self._auth = authorization
+        # R3-A: Enforce that batch_dir is the unique canonical path for this authorization
+        self._verify_canonical_batch_path()
         self._ledger_path = self._batch_dir / "budget_ledger.json"
         self._lock_path = self._batch_dir / "budget_ledger.lock"
         self._locked = False
+
+    def _verify_canonical_batch_path(self) -> None:
+        """Verify batch_dir is the canonical path for authorization.batch_id.
+
+        Rejects:
+        - Path traversal (.. components)
+        - Symlinks that escape the canonical directory
+        - Absolute or relative paths that don't resolve to the expected location
+        - Multiple ledgers for the same authorization batch_id
+        - ANY directory outside work/app001-runs/<batch_id>/
+
+        Fail-closed: any mismatch raises BudgetIntegrityError.
+        No exemptions for temporary directories or testing.
+        """
+        # Canonical root: work/app001-runs
+        from pathlib import Path as _Path
+        repo_root = _Path(__file__).resolve().parents[2]
+        canonical_root = repo_root / "work" / "app001-runs"
+
+        # Expected canonical path for this batch_id
+        safe_batch_id = _safe_filename(self._auth.batch_id)
+        if not safe_batch_id:
+            raise BudgetIntegrityError(
+                f"authorization batch_id {self._auth.batch_id!r} is empty after sanitization"
+            )
+        expected_canonical = (canonical_root / safe_batch_id).resolve()
+
+        # Resolve the provided batch_dir (follows symlinks)
+        try:
+            actual_resolved = self._batch_dir.resolve(strict=False)
+        except (OSError, RuntimeError) as exc:
+            raise BudgetIntegrityError(
+                f"batch_dir {self._batch_dir} cannot be resolved: {exc}"
+            ) from exc
+
+        # Must match exactly - no exemptions
+        if actual_resolved != expected_canonical:
+            raise BudgetIntegrityError(
+                f"batch_dir mismatch: authorization.batch_id={self._auth.batch_id!r} "
+                f"expects {expected_canonical}, got {actual_resolved}; "
+                "the same authorization cannot be used with multiple directories"
+            )
+
+        # Additional check: the resolved path must be inside canonical_root
+        try:
+            actual_resolved.relative_to(canonical_root.resolve())
+        except ValueError:
+            raise BudgetIntegrityError(
+                f"batch_dir {actual_resolved} is outside the canonical run root {canonical_root}"
+            )
 
     @property
     def authorization(self) -> FormalRunAuthorization:
@@ -531,24 +589,91 @@ class BudgetAwareTransport:
         return list(self._attempt_numbers)
 
     def send(self, request) -> object:
-        """Reserve a budget slot, call inner.send(), record outcome."""
+        """Reserve a budget slot, call inner.send(), record outcome.
+
+        R3-B/C: Creates a budget reservation token and passes it to the real
+        transport's send() method. For Ollama, also reserves budget for the
+        identity pre-check (/api/tags) on the first send().
+        """
+        # R3-C: For Ollama, reserve budget for the /api/tags identity check
+        # on the first call (when digest not yet verified)
+        from .real_transport import DeepSeekTransport, OllamaTransport, _BudgetReservationToken
+
+        needs_ollama_tags_reservation = (
+            type(self._inner) is OllamaTransport
+            and not self._inner._verified_digest
+        )
+
+        tags_reservation = None
+        tags_budget_token = None
+        if needs_ollama_tags_reservation:
+            # Reserve budget for the /api/tags GET request
+            tags_reservation = self._ledger.reserve_attempt(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+            )
+            # Create token for tags request with /api/tags endpoint
+            tags_budget_token = _BudgetReservationToken._create_for_budget_transport(
+                batch_id=self._ledger._auth.batch_id,
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                model=self._model,
+                endpoint="/api/tags",
+                attempt_number=tags_reservation.attempt_number,
+            )
+            # Note: we don't append to attempt_numbers yet because the tags call
+            # happens inside inner.send() and we can't separately track its outcome
+            # If inner.send() fails during tags, we'll record the outcome for this reservation
+
+        # Reserve budget for the main request (POST /api/chat or DeepSeek POST)
         reservation = self._ledger.reserve_attempt(
             logical_run_id=self._logical_run_id,
             provider=self._provider,
         )
         self._attempt_numbers.append(reservation.attempt_number)
+
+        # R3-B: Create budget token to prove reservation, binding to batch_id, provider, model, endpoint
+        budget_token = _BudgetReservationToken._create_for_budget_transport(
+            batch_id=self._ledger._auth.batch_id,
+            logical_run_id=self._logical_run_id,
+            provider=self._provider,
+            model=self._model,
+            endpoint=request.endpoint,
+            attempt_number=reservation.attempt_number,
+        )
+
         from .transport import TransportError
 
         try:
-            response = self._inner.send(request)
+            # Pass the budget token to the real transport
+            if type(self._inner) is OllamaTransport:
+                response = self._inner.send(
+                    request,
+                    _budget_token=budget_token,
+                    _tags_budget_token=tags_budget_token
+                )
+            elif type(self._inner) is DeepSeekTransport:
+                response = self._inner.send(request, _budget_token=budget_token)
+            else:
+                # FakeTransport doesn't take _budget_token
+                response = self._inner.send(request)
         except TransportError as exc:
             outcome = "transient_retryable" if exc.is_retryable() else "non_retryable"
+            # Record outcome for the main reservation
             self._ledger.record_outcome(
                 logical_run_id=self._logical_run_id,
                 provider=self._provider,
                 attempt_number=reservation.attempt_number,
                 outcome=outcome,
             )
+            # If Ollama tags reservation was made, also record its outcome
+            if needs_ollama_tags_reservation:
+                self._ledger.record_outcome(
+                    logical_run_id=self._logical_run_id,
+                    provider=self._provider,
+                    attempt_number=tags_reservation.attempt_number,
+                    outcome=outcome,
+                )
             raise
         except Exception:
             self._ledger.record_outcome(
@@ -557,11 +682,28 @@ class BudgetAwareTransport:
                 attempt_number=reservation.attempt_number,
                 outcome="non_retryable",
             )
+            if needs_ollama_tags_reservation:
+                self._ledger.record_outcome(
+                    logical_run_id=self._logical_run_id,
+                    provider=self._provider,
+                    attempt_number=tags_reservation.attempt_number,
+                    outcome="non_retryable",
+                )
             raise
+        # Success: record outcomes for both reservations
         self._ledger.record_outcome(
             logical_run_id=self._logical_run_id,
             provider=self._provider,
             attempt_number=reservation.attempt_number,
             outcome="success",
         )
+        if needs_ollama_tags_reservation:
+            self._ledger.record_outcome(
+                logical_run_id=self._logical_run_id,
+                provider=self._provider,
+                attempt_number=tags_reservation.attempt_number,
+                outcome="success",
+            )
+            # Now record the tags attempt number
+            self._attempt_numbers.insert(0, tags_reservation.attempt_number)
         return response

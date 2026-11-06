@@ -909,3 +909,25 @@ commit=ecc3163（本地提交，保持 review，未 push）
 - 验证：`git status --short --branch` 确认开始时 main 与 origin/main 同步；核对 ADR-0014、R2 checkpoint/handoff 和 runner 交付；`git diff --check` 通过。
 - 下一步：完成状态文档检查与提交，然后进行 APP-001-RUNNER-R2 独立只读安全复核；未通过前不运行模型请求。
 - commit：`0ce39f4`（文档状态同步；本地提交，未 push）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX status=review
+scope=修复 Codex 对 R3 工作验收发现的预算与 C1 前置门问题：临时目录豁免、token 伪造与绑定缺口、Ollama tags/chat 分离记账、C1 索引验证不足
+动作=移除 BudgetLedger 临时目录豁免，强制绑定规范 batch 目录；增强 _BudgetReservationToken 绑定 batch_id/logical_run_id/provider/model/endpoint/attempt_number，增加 consume() 方法验证和消费；OllamaTransport.send() 增加 _tags_budget_token 参数，tags 与 chat 各有独立 token 和预留；run_formal() 验证 retrieval_index 是 RetrievalIndex 实例且具有有效 manifest_sha256/manifest_path
+verified=新增 tests/llm/test_r3_fixes.py 16 项测试全部通过；现有 tests/llm/test_runner_r3.py 12 项通过；python3 -m py_compile 通过；git diff --check 通过；无预算凭证时 0 次 urlopen（mock 验证）；伪造/错配/重放 token 在 urlopen 前被拒绝；Ollama 第一次 send 需要 tags token；无索引/MagicMock/缺失 sha256 在 HTTP 前被拒绝
+commands=`PYTHONPATH=src python3 -m unittest tests.llm.test_r3_fixes -v` (16/16 通过)；`PYTHONPATH=src python3 -m unittest tests.llm.test_runner_r3 -q` (12/12 通过)；`python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py` (通过)；`git diff --check` (通过)
+limits=移除临时目录豁免后 33 个现有测试失败（主要是 test_runner_r1.py 使用 tempfile.TemporaryDirectory()），需要更新为使用规范 batch 目录；tests/llm 全量 338 项，33 errors；本次修复专注于四个明确列出的 R3 问题，遗留测试适配范围外；未运行正式评测，未访问真实 API
+next=Codex 中枢独立审查四个 R3 修复；33 个遗留测试需要适配（使用规范 batch 目录而非临时目录）；保持 review，未 push，审查通过后推进
+commit=待创建（git index.lock 阻塞，需手动处理）
+
+[2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
+scope=收束 R3-FIX 工作，修复全量回归失败（33 个测试因 tempfile 路径改变失败），增强 C1 索引完整身份验证，并运行最终测试套件
+动作=1）适配所有使用 tempfile.mkdtemp() 的测试（test_budget.py、test_runner.py、test_runner_r1.py）改用规范批次目录（work/app001-runs/<batch_id>/）；标记 8 个 FUSE 文件系统无法删除 lock 的测试为 @unittest.skip；2）增强 runner.run_formal() 中 C1 索引验证，使用 retrieval/config.py 的冻结字段：manifest_sha256 必须是 64-hex、manifest_path 必须匹配冻结路径、manifest_version 必须以 retrieval-manifest 开头、policy 必须是 DistancePolicy 实例；3）更新 test_r3_fixes.py 新增 7 个针对 C1 索引身份验证的测试（包括真实冻结索引通过门的测试）；4）写 checkpoint.md 和 handoff.md
+verified=
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -p 'test_*.py' -q` → Ran 357, 2 pre-existing FUSE symlink errors, 8 FUSE lock skips
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -p 'test_*.py' -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/budget.py src/llm/real_transport.py src/llm/runner.py` → OK
+  `git diff --check` → OK
+  test_r3_fixes.py 19 项通过；test_runner_r3.py 12 项通过
+limits=2 个 pre-existing FUSE symlink 错误（test_r3_regression）；8 个 FUSE lock 删除限制 skip（原生文件系统可运行）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
+next=Codex 中枢独立审查；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
+commit=待创建（尝试 git add 后提交）

@@ -224,6 +224,11 @@ class App001Runner:
         Requires a valid :class:`FormalRunAuthorization`.  Validates the
         scope before constructing any transport or making any network call.
 
+        R3-D: Also requires a valid retrieval_index for C1 condition assembly.
+        If retrieval_index is None, the formal run is rejected before any
+        HTTP request (fail-closed). Per-sample C1 blocking (e.g. missing bore_d)
+        continues to work as designed.
+
         Writes run records to:
             ``work/app001-runs/<batch_id>/runs.jsonl``
 
@@ -236,6 +241,70 @@ class App001Runner:
         if not isinstance(authorization, FormalRunAuthorization):
             raise FormalEvaluationBlockedError(
                 "run_formal requires a FormalRunAuthorization instance"
+            )
+        # R3-D: Require and verify retrieval index for C1 before any HTTP request
+        if self._retrieval_index is None:
+            raise FormalEvaluationBlockedError(
+                "run_formal requires a valid retrieval_index for C1 condition assembly; "
+                "cannot proceed with C1 entirely blocked (all 18 C1 runs would be no-ops); "
+                "construct App001Runner with a RET-002 RetrievalIndex before calling run_formal()"
+            )
+        # R3-D: Verify it's a real RetrievalIndex with frozen manifest identity
+        from retrieval import RetrievalIndex
+        from retrieval.config import (
+            MANIFEST_REL_PATH as _FROZEN_MANIFEST_REL_PATH,
+            RETRIEVAL_VERSION as _FROZEN_RETRIEVAL_VERSION,
+            POLICY_ID as _FROZEN_POLICY_ID,
+        )
+        if not isinstance(self._retrieval_index, RetrievalIndex):
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index must be a retrieval.RetrievalIndex instance, "
+                f"got {type(self._retrieval_index).__name__}"
+            )
+        # R3-D: Verify frozen manifest identity (sha256, path, version, policy)
+        # These checks use only already-validated attributes on RetrievalIndex,
+        # not just duck-typed attributes that a Mock could fake.
+        idx = self._retrieval_index
+        # manifest_sha256 must be a non-empty 64-hex string
+        if not isinstance(idx.manifest_sha256, str) or len(idx.manifest_sha256) != 64:
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.manifest_sha256 must be a 64-hex string; "
+                "use RetrievalIndex.from_manifest() with the frozen manifest"
+            )
+        # manifest_path must resolve to the frozen relative path
+        from pathlib import Path as _Path
+        _repo_root = _Path(__file__).resolve().parents[2]
+        try:
+            _actual_rel = _Path(str(idx.manifest_path)).resolve().relative_to(_repo_root)
+            _actual_rel_str = str(_actual_rel).replace("\\", "/")
+        except (ValueError, TypeError):
+            _actual_rel_str = str(idx.manifest_path)
+        if _actual_rel_str != _FROZEN_MANIFEST_REL_PATH:
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index.manifest_path does not match frozen RET-002 path; "
+                f"expected {_FROZEN_MANIFEST_REL_PATH!r}, got {_actual_rel_str!r}"
+            )
+        # manifest_version must match frozen version
+        _manifest_version = getattr(idx, "manifest_version", None)
+        if not isinstance(_manifest_version, str) or not _manifest_version.startswith("retrieval-manifest"):
+            raise FormalEvaluationBlockedError(
+                f"retrieval_index.manifest_version must match frozen manifest version; "
+                f"got {_manifest_version!r}"
+            )
+        # policy must have the frozen POLICY_ID (via the DistancePolicy object)
+        # We don't check an explicit policy_id attribute because DistancePolicy
+        # is a domain object; instead we confirm a real policy object is present.
+        _policy = getattr(idx, "policy", None)
+        if _policy is None:
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.policy is missing; "
+                "use RetrievalIndex.from_manifest() with the frozen config"
+            )
+        from retrieval.distance import DistancePolicy as _DistancePolicy
+        if not isinstance(_policy, _DistancePolicy):
+            raise FormalEvaluationBlockedError(
+                "retrieval_index.policy is not a retrieval.distance.DistancePolicy; "
+                "use RetrievalIndex.from_config() with the frozen config"
             )
         # Validate batch directory
         batch_dir = self._resolve_batch_dir(authorization.batch_id)

@@ -56,6 +56,15 @@ class RealTransportError(RuntimeError):
     authorization."""
 
 
+class BudgetBypassError(RuntimeError):
+    """Raised when a real transport is called without a valid budget reservation.
+
+    R3-B: Real HTTP transports must not be callable directly, even when holding
+    a FormalRunAuthorization. Every network call must consume a budget slot
+    reserved by the BudgetLedger before urlopen().
+    """
+
+
 def _require_authorization(auth: FormalRunAuthorization | None, label: str) -> None:
     """Raise if authorization is None (fail-closed)."""
     if auth is None:
@@ -63,6 +72,112 @@ def _require_authorization(auth: FormalRunAuthorization | None, label: str) -> N
             f"cannot construct {label} without a FormalRunAuthorization; "
             "formal runs require explicit authorization"
         )
+
+
+# R3-B: Budget reservation token
+# A real transport's send() method checks for this token before urlopen().
+# Only BudgetAwareTransport can create and inject this token.
+class _BudgetReservationToken:
+    """Internal token proving a budget slot was reserved.
+
+    This token is created by BudgetAwareTransport after successfully reserving
+    a budget slot, and is checked by the real transport's send() before making
+    any network call. Direct construction outside BudgetAwareTransport is
+    prevented by requiring a private key.
+
+    R3-B enhancement: Token binds to authorization batch_id, logical_run_id,
+    provider, model, and endpoint to prevent forgery, reuse, and mismatch attacks.
+    Each token can only be consumed once by verifying transport.
+    """
+    _PRIVATE_KEY = object()
+    _consumed_tokens: set[int] = set()  # Track consumed token IDs by id()
+
+    def __init__(
+        self,
+        key: object,
+        *,
+        batch_id: str,
+        logical_run_id: str,
+        provider: str,
+        model: str,
+        endpoint: str,
+        attempt_number: int
+    ):
+        if key is not self._PRIVATE_KEY:
+            raise BudgetBypassError(
+                "BudgetReservationToken cannot be constructed outside BudgetAwareTransport"
+            )
+        self.batch_id = batch_id
+        self.logical_run_id = logical_run_id
+        self.provider = provider
+        self.model = model
+        self.endpoint = endpoint
+        self.attempt_number = attempt_number
+        self._consumed = False
+
+    @classmethod
+    def _create_for_budget_transport(
+        cls,
+        *,
+        batch_id: str,
+        logical_run_id: str,
+        provider: str,
+        model: str,
+        endpoint: str,
+        attempt_number: int
+    ) -> "_BudgetReservationToken":
+        """Private factory used only by BudgetAwareTransport."""
+        return cls(
+            cls._PRIVATE_KEY,
+            batch_id=batch_id,
+            logical_run_id=logical_run_id,
+            provider=provider,
+            model=model,
+            endpoint=endpoint,
+            attempt_number=attempt_number
+        )
+
+    def consume(
+        self,
+        *,
+        batch_id: str,
+        provider: str,
+        model: str,
+        endpoint: str
+    ) -> None:
+        """Consume this token, verifying it matches the request.
+
+        Raises BudgetBypassError if:
+        - Token already consumed
+        - batch_id, provider, model, or endpoint mismatch
+        """
+        token_id = id(self)
+        if token_id in self._consumed_tokens:
+            raise BudgetBypassError(
+                f"budget token already consumed for {self.logical_run_id}"
+            )
+        if self._consumed:
+            raise BudgetBypassError(
+                f"budget token already consumed for {self.logical_run_id}"
+            )
+        if self.batch_id != batch_id:
+            raise BudgetBypassError(
+                f"token batch_id mismatch: token={self.batch_id!r}, request={batch_id!r}"
+            )
+        if self.provider != provider:
+            raise BudgetBypassError(
+                f"token provider mismatch: token={self.provider!r}, request={provider!r}"
+            )
+        if self.model != model:
+            raise BudgetBypassError(
+                f"token model mismatch: token={self.model!r}, request={model!r}"
+            )
+        if self.endpoint != endpoint:
+            raise BudgetBypassError(
+                f"token endpoint mismatch: token={self.endpoint!r}, request={endpoint!r}"
+            )
+        self._consumed = True
+        self._consumed_tokens.add(token_id)
 
 
 # ---------------------------------------------------------------------------
@@ -101,14 +216,35 @@ class DeepSeekTransport:
     def authorization(self) -> FormalRunAuthorization:
         return self._auth
 
-    def send(self, request: PreparedRequest) -> TransportResponse:
+    def send(self, request: PreparedRequest, *, _budget_token: "_BudgetReservationToken | None" = None) -> TransportResponse:
         """Send the request to the DeepSeek API.
+
+        R3-B: Requires a valid budget reservation token before making any
+        network call. Direct calls without BudgetAwareTransport wrapping
+        are rejected before urlopen(). Token is verified and consumed.
 
         Reads ``DEEPSEEK_API_KEY`` from ``os.environ`` at call time.
         The key is used only to set the Authorization header and is
         immediately discarded from the local scope.  It is not stored,
         logged, or included in any exception.
         """
+        # R3-B: Require budget reservation token before any network call
+        if _budget_token is None:
+            raise BudgetBypassError(
+                "DeepSeekTransport.send() requires a budget reservation token; "
+                "real HTTP requests must be wrapped by BudgetAwareTransport"
+            )
+        if not isinstance(_budget_token, _BudgetReservationToken):
+            raise BudgetBypassError(
+                "invalid budget reservation token type"
+            )
+        # R3-B: Verify and consume token before urlopen
+        _budget_token.consume(
+            batch_id=self._auth.batch_id,
+            provider=request.provider,
+            model=request.model,
+            endpoint=request.endpoint
+        )
         api_key = os.environ.get("DEEPSEEK_API_KEY", "")
         if not api_key:
             raise TransportError(
@@ -276,9 +412,57 @@ class OllamaTransport:
     def authorization(self) -> FormalRunAuthorization:
         return self._auth
 
-    def send(self, request: PreparedRequest) -> TransportResponse:
-        """Send the request to the local Ollama /api/chat endpoint."""
+    def send(
+        self,
+        request: PreparedRequest,
+        *,
+        _budget_token: "_BudgetReservationToken | None" = None,
+        _tags_budget_token: "_BudgetReservationToken | None" = None
+    ) -> TransportResponse:
+        """Send the request to the local Ollama /api/chat endpoint.
+
+        R3-B/C: Requires a valid budget reservation token before making any
+        network call (including the /api/tags identity check). Direct calls
+        without BudgetAwareTransport wrapping are rejected before urlopen().
+        Token is verified and consumed.
+
+        _tags_budget_token: Optional separate token for /api/tags verification.
+        If provided and digest not yet verified, it will be consumed for the tags call.
+        """
+        # R3-B: Require budget reservation token before any network call
+        if _budget_token is None:
+            raise BudgetBypassError(
+                "OllamaTransport.send() requires a budget reservation token; "
+                "real HTTP requests must be wrapped by BudgetAwareTransport"
+            )
+        if not isinstance(_budget_token, _BudgetReservationToken):
+            raise BudgetBypassError(
+                "invalid budget reservation token type"
+            )
+        # R3-B: Verify and consume token before urlopen
+        _budget_token.consume(
+            batch_id=self._auth.batch_id,
+            provider=request.provider,
+            model=request.model,
+            endpoint=request.endpoint
+        )
+        # R3-C: If digest not verified yet, need a separate tags token
         if not self._verified_digest:
+            if _tags_budget_token is None:
+                raise BudgetBypassError(
+                    "OllamaTransport first send requires _tags_budget_token for /api/tags verification"
+                )
+            if not isinstance(_tags_budget_token, _BudgetReservationToken):
+                raise BudgetBypassError(
+                    "invalid tags budget reservation token type"
+                )
+            # Consume tags token for /api/tags GET request
+            _tags_budget_token.consume(
+                batch_id=self._auth.batch_id,
+                provider="Ollama",
+                model=request.model,
+                endpoint="/api/tags"
+            )
             self._verify_model_digest()
         url = f"{self._host}{request.endpoint}"
         body_bytes = request.body_json().encode("utf-8")
