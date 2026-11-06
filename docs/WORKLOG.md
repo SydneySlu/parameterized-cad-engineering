@@ -1049,3 +1049,19 @@ verified=
 limits=9d83219 尚未 push/合入 main，APP-001-RUNNER 保持 review；8 项 FUSE skip 未解除；未进行正式模型调用或评测
 next=用户 push 并合入 9d83219 后，按 ADR-0014 运行 APP-001 第一阶段授权范围；C2 和 IR/CAD/geometry/STEP 仍禁用
 commit=待本次文档同步提交
+[2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-01-REVIEW status=review
+scope=核对并记录 APP-001 Phase 1 首个正式批次；不重复调用真实模型
+动作=
+  1) 以本机 `main`/`origin/main` 和批次目录为事实源，确认 runner 已合入 `53f6c49`，工作区干净；
+  2) 核对 `runs.jsonl` 36 条记录、`budget_ledger.json` 27 次物理 HTTP 和 18 个原始响应文件；确认 `work/app001-runs/` 被 Git 忽略；
+  3) 分离统计传输成功、解析/Schema 状态与 C1 请求前阻塞，不把 `final_outcome=success` 当作模型质量成功；
+  4) 新建 `agent-work/reviews/APP-001-phase1-20261107-01-codex-review.md`，同步 PROJECT_STATUS/PROJECT_PLAN。
+verified=
+  `git status --short --branch` → `main...origin/main`，无未提交改动；
+  `runs.jsonl` → 36 条，C0 18 条完成模型调用，C1 18 条阻塞；
+  `budget_ledger.json` → DeepSeek 9、Ollama tags 9、Ollama chat 9，总计 27/108；
+  `git check-ignore` → 正式批次目录被 `work/` 规则忽略；密钥扫描未发现 key/Bearer 内容。
+limits=
+  C1 因 `conditions.py` 只提供 `bore_d` 而 RET-002 flat query 要求六字段全部阻塞；C0 多数缺冻结 envelope；所有 token/费用字段为空；C2 和 IR/CAD/geometry/STEP 未运行。
+next=先由编程 Agent 窄范围修复 C1 查询契约和 usage/token/费用传递并补 fixture 测试；中枢审查通过后新建唯一批次重跑，保留本批次诊断证据。
+commit=待本次文档同步提交

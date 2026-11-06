@@ -43,8 +43,8 @@
 ## 阶段 4：轻量版交付
 
 - [x] 实现并审查云端/本地 LLM adapter/logger（APP-001-ADAPTER；已通过 R3-FIX 中枢验收）
-- [x] 实现 APP-001 第一阶段受控 runner（APP-001-RUNNER-001/R1/R2；R2-R6 修复已收束到本地 `9d83219`，中枢独立复核通过；待 push/合入 main）
-- [ ] 在 APP-001-RUNNER commit `9d83219` 合入 main 后，按既有 ADR-0014 授权范围运行正式 APP-001 第一阶段（9 个冻结样例、C0/C1、DeepSeek 与 Ollama、36 逻辑运行，最多 108 次请求；IR/CAD/geometry/STEP 禁用；契约见 [`docs/coordination/APP-001-baseline-contract.md`](coordination/APP-001-baseline-contract.md)）
+- [x] 实现并合入 APP-001 第一阶段受控 runner（APP-001-RUNNER-001/R1/R2；R2-R6 修复合入 `main`，中枢独立复核通过）
+- [x] 按 ADR-0014 运行 APP-001 第一阶段首个正式批次（`app001-phase1-20261107-01`：36 条逻辑记录、最多 108 次物理 HTTP；IR/CAD/geometry/STEP 禁用）；结果审查见 [`agent-work/reviews/APP-001-phase1-20261107-01-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-01-codex-review.md)，因 C1 契约和 usage/token/费用缺口保持 `review`，修复后需新批次重跑
 - [ ] 实现有限验证和字段修复循环（APP-002）
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）
