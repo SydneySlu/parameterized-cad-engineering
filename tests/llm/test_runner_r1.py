@@ -537,7 +537,7 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
         mock_index.query.assert_not_called()
 
     def test_bore_d_in_nli_queries_ret002(self):
-        """When bore_d is in NLI, C1 uses it to query RET-002."""
+        """When bore_d is in NLI, C1 uses it to query RET-002 via envelope form."""
         case = self._make_case("做 GN 705 轴环，bore_d=24 mm")
 
         class MockResult:
@@ -550,8 +550,10 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
 
         class MockIndex:
             def query(self, family_id, parameters, top_k=3):
-                assert "bore_d" in parameters
-                assert parameters["bore_d"] == 24.0
+                # Envelope form: parameters["parameters"]["bore_d"]
+                inner = parameters.get("parameters", {})
+                assert "bore_d" in inner, f"Expected envelope form with bore_d, got {parameters}"
+                assert inner["bore_d"] == 24.0
                 return MockResult()
 
         assembled = assemble_c1(case, MockIndex())
@@ -559,7 +561,7 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
         self.assertEqual(assembled.bore_d_used_for_query, 24.0)
 
     def test_cm_unit_converted_for_query(self):
-        """1.6 cm → 16 mm for the RET-002 query."""
+        """1.6 cm → 16 mm for the RET-002 query (envelope form)."""
         case = self._make_case("轴孔直径 1.6 cm，按 GN 705 目录做轴环。")
         queried = []
 
@@ -573,7 +575,8 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
 
         class MockIndex:
             def query(self, family_id, parameters, top_k=3):
-                queried.append(parameters["bore_d"])
+                inner = parameters.get("parameters", {})
+                queried.append(inner["bore_d"])
                 return MockResult()
 
         assembled = assemble_c1(case, MockIndex())
@@ -605,7 +608,8 @@ class C1AssemblyNoFixedFallbackTests(unittest.TestCase):
 
         class MockIndex:
             def query(self, family_id, parameters, top_k=3):
-                queried.append(parameters["bore_d"])
+                inner = parameters.get("parameters", {})
+                queried.append(inner["bore_d"])
                 return MockResult()
 
         assembled = assemble_c1(case, MockIndex())

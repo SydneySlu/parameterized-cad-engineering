@@ -192,8 +192,16 @@ def assemble_c1(
             ),
             bore_d_used_for_query=None,
         )
-    # Query RET-002
-    query_params = {"bore_d": bore_d}
+    # Query RET-002 using the CAD-003 envelope form so the Schema can derive
+    # the other five frozen fields from bore_d.  The flat_parameters form
+    # requires all six fields and must not be used here because only bore_d
+    # is available from the allowed natural language input.
+    from .contract import SCHEMA_VERSION
+    query_params = {
+        "schema_version": SCHEMA_VERSION,
+        "family_id": FAMILY_ID,
+        "parameters": {"bore_d": bore_d},
+    }
     try:
         result = retrieval_index.query(
             family_id=FAMILY_ID,

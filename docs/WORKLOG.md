@@ -1065,3 +1065,69 @@ limits=
   C1 因 `conditions.py` 只提供 `bore_d` 而 RET-002 flat query 要求六字段全部阻塞；C0 多数缺冻结 envelope；所有 token/费用字段为空；C2 和 IR/CAD/geometry/STEP 未运行。
 next=先由编程 Agent 窄范围修复 C1 查询契约和 usage/token/费用传递并补 fixture 测试；中枢审查通过后新建唯一批次重跑，保留本批次诊断证据。
 commit=待本次文档同步提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-FIX status=review
+scope=修复 C1 查询契约（envelope form）和 DeepSeek usage/cost 传递链（parse 前记录）
+动作=
+  Part 1（C1 查询契约）：
+  1) conditions.py assemble_c1() 改用 CAD-003 envelope 形式 {schema_version, family_id, parameters:{bore_d}} 替代 flat_parameters {bore_d}，让 Schema 从 bore_d 推导其余五个字段；
+  2) 新建 tests/llm/test_conditions.py（10项）：C0 无 reference、C1 有效 bore_d 成功、C1 缺 bore_d 阻塞、C1 无 index 阻塞、evaluator 标签不污染查询、Chinese NLI 提取、envelope 形式验证；
+  3) test_runner_r1.py 3 个 mock 适配 envelope 形式；
+
+  Part 2（DeepSeek usage/cost）：
+  4) adapter.py 将 _record_cloud_usage_and_cost() 和 local_wall_time_ms 记录从 parse 之后移到 model_call pass 之后、parse 之前，确保 parse 失败时仍捕获 token/费用；
+  5) 新增 DeepSeekUsagePropagationTests（5项）：parse 失败仍记录 usage、完整 usage 有 cost、缺 cache cost=None、cache 不一致 cost=None、无 usage 字段全 None；
+  6) 新增 OllamaUsageUnavailableTests（2项）：cloud 字段始终 None、local_wall_time_ms 在 parse 失败时仍记录
+verified=
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 406, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile src/llm/conditions.py src/llm/adapter.py` → OK
+  `git diff --check` → CLEAN
+limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
+next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
+commit=待提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
+scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
+动作=
+  1) 新建 tests/llm/test_deepseek_usage_fixture.py（8 项）：
+     Tier 1（transport 层）：DeepSeekTransport._parse_response() 从脱敏 fixture 提取 5 个 usage 字段 + runtime model；缺 cache 字段返回 None；不一致 cache 值原样透传给 cost 层；
+     Tier 2（adapter 层）：FakeTransport + TransportResponse.usage 模拟 DeepSeekTransport 输出格式，经 Adapter._record_cloud_usage_and_cost() 传入 RunRecord：
+       - 完整 cache → RunRecord.cloud_* 全部填充 + cost 可计算 + cost_source 有值
+       - 缺 cache → tokens 填充、cost=None
+       - cache 不一致 → tokens 填充、cost=None
+       - parse 失败 → usage 仍被记录（验证 parse 前记录修复）
+       - 无 usage → 所有 cloud 字段 None
+  2) fixture 不含真实密钥、Authorization 或用户数据；不读取 .env 或 DEEPSEEK_API_KEY；无网络请求
+  3) 不改 src/ 生产代码、正式批次 app001-phase1-20261107-01、冻结样例、Prompt 或 ADR
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_deepseek_usage_fixture -v` → Ran 8, OK
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 414, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `python3 -m py_compile` 未变更源文件，无需运行
+  `git diff --check` → CLEAN
+  实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
+limits=验证使用 Python 3.10.12；用户须在 Mac 复核；未修改正式批次；未运行真实模型
+next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
+commit=待提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TRANSPORT-ADAPTER-INTEGRATION status=review
+scope=补齐端到端测试缺口：脱敏 DeepSeek HTTP fixture 从 DeepSeekTransport 解析经 Adapter 写入 RunRecord/cost
+动作=
+  1) 在 tests/llm/test_deepseek_usage_fixture.py 新增 TestDeepSeekEndToEndFixtureFlow（1 项端到端集成测试）：
+     - @patch urllib.request.urlopen 返回脱敏 Chat Completions JSON fixture
+     - @patch.dict os.environ 注入 dummy DEEPSEEK_API_KEY=test-only-not-a-secret（测试后恢复）
+     - 构造真实 DeepSeekTransport + BudgetAwareTransport + Adapter 栈，绑定 run_id/query_id/condition_id 匹配 Adapter gate
+     - 从 Adapter.run() 正常入口发起，fixture 经 DeepSeekTransport._parse_response() → BudgetAwareTransport.send() → Adapter → RunRecord/cost 完整流转
+     - 断言：urlopen 恰好 1 次；5 个 usage 字段与 fixture 一致；parse 失败但 usage 仍存在；cache 192+48=240 一致 → cost 可计算；cost_currency/cost_source 匹配 RATE_CARD 契约；runtime_returned_model 来自 fixture
+  2) 更新模块 docstring：fixture 按 DeepSeek 文档/已保存 probe 响应结构构造，不声称来自正式批次（正式批次 raw response 不含完整 HTTP usage/model envelope）
+  3) 不改 src/ 生产代码、正式批次 app001-phase1-20261107-01、冻结样例、Prompt 或 ADR
+verified=
+  `PYTHONPATH=src python3 -m unittest tests.llm.test_deepseek_usage_fixture -v` → Ran 9, OK
+  `PYTHONPATH=src python3 -m unittest discover -s tests/llm -q` → Ran 415, OK (skipped=8)
+  `PYTHONPATH=src python3 -m unittest discover -s tests/schema -q` → Ran 17, OK
+  `git diff --check` → CLEAN
+  实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
+limits=验证使用 Python 3.10.12；用户须在 Mac 复核；VM 无 GitHub 凭据，推送需用户在本机执行；未运行真实模型，未读取用户 DEEPSEEK_API_KEY
+next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
+commit=待提交
