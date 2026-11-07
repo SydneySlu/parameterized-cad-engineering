@@ -24,6 +24,8 @@ v4 候选只澄清上述边界，保留 v3 decision gate。目标测试映射是
 3. **unsupported 规范标签**：每项仍须依据用户原话并附 evidence；等价表述输出稳定规范名。阳极氧化、anodize、anodized、anodizing 均规范为 `anodizing`；法兰/ flange 规范为 `flange`；键槽/keyway 规范为 `keyway`。保留用户原文作为 quote，不添加未请求项目。
 4. **安全 gate 不变**：沿用 v3 中 `answer` 的 bore_d 目录成员、无 unsupported 和无可见自相矛盾等前置条件，以及 CAD-003 的最终确定性校验；不静默改写显式主张。
 
+显式 `bore_d` 必须属于 15 个离散目录 selector；“5–80 mm”只是数值边界，不是连续可选范围。因此 `75 mm` 虽在数值边界内，仍属于非目录值，必须保留用户主张并 `refuse`，不能吸附到 70 或 80。
+
 ## 3. 冻结样例回归映射
 
 | 样例/观测 | 离线期望 |

@@ -84,7 +84,7 @@ intended. Apply the catalog decision reference to the user's explicit value.
 
 Emit `refuse` when construction is not possible within the frozen family scope.
 
-- `bore_d` is explicitly stated but falls outside the catalog range (below 5 mm or above 80 mm). Do not snap to the nearest catalog value. Preserve the explicit claim and refuse construction.
+- `bore_d` is explicitly stated but is not one of the 15 discrete catalog selectors. This includes values inside the numeric span that are not catalog rows, such as `75 mm`, as well as values below 5 mm or above 80 mm. Do not snap to the nearest catalog value. Preserve the explicit claim and refuse construction.
 - The user requests features outside the frozen `set_screw_shaft_collar` family. Record each unsupported item in `unsupported_requests` with a concise name and refuse construction. Do not claim any unsupported feature is supported.
 - The request is fundamentally outside the `set_screw_shaft_collar` family scope.
 

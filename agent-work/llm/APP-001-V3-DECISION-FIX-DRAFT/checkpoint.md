@@ -32,3 +32,19 @@ next_agent_focus=<审查候选措辞是否仅覆盖三项已观测偏差、是�
 ## 禁止范围
 
 不更新激活 manifest，不变更生产 `PROMPT_VERSION`，不修改冻结 acceptance-set，不运行任何模型，不改旧批次，不运行 C2/IR/CAD/geometry/STEP。真实模型复测必须另行授权。
+
+## 离线补强 checkpoint（2026-11-08）
+
+- 状态：review；ADR-0017 仍保持 proposed，生产继续使用 `app001-extraction.v3`。
+- 变更：新增未激活的 `src/llm/decision_policy_v4_candidate.py` 纯函数 checker；补充 v4 测试；明确 `75 mm` 虽在 5–80 mm 数值边界内但不是 15 个离散 selector，必须 `refuse`。
+- checker 覆盖：`1.6 cm -> 16 mm` 且保留 evidence quote；用户 `bore_d=24` 优先于不可信 retrieval `20`；unsupported alias 统一为 `anodizing`；缺失/目录冲突/规则冲突不得 `answer`。
+- handoff_successor_check：
+  - predecessor=`d8961ac` + Codex review `479561a`
+  - files_format=`prompt-v4-candidate.md`、策略稿、checker 和测试可读；checker 未被生产 adapter/parser/runner 导入
+  - core_rerun=`tests.llm.test_decision_policy_v4_candidate` 18/18 OK
+  - normal_case=`1.6 cm` 归一为 16 并允许 answer；`bore_d=24` 在 retrieval=20 时仍允许 answer
+  - failure_case=`75 mm` 返回 refuse；缺失 bore_d、目录冲突和规则冲突均不允许 answer
+  - interface=`app001-io.v1`、v3 生产版本、acceptance-set 和旧批次未改
+  - limits=`LLM discover` 594/8 skip、Schema 17/17、v3 candidate 55/55、parser 41/41、py_compile 和 diff check 通过；未调用真实模型
+  - result=pass_with_review_gate
+- 下一步：对 checker 和文案做 Codex 中枢独立审查；通过后再决定是否建立 v4 activation 实现任务。任何真实模型批次仍需新 ID 和单独授权。

@@ -1579,3 +1579,11 @@ commit=待提交
 - 结果：候选范围与 v3 正式批次证据一致；新增三条策略说明保留现有安全 gate。审查报告指出目录拒绝措辞仍需明确覆盖范围内非离散值，且当前测试检查文本存在性而未实现纯函数 fixture checker。
 - 验证：v4 专项 8/8、v3 候选 55/55、parser 41/41；候选提交前 LLM 全量 584 passed/8 skipped、Schema 17/17；active v3 hash 和 acceptance-set hash 均保持不变。
 - 结论：当前候选通过 review，可继续补强离线策略 checker；ADR-0017 保持 proposed，v4 不激活，不授权新模型批次。
+
+### APP-001-V3-DECISION-FIX-DRAFT-OFFLINE-HARDENING / Codex / review / 2026-11-08
+
+- 动作：按中枢审查意见补强 v4 候选；新增未激活的 `decision_policy_v4_candidate.py` 纯函数 checker，修正 prompt/spec 对非离散目录值的拒绝措辞，并扩展专项测试。
+- 结果：checker 明确验证精确单位换算、证据 quote 保留、用户值优先于 retrieval reference、unsupported alias 规范化，以及缺失/目录冲突/规则冲突不得 `answer`；生产 v3、契约、acceptance-set、旧批次和激活 manifest 未改。
+- 验证：v4 专项 18/18、v3 candidate 55/55、parser 41/41、LLM 全量 594 passed/8 skipped、Schema 17/17；`py_compile` 与 `git diff --check` 通过。未调用真实模型、未读取密钥。
+- 边界：ADR-0017 仍 proposed；checker 只验证离线 fixture 规则，不证明模型依从；真实效果评测仍需新的唯一批次和单独授权。
+- 下一步：Codex 中枢独立复核本轮 checker 与候选文案，再决定是否创建 v4 activation 实现任务。

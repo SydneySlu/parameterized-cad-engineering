@@ -9,6 +9,14 @@ import json
 import unittest
 from pathlib import Path
 
+from src.llm.decision_policy_v4_candidate import (
+    CandidateInputError,
+    V4FixtureCase,
+    canonicalize_unsupported,
+    evaluate_fixture,
+    normalize_length_to_mm,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = ROOT / "agent-work/llm/APP-001-baseline-prep"
@@ -74,6 +82,56 @@ class TestV4CandidateBoundaries(unittest.TestCase):
     def test_candidate_does_not_claim_model_effect_or_authorize_a_run(self):
         self.assertIn("不能证明模型会遵循指令", self.policy)
         self.assertIn("单独授权", self.policy)
+
+    def test_non_catalog_wording_covers_in_range_75(self):
+        self.assertIn("not one of the 15 discrete catalog selectors", self.prompt)
+        self.assertIn("such as `75 mm`", self.prompt)
+
+
+class TestV4ExecutableOfflineChecker(unittest.TestCase):
+    def test_exact_cm_conversion_preserves_evidence(self):
+        result = normalize_length_to_mm(1.6, "cm", "轴孔直径 1.6 cm")
+        self.assertEqual(result.value_mm, 16)
+        self.assertEqual(result.evidence_quote, "轴孔直径 1.6 cm")
+        self.assertEqual(evaluate_fixture(V4FixtureCase(1.6, "cm")).decision_options, {"answer"})
+
+    def test_fractional_conversion_does_not_fake_catalog_membership(self):
+        result = evaluate_fixture(V4FixtureCase(1.65, "cm"))
+        self.assertNotIn("answer", result.decision_options)
+
+    def test_user_bore_wins_over_untrusted_retrieval_reference(self):
+        result = evaluate_fixture(V4FixtureCase(24, "mm", retrieval_bore_value=20))
+        self.assertEqual(result.normalized_bore.value_mm, 24)
+        self.assertEqual(result.decision_options, {"answer"})
+
+    def test_unsupported_aliases_are_stable(self):
+        self.assertEqual(canonicalize_unsupported("阳极氧化"), "anodizing")
+        self.assertEqual(canonicalize_unsupported("anodized"), "anodizing")
+        result = evaluate_fixture(V4FixtureCase(75, unsupported_terms=("阳极氧化",)))
+        self.assertEqual(result.unsupported_labels, ("anodizing",))
+        self.assertEqual(result.decision_options, {"refuse"})
+
+    def test_in_range_non_catalog_75_is_refused(self):
+        result = evaluate_fixture(V4FixtureCase(75))
+        self.assertEqual(result.decision_options, {"refuse"})
+        self.assertFalse(result.answer_allowed)
+
+    def test_missing_bore_cannot_answer(self):
+        result = evaluate_fixture(V4FixtureCase())
+        self.assertNotIn("answer", result.decision_options)
+        self.assertIn("ask", result.decision_options)
+
+    def test_catalog_conflict_cannot_answer(self):
+        result = evaluate_fixture(V4FixtureCase(20, catalog_conflict=True))
+        self.assertNotIn("answer", result.decision_options)
+
+    def test_rule_conflict_cannot_answer(self):
+        result = evaluate_fixture(V4FixtureCase(80, rule_conflict=True))
+        self.assertNotIn("answer", result.decision_options)
+
+    def test_unknown_unit_fails_closed(self):
+        with self.assertRaises(CandidateInputError):
+            normalize_length_to_mm(16, "inch")
 
 
 if __name__ == "__main__":
