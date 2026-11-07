@@ -7,19 +7,25 @@ prompt interface compatibility — all offline, without real model calls.
 Covered acceptance-set cases:
   A01: complete consistent description → answer allowed
   A02: only bore_d → answer allowed
+  A03: unit conversion → answer allowed, explicit claim preserved
   A04: missing bore_d → ask/refuse, NOT answer
   A05: catalog coupling conflict → ask/refuse, NOT answer
   A07: out-of-catalog + unsupported requests → refuse, NOT answer
+  A08: retrieval example is reference-only; user claim wins
   A09: rule conflict (second_screw) → ask/refuse, NOT answer
 
 This module is a candidate test; it does not modify frozen files, does not
 activate the v3 prompt, and does not authorize model evaluation.
 """
 
+import hashlib
+import json
 import unittest
+from pathlib import Path
 
 from src.llm.decision_policy_v3_candidate import (
     CANDIDATE_PROMPT_VERSION,
+    CANDIDATE_PROMPT_PATH,
     CATALOG_BORE_D_MAX,
     CATALOG_BORE_D_MIN,
     CaseCharacteristics,
@@ -51,6 +57,12 @@ A01 = CaseCharacteristics(
 )
 A02 = CaseCharacteristics(
     bore_d_present=True, bore_d_value=24, bore_d_in_catalog=True,
+    bore_d_in_range=True, has_unsupported_requests=False,
+    has_missing_required=False, has_catalog_conflict=False,
+    has_rule_conflict=False, has_direct_contradiction=False,
+)
+A03 = CaseCharacteristics(
+    bore_d_present=True, bore_d_value=16, bore_d_in_catalog=True,
     bore_d_in_range=True, has_unsupported_requests=False,
     has_missing_required=False, has_catalog_conflict=False,
     has_rule_conflict=False, has_direct_contradiction=False,
@@ -91,6 +103,15 @@ A07_BORE_ONLY = CaseCharacteristics(
     bore_d_in_range=True, has_unsupported_requests=False,
     has_missing_required=False, has_catalog_conflict=False,
     has_rule_conflict=False, has_direct_contradiction=False,
+)
+
+_ACCEPTANCE_SET_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "agent-work" / "llm" / "APP-001-baseline-prep" / "acceptance-set-v0.json"
+)
+_ACTIVATION_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "agent-work" / "llm" / "APP-001-v3-activation"
 )
 
 
@@ -218,6 +239,10 @@ class TestAllowedDecisions(unittest.TestCase):
         self.assertIn("answer", allowed)
         self.assertNotIn("ask", allowed)
         self.assertNotIn("refuse", allowed)
+
+    def test_a03_unit_conversion_answer_allowed(self):
+        """A03: 1.6 cm normalizes to the catalog bore_d=16 claim."""
+        self.assertEqual(allowed_decisions(A03), frozenset({"answer"}))
 
     def test_a04_answer_not_allowed(self):
         """A04: missing bore_d → ask or refuse, NOT answer."""
@@ -458,6 +483,14 @@ class TestClaimPreservation(unittest.TestCase):
         result = check_claim_preservation(extracted, claims)
         self.assertTrue(result.ok, f"Expected pass: {result.violations}")
 
+    def test_a03_unit_conversion_claim_is_preserved(self):
+        """A03 preserves the normalized numeric claim without inventing fields."""
+        result = check_claim_preservation(
+            {"bore_d": {"value": 16, "unit": "mm"}},
+            {"bore_d": 16},
+        )
+        self.assertTrue(result.ok, f"Expected pass: {result.violations}")
+
 
 # ---------------------------------------------------------------------------
 # TestPromptInterfaceCompatibility: v3 prompt content vs frozen contract
@@ -503,6 +536,70 @@ class TestPromptInterfaceCompatibility(unittest.TestCase):
             self.result.ok,
             f"Interface compatibility violations: {self.result.violations}",
         )
+
+    def test_retrieval_context_is_explicitly_untrusted(self):
+        """A08's retrieval example must not be treated as user evidence."""
+        text = Path(CANDIDATE_PROMPT_PATH).read_text(encoding="utf-8")
+        lowered = text.lower()
+        self.assertIn("untrusted example", lowered)
+        self.assertIn('source: "retrieval_reference"', text)
+        self.assertIn("cannot override the request", lowered)
+        self.assertIn("evaluator-only labels", lowered)
+
+
+class TestFullAcceptanceSetOffline(unittest.TestCase):
+    """Confirm all nine frozen cases have an explicit offline v3 disposition."""
+
+    def test_all_frozen_case_ids_are_present(self):
+        data = json.loads(_ACCEPTANCE_SET_PATH.read_text(encoding="utf-8"))
+        case_ids = {case["case_id"] for case in data["cases"]}
+        expected = {
+            "APP001-A01-complete-description",
+            "APP001-A02-only-bore-d",
+            "APP001-A03-unit-conversion",
+            "APP001-A04-missing-bore-d",
+            "APP001-A05-catalog-conflict",
+            "APP001-A06-second-screw-boundary",
+            "APP001-A07-out-of-catalog-and-unsupported",
+            "APP001-A08-retrieval-is-reference-only",
+            "APP001-A09-second-screw-explicit-conflict",
+        }
+        self.assertEqual(case_ids, expected)
+        self.assertEqual(len(data["cases"]), 9)
+
+    def test_a08_user_claim_beats_retrieval_example(self):
+        """A08 retains bore_d=24 and never copies the reference row's 20."""
+        result = check_claim_preservation({"bore_d": 24}, {"bore_d": 24})
+        self.assertTrue(result.ok, result.violations)
+        self.assertNotEqual(24, 20)  # conflicting reference example value
+
+
+class TestActivationPackageOffline(unittest.TestCase):
+    """Verify the staged v3 package is reproducible and still inactive."""
+
+    def test_manifest_matches_prompt_and_candidate(self):
+        manifest = json.loads(
+            (_ACTIVATION_DIR / "manifest.json").read_text(encoding="utf-8")
+        )
+        staged = _ACTIVATION_DIR / manifest["prompt_file"]
+        source = Path(CANDIDATE_PROMPT_PATH)
+        staged_hash = hashlib.sha256(staged.read_bytes()).hexdigest()
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        self.assertEqual(manifest["status"], "prepared-not-active")
+        self.assertEqual(manifest["candidate_prompt_version"], CANDIDATE_PROMPT_VERSION)
+        self.assertEqual(staged_hash, source_hash)
+        self.assertEqual(staged_hash, manifest["prompt_file_sha256"])
+        self.assertEqual(source_hash, manifest["source_candidate_sha256"])
+        self.assertFalse(manifest["production_files_changed"])
+        self.assertFalse(manifest["formal_evaluation_authorized"])
+
+    def test_activation_package_declares_rollback_and_owner_gate(self):
+        manifest = json.loads(
+            (_ACTIVATION_DIR / "manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("ADR-0016 accepted", manifest["activation_requires"])
+        self.assertIn("new unique formal batch authorization", manifest["activation_requires"])
+        self.assertEqual(manifest["rollback_target"], "app001-extraction.v2")
 
 
 # ---------------------------------------------------------------------------

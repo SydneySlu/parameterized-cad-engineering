@@ -58,3 +58,12 @@
 ### 结论和边界
 
 本轮原先指出的两个代码/规格缺口已修正，离线候选达到可继续评估的状态。它仍只是未激活的候选：真实模型能否稳定根据新增目录表识别目录耦合与规则冲突，离线测试无法证明。该结论不代表 prompt 效果通过，也不构成冻结/激活许可或新批次授权。若项目负责人决定评估模型效果，需先完成候选冻结/激活所需的新 ADR 与版本更新，并单独授权唯一正式批次。
+
+## 版本化激活准备复核（2026-11-07）
+
+- 候选专项扩展为 55/55；覆盖 A01-A09 case ID、A03 单位换算、A08 retrieval reference 隔离、正常/澄清/拒绝边界、主张保留和激活包哈希一致性。
+- LLM 全量 571 passed/8 skipped，Schema 17/17，`py_compile`、manifest JSON parse 和 `git diff --check` 通过；环境为 Python 3.15.2，未在 Python 3.11.18 复核。
+- `agent-work/llm/APP-001-v3-activation/` 已建立，状态 `prepared-not-active`；prompt 副本与候选源 SHA-256 一致（`e90ad55c...`），acceptance-set hash 已登记。
+- `contract.py`、`parser.py`、`prompt_loader.py`、生产 v2 prompt、旧正式批次均未修改；没有真实模型请求、密钥读取或新批次授权。
+
+结论：候选 v3 的离线验收和激活准备通过本轮审查；ADR-0016 保持 `proposed`。这不是生产激活，也不构成真实模型效果结论。下一步必须由项目负责人决定是否接受 ADR-0016；若接受，再单独提交生产激活改动并完成 Python 3.11.18 复核，效果评测仍需新的唯一批次授权。
