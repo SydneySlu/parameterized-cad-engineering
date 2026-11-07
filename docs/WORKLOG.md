@@ -1145,3 +1145,56 @@ verified=
 limits=响应 envelope 仍不符合冻结契约；A04 C1 无安全 bore_d，A07 C1 的 CAD-003 envelope 被 Schema 拒绝；未发布字段抽取、Schema、CAD 或模型质量指标。
 next=先修复/冻结响应 envelope 契约并明确 A04/A07 C1 覆盖口径；中枢审查通过后才允许新批次，保留两个旧批次作为诊断证据。
 commit=待本次文档同步提交
+
+[2026-11-07] agent=CC task=APP-001-PHASE1-ENVELOPE-FIX status=review
+scope=查明并修复 APP-001 第二批次模型响应缺少冻结 envelope 的根因，补齐无网络测试证据；不修改正式批次、prompt artifact、ADR-0014 或 C1 评测口径
+动作=
+  1) 读取必读事实源：PROJECT_STATUS、PROJECT_PLAN、DECISIONS、WORKLOG、handoff-review-protocol、
+     APP-001-baseline-contract、codex-review、prompt-v2.md、acceptance-set-v0.json、
+     prompt-output-contract-v1.md；
+  2) 重点检查 src/llm/{prompt_loader,contract,parser,adapter,real_transport,runner}.py 和
+     tests/llm/{test_deepseek_usage_fixture,test_adapter,test_runner_r1}.py；
+  3) 检查正式批次 work/app001-runs/app001-phase1-20261107-02/ 的 runs.jsonl 和 5 个 raw_response.txt 样本，
+     确认 32 条响应均缺 contract_version/prompt_version，与 MISSING_ENVELOPE_KEY 一致；
+  4) 根因诊断：prompt_loader._parse_artifact() 剥离 fenced code block 内容，隐藏了
+     prompt-v2.md 中唯一包含 contract_version/prompt_version 的 JSON envelope 示例；
+  5) 实现最小修复：src/llm/prompt_loader.py 的 system 段落处理移除 if not in_fence 守护，
+     让 fenced block 内容进入 system_prompt（fence 标记行本身仍跳过）；
+  6) 新增 tests/llm/test_envelope_fix.py 38 项无网络 fixture 测试，覆盖任务要求的 1-8 项。
+root_cause=
+  prompt_loader.py 代码 bug（解析冻结 artifact 时剥离了 fenced code block 内容）；
+  不是 prompt artifact 内容不足（prompt-v2.md 正确包含完整 envelope 示例）；
+  不是 transport/parser/adapter 丢字段；
+  不是 request 构造问题（providers 已正确发送 JSON object 约束）。
+prompt_artifact_modified=否；prompt-v2.md 文件 hash d95f853d… 未改变
+files=
+  src/llm/prompt_loader.py（修改 _parse_artifact system 段落处理）
+  tests/llm/test_envelope_fix.py（新增 38 项无网络测试）
+  agent-work/llm/APP-001-PHASE1-ENVELOPE-FIX/checkpoint.md（本 checkpoint）
+  docs/WORKLOG.md（追加本记录）
+not_modified=
+  work/app001-runs/app001-phase1-20261107-01、app001-phase1-20261107-02（正式批次只读）
+  acceptance-set-v0.json、ADR-0014、APP-001 正式评测范围
+  C2、IR/CAD/geometry/STEP 流程
+  C1 查询逻辑、RET-002 规则、A04/A07 评测标签
+  contract.py、parser.py、adapter.py、real_transport.py、providers.py、runner.py
+  prompt-v2.md、FROZEN_PROMPT_FILE_SHA256
+verified=
+  /usr/bin/python3 --version → Python 3.10.12（VM 无 python3.11，已如实报告）
+  PYTHONPATH=src:. /usr/bin/python3 -m unittest tests.llm.test_envelope_fix -v → Ran 38, OK
+  PYTHONPATH=src:. /usr/bin/python3 -m unittest discover -s tests/llm -q → Ran 453, OK (skipped=8)
+  PYTHONPATH=src:. /usr/bin/python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  PYTHONPATH=src:. /usr/bin/python3 -m py_compile src/llm/prompt_loader.py tests/llm/test_envelope_fix.py → OK
+  git diff --check → CLEAN
+  修复后 load_frozen_prompt().system_prompt 含 contract_version 和 prompt_version → True
+  prompt-v2.md 文件 hash 仍为 d95f853d… → True（artifact 未修改）
+  system_prompt_sha256 从 561904470f… 变为 0e457d216b…（预期，内容变了）
+real_model_requests=无；未发起真实 DeepSeek 或 Ollama 请求
+api_key_accessed=否；未读取、输出或写入 API key
+formal_batches_modified=否；正式批次 app001-phase1-20261107-01/-02 保持只读
+unresolved=
+  .git/index.lock 存在（0 字节，FUSE 环境下 git status 创建后无法清理），阻塞 git add/commit/push；
+  按任务规则不自行删除锁，需要用户在本机执行：rm .git/index.lock → git add … → git commit → git push
+  Python 3.11.18 不可用（VM 仅有 3.10.12），用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核
+next=用户在本机删除 .git/index.lock → Python 3.11.18 复核验证 → git commit → git push -u origin cc/APP-001-PHASE1-ENVELOPE-FIX → Codex 中枢独立审查；审查通过后是否启动新正式批次由项目负责人按 ADR-0014 授权；本任务保持 review
+commit=待提交（index.lock 阻塞）
