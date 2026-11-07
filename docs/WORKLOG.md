@@ -947,7 +947,7 @@ verified=
   test_r3_fixes.py 25/25 通过
 limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件系统可运行；test_r3_regression 两个 symlink 测试现在通过，已转为 skip-on-FUSE 模式）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
 next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
-commit=2581a10
+commit=待提交
 
 [2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CODEX-REVIEW status=review
 scope=独立复核 evidence null 契约修正；不启动正式批次
@@ -1135,7 +1135,7 @@ verified=
   `git diff --check` → CLEAN
 limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
-commit=2581a10
+commit=待提交
 
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
 scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
@@ -1159,7 +1159,7 @@ verified=
   实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
 limits=验证使用 Python 3.10.12；用户须在 Mac 复核；未修改正式批次；未运行真实模型
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
-commit=2581a10
+commit=待提交
 
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TRANSPORT-ADAPTER-INTEGRATION status=review
 scope=补齐端到端测试缺口：脱敏 DeepSeek HTTP fixture 从 DeepSeekTransport 解析经 Adapter 写入 RunRecord/cost
@@ -1180,7 +1180,7 @@ verified=
   实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
 limits=验证使用 Python 3.10.12；用户须在 Mac 复核；VM 无 GitHub 凭据，推送需用户在本机执行；未运行真实模型，未读取用户 DEEPSEEK_API_KEY
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
-commit=2581a10
+commit=待提交
 [2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-02-REVIEW status=review
 scope=在 `APP-001-PHASE1-FIX` 合入 main 后运行第二个唯一正式批次并审查结果
 动作=
@@ -1357,7 +1357,7 @@ verified=
   python3 -m py_compile src/llm/parser.py → OK
   git diff --check → CLEAN
 no_network=无真实模型调用、无密钥读取、无修改正式批次
-commit=2581a10
+commit=待提交
 
 [2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-04-CODEX-REVIEW status=review
 scope=对已授权完成的 APP-001 第四批次做只读独立核对；不重新运行模型、不修改代码或旧批次
@@ -1427,3 +1427,16 @@ verified=
 limits=尚未在 Python 3.11.18 环境复核；8 个 FUSE skip 不是通过项；未调用真实模型、未读取密钥、未修改 work/app001-runs
 next=独立中枢复核本窄补丁；APP-001 保持 review
 commit=2581a10
+
+[2026-11-07] agent=Codex task=APP-001-AUDIT-EVIDENCE-R1-CODEX-REVIEW status=review
+scope=独立验收 R1 证据留存/transport shape 修正和 A02/A04/A07 C1 样例边界；不启动新批次
+动作=
+  1) 以共享仓库和实际提交 0a49fb2/2581a10 为事实源，核对代码 diff、checkpoint、旧批次只读状态及 `.gitignore`；
+  2) Python 3.11.18 重跑专项+C1 回归 17/17、LLM 全量 516 passed/8 FUSE skipped、Schema 17/17；Python 3.15.2 结果一致；
+  3) 独立复放 A02 C1 正常、A04 缺 bore_d 安全阻塞、A07 RETREIVAL_SCHEMA_REJECTED 阻塞；确认未读取 evaluator 标签；
+  4) 发现并恢复 CC 文档提交对历史 WORKLOG 行的误改；新增中枢审查记录和冻结样例回归测试。
+verified=
+  2xx wrapper 缺 message/content 与 DeepSeek prompt_tokens_details 非对象均为 invalid_json 并进入受控留存；5xx 正文不读取；原始响应正文不进入错误 metadata；A04/A07 阻塞符合冻结 RET-002/CAD-003 契约。
+limits=任务当前仍在 review，尚未合入 main；8 个 FUSE skip；未发起真实模型请求、未读取 API key；LLM 全量曾观察到历史预算测试的账本/批次隔离波动，但当前干净复跑通过。
+next=项目负责人审查后合入 main；不因 A04/A07 放宽查询契约；模型质量/Prompt/Schema 变化需新版本、新 ADR 和新批次授权。
+commit=待提交
