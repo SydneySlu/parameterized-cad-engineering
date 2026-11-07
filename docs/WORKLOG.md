@@ -1587,3 +1587,10 @@ commit=待提交
 - 验证：v4 专项 18/18、v3 candidate 55/55、parser 41/41、LLM 全量 594 passed/8 skipped、Schema 17/17；`py_compile` 与 `git diff --check` 通过。未调用真实模型、未读取密钥。
 - 边界：ADR-0017 仍 proposed；checker 只验证离线 fixture 规则，不证明模型依从；真实效果评测仍需新的唯一批次和单独授权。
 - 下一步：Codex 中枢独立复核本轮 checker 与候选文案，再决定是否创建 v4 activation 实现任务。
+
+### APP-001-V4-ACTIVATION-REVIEW / Codex / review / 2026-11-08
+
+- 动作：独立复核 `APP-001-V3-DECISION-FIX-DRAFT` 提交 `32caed6` 的 v4 候选、ADR-0017、checker、生产隔离和回归证据。
+- 结果：候选规则方向、`75 mm` 离散目录措辞、生产 v3 隔离和冻结 hash 均通过；发现 P1：`retrieval_bore_value` 传入但未参与 checker 逻辑，导致“用户 24 优先 retrieval 20”测试不具备判别力；P2：unsupported 原文 evidence quote 未由 checker 验证。
+- 验证：v4 18/18、v3 candidate 55/55、parser 41/41、LLM 594 passed/8 skipped、Schema 17/17、`py_compile` 与 `git diff --check` 通过；未调用真实模型、未读取密钥。
+- 结论：activation review 暂不放行；ADR-0017 保持 proposed，生产继续 v3。先完成 P1 checker 修正，再复审；不授权新模型批次。
