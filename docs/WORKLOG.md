@@ -1481,3 +1481,18 @@ limits=
   未调用真实模型、未读取密钥、未修改正式批次；不产生模型效果结论
 next=中枢审查 v3 decision-gate 规则和接口兼容性；若项目负责人决定激活，需新 ADR 并更新冻结接口
 commit=待提交（分支 cc/APP-001-DECISION-POLICY-V3-DRAFT）
+
+[2026-11-07] agent=Codex task=APP-001-DECISION-POLICY-V3-DRAFT-CODEX-REVIEW status=review
+scope=独立验收未激活的 APP-001 候选决策策略 v3；不调用模型、不修改冻结接口或正式批次
+动作=
+  1) 在共享仓库确认分支 cc/APP-001-DECISION-POLICY-V3-DRAFT，HEAD 9a32756，父链包含本地分析提交 002b936/6f4af27，工作区干净；读取项目状态、计划、决策、交接协议及候选 prompt/spec/checkpoint/代码/测试
+  2) 独立运行 v3 专项 44 项、LLM 全量 560 项（8 skip）、Schema 17 项、py_compile；检查候选代码未被 adapter/parser/runner 导入，冻结文件差异为空
+  3) 确认 A05/A09 的 allowed_decisions 测试输入包含 prompt 不可见的 catalog/rule conflict 布尔值；相应 bad-answer envelope self-consistency 测试断言通过，不能证明 prompt 识别冲突
+  4) 独立复放只有 bore_d=75 且无 unsupported 请求时 allowed_decisions 返回 answer；这与 CAD-003 的离散目录集合不一致，尽管下游仍安全拒绝构造
+  5) 新建中枢审查记录并将 PROJECT_STATUS 验收描述收窄为需修正
+verified=
+  tests.llm.test_decision_policy_v3_candidate：44/44；tests/llm discover：560 passed、8 skipped；tests/schema discover：17/17；py_compile 通过；git show --check HEAD 通过
+  候选未激活，生产路径未导入 checker；冻结文件未改；未发起模型/网络请求、未读取密钥、未修改旧批次
+limits=当前环境 Python 3.15.2，未在 Python 3.11.18 复核；8 个 FUSE skip 不计作通过；候选策略存在 A05/A09 可观测性及目录成员边界缺口
+next=CC 窄修候选 prompt/spec/checker/测试，说明模型需要哪些可见规则信息，并增加 bore_d=75 单独输入拒绝 answer 的用例；不得激活、push、合并或调用模型；之后由 Codex 复审
+commit=待提交
