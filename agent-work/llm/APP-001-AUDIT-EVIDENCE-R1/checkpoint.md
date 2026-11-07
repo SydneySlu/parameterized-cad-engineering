@@ -91,4 +91,4 @@ handoff_self_check:
   next_agent_focus=独立检查变更范围与错误分类；APP-001 保持 review，不启动新批次
 ```
 
-Commit：待提交。仅提交上述任务文件；不纳入未跟踪的 Codex C1 回归测试。
+Commit：`2581a10`。仅提交上述任务文件；未纳入未跟踪的 Codex C1 回归测试。

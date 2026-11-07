@@ -947,7 +947,7 @@ verified=
   test_r3_fixes.py 25/25 通过
 limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件系统可运行；test_r3_regression 两个 symlink 测试现在通过，已转为 skip-on-FUSE 模式）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
 next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
-commit=待提交
+commit=2581a10
 
 [2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CODEX-REVIEW status=review
 scope=独立复核 evidence null 契约修正；不启动正式批次
@@ -1135,7 +1135,7 @@ verified=
   `git diff --check` → CLEAN
 limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
-commit=待提交
+commit=2581a10
 
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
 scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
@@ -1159,7 +1159,7 @@ verified=
   实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
 limits=验证使用 Python 3.10.12；用户须在 Mac 复核；未修改正式批次；未运行真实模型
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
-commit=待提交
+commit=2581a10
 
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TRANSPORT-ADAPTER-INTEGRATION status=review
 scope=补齐端到端测试缺口：脱敏 DeepSeek HTTP fixture 从 DeepSeekTransport 解析经 Adapter 写入 RunRecord/cost
@@ -1180,7 +1180,7 @@ verified=
   实际解释器: Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 用 /opt/homebrew/bin/python3.11 复核
 limits=验证使用 Python 3.10.12；用户须在 Mac 复核；VM 无 GitHub 凭据，推送需用户在本机执行；未运行真实模型，未读取用户 DEEPSEEK_API_KEY
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 审查
-commit=待提交
+commit=2581a10
 [2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-02-REVIEW status=review
 scope=在 `APP-001-PHASE1-FIX` 合入 main 后运行第二个唯一正式批次并审查结果
 动作=
@@ -1357,7 +1357,7 @@ verified=
   python3 -m py_compile src/llm/parser.py → OK
   git diff --check → CLEAN
 no_network=无真实模型调用、无密钥读取、无修改正式批次
-commit=待提交
+commit=2581a10
 
 [2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-04-CODEX-REVIEW status=review
 scope=对已授权完成的 APP-001 第四批次做只读独立核对；不重新运行模型、不修改代码或旧批次
@@ -1426,4 +1426,4 @@ verified=
   git diff --check -> clean
 limits=尚未在 Python 3.11.18 环境复核；8 个 FUSE skip 不是通过项；未调用真实模型、未读取密钥、未修改 work/app001-runs
 next=独立中枢复核本窄补丁；APP-001 保持 review
-commit=待提交
+commit=2581a10
