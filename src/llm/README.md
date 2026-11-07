@@ -232,9 +232,55 @@ this adapter can drive end-to-end CAD/STEP.
 | `response_format: {type: json_object}` | ✓ | ✗ |
 | `max_tokens` | ✓ | ✗ |
 | `think: false` | ✗ | ✓ |
-| `format: "json"` | ✗ | ✓ |
+| `format` (structured JSON Schema, `OLLAMA_FORMAT_SCHEMA`) | ✗ | ✓ |
 | `num_predict` (in `options`) | ✗ | ✓ |
 | `seed: 271828` | ✓ (body) | ✓ (`options`) |
 | `temperature: 0` | ✓ (body) | ✓ (`options`) |
 | `top_p: 1` | ✓ (body) | ✓ (`options`) |
 | `authorization` | None (mock path) | None (always) |
+
+---
+
+## Ollama structured output schema (APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX)
+
+`build_ollama_request()` sets `body["format"]` to `OLLAMA_FORMAT_SCHEMA`, a JSON
+Schema object aligned with the `app001-io.v1` envelope contract.  This is a
+generation constraint (sampling hint), not a guarantee; `parse_response()` remains
+the authoritative gating layer.
+
+### Schema alignment with parser contract
+
+| Field | Schema constraint | Parser enforcement |
+|---|---|---|
+| Top-level keys | `required` = all 9 ENVELOPE_KEYS; `additionalProperties: false` | `MISSING_ENVELOPE_KEY` / `EXTRA_ENVELOPE_KEY` |
+| `contract_version` | `const: "app001-io.v1"` | `CONTRACT_VERSION_MISMATCH` |
+| `prompt_version` | `const: "app001-extraction.v2"` | `PROMPT_VERSION_MISMATCH` |
+| `decision` | `enum: [answer, ask, refuse]` | `DECISION_INVALID` |
+| Length fields (5) | `oneOf: [number, {value, unit}]` — string excluded | `EXTRACTED_TYPE_ERROR` |
+| `second_screw` | `integer` | `EXTRACTED_TYPE_ERROR` |
+| `confidence` | `null` | `CONFIDENCE_NOT_NULL` |
+| Array fields | `string` items | `ARRAY_ELEMENT_TYPE_ERROR` |
+| `evidence` entries | `additionalProperties: false`; `field/quote/source` required strings; `source` enum | `EVIDENCE_ENTRY_*` |
+
+### Schema does NOT encode
+
+- Numeric value ranges, catalog rows, or CAD-003 rules (those remain in the deterministic Schema/adapter layer).
+- Evaluator-only labels, expected outputs, or derived-value annotations.
+
+### Snapshot
+
+`decoding_parameters_snapshot(OLLAMA_PROVIDER)` records:
+
+- `format_schema_sha256`: SHA-256 of the serialised schema (sorted keys)
+- `format_schema_version`: `"ollama-app001-io-v1.0"`
+
+These are computed from `OLLAMA_FORMAT_SCHEMA` / `OLLAMA_FORMAT_SCHEMA_SHA256` in
+`providers.py`, ensuring the snapshot cannot drift from the actual request body.
+
+### Ollama version compatibility
+
+Ollama structured output (JSON Schema as `format`) requires **Ollama ≥ 0.4**.
+The project baseline is Ollama 0.33.2 (ADR / baseline contract).  Whether to
+upgrade Ollama, add an ADR, or accept the schema as a forward-looking constraint
+is **pending Codex hub review** — this task records the implementation but does
+not authorize or perform a new model run.

@@ -244,7 +244,8 @@ class OllamaAdapterTests(unittest.TestCase):
         req = self.transport.last_call()
         self.assertEqual(req.provider, OLLAMA_PROVIDER)
         self.assertFalse(req.body["think"])
-        self.assertEqual(req.body["format"], "json")
+        # format is now a structured JSON Schema object (not the plain string "json")
+        self.assertIsInstance(req.body["format"], dict)
         self.assertNotIn("thinking", req.body)
 
 

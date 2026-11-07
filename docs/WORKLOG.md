@@ -1225,3 +1225,60 @@ unresolved=
   Python 3.11.18 不可用（VM 仅有 3.10.12），用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核
 next=用户在本机删除 .git/index.lock → Python 3.11.18 复核验证 → git commit → git push -u origin cc/APP-001-PHASE1-ENVELOPE-FIX → Codex 中枢独立审查；审查通过后是否启动新正式批次由项目负责人按 ADR-0014 授权；本任务保持 review
 commit=待提交（index.lock 阻塞）
+
+[2026-11-07] agent=CC task=APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX status=review
+scope=只处理 Ollama qwen3:8b 请求的结构化 JSON 类型约束和无网络测试；不修改 prompt-v2.md/parser/adapter/runner/正式批次/C1/C2/IR/CAD/STEP
+动作=
+  1) 启动检查：git rev-parse、status、log 确认从 main(16f0d1f) 创建 cc/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX；
+     交接定向复核：OllamaRequestTests.test_request_uses_frozen_fields 通过、parser 接受数字 bore_d=24、
+     parser 拒绝字符串 "24 mm"(EXTRACTED_TYPE_ERROR)、prompt-v2.md hash d95f853d 与主线冻结值一致；
+  2) src/llm/providers.py：新增 _build_ollama_format_schema() 构造与 app001-io.v1 对齐的 JSON Schema；
+     新增 OLLAMA_FORMAT_SCHEMA 常量（JSON round-trip 深拷贝）和 OLLAMA_FORMAT_SCHEMA_SHA256；
+     build_ollama_request() 的 body["format"] 从字符串 "json" 改为 schema 对象；
+     decoding_parameters_snapshot(OLLAMA) 从记录 "format":"json" 改为 format_schema_sha256 + format_schema_version；
+     更新模块 docstring；
+  3) tests/llm/test_providers.py：更新 2 个旧断言（format==json → dict）；新增 3 个测试类 33 项
+     （OllamaFormatSchemaStructureTests 22、OllamaSchemaVsParserAlignmentTests 7、OllamaDecodingSnapshotConsistencyTests 4）；
+  4) tests/llm/test_adapter.py：更新 test_ollama_no_think_field_in_request 断言（format==json → dict）；
+  5) tests/llm/test_envelope_fix.py：更新 test_format_is_json → test_format_is_schema_object；
+  6) src/llm/README.md：更新 provider 参数隔离表 format 行；新增 Ollama structured output schema 章节；
+  7) agent-work/llm/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX/checkpoint.md 和 handoff.md；
+  8) docs/WORKLOG.md 只追加（本记录）。
+root_cause=
+  build_ollama_request() 原来只设置 format="json"，仅要求 JSON 格式但不约束字段类型；
+  模型将数值字段序列化为带单位字符串，parser 正确拒绝。
+schema_design=
+  顶层 type=object, required=9 ENVELOPE_KEYS, additionalProperties=false；
+  contract_version/prompt_version 为 const；decision 为 enum；confidence 为 null type；
+  extracted_parameters 仅允许 6 字段，全可选，additionalProperties=false；
+  长度字段 oneOf[number, {value,unit}]（排除 string）；second_screw 为 integer；
+  evidence source 受 enum 约束；不含数值范围/catalog/evaluator 标签
+  Schema SHA-256: d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043
+  Schema 标识: ollama-app001-io-v1.0
+verified=
+  /usr/bin/python3 --version → Python 3.10.12（VM 无 python3.11）
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_providers tests.llm.test_envelope_fix -v → Ran 86, OK
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 487, OK (skipped=8)
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  python3 -m py_compile src/llm/providers.py src/llm/contract.py tests/llm/test_providers.py tests/llm/test_adapter.py → OK
+  git diff --check → CLEAN
+  快照 format_schema_sha256 与请求体 schema hash 一致（d82e53ad…）
+  parser 数字通过、字符串 "24 mm"/"1.6 cm"/"0" 仍被 EXTRACTED_TYPE_ERROR 拒绝
+  DeepSeek 请求和 provider 参数隔离维持原样
+  work/app001-runs/ 无变更；无 index.lock
+not_modified=
+  prompt-v2.md、其 SHA-256 锚点、Prompt 内容或版本
+  src/llm/parser.py 拒绝行为、adapter.py、runner/预算/授权逻辑
+  冻结 acceptance set、Schema/CAD-003、C1/C0 组装、ADR-0014
+  work/app001-runs/app001-phase1-20261107-01/-02/-03/ 下任何内容
+  DeepSeek 请求、模型/解码共享参数、正式评测门
+no_network=本任务无真实网络/模型调用、无访问密钥、无修改正式批次、无生成新正式指标
+unresolved=
+  Ollama 0.33.2（项目基线）是否支持 JSON Schema 作为 format 值未经验证；
+  可能需要升级 Ollama 或新 ADR，由中枢决策
+  Python 3.11.18 不可用（VM 仅 3.10.12），用户须在 Mac 复核
+  是否需要新 ADR 记录结构化输出约束变化由中枢决策
+  未运行真实模型批次；不能声称类型违规问题已端到端解决
+next=Codex 中枢独立审查：Ollama 版本兼容性、Schema 结构正确性、快照一致性、parser 行为不变；
+  审查后再判断是否需要新 ADR/协议版本及新的唯一批次授权；本任务不得擅自重跑
+commit=待提交（不 push、不合并、不标 done）
