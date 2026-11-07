@@ -54,6 +54,7 @@
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
+| APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | review | 候选针对 A03 单位换算、A08 用户值与 retrieval reference 优先级、A07 unsupported 规范标签；生产仍为 v3，ADR-0017 proposed，未调用模型。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
 
 ## 阻塞项
 
@@ -72,7 +73,7 @@
 ## 下一步
 
 1. 由项目负责人审阅 v3 批次独立报告，决定是否接受其作为 APP-001 第一阶段 v3 诊断结果。
-2. 如需继续，先明确处理范围：Ollama 的 A03/A08 决策不一致与 A07 unsupported 标签变体；任何追加模型请求都需要新的唯一批次和明确授权。
+2. 审查 APP-001-V3-DECISION-FIX-DRAFT 的离线候选和 proposed ADR-0017；若接受 v4 策略，再安排独立激活实现。任何追加模型请求都需要新的唯一批次和明确授权。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
 5. 如需测 v3 效果，先完成运行前审查并单独申请新的唯一正式批次授权。

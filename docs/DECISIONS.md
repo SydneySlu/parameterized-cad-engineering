@@ -412,3 +412,27 @@ status: activation merged to main and independently reviewed (`7dc7a37`)
 ### 当前结论
 
 本 ADR 已被接受。激活提交只切换生产 prompt 版本和离线运行契约；真实模型效果仍未知，新的正式批次授权必须单独取得。
+
+## ADR-0017：APP-001 extraction v4 决策修正候选（proposed）
+
+- 日期：2026-11-07
+- 状态：proposed；仅允许离线候选编写和审查，不允许激活或真实模型调用
+- 决策人：Codex 中枢提出，待项目负责人审阅
+- 关联：ADR-0013、ADR-0016；`APP-001-PHASE1-V3-20261107-01`
+
+### 背景
+
+v3 正式批次的字段抽取与解析契约通过，但 Ollama 在 A03 单位换算样例两次误拒绝，在 A08 C1 对明确用户值多问一次，且 A07 将 `anodizing` 输出为词形变体 `anodized`。独立审查见 `agent-work/reviews/APP-001-phase1-v3-20261107-01-codex-review.md`。
+
+### 提议
+
+建立 `app001-extraction.v4` 候选，只修正三类策略说明：可精确换算的 1.6 cm→16 mm 不应误拒绝；不可信 retrieval example 不应覆盖用户明确的 bore_d=24；unsupported 项使用稳定规范标签 `anodizing`，但证据 quote 保留原文。v4 候选保留 v3 的目录、安全 decision gate、字段抽取、Schema、接口和构造边界。
+
+冻结的 `acceptance-set-v0`、生产 v3 prompt、prompt hash、parser、adapter、runner、授权和预算均不修改。离线测试只验证候选文本与规格，不证明真实模型依从性。
+
+### 提议边界
+
+- 本 ADR 被接受前，v4 不得成为生产版本；正式路径继续使用 `app001-extraction.v3`。
+- 激活需独立实现/审查单元，完整更新版本常量、解析器、prompt loader 哈希与路径、manifest 和兼容性测试。
+- 真实模型效果验证必须使用新的唯一正式批次，并由项目负责人另行明确授权。
+- 不修改或回填历史 v2/v3 批次，不运行 C2、IR、CAD、geometry 或 STEP。

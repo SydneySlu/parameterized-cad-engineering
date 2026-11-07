@@ -1564,3 +1564,11 @@ commit=待提交
 - 记录：新增 `agent-work/reviews/APP-001-phase1-v3-20261107-01-codex-review.md`；同步 `docs/PROJECT_STATUS.md`。运行产物仍在 Git 忽略目录，未加入 Git。
 - 限制：批次运行记录环境为 Python 3.15.2/macOS arm64，不等同于项目 Python 3.11.18 固定复核基线；全局 `FORMAL_EVALUATION_ALLOWED=False` 未改变；结果不能解释为 CAD/STEP 端到端成绩。
 - 下一步：项目负责人审阅 v3 诊断结论；如修正模型决策策略，需版本化并新建唯一批次、重新授权。
+
+### APP-001-V3-DECISION-FIX-DRAFT / Codex / review / 2026-11-07
+
+- 动作：依据 v3 正式批次审查，起草 extraction v4 离线策略候选，聚焦 A03 精确单位换算、A08 明确用户值优先于不可信 retrieval reference、A07 unsupported 标签规范化。
+- 结果：新增 `prompt-v4-candidate.md`、`decision-policy-v4-candidate.md`、7 项离线候选检查和 `checkpoint.md`；追加 proposed ADR-0017；同步状态页。生产 v3/契约/验收集/runner 未改。
+- 边界：未发起模型/API 请求，未读密钥，未改任何正式批次；离线测试只验证候选规则文本和冻结边界，不声称模型效果已修复。
+- 验证：Python 3.15.2；v4 专项 8/8、v3 候选回归 55/55、parser 41/41、LLM 全量 584 passed/8 skipped、Schema 17/17；`py_compile`、`git diff --check` 通过。8 个 skip 为既有 FUSE 文件锁限制。
+- 下一步：项目负责人/中枢审查 proposed ADR-0017 和 v4 候选；若决定激活，再另建实现任务；若验证模型效果，须新的唯一正式批次和单独授权。
