@@ -961,6 +961,17 @@ no_network=无真实模型调用、无密钥读取、无正式批次修改
 next=先同步并合入 main；合入前不启动新批次，合入后按 ADR-0014/0015 重新申请唯一批次
 commit=待提交（中枢审查记录）
 
+[2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CLOSEOUT status=done
+scope=合入后复核 evidence null 契约修正
+verified=
+  main 与 origin/main 同步于 830f65b，包含 352ef8a 修正、efe5a7d 审查记录和 2bb12ec Ollama 冻结；工作区干净且无 index.lock；Python 3.11.18 下定向 119 项、LLM 全量 499 项（8 项既有 FUSE skip）、Schema 17 项全部通过；py_compile 和 git diff --check 通过
+confirmed=
+  合法字符串 evidence 通过；field/quote/source 显式 null 均被 EVIDENCE_FIELD_TYPE_ERROR 拒绝并定位准确；未改变 Ollama、正式批次和授权范围
+decision=
+  evidence 契约修正工作单元标记 done；APP-001 正式评测整体仍为 review，新的唯一批次尚未授权
+next=项目负责人按 ADR-0014/0015 决定是否授权新批次；三个既有正式批次保持只读
+commit=待提交（合入后状态同步）
+
 [2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
 scope=Git commit 阻塞记录
 动作=尝试 git add / git commit，发现 .git/index.lock 存在（0 字节，本进程所有，18:27 由 git status 留下，FUSE 无法清理）
