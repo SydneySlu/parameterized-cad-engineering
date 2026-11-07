@@ -3,8 +3,8 @@
 - 日期：2026-11-07
 - Agent：CC
 - 任务：APP-001-DECISION-POLICY-V3-DRAFT
-- 状态：candidate draft，未冻结、未激活；已按 Codex review 做窄范围修正，等待复审
-- 分支：`cc/APP-001-DECISION-POLICY-V3-DRAFT`（未 push，未合并到 main）
+- 状态：candidate draft，未冻结、未激活；窄修复经 Codex 复审通过，等待项目负责人决定后续是否启动激活流程
+- 分支：`cc/APP-001-DECISION-POLICY-V3-DRAFT`，复审提交 `b757e9c`（未 push，未合并到 main）
 
 ## 范围
 
@@ -63,7 +63,7 @@ v3 候选变更：
 - `parser.py` 的版本检查
 - `prompt_loader.py` 的 `FROZEN_PROMPT_PATH` / `FROZEN_PROMPT_VERSION` / `FROZEN_PROMPT_FILE_SHA256`
 
-## 离线验证（Codex 窄修复复核）
+## 离线验证（Codex 窄修复复核，commit `b757e9c`）
 
 | 检查 | 命令 | 结果 |
 |---|---|---|
