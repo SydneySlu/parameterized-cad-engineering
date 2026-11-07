@@ -1572,3 +1572,10 @@ commit=待提交
 - 边界：未发起模型/API 请求，未读密钥，未改任何正式批次；离线测试只验证候选规则文本和冻结边界，不声称模型效果已修复。
 - 验证：Python 3.15.2；v4 专项 8/8、v3 候选回归 55/55、parser 41/41、LLM 全量 584 passed/8 skipped、Schema 17/17；`py_compile`、`git diff --check` 通过。8 个 skip 为既有 FUSE 文件锁限制。
 - 下一步：项目负责人/中枢审查 proposed ADR-0017 和 v4 候选；若决定激活，再另建实现任务；若验证模型效果，须新的唯一正式批次和单独授权。
+
+### APP-001-V3-DECISION-FIX-DRAFT-CODEX-REVIEW / Codex / review / 2026-11-07
+
+- 动作：独立复核候选分支 `d8961ac`，比较 v4 候选与 active v3，确认生产路径和冻结验收集无变更；运行 v4/v3/parser 定向测试。
+- 结果：候选范围与 v3 正式批次证据一致；新增三条策略说明保留现有安全 gate。审查报告指出目录拒绝措辞仍需明确覆盖范围内非离散值，且当前测试检查文本存在性而未实现纯函数 fixture checker。
+- 验证：v4 专项 8/8、v3 候选 55/55、parser 41/41；候选提交前 LLM 全量 584 passed/8 skipped、Schema 17/17；active v3 hash 和 acceptance-set hash 均保持不变。
+- 结论：当前候选通过 review，可继续补强离线策略 checker；ADR-0017 保持 proposed，v4 不激活，不授权新模型批次。
