@@ -1632,3 +1632,9 @@ commit=待提交
 - 结果：锁已清除，未丢失工作区改动；Python 3.11.18 下 v4 34/34、v3 candidate 55/55、parser 41/41、LLM 610 passed/8 skipped、Schema 17/17，py_compile 和 `git diff --check` 通过。8 个 skip 为既有 FUSE 限制，未计作通过项。
 - 流程沉淀：`docs/coordination/project-memory-and-delivery-playbook.md` 记录启动事实恢复、角色分工、计划/架构一致性、分层测试、证据和 skip 报告、交接审查、对话压缩恢复、Git 锁处置及 done gate。
 - 边界：尚未提交或 push；ADR-0017 保持 proposed、生产继续 v3；没有真实模型请求或密钥读取。当前任务待形成 commit 并由中枢对提交对象最终核验。
+
+### APP-001-V4-CHECKER-FIX-COMMIT / Codex / review / 2026-11-08
+
+- 动作：提交已验证的 APP-001 v4 checker 修正、复核报告和项目级协作手册。
+- 结果：commit `6d1f90a`（`fix: complete APP-001 v4 checker review prep [APP-001-V4-CHECKER-FIX]`）；当前候选分支工作区干净，未 push、未合并。
+- 下一步：项目负责人 push 后由 Codex 核实远端 ref 与提交哈希，再判断 v4 activation implementation 的范围和决策状态。

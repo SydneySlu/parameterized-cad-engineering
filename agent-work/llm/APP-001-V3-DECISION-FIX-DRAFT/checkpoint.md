@@ -102,4 +102,5 @@ next_agent_focus=<Codex 中枢独立复审 P1/P2 checker 修正；验证 resolve
 - 固定环境：本机 `/opt/homebrew/bin/python3.11` 为 Python 3.11.18；v4 34/34、v3 candidate 55/55、parser 41/41、LLM 610 passed/8 skipped、Schema 17/17、py_compile 和 diff-check 全部通过。
 - 结论：P1/P2 checker 工作区复核通过；单一任务交付尚待提交。生产 v3 与 acceptance-set hash 保持原值。ADR-0017 仍 proposed，模型效果仍未验证。
 - 流程沉淀：新增 `docs/coordination/project-memory-and-delivery-playbook.md`，覆盖启动事实恢复、角色分工、架构/计划防漂移、验证证据、交接复核、压缩恢复、Git 锁及完成状态门；`AGENTS.md` 已增加入口链接。
-- 下一步：提交并 push 当前候选分支后，由 Codex 对提交对象做最终核对；再决定是否进入 v4 激活实现，不能跳过后续激活包审查与独立模型授权。
+- 提交：`6d1f90a`（checker 修正、独立复核记录及项目工作手册）；当前工作区干净，尚未 push。
+- 下一步：由项目负责人 push 当前候选分支后，Codex 对远端提交对象做最终核对；再决定是否进入 v4 激活实现，不能跳过后续激活包审查与独立模型授权。
