@@ -1454,3 +1454,30 @@ verified=
 limits=结论仅覆盖第四批次 8 个 Schema 拒绝；未外推至总体模型质量；未发起网络/模型请求、未读取密钥，未运行 C2/IR/CAD/geometry/STEP
 next=项目负责人审阅是否将决策一致性作为下一窄范围 Prompt/输出策略工作；任何新模型效果验证需新版本、唯一批次和单独授权
 commit=待提交
+
+[2026-11-07] agent=CC task=APP-001-DECISION-POLICY-V3-DRAFT status=review
+scope=为 APP-001 准备候选决策策略 v3，修正第四批次 analysis 报告中的 decision 行为不一致；不修改冻结接口，不激活候选版本，不调用真实模型
+动作=
+  1) 确认共享仓库根目录、分支 main HEAD=002b936（含 6f4af27）、工作区干净；读取 AGENTS/PROJECT_STATUS/PROJECT_PLAN/DECISIONS/WORKLOG、第四批次分析报告、交接协议、基线契约、冻结 prompt-v2.md、prompt-output-contract-v1.md、prompt_loader.py、contract.py、parser.py、CAD-003 Schema、acceptance-set-v0.json
+  2) 核对 I/O 契约允许的 decision 值：{answer, ask, refuse}（contract.py L67）；构造门：decision=answer + 无不支持请求 + CAD-003 通过；冻结 prompt 加载/哈希机制：FROZEN_PROMPT_FILE_SHA256 文件级 SHA-256 + FROZEN_PROMPT_VERSION 版本标记 + system/user_template SHA-256
+  3) 新增独立、未激活的候选 prompt v3（prompt-v3-candidate.md），含 decision-gate 表、ask/refuse 条件、自洽性检查、不支持请求证据要求；声明 prompt_version=app001-extraction.v3，保持 contract_version=app001-io.v1 和 envelope 键集不变
+  4) 新增决策策略规格（decision-policy-v3-candidate.md），映射到 I/O 契约和 acceptance-set A01/A02/A04/A05/A07/A09 期望行为
+  5) 新增纯函数离线 checker（src/llm/decision_policy_v3_candidate.py），未被 adapter/parser/runner 导入；实现 allowed_decisions、check_envelope_consistency、check_claim_preservation、check_prompt_interface_compatibility
+  6) 新增离线回归测试（tests/llm/test_decision_policy_v3_candidate.py）：A04/A05/A07/A09 decision 一致性、A01/A02 正常案例 answer、字段主张保留、不支持请求证据、envelope 自洽性、prompt 接口兼容性
+verified=
+  Python 3.10.12
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -v → Ran 44, OK
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 560, OK (skipped=8)
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  python3 -m py_compile src/llm/decision_policy_v3_candidate.py tests/llm/test_decision_policy_v3_candidate.py → OK
+  git diff --check → CLEAN
+  git diff --name-only main → 空（无 tracked 文件修改；5 个新文件 untracked）
+  冻结文件验证：prompt-v2.md/contract.py/parser.py/prompt_loader.py/acceptance-set-v0.json/set_screw_shaft_collar.py diff 均为空
+limits=
+  v3 候选未激活；激活需新 ADR 更新 contract.py PROMPT_VERSION、parser.py 版本检查、prompt_loader.py 哈希锚点
+  v3 prompt 对 A05/A09 目录/规则冲突检测依赖模型判断力，模型不持有完整目录表；确定性 CAD-003 层仍是安全门
+  envelope 自洽性 checker 检测模型可检测的不一致，不检测 CAD-003 目录/规则冲突
+  未在 Python 3.11.18 环境复核（当前 3.10.12）；8 个 skip 为既有 FUSE 限制
+  未调用真实模型、未读取密钥、未修改正式批次；不产生模型效果结论
+next=中枢审查 v3 decision-gate 规则和接口兼容性；若项目负责人决定激活，需新 ADR 并更新冻结接口
+commit=待提交（分支 cc/APP-001-DECISION-POLICY-V3-DRAFT）

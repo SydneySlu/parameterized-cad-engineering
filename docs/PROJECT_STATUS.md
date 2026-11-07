@@ -53,6 +53,7 @@
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
+| APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与离线行为测试 | CC | review | 候选 prompt v3、策略规格、离线 checker 和 44 项离线回归测试；修正 A04/A05/A07/A09 的 decision 行为不一致；不修改冻结接口，不激活候选，不调用真实模型；分支 `cc/APP-001-DECISION-POLICY-V3-DRAFT` |
 
 ## 阻塞项
 
@@ -64,6 +65,7 @@
 - APP-001-AUDIT-EVIDENCE-R1 仅修补失败响应的受控留存和请求前阻塞记录；不改变 Prompt、输出协议、RET-002 策略、重试上限或 provider 配置，不调用真实模型；已合入 main 并通过中枢审查。
 - A04 C1 因用户输入缺少 `bore_d` 而正确阻塞；A07 C1 因 `bore_d=75` 不满足 envelope 的 CAD-003 目录校验，且不具备 flat 查询所需六字段而正确阻塞。不得从 evaluator-only 标签补值或猜字段。样例级回归由 Codex 在本工作单元后独立补齐/验收。
 - 8 个 Schema 拒绝的只读决策质量分析已完成；若要改 Prompt/输出策略，必须版本化、另建批次，并另行取得新模型运行授权。
+- APP-001-DECISION-POLICY-V3-DRAFT 已创建候选决策策略 v3 和 44 项离线行为测试（分支 `cc/APP-001-DECISION-POLICY-V3-DRAFT`），修正 A04/A05/A07/A09 的 decision 不一致；v3 候选未激活，不修改冻结 prompt-v2.md、哈希锚点、acceptance-set、parser、adapter 或 CAD-003 Schema；激活需新 ADR 并更新 contract.py/parser.py/prompt_loader.py；不产生模型效果结论，不授权新正式批次。
 - DeepSeek 5xx 继续按 ADR-0010 当前最多两次重试；除非服务状态或错误证据支持，不调整 provider 配置或重试策略。
 
 ## 下一步
@@ -72,3 +74,4 @@
 2. 如需继续，先明确处理范围：DeepSeek 暂时故障表现、失败响应留存、A04/A07 C1 前置阻塞；任何追加模型请求都需要新的唯一批次和明确授权。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
+5. 中枢审查候选决策策略 v3（`cc/APP-001-DECISION-POLICY-V3-DRAFT` 分支）；若项目负责人决定激活，需新 ADR 并更新 contract.py `PROMPT_VERSION`、parser.py 版本检查和 prompt_loader.py 哈希锚点，并另行取得新模型运行授权。
