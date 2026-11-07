@@ -990,6 +990,19 @@ limits=本地 `main` 尚未推送；修复后尚未运行新真实批次；A04/A
 next=用户推送 `f460dd0` 到 `origin/main`；明确新唯一批次授权和 A04/A07 覆盖口径后，再启动正式评测。
 commit=f460dd0
 
+[2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-03-REVIEW status=review
+scope=审查 envelope 修复后的第三批正式评测；保持 C2、IR/CAD/geometry/STEP 禁用
+动作=
+  1) 主线 `d5613a1` 已推送后，使用新唯一批次 `app001-phase1-20261107-03`，从 `.env` 注入密钥到一次性进程，不打印或保存密钥；
+  2) 运行冻结 9 样例 × C0/C1 × DeepSeek/Ollama；冻结 RET-002 索引通过预检；
+  3) 核对 36 条 JSONL、32 条模型调用、4 条 C1 阻塞、48 次物理 HTTP、32 个原始响应和预算账本；
+  4) 重解析原始响应并按 acceptance-set-v0 的显式字段标签做单位归一化诊断。
+verified=
+  DeepSeek envelope 16/16、Ollama C1 7/7；Ollama C0 8 条因 `EXTRACTED_TYPE_ERROR` 被严格拒绝；DeepSeek 显式字段 27/27，Ollama 25/27；DeepSeek 费用 CNY 0.01207752，Ollama 平均墙钟 15745.52 ms；总物理 HTTP 48/108。
+limits=本批次只覆盖字段/Schema/usage/cost/延迟；CAD/STEP 未运行；A04/A07 C1 仍请求前阻塞；不能把 model-call pass 当作完整抽取或构造成功。
+next=决定是否接受 Ollama C0 类型拒绝，或安排窄范围输出契约修正；旧批次 `-01`/`-02`/`-03` 均只读保留。
+commit=待本次审查文档同步提交
+
 [2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R4 status=review
 scope=R3-FIX-R3 续任；仅补齐 Ollama tags/chat 预算记账顺序的集成测试，不修改生产代码
 动作=
