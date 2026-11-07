@@ -949,6 +949,18 @@ limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件�
 next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
 commit=待提交
 
+[2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CODEX-REVIEW status=review
+scope=独立复核 evidence null 契约修正；不启动正式批次
+verified=
+  Python 3.11.18 下定向 119 项通过；tests/llm 全量 499 项通过（8 项既有 FUSE skip）；tests/schema 17 项通过；py_compile 和 git diff --check 通过；正常字符串 evidence 通过，field/quote/source=null 均准确拒绝
+confirmed=
+  parser 与 OLLAMA_FORMAT_SCHEMA 的非空字符串约束已对齐；未修改 Ollama、Prompt、adapter、runner、预算、授权或正式批次
+git_state=
+  本地 HEAD=352ef8a、工作区干净；fetch 后 origin/cc/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX 仍为 2bb12ec，origin/main 为 16f0d1f；push 尚未在当前远端事实中确认
+no_network=无真实模型调用、无密钥读取、无正式批次修改
+next=先同步并合入 main；合入前不启动新批次，合入后按 ADR-0014/0015 重新申请唯一批次
+commit=待提交（中枢审查记录）
+
 [2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
 scope=Git commit 阻塞记录
 动作=尝试 git add / git commit，发现 .git/index.lock 存在（0 字节，本进程所有，18:27 由 git status 留下，FUSE 无法清理）
