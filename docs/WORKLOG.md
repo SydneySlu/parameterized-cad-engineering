@@ -1282,3 +1282,17 @@ unresolved=
 next=Codex 中枢独立审查：Ollama 版本兼容性、Schema 结构正确性、快照一致性、parser 行为不变；
   审查后再判断是否需要新 ADR/协议版本及新的唯一批次授权；本任务不得擅自重跑
 commit=待提交（不 push、不合并、不标 done）
+[2026-11-07] agent=Codex task=APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX-CODEX-REVIEW status=review
+scope=独立验收 Ollama JSON Schema 输出约束窄修正，不启动新批次
+动作=
+  1) 核对 CC commit 0e1721f、checkpoint/handoff、实际 diff 和当前 Ollama 版本；
+  2) 使用 Python 3.11.18 重跑 86 项专项测试、487 项 LLM 测试（8 项既有 FUSE skip）和 17 项 Schema 测试；
+  3) 抽查数字/measurement object 正常解析、数值字符串严格拒绝、请求体与 snapshot schema hash 一致；
+  4) 发现运行时基线 Ollama 0.33.2 尚无 JSON Schema 对象 format 兼容性证据；发现 parser 对 evidence 显式 null 的实际行为与 Schema 的 string 声称不完全一致；
+  5) 新建 `agent-work/reviews/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX-codex-review.md` 并同步 PROJECT_STATUS。
+verified=
+  Python 3.11.18：86、487（skipped=8）、17 项测试分别通过；py_compile 与 git diff --check 通过；未调用模型、未访问密钥、未改正式批次。
+limits=
+  `jsonschema` 第三方验证器在本机不可用；Ollama 0.33.2 对 JSON Schema `format` 对象的实机兼容性未验证；APP-001 保持 review。
+next=项目负责人决定保持 0.33.2 并隔离该修正，或升级 Ollama 并新增 ADR/兼容性 smoke test；随后再决定是否启动唯一新批次；先处理 evidence null 契约偏差。
+commit=待提交（当前 CC 分支上追加中枢审查记录）
