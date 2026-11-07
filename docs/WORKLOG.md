@@ -1320,3 +1320,18 @@ unresolved=
   evidence 的显式 null 行为与当前 Schema string 约束仍需单独窄范围决策和复核；本次不授权新的正式批次
 next=先完成 evidence null 契约处理；通过中枢复核后，由项目负责人按 ADR-0014/0015 再授权唯一新批次
 commit=待提交（文档同步工作单元）
+
+[2026-11-07] agent=CC task=APP-001-EVIDENCE-CONTRACT-FIX status=review
+scope=修复 parser evidence null 放行 bug，与 OLLAMA_FORMAT_SCHEMA string 约束对齐；不修改 OLLAMA_FORMAT_SCHEMA/prompt-v2.md/adapter/runner/正式批次/ADR-0015
+修复=src/llm/parser.py evidence type-check 循环移除 val is not None 守护；None 现在产生 EVIDENCE_FIELD_TYPE_ERROR；其他 parser 行为不变
+测试=tests/llm/test_parser.py 新增 EvidenceNullFieldTests 12 项：合法 string 通过、field/quote/source null 各自失败并含准确路径、三个 null 产生三个错误、非枚举字符串仍为 EVIDENCE_SOURCE_INVALID、非字符串整数/bool 仍失败
+verified=
+  /usr/bin/python3 --version → Python 3.10.12
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_r1_regression tests.llm.test_providers -v → Ran 83, OK
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_parser -v → Ran 36, OK
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 499, OK (skipped=8)
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  python3 -m py_compile src/llm/parser.py → OK
+  git diff --check → CLEAN
+no_network=无真实模型调用、无密钥读取、无修改正式批次
+commit=待提交
