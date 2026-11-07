@@ -1135,7 +1135,7 @@ verified=
   `git diff --check` → CLEAN
 limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核；正式批次 app001-phase1-20261107-01 未被修改，需新批次 ID 重跑；未运行正式模型，未读取/打印 API key
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
-commit=待提交
+commit=ed56381（激活包与候选测试）+201710b（激活准备文档、状态和审查同步）
 
 [2026-11-07] agent=Codex task=APP-001-DECISION-POLICY-V3-DRAFT-NARROW-REVIEW status=review
 scope=复核候选 v3 窄修是否解决目录可见性和离散 bore_d 成员缺口；不激活、不调用模型、不修改冻结接口或正式批次
