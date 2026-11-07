@@ -1534,3 +1534,10 @@ commit=待提交
 - 验证：Python 3.11.18；定向 153 项通过；LLM 全量 572 项通过（8 个既有 FUSE skip）；Schema 17 项通过；`py_compile` 通过。最终 `git diff --check` 与提交待完成。
 - 边界：`FORMAL_EVALUATION_ALLOWED=False`；没有真实模型请求、密钥读取或旧批次修改；模型效果未测，不授权新正式批次。
 - 下一步：完成中枢差异审查和单一激活提交；之后如需测效果，单独申请新唯一批次授权。
+
+### APP-001-V3-ACTIVATION-CLOSEOUT / Codex / review / 2026-11-07
+
+- 动作：完成激活提交后的中枢复核；核对 active prompt 与 manifest 哈希、候选源未变、acceptance-set 哈希未变、旧 v2 仅作为拒绝测试和回滚证据，且正式 gate 未打开。
+- 结果：激活实现提交为 `6260cd3`（当前功能分支）；状态仍为 `review`，尚未推送/合并到 `main`。没有发现额外生产范围变更。
+- 验证：Python 3.11.18 下全量 LLM 572 项通过（8 项既有 FUSE skip）、Schema 17 项通过、激活定向 153 项通过；closeout 后候选/manifest 专项 55 项再次通过；`git diff --check` CLEAN。
+- 下一步：按项目分支流程审查并合并 `6260cd3`；若之后要测 v3 模型效果，先另行取得唯一正式批次授权。
