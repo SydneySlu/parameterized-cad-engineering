@@ -1,6 +1,4 @@
-# APP-001 extraction prompt v3 (candidate, unactivated)
-
-Status: candidate draft for the APP-001 decision policy v3. This is NOT frozen, NOT activated, and does NOT authorize model evaluation or API calls. It is an independent candidate that must not overwrite or replace the frozen `prompt-v2.md` or its hash anchor. Activating this version requires a new ADR that updates `contract.py`, `parser.py`, and `prompt_loader.py`.
+# APP-001 extraction prompt v3
 
 ## System message
 

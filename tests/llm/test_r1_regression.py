@@ -40,7 +40,7 @@ def _input(qid="q1", cond="c0", nl="bore_d=20"):
 def _body(**overrides):
     base = {
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v2",
+        "prompt_version": "app001-extraction.v3",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],
@@ -169,7 +169,7 @@ class ParserNaNInfinityTests(unittest.TestCase):
 
         # Python's json.loads accepts bare NaN (non-standard JSON extension).
         # Our parser's _walk_check_finite must catch it and return NON_FINITE_VALUE.
-        body_with_nan = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v2", "decision": "answer", "extracted_parameters": {"bore_d": NaN}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
+        body_with_nan = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v3", "decision": "answer", "extracted_parameters": {"bore_d": NaN}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
         result = pr(body_with_nan)
         self.assertFalse(result.ok)
         codes = [e.code for e in result.errors]
@@ -184,14 +184,14 @@ class ParserNaNInfinityTests(unittest.TestCase):
     def test_infinity_in_field_rejected(self):
         from src.llm.parser import parse_response as pr
 
-        body = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v2", "decision": "answer", "extracted_parameters": {"bore_d": Infinity}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
+        body = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v3", "decision": "answer", "extracted_parameters": {"bore_d": Infinity}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
         result = pr(body)
         self.assertFalse(result.ok)
 
     def test_negative_infinity_in_field_rejected(self):
         from src.llm.parser import parse_response as pr
 
-        body = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v2", "decision": "answer", "extracted_parameters": {"bore_d": -Infinity}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
+        body = '{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v3", "decision": "answer", "extracted_parameters": {"bore_d": -Infinity}, "unsupported_requests": [], "evidence": [], "missing_fields": [], "questions": [], "confidence": null}'
         result = pr(body)
         self.assertFalse(result.ok)
 

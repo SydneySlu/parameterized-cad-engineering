@@ -5,7 +5,7 @@
 but no formal run starts until the runner safety review is complete.
 
 This package implements the injectable adapter layer for the frozen APP-001
-extraction protocol (`app001-io.v1` / `app001-extraction.v2`, ADR-0013).  It
+extraction protocol (`app001-io.v1` / `app001-extraction.v3`, ADR-0016).  It
 never performs real network calls by default, never reads credentials in the
 mock path, and the formal evaluation gate is always closed in this task.
 
@@ -144,7 +144,7 @@ same complete wall clock, including any backoff on retried requests).
 ## Prompt artifact verification (R3)
 
 `Adapter.run()` **unconditionally** loads and verifies the frozen prompt
-artifact (`agent-work/llm/APP-001-baseline-prep/prompt-v2.md`) before any
+artifact (`agent-work/llm/APP-001-v3-activation/prompt-v3.md`) before any
 transport `send()` call.  There is **no parameter** to skip, replace, or bypass
 this check -- `verify_frozen_prompt` and `_prompt_loader_path` were removed in
 R3.
@@ -154,7 +154,7 @@ Verification checks:
 1. **File-level SHA-256 anchor** (`FROZEN_PROMPT_FILE_SHA256`): the file bytes
    must match the pinned hash.  A tampered file that preserves the version
    string but changes content is rejected.
-2. **Version marker**: the file must contain `app001-extraction.v2`.
+2. **Version marker**: the file must contain `app001-extraction.v3`.
 3. **Parsed system prompt**: must match the `AdapterInput.system_prompt`.
 4. **Parsed user template**: must match the `AdapterInput.user_prompt_template`
    (after `{{placeholder}}` → `{placeholder}` normalization).
@@ -254,7 +254,7 @@ the authoritative gating layer.
 |---|---|---|
 | Top-level keys | `required` = all 9 ENVELOPE_KEYS; `additionalProperties: false` | `MISSING_ENVELOPE_KEY` / `EXTRA_ENVELOPE_KEY` |
 | `contract_version` | `const: "app001-io.v1"` | `CONTRACT_VERSION_MISMATCH` |
-| `prompt_version` | `const: "app001-extraction.v2"` | `PROMPT_VERSION_MISMATCH` |
+| `prompt_version` | `const: "app001-extraction.v3"` | `PROMPT_VERSION_MISMATCH` |
 | `decision` | `enum: [answer, ask, refuse]` | `DECISION_INVALID` |
 | Length fields (5) | `oneOf: [number, {value, unit}]` — string excluded | `EXTRACTED_TYPE_ERROR` |
 | `second_screw` | `integer` | `EXTRACTED_TYPE_ERROR` |

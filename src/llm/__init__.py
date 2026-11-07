@@ -1,7 +1,7 @@
 """APP-001 LLM execution adapter package.
 
 This package implements the injectable, mock-testable adapter layer for the
-frozen APP-001 extraction protocol (`app001-io.v1` / `app001-extraction.v2`).
+frozen APP-001 extraction protocol (`app001-io.v1` / `app001-extraction.v3`).
 It never performs real network calls or reads credentials by default; the
 formal evaluation gate is closed and every runnable entry point fails closed.
 

@@ -575,7 +575,7 @@ class TestFullAcceptanceSetOffline(unittest.TestCase):
 
 
 class TestActivationPackageOffline(unittest.TestCase):
-    """Verify the staged v3 package is reproducible and still inactive."""
+    """Verify the active v3 production prompt and preserved candidate source."""
 
     def test_manifest_matches_prompt_and_candidate(self):
         manifest = json.loads(
@@ -585,20 +585,26 @@ class TestActivationPackageOffline(unittest.TestCase):
         source = Path(CANDIDATE_PROMPT_PATH)
         staged_hash = hashlib.sha256(staged.read_bytes()).hexdigest()
         source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
-        self.assertEqual(manifest["status"], "prepared-not-active")
+        self.assertEqual(manifest["status"], "implemented-on-branch-pending-review")
         self.assertEqual(manifest["candidate_prompt_version"], CANDIDATE_PROMPT_VERSION)
-        self.assertEqual(staged_hash, source_hash)
         self.assertEqual(staged_hash, manifest["prompt_file_sha256"])
         self.assertEqual(source_hash, manifest["source_candidate_sha256"])
-        self.assertFalse(manifest["production_files_changed"])
+        self.assertNotEqual(staged_hash, source_hash)
+        self.assertTrue(manifest["production_files_changed"])
         self.assertFalse(manifest["formal_evaluation_authorized"])
 
     def test_activation_package_declares_rollback_and_owner_gate(self):
         manifest = json.loads(
             (_ACTIVATION_DIR / "manifest.json").read_text(encoding="utf-8")
         )
-        self.assertIn("ADR-0016 accepted", manifest["activation_requires"])
-        self.assertIn("new unique formal batch authorization", manifest["activation_requires"])
+        self.assertIn(
+            "Python 3.11.18 verification completed",
+            manifest["activation_requires"],
+        )
+        self.assertIn(
+            "new unique formal batch authorization before model calls",
+            manifest["activation_requires"],
+        )
         self.assertEqual(manifest["rollback_target"], "app001-extraction.v2")
 
 

@@ -67,7 +67,7 @@ def _input(**kw):
 def _body():
     return json.dumps({
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v2",
+        "prompt_version": "app001-extraction.v3",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],
@@ -247,7 +247,7 @@ class FrozenPromptVerificationTests(unittest.TestCase):
         clear_cache()
 
     def test_frozen_artifact_loads_successfully(self):
-        """The actual frozen prompt-v2.md must load with correct version."""
+        """The actual frozen prompt-v3.md must load with correct version."""
         artifact = load_frozen_prompt()
         self.assertEqual(artifact.version, FROZEN_PROMPT_VERSION)
         self.assertGreater(len(artifact.system_prompt), 50)

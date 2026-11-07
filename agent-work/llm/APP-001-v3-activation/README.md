@@ -1,17 +1,9 @@
-# APP-001 extraction v3 activation package (staged)
+# APP-001 extraction v3 激活记录
 
-状态：`prepared-not-active`。
+ADR-0016 已被项目负责人接受。本分支已将 `app001-extraction.v3` 接入生产 prompt 加载与解析契约，待 Codex 审查并合入 `main`；真实模型效果仍未验证。
 
-本目录是 `app001-extraction.v3` 的版本化激活准备包，不是生产冻结目录。`prompt-v3.md` 从候选 prompt 复制而来，必须与候选源文件通过 SHA-256 比对后才能进入新的 ADR 激活流程。
+候选源 `../APP-001-baseline-prep/prompt-v3-candidate.md` 保持原样，SHA-256 为 `e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b`。生产冻结副本 `prompt-v3.md` 去除了候选/未激活元说明，SHA-256 为 `3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b`；manifest 分别锚定两者。
 
-当前生产路径仍使用 `app001-extraction.v2`：`src/llm/contract.py`、`src/llm/parser.py` 和 `src/llm/prompt_loader.py` 没有修改，`FORMAL_EVALUATION_ALLOWED` 仍为 `False`。本包不授权模型调用、不改变旧批次，也不改变 `acceptance-set-v0`。
+保持不变：`app001-io.v1`、9 条 evaluator-only `acceptance-set-v0`（原 SHA-256）、CAD-003 Schema、36 个逻辑运行/108 次 HTTP 上限、重试策略和 C2/IR/CAD/STEP 禁用范围。`FORMAL_EVALUATION_ALLOWED` 仍为 `False`，本次没有任何真实模型/API 调用授权。模型效果如需评测，必须使用新唯一批次并单独授权。
 
-激活前必须完成：
-
-1. 项目负责人接受 ADR-0016（目前为 `proposed`）；
-2. 在 Python 3.11.18 下重跑候选专项、LLM 全量和 Schema 全量测试；
-3. 将 `contract.py` 的 prompt 版本、`parser.py` 的版本检查和 `prompt_loader.py` 的路径/版本/文件哈希作为同一提交更新；
-4. 记录激活前后的接口、哈希和回滚点；
-5. 另行取得新的唯一批次授权后，才允许任何真实模型请求。
-
-回滚方式：恢复生产 v2 文件和其 `d95f853d...` 文件哈希锚点；不修改或重写任何历史批次。
+回滚目标是 v2 prompt `d95f853d325e05d9b045921da994256c7b8656336b5be02d75ced20d22755eac`；回滚不修改历史批次或候选 v3 证据。

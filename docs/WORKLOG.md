@@ -1526,3 +1526,11 @@ verified=
 limits=未在 Python 3.11.18 复核；8 个 FUSE skip；离线测试不构成真实模型效果证据；ADR-0016 尚未接受，激活提交和新批次授权均未发生
 next=项目负责人审阅 ADR-0016 和激活包；若接受，再单独安排生产激活提交与 Python 3.11.18 复核；之后如需效果评测再申请新的唯一正式批次
 commit=待提交
+
+### APP-001-V3-ACTIVATION / Codex / review / 2026-11-07
+
+- 动作：项目负责人接受 ADR-0016 后，将生产 Prompt 契约由 `app001-extraction.v2` 切换至 `app001-extraction.v3`；冻结 loader 指向独立激活副本并更新文件级 hash 锚点；保留候选源与 v2 回滚哈希；更新版本相关测试、README、激活 manifest/checklist、PROJECT_STATUS 和 PROJECT_PLAN。
+- 结果：生产 prompt SHA-256=`3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b`；候选源 SHA-256=`e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b`；acceptance-set-v0 哈希未变，历史 `frozen_prompt_version` 未改。解析器接受当前 v3，并拒绝旧 v2 响应。
+- 验证：Python 3.11.18；定向 153 项通过；LLM 全量 572 项通过（8 个既有 FUSE skip）；Schema 17 项通过；`py_compile` 通过。最终 `git diff --check` 与提交待完成。
+- 边界：`FORMAL_EVALUATION_ALLOWED=False`；没有真实模型请求、密钥读取或旧批次修改；模型效果未测，不授权新正式批次。
+- 下一步：完成中枢差异审查和单一激活提交；之后如需测效果，单独申请新唯一批次授权。

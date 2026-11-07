@@ -129,7 +129,7 @@ class PromptLoaderIncludesEnvelopeExample(unittest.TestCase):
         """The JSON envelope example object must be present verbatim."""
         self.assertIn('"contract_version": "app001-io.v1"',
                       self.artifact.system_prompt)
-        self.assertIn('"prompt_version": "app001-extraction.v2"',
+        self.assertIn('"prompt_version": "app001-extraction.v3"',
                       self.artifact.system_prompt)
 
     def test_system_prompt_does_not_contain_code_fence_markers(self):
@@ -140,14 +140,13 @@ class PromptLoaderIncludesEnvelopeExample(unittest.TestCase):
         self.assertNotIn("```", self.artifact.system_prompt)
 
     def test_file_hash_anchor_still_matches(self):
-        """The prompt artifact FILE hash must be unchanged (we did not modify
-        prompt-v2.md; only the parsing logic changed)."""
+        """The production v3 prompt file hash is independently frozen."""
         import hashlib
         from pathlib import Path
         repo_root = Path(__file__).resolve().parents[2]
-        p = repo_root / "agent-work" / "llm" / "APP-001-baseline-prep" / "prompt-v2.md"
+        p = repo_root / "agent-work" / "llm" / "APP-001-v3-activation" / "prompt-v3.md"
         actual = hashlib.sha256(p.read_bytes()).hexdigest()
-        self.assertEqual(actual, "d95f853d325e05d9b045921da994256c7b8656336b5be02d75ced20d22755eac")
+        self.assertEqual(actual, "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b")
 
     def test_envelope_keys_all_mentioned_in_system_prompt(self):
         """Every key in ENVELOPE_KEYS must appear somewhere in the system

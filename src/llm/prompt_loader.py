@@ -1,16 +1,16 @@
 """Frozen prompt artifact loader and verifier for APP-001.
 
 This module loads the frozen system prompt and user message template from
-``agent-work/llm/APP-001-baseline-prep/prompt-v2.md`` and verifies that:
+``agent-work/llm/APP-001-v3-activation/prompt-v3.md`` and verifies that:
 
-1. The artifact declares version ``app001-extraction.v2``.
+1. The artifact declares version ``app001-extraction.v3``.
 2. The system message content matches exactly (after whitespace normalization).
 3. The user message template content matches exactly (after normalization and
    placeholder form conversion).
 4. The SHA-256 hashes in a run record match the actual content used.
 
 **Normalization rules for template placeholders:**
-The frozen prompt-v2.md uses ``{{query_id}}``-style double-brace placeholders
+The frozen prompt uses ``{{query_id}}``-style double-brace placeholders
 (Markdown-safe).  The runtime ``AdapterInput.rendered_user_prompt()`` uses
 Python ``.format()``-style single-brace ``{query_id}`` placeholders.  The
 loader converts double-brace to single-brace before comparison.
@@ -36,16 +36,16 @@ FROZEN_PROMPT_PATH = (
     _REPO_ROOT
     / "agent-work"
     / "llm"
-    / "APP-001-baseline-prep"
-    / "prompt-v2.md"
+    / "APP-001-v3-activation"
+    / "prompt-v3.md"
 )
 
-FROZEN_PROMPT_VERSION = "app001-extraction.v2"
+FROZEN_PROMPT_VERSION = "app001-extraction.v3"
 
 # Known version string that must appear in the artifact.
-_VERSION_MARKER = "app001-extraction.v2"
+_VERSION_MARKER = "app001-extraction.v3"
 
-# R3-A: Fixed SHA-256 anchor of the frozen prompt-v2.md file content (bytes).
+# Fixed SHA-256 anchor of the frozen prompt-v3.md file content (bytes).
 # This is a separate integrity check from the parsed system_prompt/user_template
 # hashes.  If the file is modified (even preserving the version string), the
 # file-level hash will not match and loading fails closed.
@@ -53,7 +53,7 @@ _VERSION_MARKER = "app001-extraction.v2"
 # Update procedure: when a new frozen prompt version is approved via ADR,
 # replace this constant with the new file's SHA-256 and update
 # FROZEN_PROMPT_VERSION.  Do NOT change this value to match a modified file.
-FROZEN_PROMPT_FILE_SHA256 = "d95f853d325e05d9b045921da994256c7b8656336b5be02d75ced20d22755eac"
+FROZEN_PROMPT_FILE_SHA256 = "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b"
 
 # Regex to extract fenced Markdown code block content.
 # Captures the text between ```...``` fences (the first code block found).
@@ -92,10 +92,10 @@ def _extract_code_blocks(markdown: str) -> list[str]:
 
 
 def _parse_artifact(text: str) -> tuple[str, str]:
-    """Parse the frozen prompt-v2.md and extract (system_prompt, user_template).
+    """Parse the frozen prompt-v3.md and extract (system_prompt, user_template).
 
     The artifact structure (as frozen):
-    - Contains the literal version string ``app001-extraction.v2``.
+    - Contains the literal version string ``app001-extraction.v3``.
     - The first fenced code block after ``## System message`` is the system
       prompt JSON envelope example.
     - The second fenced code block (```text) is the user message template.
@@ -110,7 +110,7 @@ def _parse_artifact(text: str) -> tuple[str, str]:
       JSON object naming ``contract_version`` and ``prompt_version``).
     - ``## User message template`` section → first code block body.
 
-    This parsing is tied to the actual structure of prompt-v2.md.
+    This parsing is tied to the actual structure of prompt-v3.md.
     """
     lines = text.splitlines()
     system_lines: list[str] = []
@@ -137,7 +137,7 @@ def _parse_artifact(text: str) -> tuple[str, str]:
             # System section: take prose AND fenced code block content; skip
             # only the fence marker lines themselves.
             #
-            # APP-001-PHASE1-ENVELOPE-FIX: the frozen prompt-v2.md embeds the
+            # APP-001-PHASE1-ENVELOPE-FIX: the frozen prompt embeds the
             # JSON envelope example (the only place ``contract_version`` and
             # ``prompt_version`` appear) inside a fenced code block under
             # ``## System message``.  Stripping fenced-block content caused
@@ -199,7 +199,7 @@ def load_frozen_prompt(*, path: Path = FROZEN_PROMPT_PATH) -> FrozenPromptArtifa
     except FileNotFoundError:
         raise FrozenPromptMismatchError(
             f"frozen prompt artifact not found at {path}; "
-            "cannot label a run as app001-extraction.v2 without the artifact"
+            f"cannot label a run as {FROZEN_PROMPT_VERSION} without the artifact"
         )
     except OSError as exc:
         raise FrozenPromptMismatchError(
@@ -265,7 +265,7 @@ def verify_adapter_input(
     if actual_system != artifact.system_prompt:
         raise FrozenPromptMismatchError(
             "system_prompt does not match frozen artifact; "
-            "cannot label run as app001-extraction.v2. "
+            f"cannot label run as {FROZEN_PROMPT_VERSION}. "
             f"actual sha256={_sha256(actual_system)!r} "
             f"expected sha256={artifact.system_prompt_sha256!r}"
         )
@@ -274,7 +274,7 @@ def verify_adapter_input(
     if actual_template != artifact.user_template:
         raise FrozenPromptMismatchError(
             "user_prompt_template does not match frozen artifact; "
-            "cannot label run as app001-extraction.v2. "
+            f"cannot label run as {FROZEN_PROMPT_VERSION}. "
             f"actual sha256={_sha256(actual_template)!r} "
             f"expected sha256={artifact.user_template_sha256!r}"
         )

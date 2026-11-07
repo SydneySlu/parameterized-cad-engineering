@@ -45,6 +45,7 @@
 - [x] 实现并审查云端/本地 LLM adapter/logger（APP-001-ADAPTER；已通过 R3-FIX 中枢验收）
 - [x] 实现并合入 APP-001 第一阶段受控 runner（APP-001-RUNNER-001/R1/R2；R2-R6 修复合入 `main`，中枢独立复核通过）
 - [x] 按 ADR-0014 运行 APP-001 第一阶段诊断批次（`app001-phase1-20261107-01`、`app001-phase1-20261107-02`；每批 36 条逻辑运行、物理 HTTP 未超过 108；IR/CAD/geometry/STEP 禁用）；第二批次的 envelope 缺失已定位并由 `APP-001-PHASE1-ENVELOPE-FIX` 修复、合入 `main`，旧批次仍仅作诊断证据；修复后正式批次待重新授权，详见 [`agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md)
+- [x] 按接受的 ADR-0016 将生产 prompt/解析契约切换到 `app001-extraction.v3`；Python 3.11.18 离线验证通过；真实模型效果评测仍需新的唯一批次授权
 - [ ] 实现有限验证和字段修复循环（APP-002）
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）

@@ -371,20 +371,20 @@ format_schema_sha256: d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e77
 - 在 evidence `null` 契约偏差得到单独决策并完成中枢复核前，不启动新的正式批次。
 - 旧 0.33.2 probe 只作历史对照；新的正式运行必须在本 ADR 冻结的服务、版本、模型和 Schema hash 下重新取得唯一批次授权。
 
-## ADR-0016：APP-001 extraction v3 版本化激活准备（proposed）
+## ADR-0016：APP-001 extraction v3 版本化激活（accepted / implementation review）
 
 - 日期：2026-11-07
-- 状态：proposed；未激活、未合入生产路径
-- 决策人：待项目负责人确认
+- 状态：accepted；允许执行生产 prompt 版本切换和离线验证，不包含真实模型评测授权
+- 决策人：项目负责人 + Codex
 - 关联：ADR-0013、ADR-0014、ADR-0015；`APP-001-DECISION-POLICY-V3-DRAFT`
 
 ### 背景
 
-第四批次的只读分析发现，模型在缺失 `bore_d`、目录耦合冲突、目录外值和 `second_screw` 规则冲突时经常输出 `answer`。候选 v3 已在离线层补充冻结目录表、阈值规则、主张保留和不支持请求证据要求，并通过候选专项测试。该结果尚未证明真实模型效果，因此本 ADR 只准备版本化激活，不改变当前生产协议。
+第四批次的只读分析发现，模型在缺失 `bore_d`、目录耦合冲突、目录外值和 `second_screw` 规则冲突时经常输出 `answer`。候选 v3 已在离线层补充冻结目录表、阈值规则、主张保留和不支持请求证据要求，并通过候选专项测试。该结果尚未证明真实模型效果，因此本 ADR 激活新版本以便后续受控评测，但不授权模型调用。
 
-### 提案
+### 决策
 
-准备 `app001-extraction.v3` 的独立激活包，保持 `app001-io.v1`、九条 `acceptance-set-v0` 和 CAD-003 Schema 不变。激活包位于 `agent-work/llm/APP-001-v3-activation/`，包含 prompt 副本、哈希 manifest、激活检查清单和回滚说明。
+将 `app001-extraction.v3` 激活为当前生产 prompt 版本，保持 `app001-io.v1`、九条 `acceptance-set-v0` 和 CAD-003 Schema 不变。激活包位于 `agent-work/llm/APP-001-v3-activation/`，包含 prompt 副本、哈希 manifest、激活检查清单和回滚说明。候选源文件保留原样；生产激活副本使用正式冻结措辞并单独锚定哈希。
 
 候选包当前固定的可审查身份为：
 
@@ -394,16 +394,16 @@ contract_version: app001-io.v1
 acceptance_set: acceptance-set-v0 (9 cases)
 cad_schema: set_screw_shaft_collar.v0
 cad_source_commit: 035f467142888edfd0bd7cd73906f9b155c8f43c
-status: prepared-not-active
+status: activation implemented on feature branch; pending Codex review and merge
 ```
 
-### 激活前置条件
+### 实施与验证条件
 
-只有项目负责人接受本 ADR 后，才可另开生产激活提交。该提交必须把 `contract.py` 的版本常量、`parser.py` 的版本检查、`prompt_loader.py` 的正式路径/版本/文件级 SHA-256 锚点和对应测试作为一个可回滚单元更新；不得修改旧批次或覆盖 v2 的历史哈希证据。激活前必须在 Python 3.11.18 下重跑候选专项、LLM 全量和 Schema 全量测试，并由 Codex 独立复核。
+生产激活提交必须把 `contract.py` 的版本常量、`parser.py` 的版本检查、`prompt_loader.py` 的正式路径/版本/文件级 SHA-256 锚点和对应测试作为一个可回滚单元更新；不得修改旧批次或覆盖 v2 的历史哈希证据。必须在 Python 3.11.18 下重跑候选专项、LLM 全量和 Schema 全量测试，并由 Codex 独立复核。由于 `acceptance-set-v0` 的文件哈希被冻结且其 `frozen_prompt_version` 是创建时的历史元数据，本次不改该文件；运行记录仍由生产 `PROMPT_VERSION` 标识为 v3。
 
 ### 正式运行边界
 
-本提案不打开 `FORMAL_EVALUATION_ALLOWED`，不授权任何 DeepSeek/Ollama 请求，不改变 36 个逻辑运行、108 次物理 HTTP 上限、C2/IR/CAD/geometry/STEP 禁用范围。若激活后要测模型效果，必须使用新的唯一批次 ID，并取得与 ADR-0014 相同粒度的单独正式运行授权；旧 v2 批次只读保留，不混合统计。
+本 ADR 不打开 `FORMAL_EVALUATION_ALLOWED`，不授权任何 DeepSeek/Ollama 请求，不改变 36 个逻辑运行、108 次物理 HTTP 上限、C2/IR/CAD/geometry/STEP 禁用范围。若激活后要测模型效果，必须使用新的唯一批次 ID，并取得与 ADR-0014 相同粒度的单独正式运行授权；旧 v2 批次只读保留，不混合统计。
 
 ### 回滚
 
@@ -411,4 +411,4 @@ status: prepared-not-active
 
 ### 当前结论
 
-该 ADR 保持 `proposed`。候选 v3 的离线验收和激活准备可以完成，但是否接受、激活以及是否授权新的正式批次，留待项目负责人在查看激活提交和 Python 3.11.18 复核结果后决定。
+本 ADR 已被接受。激活提交只切换生产 prompt 版本和离线运行契约；真实模型效果仍未知，新的正式批次授权必须单独取得。

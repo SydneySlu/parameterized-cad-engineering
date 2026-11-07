@@ -13,7 +13,7 @@ from src.llm.parser import parse_response
 def _valid_body(**overrides):
     body = {
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v2",
+        "prompt_version": "app001-extraction.v3",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],
@@ -63,6 +63,13 @@ class ParserValidTests(unittest.TestCase):
 
 
 class ParserFailureTests(unittest.TestCase):
+    def test_previous_prompt_version_is_rejected(self):
+        result = parse_response(
+            _valid_body(prompt_version="app001-extraction.v2")
+        )
+        self.assertFalse(result.ok)
+        self.assertIn("PROMPT_VERSION_MISMATCH", [e.code for e in result.errors])
+
     def test_extra_prose_before_json_rejected(self):
         result = parse_response("here is the answer: " + _valid_body())
         self.assertFalse(result.ok)
