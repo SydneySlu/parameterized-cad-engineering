@@ -97,15 +97,17 @@ def _parse_artifact(text: str) -> tuple[str, str]:
     The artifact structure (as frozen):
     - Contains the literal version string ``app001-extraction.v2``.
     - The first fenced code block after ``## System message`` is the system
-      prompt JSON envelope example -- we skip it.
+      prompt JSON envelope example.
     - The second fenced code block (```text) is the user message template.
     - The text between ``## System message`` and the first code block is the
       actual system message instructions that the model receives.
 
     Because the artifact mixes instructional prose with JSON example blocks,
     we parse it by section heading:
-    - ``## System message`` section → system prompt instructions (prose, not
-      the JSON example).
+    - ``## System message`` section → system prompt instructions AND the
+      fenced JSON envelope example content (only the ``` fence marker lines
+      are removed; the fenced content is preserved so the model sees the bare
+      JSON object naming ``contract_version`` and ``prompt_version``).
     - ``## User message template`` section → first code block body.
 
     This parsing is tied to the actual structure of prompt-v2.md.
@@ -132,12 +134,27 @@ def _parse_artifact(text: str) -> tuple[str, str]:
             continue
 
         if section == "system":
-            # System section: take prose lines; skip fenced blocks.
+            # System section: take prose AND fenced code block content; skip
+            # only the fence marker lines themselves.
+            #
+            # APP-001-PHASE1-ENVELOPE-FIX: the frozen prompt-v2.md embeds the
+            # JSON envelope example (the only place ``contract_version`` and
+            # ``prompt_version`` appear) inside a fenced code block under
+            # ``## System message``.  Stripping fenced-block content caused
+            # the model to receive "Return this envelope, using exactly these
+            # keys and literal values:" immediately followed by field
+            # descriptions for decision/extracted_parameters/evidence/... but
+            # NEVER the JSON object naming contract_version/prompt_version.
+            # The second formal batch (app001-phase1-20261107-02) confirmed
+            # this: all 32 model responses omitted those two keys and failed
+            # with MISSING_ENVELOPE_KEY.  Keeping fence-internal lines (while
+            # still dropping the ``` markers) sends the bare JSON object as the
+            # template, consistent with the instruction "Return exactly one
+            # UTF-8 JSON object, with no Markdown fences".
             if stripped.startswith("```"):
                 in_fence = not in_fence
                 continue
-            if not in_fence:
-                system_lines.append(line)
+            system_lines.append(line)
 
         elif section == "template" and not template_captured:
             # Template section: capture the first fenced block.
