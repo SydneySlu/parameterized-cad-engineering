@@ -51,18 +51,19 @@
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
-| APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | review | `0a49fb2` 实现 + `2581a10` transport shape 补强；Codex 样例回归覆盖 A02/A04/A07。Python 3.11.18 核心/专项及全量（8 个 FUSE skip）复核通过，待审查记录和主线合入 |
+| APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
+| APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 四个批次均保留且处于 review：第四批次有 7 条逻辑运行无可评估输出，8 条响应未通过 CAD-003 Schema；A04/A07 的 4 条 C1 请求前安全阻塞仍存在。证据留存和阻塞审计代码已在当前 Codex 分支补强并通过本机复核，尚未合入 main；C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
+- APP-001 四个批次均保留且处于 review：第四批次有 7 条逻辑运行无可评估输出，8 条响应未通过 CAD-003 Schema；A04/A07 的 4 条 C1 请求前安全阻塞仍存在。R1 证据留存和阻塞审计代码已合入 main。对 8 条拒绝的只读分析显示显式抽取正确、主要问题为 decision 与冲突/不支持状态不一致；C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
 
 ## 当前工作单元边界
 
-- APP-001-AUDIT-EVIDENCE-R1 仅修补失败响应的受控留存和请求前阻塞记录；不改变 Prompt、输出协议、RET-002 策略、重试上限或 provider 配置，不调用真实模型。当前实现处于 review，待合入 main 后再评估下一阶段。
+- APP-001-AUDIT-EVIDENCE-R1 仅修补失败响应的受控留存和请求前阻塞记录；不改变 Prompt、输出协议、RET-002 策略、重试上限或 provider 配置，不调用真实模型；已合入 main 并通过中枢审查。
 - A04 C1 因用户输入缺少 `bore_d` 而正确阻塞；A07 C1 因 `bore_d=75` 不满足 envelope 的 CAD-003 目录校验，且不具备 flat 查询所需六字段而正确阻塞。不得从 evaluator-only 标签补值或猜字段。样例级回归由 Codex 在本工作单元后独立补齐/验收。
-- 对 8 个 Schema 拒绝的模型决策质量分析排在证据和 C1 诊断之后；任何 Prompt/输出策略变更须版本化、另建批次，并另行取得新模型运行授权。
+- 8 个 Schema 拒绝的只读决策质量分析已完成；若要改 Prompt/输出策略，必须版本化、另建批次，并另行取得新模型运行授权。
 - DeepSeek 5xx 继续按 ADR-0010 当前最多两次重试；除非服务状态或错误证据支持，不调整 provider 配置或重试策略。
 
 ## 下一步

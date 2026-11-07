@@ -1440,3 +1440,17 @@ verified=
 limits=任务当前仍在 review，尚未合入 main；8 个 FUSE skip；未发起真实模型请求、未读取 API key；LLM 全量曾观察到历史预算测试的账本/批次隔离波动，但当前干净复跑通过。
 next=项目负责人审查后合入 main；不因 A04/A07 放宽查询契约；模型质量/Prompt/Schema 变化需新版本、新 ADR 和新批次授权。
 commit=待提交
+[2026-11-07] agent=Codex task=APP-001-DECISION-QUALITY-ANALYSIS status=review
+scope=只读分析 APP-001 第四批次 8 条 CAD-003 Schema 拒绝；不运行模型、不改 Prompt/Schema/规则或正式批次
+动作=
+  1) 确认共享仓库根目录、本地 main 与 origin/main 均为 60f4fa2，工作区起始干净；读取项目状态/计划/决策、交接协议及第四批次和 R1 审查材料
+  2) 逐条从 runs.jsonl 定位 8 个 schema.fail 运行，读取 Adapter 保留的模型 JSON 正文，并与冻结 acceptance-set 的 explicit_parameter_claims、expected_behavior 和 scoring policy 对照
+  3) 将 Schema 拒绝与模型抽取、evidence、decision 分开评价；新增 agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md
+  4) 修正 PROJECT_STATUS 中 R1 已合入 main 的过期状态，并登记只读质量分析结果
+verified=
+  8/8 显式参数值与冻结样例一致；CAD-003 对 MISSING_REQUIRED 1、CATALOG_MISMATCH 3、CATALOG_CHOICE 2、SECOND_SCREW_CONSTRAINT 2 的拒绝符合冻结规则
+  A05 三条中 DeepSeek C1 decision=ask 符合预期，其余 A05 两条、A04 一条、A07 两条、A09 两条均 decision=answer，与冻结样例应澄清/拒绝的要求不符；Ollama A07 的 unsupported evidence 覆盖不完整
+  R1 代码/审查已在 main（60f4fa2）；旧运行目录只读且 Git ignored
+limits=结论仅覆盖第四批次 8 个 Schema 拒绝；未外推至总体模型质量；未发起网络/模型请求、未读取密钥，未运行 C2/IR/CAD/geometry/STEP
+next=项目负责人审阅是否将决策一致性作为下一窄范围 Prompt/输出策略工作；任何新模型效果验证需新版本、唯一批次和单独授权
+commit=待提交
