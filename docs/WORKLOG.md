@@ -1645,3 +1645,8 @@ commit=待提交
 - 结果：离线候选准备通过，可进入独立 v4 激活实现工作单元；生产仍保持 v3，正式评测授权边界不变。本结论不代表 v4 已激活或模型效果通过。
 - 交付：更新 `APP-001-V4-ACTIVATION-REVIEW.md` 补记和 checker 复核报告；后续提交记录以 Git HEAD 为准。
 - 下一步：项目负责人 push 后核对远端；再单独排定 activation implementation 与 review，不运行模型。
+
+### APP-001-V4-CHECKER-FIX-STATUS-SYNC / Codex / review / 2026-11-08
+
+- 动作：同步状态页与 checkpoint，修正“待提交”的过期描述。
+- 结果：当前候选工作单元提交链为 `6d1f90a`、`2c7d199`、`9f424d0`；工作区干净，尚未 push。状态继续为 review，生产 v3 和 ADR-0017 proposed 边界不变。
