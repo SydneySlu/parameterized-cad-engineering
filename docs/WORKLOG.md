@@ -1380,3 +1380,18 @@ limits=
   不能据此声称全批次抽取成功或 CAD/STEP 端到端成功，APP-001 仍为 review。
 next=请项目负责人决定是否接受该批次作为首轮诊断结果，以及是否另行处理 DeepSeek 稳定性、失败正文安全留存、A04/A07 C1 前置阻塞；若需任何新增模型调用，须另有新的唯一批次及明确授权。
 commit=待提交；原始运行产物留在 Git 忽略的 work/ 下，不提交。
+[2026-11-07] agent=Codex task=APP-001-AUDIT-EVIDENCE-R1 status=in_progress
+scope=启动第四批次问题的窄范围证据补强；不运行真实模型、不改旧批次或评测语义
+决策=
+  1) 第一工作单元交 CC：为 C1 请求前阻塞增加非敏感结构化审计记录；为 HTTP 2xx 响应包装解析失败增加受限、忽略目录内证据留存和无网络测试
+  2) CC 不得改 Prompt/契约/RET-002/CAD-003/provider/重试/授权，也不处理模型质量和旧批次
+  3) Codex 只读核对 A04/A07：A04 的 bore_d 缺失应安全阻塞；A07 的 bore_d=75 触发 envelope CAD-003 目录拒绝，且缺 flat 查询其余五字段；不从 evaluator 标签补值
+  4) 8 条 Schema 拒绝的模型决策质量分析及任何 Prompt/输出策略版本变更排在证据补强之后；新增正式模型运行须另行授权
+verified=
+  C1 只读复放：A04 bore_d=None，C1_NO_SAFE_QUERY_PARAMETER，0 candidates；A07 bore_d=75.0，RETREIVAL_SCHEMA_REJECTED 包装为 BLOCKED_C1_RETRIEVAL_ERROR，0 candidates
+  当前测试已有一般 C1 正常/阻塞覆盖；尚未将冻结 A04/A07 两例分别锁为回归测试
+  CC 对话线程未在当前 Codex 线程清单中发现；已生成窄范围任务 prompt，未向外部对话发送消息
+limits=
+  未改生产代码；未请求网络；未读取密钥；旧批次 -01 至 -04 保持只读
+next=将 docs/coordination/prompts/APP-001-AUDIT-EVIDENCE-R1.md 交 CC 执行；CC 交付后由 Codex 重跑核心正常/失败用例、专项和全量测试，随后独立补齐/审查 A04/A07 样例级回归
+commit=待提交（Codex 启动文档单元）
