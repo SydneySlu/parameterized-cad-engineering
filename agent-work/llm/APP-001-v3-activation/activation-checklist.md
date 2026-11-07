@@ -7,8 +7,8 @@
 - [x] 生产冻结 prompt 已使用正式措辞，并与未修改的候选源分开记录哈希。
 - [x] `contract.py`、`prompt_loader.py`、parser 派生版本校验和版本相关测试作为一个工作单元切换到 v3。
 - [x] `FORMAL_EVALUATION_ALLOWED` 保持 `False`；无真实模型请求授权。
-- [ ] Python 3.11.18 下专项、LLM 全量和 Schema 全量复核通过。
-- [ ] Codex 中枢独立审查并提交激活单元。
+- [x] Python 3.11.18 下专项、LLM 全量和 Schema 全量复核通过（LLM 576 项通过，8 项既有 FUSE skip；Schema 17 项通过）。
+- [x] Codex 中枢独立审查并提交激活单元（合入 `main`：`7dc7a37`）。
 - [ ] 如要测模型效果，另行取得唯一正式批次授权。
 
 ## 激活内容

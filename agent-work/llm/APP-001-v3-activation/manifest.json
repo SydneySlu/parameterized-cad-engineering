@@ -1,6 +1,6 @@
 {
   "package_id": "APP-001-v3-activation",
-  "status": "implemented-on-branch-pending-review",
+  "status": "merged-to-main-reviewed",
   "candidate_prompt_version": "app001-extraction.v3",
   "production_prompt_version": "app001-extraction.v3",
   "contract_version": "app001-io.v1",
@@ -18,7 +18,7 @@
   "formal_evaluation_authorized": false,
   "activation_requires": [
     "Python 3.11.18 verification completed",
-    "Codex independent review and merge",
+    "Codex independent review and merge completed at 7dc7a37",
     "new unique formal batch authorization before model calls"
   ],
   "rollback_target": "app001-extraction.v2",

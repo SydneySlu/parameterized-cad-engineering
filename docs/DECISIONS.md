@@ -371,7 +371,7 @@ format_schema_sha256: d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e77
 - 在 evidence `null` 契约偏差得到单独决策并完成中枢复核前，不启动新的正式批次。
 - 旧 0.33.2 probe 只作历史对照；新的正式运行必须在本 ADR 冻结的服务、版本、模型和 Schema hash 下重新取得唯一批次授权。
 
-## ADR-0016：APP-001 extraction v3 版本化激活（accepted / implementation review）
+## ADR-0016：APP-001 extraction v3 版本化激活（accepted / implemented）
 
 - 日期：2026-11-07
 - 状态：accepted；允许执行生产 prompt 版本切换和离线验证，不包含真实模型评测授权
@@ -394,7 +394,7 @@ contract_version: app001-io.v1
 acceptance_set: acceptance-set-v0 (9 cases)
 cad_schema: set_screw_shaft_collar.v0
 cad_source_commit: 035f467142888edfd0bd7cd73906f9b155c8f43c
-status: activation implemented on feature branch; pending Codex review and merge
+status: activation merged to main and independently reviewed (`7dc7a37`)
 ```
 
 ### 实施与验证条件

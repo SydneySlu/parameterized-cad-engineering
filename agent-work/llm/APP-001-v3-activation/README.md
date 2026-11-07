@@ -1,6 +1,6 @@
 # APP-001 extraction v3 激活记录
 
-ADR-0016 已被项目负责人接受。本分支已将 `app001-extraction.v3` 接入生产 prompt 加载与解析契约，待 Codex 审查并合入 `main`；真实模型效果仍未验证。
+ADR-0016 已被项目负责人接受。`app001-extraction.v3` 已接入生产 prompt 加载与解析契约，并经 Codex 独立复核后合入 `main`（`7dc7a37`）；真实模型效果仍未验证。
 
 候选源 `../APP-001-baseline-prep/prompt-v3-candidate.md` 保持原样，SHA-256 为 `e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b`。生产冻结副本 `prompt-v3.md` 去除了候选/未激活元说明，SHA-256 为 `3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b`；manifest 分别锚定两者。
 

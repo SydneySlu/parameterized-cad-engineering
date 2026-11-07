@@ -585,7 +585,7 @@ class TestActivationPackageOffline(unittest.TestCase):
         source = Path(CANDIDATE_PROMPT_PATH)
         staged_hash = hashlib.sha256(staged.read_bytes()).hexdigest()
         source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
-        self.assertEqual(manifest["status"], "implemented-on-branch-pending-review")
+        self.assertEqual(manifest["status"], "merged-to-main-reviewed")
         self.assertEqual(manifest["candidate_prompt_version"], CANDIDATE_PROMPT_VERSION)
         self.assertEqual(staged_hash, manifest["prompt_file_sha256"])
         self.assertEqual(source_hash, manifest["source_candidate_sha256"])

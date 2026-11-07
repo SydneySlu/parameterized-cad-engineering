@@ -1548,3 +1548,10 @@ commit=待提交
 - 结果：Python 3.11.18 下 parser 41 项、LLM 全量 576 项（8 个既有 FUSE skip）、Schema 17 项通过；对只读旧批次 `app001-phase1-20261107-03` 的 32 条 v2 原始响应复放，24 条通过显式 v2 parser，8 条按原始 `EXTRACTED_TYPE_ERROR` 拒绝；默认 v3 parser 对 32 条均保留版本拒绝。
 - 边界：未发起真实模型/网络请求，未读取密钥，未修改 `work/` 或旧批次，未打开正式 gate；v3 效果仍需新的唯一正式批次授权。
 - 下一步：建议审查并合入 v3 激活与历史审计兼容提交；合入后再按独立授权决定是否运行 v3 正式批次。
+
+### APP-001-V3-ACTIVATION-MERGE-CLOSEOUT / Codex / done / 2026-11-07
+
+- 动作：核对合入后的 `main`/`origin/main`、激活文件身份、生产调用链和工作区；将激活包、ADR、状态页和清单中的“待合入/待审查”旧状态更新为已合入。
+- 结果：`main` 与 `origin/main` 同为 `7dc7a37`；生产 `PROMPT_VERSION`/loader 为 v3，正式 gate 仍为 `False`；Adapter 继续使用严格 v3 parser；LLM 576 项、Schema 17 项通过，8 项为既有 FUSE skip。
+- 边界：未发起真实模型/网络请求，未读取密钥，未修改旧批次；v3 效果尚未测量。
+- 下一步：若启动 v3 效果评测，必须先完成新的运行前审查并取得唯一正式批次授权。

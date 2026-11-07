@@ -2,8 +2,8 @@
 
 - 日期：2026-11-07
 - Agent：Codex
-- 状态：review（激活提交已在功能分支，待中枢审查/合并）
-- 分支：`cc/APP-001-DECISION-POLICY-V3-DRAFT`
+- 状态：done（激活与历史 v2 审计兼容已合入 `main`）
+- 合入提交：`7dc7a37`
 - 前置：项目负责人接受 ADR-0016；本次仅激活生产协议并做离线验证，不含真实模型评测授权。
 
 ## 交付与版本身份
@@ -23,7 +23,7 @@ Python：`/opt/homebrew/bin/python3.11`，Python 3.11.18。
 PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.llm.test_decision_policy_v3_candidate tests.llm.test_parser tests.llm.test_envelope_fix tests.llm.test_r2_regression -q
   Ran 153, OK
 PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -q
-  Ran 572, OK (skipped=8; existing FUSE file-lock limitation)
+  Ran 576, OK (skipped=8; existing FUSE file-lock limitation)
 PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/schema -q
   Ran 17, OK
 /opt/homebrew/bin/python3.11 -m py_compile src/llm/contract.py src/llm/prompt_loader.py src/llm/parser.py src/llm/adapter.py tests/llm/test_parser.py tests/llm/test_decision_policy_v3_candidate.py
@@ -37,8 +37,8 @@ PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/sche
 ```text
 handoff_self_check:
   changed=src/llm/contract.py, src/llm/prompt_loader.py, src/llm/README.md, src/llm/__init__.py, src/llm/adapter.py, tests/llm version fixtures/assertions, v3 activation manifest/checklist/README, docs/DECISIONS.md, docs/PROJECT_STATUS.md, docs/PROJECT_PLAN.md, docs/WORKLOG.md
-  commands=Python 3.11.18 targeted 153 OK; LLM 572 OK/8 skipped; Schema 17 OK; py_compile OK; git diff --check pending final review
-  confirmed=ADR-0016 accepted; active loader is v3 and file hash anchored; candidate source unchanged; acceptance-set hash unchanged; old v2 response rejected; formal gate remains false
-  unresolved=Codex final diff review and commit; no real-model effectiveness evidence; no new formal batch authorization
-  next_agent_focus=review dynamic version checks, historical acceptance metadata handling, exact v3/v2 prompt hashes, no unintended changes to authorization or gate
+  commands=Python 3.11.18 targeted 153 OK before compatibility closeout; parser 41 OK, LLM 576 OK/8 skipped, Schema 17 OK, py_compile OK, git diff --check OK
+  confirmed=ADR-0016 accepted; active loader is v3 and file hash anchored; candidate source unchanged; acceptance-set hash unchanged; explicit v2 audit replay works without changing strict v3 production parsing; formal gate remains false
+  unresolved=no real-model effectiveness evidence; no new formal batch authorization
+  next_agent_focus=before any v3 model run, verify authorization scope, runtime identities, Ollama digest/version, budget ledger and output evidence retention
 ```
