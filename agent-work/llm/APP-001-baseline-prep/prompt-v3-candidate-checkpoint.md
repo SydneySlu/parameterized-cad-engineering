@@ -147,3 +147,32 @@ handoff_successor_check:
 - 不产生新模型效果结论，不授权新正式批次。
 - v3 prompt 对目录耦合冲突和规则冲突的检测依赖模型判断力；模型不持有完整目录表，确定性 CAD-003 层仍是最终安全门。
 - envelope 自洽性 checker 检测模型可检测的不一致（missing_fields + answer、unsupported_requests + answer、bore_d 缺失/越界 + answer），不检测 CAD-003 目录/规则冲突（由确定性层负责）。
+
+## 版本化激活准备补充（2026-11-07）
+
+- 候选离线验收扩展为完整九样例登记：A01-A09 均有冻结 case ID；新增 A03 单位换算、A08 retrieval reference 隔离和 staged activation manifest 测试。
+- 新增准备包：`agent-work/llm/APP-001-v3-activation/`。
+  - `prompt-v3.md` 与候选源逐字节一致；manifest 记录 prompt SHA-256、acceptance-set SHA-256、CAD-003 source commit、回滚目标和未授权状态。
+  - `activation-checklist.md` 明确生产激活尚未执行，必须等待 ADR-0016、Python 3.11.18 复核和新的唯一批次授权。
+  - 包状态为 `prepared-not-active`，不替换 v2，不接入 adapter/parser/runner。
+- ADR-0016 已追加到 `docs/DECISIONS.md`，状态为 `proposed`，只描述激活前置条件和回滚边界。
+
+### 本次复核命令
+
+```text
+PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -q → Ran 55, OK
+PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 571, OK (skipped=8)
+PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+python3 -m py_compile src/llm/decision_policy_v3_candidate.py tests/llm/test_decision_policy_v3_candidate.py → OK
+python3 -m json.tool agent-work/llm/APP-001-v3-activation/manifest.json → OK
+git diff --check → CLEAN
+```
+
+Python 3.15.2；8 个 skip 为既有 FUSE 文件锁限制。未调用真实模型、未读取密钥、未修改生产 v2 文件或任何正式批次。
+
+```text
+activation_status=prepared-not-active
+adr=ADR-0016 proposed
+production_prompt_version=app001-extraction.v2
+new_formal_batch_authorized=false
+```

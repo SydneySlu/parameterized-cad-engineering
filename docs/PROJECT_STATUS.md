@@ -53,7 +53,7 @@
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
-| APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与离线行为测试 | CC + Codex | review | 窄修复经中枢复审通过（`b757e9c`）；48 项专项测试通过，prompt 表与 CAD-003 一致，bore_d=75 被拒绝；仍为未激活候选，等待负责人决定后续是否启动版本化激活流程 |
+| APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与离线行为测试 | CC + Codex | review | 九样例离线验收与版本化激活准备已完成（`55` 项专项测试通过）；激活包 `agent-work/llm/APP-001-v3-activation/` 为 `prepared-not-active`，ADR-0016 仍为 proposed，未改生产 v2 路径 |
 
 ## 阻塞项
 
@@ -66,6 +66,7 @@
 - A04 C1 因用户输入缺少 `bore_d` 而正确阻塞；A07 C1 因 `bore_d=75` 不满足 envelope 的 CAD-003 目录校验，且不具备 flat 查询所需六字段而正确阻塞。不得从 evaluator-only 标签补值或猜字段。样例级回归由 Codex 在本工作单元后独立补齐/验收。
 - 8 个 Schema 拒绝的只读决策质量分析已完成；若要改 Prompt/输出策略，必须版本化、另建批次，并另行取得新模型运行授权。
 - APP-001-DECISION-POLICY-V3-DRAFT 原有缺口已在同一候选分支窄修并经中枢复审通过（`b757e9c`）：候选 prompt 提供冻结目录行和螺钉规则作为可见判定参考，静态测试核对该表与 CAD-003 完全一致；`answer` 要求 `bore_d` 为离散目录值，新增 bore_d=75 拒绝及 A06 边界正常用例。候选未激活，离线测试不构成模型效果结论；不授权新正式批次。
+- APP-001 extraction v3 的九样例离线验收已补齐：A01-A09 的 case ID、A03 单位换算、A08 retrieval reference 隔离、主张保留、拒绝/澄清边界和 prompt/激活包哈希均有测试。版本化激活准备包位于 `agent-work/llm/APP-001-v3-activation/`；ADR-0016 保持 `proposed`，生产仍使用 v2，未授权新正式批次。
 - DeepSeek 5xx 继续按 ADR-0010 当前最多两次重试；除非服务状态或错误证据支持，不调整 provider 配置或重试策略。
 
 ## 下一步
@@ -74,4 +75,4 @@
 2. 如需继续，先明确处理范围：DeepSeek 暂时故障表现、失败响应留存、A04/A07 C1 前置阻塞；任何追加模型请求都需要新的唯一批次和明确授权。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
-5. 项目负责人审阅已通过中枢窄修复复核的 v3 候选（`cc/APP-001-DECISION-POLICY-V3-DRAFT` 分支）；若决定激活，需新 ADR 并更新 contract.py `PROMPT_VERSION`、parser.py 版本检查和 prompt_loader.py 哈希锚点，并另行取得新模型运行授权。
+5. 项目负责人审阅 ADR-0016 和 `agent-work/llm/APP-001-v3-activation/`；若决定激活，需先完成 Python 3.11.18 复核和单一生产激活提交，再另行取得新模型运行授权。

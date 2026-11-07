@@ -1511,3 +1511,18 @@ verified=
 limits=当前环境 Python 3.15.2，未在 Python 3.11.18 复核；8 个 FUSE skip 不计作通过；候选策略存在 A05/A09 可观测性及目录成员边界缺口
 next=CC 窄修候选 prompt/spec/checker/测试，说明模型需要哪些可见规则信息，并增加 bore_d=75 单独输入拒绝 answer 的用例；不得激活、push、合并或调用模型；之后由 Codex 复审
 commit=待提交
+
+[2026-11-07] agent=Codex task=APP-001-V3-OFFLINE-ACCEPTANCE-ACTIVATION-PREP status=review
+scope=完成候选 extraction v3 的完整离线验收和版本化激活准备；不激活生产路径、不调用模型、不授权新批次
+动作=
+  1) 在候选分支读取最新 PROJECT_STATUS/PROJECT_PLAN/DECISIONS/WORKLOG、交接协议、候选 prompt/spec/checkpoint、CAD-003 Schema 和 acceptance-set-v0
+  2) 扩展候选专项测试，覆盖 A01-A09 的冻结 case ID、A03 单位换算、A08 retrieval reference 隔离、主张保留、拒绝/澄清边界以及激活 manifest 哈希一致性
+  3) 创建 `agent-work/llm/APP-001-v3-activation/`，包含 staged prompt 副本、manifest、activation-checklist 和 README；状态固定为 prepared-not-active
+  4) 在 docs/DECISIONS.md 追加 ADR-0016 proposed，记录 v3 激活前置条件、生产改动边界、唯一批次授权要求和 v2 回滚目标；同步 PROJECT_STATUS 与 checkpoint
+verified=
+  Python 3.15.2；候选专项 55/55；LLM 全量 571 passed/8 skipped；Schema 17/17；py_compile、manifest JSON parse、git diff --check 通过
+  激活包 prompt 与候选源 SHA-256 一致：e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b；acceptance-set SHA-256：ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf
+  production_files_changed=false；formal_evaluation_authorized=false；生产仍为 app001-extraction.v2；旧批次和 work/ 未修改
+limits=未在 Python 3.11.18 复核；8 个 FUSE skip；离线测试不构成真实模型效果证据；ADR-0016 尚未接受，激活提交和新批次授权均未发生
+next=项目负责人审阅 ADR-0016 和激活包；若接受，再单独安排生产激活提交与 Python 3.11.18 复核；之后如需效果评测再申请新的唯一正式批次
+commit=待提交

@@ -1,0 +1,25 @@
+{
+  "package_id": "APP-001-v3-activation",
+  "status": "prepared-not-active",
+  "candidate_prompt_version": "app001-extraction.v3",
+  "contract_version": "app001-io.v1",
+  "prompt_file": "prompt-v3.md",
+  "prompt_file_sha256": "e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b",
+  "source_candidate": "../APP-001-baseline-prep/prompt-v3-candidate.md",
+  "source_candidate_sha256": "e90ad55ca20cf356c3c143a723da271f1874eb9fa902dd1379d4afba657a8b5b",
+  "acceptance_set": "../APP-001-baseline-prep/acceptance-set-v0.json",
+  "acceptance_set_sha256": "ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf",
+  "acceptance_set_version": "acceptance-set-v0",
+  "acceptance_case_count": 9,
+  "cad_schema_version": "set_screw_shaft_collar.v0",
+  "cad_schema_source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+  "production_files_changed": false,
+  "formal_evaluation_authorized": false,
+  "activation_requires": [
+    "ADR-0016 accepted",
+    "Python 3.11.18 verification",
+    "single production activation commit",
+    "new unique formal batch authorization"
+  ],
+  "rollback_target": "app001-extraction.v2"
+}
