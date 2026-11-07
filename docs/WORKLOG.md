@@ -1594,3 +1594,41 @@ commit=待提交
 - 结果：候选规则方向、`75 mm` 离散目录措辞、生产 v3 隔离和冻结 hash 均通过；发现 P1：`retrieval_bore_value` 传入但未参与 checker 逻辑，导致“用户 24 优先 retrieval 20”测试不具备判别力；P2：unsupported 原文 evidence quote 未由 checker 验证。
 - 验证：v4 18/18、v3 candidate 55/55、parser 41/41、LLM 594 passed/8 skipped、Schema 17/17、`py_compile` 与 `git diff --check` 通过；未调用真实模型、未读取密钥。
 - 结论：activation review 暂不放行；ADR-0017 保持 proposed，生产继续 v3。先完成 P1 checker 修正，再复审；不授权新模型批次。
+
+### APP-001-V4-CHECKER-FIX / Kiro / review / 2026-11-08
+
+- 动作：按 `APP-001-V4-ACTIVATION-REVIEW` 的 P1/P2 要求，对 v4 未激活候选 checker 做窄范围修正。
+- 分支：`codex/APP-001-V3-DECISION-FIX-DRAFT`；前序 HEAD `3665293`。
+- 范围：只改 `src/llm/decision_policy_v4_candidate.py`、`tests/llm/test_decision_policy_v4_candidate.py` 和本交接记录；不改生产 v3、contract/parser/prompt_loader/adapter/runner、冻结 acceptance-set、prompt-v3、ADR-0017 状态、旧批次或正式评测结果。
+
+**P1（retrieval 优先级）：**
+新增纯函数 `resolve_bore_precedence(user_bore, retrieval_bore_value)`；`evaluate_fixture()` 调用该函数，retrieval 值通过 `retrieval_bore_raw`/`retrieval_acknowledged` 作审计追踪，不作 user_input evidence，不填入 extracted claims。
+新增 `TestV4RetrievalIsolation`（10 项）含反向测试：用户 bore=None + retrieval=20 → answer 不允许，ask 允许；用户 24 + retrieval=20 → normalized=24，answer 允许；retrieval=24 不被提升为用户主张。
+
+**P2（unsupported evidence quote 保留）：**
+新增 `UnsupportedEvidence` dataclass（`canonical_label`、`original_quote`、`source="user_input"`）；`V4FixtureResult` 新增 `unsupported_evidence` tuple；`evaluate_fixture()` 为每项 unsupported term 构建 evidence 条目（`阳极氧化` → label=`anodizing`，quote=`阳极氧化`，source=`user_input`）；无 unsupported_terms 时 evidence 为空。
+新增 `TestV4UnsupportedEvidenceQuote`（7 项）：阳极氧化/anodized/anodizing 规范化、原文 quote 保留、source 检查、不凭空增加项目。
+
+- 正常案例：`evaluate_fixture(V4FixtureCase(24, "mm", retrieval_bore_value=20))` → normalized_bore=24，answer 允许，retrieval_acknowledged=True，retrieval_bore_raw=20。
+- 失败案例（反向）：`evaluate_fixture(V4FixtureCase(bore_value=None, retrieval_bore_value=20))` → normalized_bore=None，answer 不允许，ask 允许。
+- unsupported 案例：`evaluate_fixture(V4FixtureCase(unsupported_terms=("阳极氧化",)))` → canonical_label=`anodizing`，original_quote=`阳极氧化`，source=`user_input`。
+
+- 验证（Python 3.10.12 / Linux aarch64）：v4 专项 34/34 OK；v3 candidate 55/55 OK；parser 41/41 OK；LLM 全量 610 passed、8 skipped（既有 FUSE 文件锁限制，不计通过）；Schema 17/17 OK；py_compile 通过；git diff --check CLEAN。active v3 prompt SHA-256=`3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b` 未变；acceptance-set SHA-256=`ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf` 未变；checker 未被 adapter/parser/runner 导入。
+- 阻塞：`.git/index.lock` 存在（FUSE 挂载下 `git status` 创建后无法删除，0 字节）；不自行删除锁；按任务规则记录阻塞。用户须在本机执行 `rm .git/index.lock && git add src/llm/decision_policy_v4_candidate.py tests/llm/test_decision_policy_v4_candidate.py agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md docs/WORKLOG.md && git commit -m "fix: harden APP-001 v4 checker P1 retrieval priority and P2 evidence quote [APP-001-V4-CHECKER-FIX]"`
+- 未解决：Python 3.11.18 在当前 VM 不可用，用户须在 Mac 本机复核；离线测试不证明模型依从；ADR-0017 仍 proposed；v4 尚未激活。
+- 下一步：用户提交后，交 Codex 中枢独立复审 P1/P2 修正；若通过，再决定是否创建 v4 activation 实现任务；任何真实模型批次仍需新 ID 和单独授权。
+
+### APP-001-V4-CHECKER-FIX-CODEX-REVIEW / Codex / review / 2026-11-08
+
+- 动作：在共享仓库复核 P1/P2 修正工作区，重跑 checker、v3 candidate、parser、LLM/Schema 全量及编译/空白检查。
+- 结果：P1 retrieval 隔离反向测试和 P2 unsupported quote/source 测试通过；active v3 与 acceptance-set 哈希未变，生产路径无 v4 checker 导入。发现 `.git/index.lock` 仍存在，HEAD 仍为 `3665293`，本轮修改尚未提交；不删除锁、不做 Git 写操作。
+- 验证：本机 Python 3.15.2 下 v4 34/34、v3 candidate 55/55、parser 41/41、LLM 610 passed/8 skipped、Schema 17/17、`py_compile`、`git diff --check` 均通过。此环境与项目基线 Python 3.11.18 不同，需单独复核。
+- 限制：checker 对相同 canonical unsupported 标签去重，多个不同原文别名只保留第一条 quote；单请求 quote 目标已通过，多原文逐条留证未覆盖。
+- 结论：本轮 checker 修正可接受，最终 Git 提交及固定 Python 基线复核待完成；ADR-0017 仍 proposed，不代表 activation 通过，不授权新模型请求。
+
+### APP-001-V4-CHECKER-FIX-LOCAL-VERIFY / Codex / review / 2026-11-08
+
+- 动作：根据项目负责人授权，检查没有活动 Git 进程后删除遗留的 0 字节 `.git/index.lock`；在本机固定 Python 3.11.18 环境重跑完整目标验证；新增项目级可复用推进手册并从 `AGENTS.md` 链接。
+- 结果：锁已清除，未丢失工作区改动；Python 3.11.18 下 v4 34/34、v3 candidate 55/55、parser 41/41、LLM 610 passed/8 skipped、Schema 17/17，py_compile 和 `git diff --check` 通过。8 个 skip 为既有 FUSE 限制，未计作通过项。
+- 流程沉淀：`docs/coordination/project-memory-and-delivery-playbook.md` 记录启动事实恢复、角色分工、计划/架构一致性、分层测试、证据和 skip 报告、交接审查、对话压缩恢复、Git 锁处置及 done gate。
+- 边界：尚未提交或 push；ADR-0017 保持 proposed、生产继续 v3；没有真实模型请求或密钥读取。当前任务待形成 commit 并由中枢对提交对象最终核验。

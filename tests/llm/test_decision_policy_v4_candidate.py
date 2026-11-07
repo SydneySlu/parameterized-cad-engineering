@@ -134,5 +134,156 @@ class TestV4ExecutableOfflineChecker(unittest.TestCase):
             normalize_length_to_mm(16, "inch")
 
 
+class TestV4RetrievalIsolation(unittest.TestCase):
+    """Tests that the user's explicit bore_d controls and retrieval context
+    is never promoted to a user claim.
+
+    These tests include reverse assertions that would fail if the
+    implementation erroneously selected the retrieval value.
+    """
+
+    def test_user_bore_24_wins_over_retrieval_20(self):
+        """User bore_d=24 controls even when retrieval shows 20."""
+        result = evaluate_fixture(V4FixtureCase(24, "mm", retrieval_bore_value=20))
+        self.assertEqual(result.normalized_bore.value_mm, 24)
+        self.assertIn("answer", result.decision_options)
+
+    def test_retrieval_noncatalog_does_not_override_user_catalog(self):
+        """Reverse test: retrieval=75 (non-catalog) would give ``refuse`` if
+        promoted; user=24 (catalog) gives ``answer``.  Asserting ``answer``
+        catches an implementation that erroneously selects retrieval."""
+        result = evaluate_fixture(V4FixtureCase(24, "mm", retrieval_bore_value=75))
+        self.assertIn("answer", result.decision_options)
+        self.assertNotIn("refuse", result.decision_options)
+        self.assertEqual(result.normalized_bore.value_mm, 24)
+
+    def test_user_missing_retrieval_present_no_answer(self):
+        """Reverse test: user bore missing, retrieval=20 is catalog.  If
+        retrieval were promoted, ``answer`` would be allowed.  Correct
+        behavior: bore_d missing → answer is NOT allowed."""
+        result = evaluate_fixture(
+            V4FixtureCase(bore_value=None, retrieval_bore_value=20)
+        )
+        self.assertIsNone(result.normalized_bore)
+        self.assertNotIn("answer", result.decision_options)
+
+    def test_user_missing_retrieval_present_ask_allowed(self):
+        """When user bore is missing and retrieval is present, ``ask`` is
+        appropriate because the user can still supply bore_d."""
+        result = evaluate_fixture(
+            V4FixtureCase(bore_value=None, retrieval_bore_value=20)
+        )
+        self.assertIn("ask", result.decision_options)
+
+    def test_retrieval_catalog_value_not_promoted_to_user_claim(self):
+        """Strong reverse test: retrieval=24 is a valid catalog value, but
+        the user did not state bore_d.  If retrieval were promoted,
+        ``normalized_bore`` would be 24 and ``answer`` would be allowed.
+        Correct behavior: ``normalized_bore`` is None."""
+        result = evaluate_fixture(
+            V4FixtureCase(bore_value=None, retrieval_bore_value=24)
+        )
+        self.assertIsNone(result.normalized_bore)
+        self.assertNotIn("answer", result.decision_options)
+
+    def test_retrieval_acknowledged_when_present(self):
+        """When a retrieval value is provided, it is tracked for audit but
+        not promoted."""
+        result = evaluate_fixture(V4FixtureCase(24, "mm", retrieval_bore_value=20))
+        self.assertTrue(result.retrieval_acknowledged)
+        self.assertEqual(result.retrieval_bore_raw, 20)
+
+    def test_retrieval_not_acknowledged_when_absent(self):
+        """When no retrieval value is provided, ``retrieval_acknowledged``
+        is False and ``retrieval_bore_raw`` is None."""
+        result = evaluate_fixture(V4FixtureCase(24, "mm"))
+        self.assertFalse(result.retrieval_acknowledged)
+        self.assertIsNone(result.retrieval_bore_raw)
+
+    def test_resolve_bore_precedence_returns_user_when_present(self):
+        """The pure function returns the user bore when present, ignoring
+        retrieval entirely."""
+        from src.llm.decision_policy_v4_candidate import resolve_bore_precedence
+
+        user_bore = normalize_length_to_mm(24, "mm", "bore_d=24 mm")
+        result = resolve_bore_precedence(user_bore, retrieval_bore_value=20)
+        self.assertIs(result, user_bore)
+        self.assertEqual(result.value_mm, 24)
+
+    def test_resolve_bore_precedence_returns_none_when_user_absent(self):
+        """The pure function returns None when user bore is absent, even if
+        retrieval has a value."""
+        from src.llm.decision_policy_v4_candidate import resolve_bore_precedence
+
+        result = resolve_bore_precedence(None, retrieval_bore_value=20)
+        self.assertIsNone(result)
+
+
+class TestV4UnsupportedEvidenceQuote(unittest.TestCase):
+    """Tests that unsupported spec labels are canonicalized while preserving
+    the user's original wording as an evidence quote with source=user_input.
+    """
+
+    def test_chinese_anodizing_maps_to_canonical_label(self):
+        """阳极氧化 canonicalizes to ``anodizing``."""
+        result = evaluate_fixture(V4FixtureCase(unsupported_terms=("阳极氧化",)))
+        self.assertEqual(len(result.unsupported_evidence), 1)
+        ev = result.unsupported_evidence[0]
+        self.assertEqual(ev.canonical_label, "anodizing")
+
+    def test_original_quote_preserves_chinese_not_canonical(self):
+        """The evidence quote preserves ``阳极氧化``, not the canonical
+        ``anodizing``."""
+        result = evaluate_fixture(V4FixtureCase(unsupported_terms=("阳极氧化",)))
+        ev = result.unsupported_evidence[0]
+        self.assertEqual(ev.original_quote, "阳极氧化")
+        self.assertNotEqual(ev.original_quote, ev.canonical_label)
+
+    def test_evidence_source_is_user_input(self):
+        """source must be ``user_input`` — retrieval cannot create
+        unsupported items."""
+        result = evaluate_fixture(
+            V4FixtureCase(unsupported_terms=("阳极氧化", "法兰"))
+        )
+        for ev in result.unsupported_evidence:
+            self.assertEqual(ev.source, "user_input")
+
+    def test_anodized_variant_preserves_original_quote(self):
+        """``anodized`` maps to ``anodizing`` but the quote stays
+        ``anodized``."""
+        result = evaluate_fixture(V4FixtureCase(unsupported_terms=("anodized",)))
+        ev = result.unsupported_evidence[0]
+        self.assertEqual(ev.canonical_label, "anodizing")
+        self.assertEqual(ev.original_quote, "anodized")
+
+    def test_no_fabricated_unsupported_items_when_none_requested(self):
+        """When the user does not request any unsupported feature, the
+        evidence list is empty."""
+        result = evaluate_fixture(V4FixtureCase(24, "mm"))
+        self.assertEqual(len(result.unsupported_evidence), 0)
+        self.assertEqual(len(result.unsupported_labels), 0)
+
+    def test_canonical_labels_match_evidence_labels(self):
+        """``unsupported_labels`` and the canonical labels from
+        ``unsupported_evidence`` are consistent."""
+        result = evaluate_fixture(
+            V4FixtureCase(unsupported_terms=("阳极氧化", "法兰"))
+        )
+        evidence_labels = tuple(ev.canonical_label for ev in result.unsupported_evidence)
+        self.assertEqual(evidence_labels, result.unsupported_labels)
+
+    def test_multiple_unsupported_items_each_have_evidence(self):
+        """Each unsupported item gets its own evidence entry with the
+        original quote."""
+        result = evaluate_fixture(
+            V4FixtureCase(unsupported_terms=("阳极氧化", "法兰", "键槽"))
+        )
+        self.assertEqual(len(result.unsupported_evidence), 3)
+        quotes = {ev.original_quote for ev in result.unsupported_evidence}
+        self.assertEqual(quotes, {"阳极氧化", "法兰", "键槽"})
+        labels = {ev.canonical_label for ev in result.unsupported_evidence}
+        self.assertEqual(labels, {"anodizing", "flange", "keyway"})
+
+
 if __name__ == "__main__":
     unittest.main()

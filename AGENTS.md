@@ -9,6 +9,8 @@
 
 涉及前序 Agent 产物的任务还必须阅读并执行 [`docs/coordination/handoff-review-protocol.md`](docs/coordination/handoff-review-protocol.md)。该协议规定交接 Agent 自检、续任 Agent 定向复核和 Codex 中枢独立审查三层检查。
 
+跨阶段、跨 Agent 或跨会话推进时，还应按 [`docs/coordination/project-memory-and-delivery-playbook.md`](docs/coordination/project-memory-and-delivery-playbook.md) 恢复项目事实、检查计划/架构一致性、选择验证深度并维护可复用的交付证据。
+
 ## 项目基座与文件位置
 
 - 当前主机的共享项目基座是 `/Users/syd/Desktop/参数化 cad 工程辅助设计`，所有 Agent 必须在这个 Git 根目录内工作。

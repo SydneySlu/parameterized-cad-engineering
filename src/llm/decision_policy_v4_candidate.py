@@ -68,6 +68,22 @@ class NormalizedLength:
 
 
 @dataclass(frozen=True)
+class UnsupportedEvidence:
+    """Evidence entry for one unsupported feature request.
+
+    Mirrors the ``evidence`` array entry shape from ``app001-io.v1``:
+    each entry has a stable canonical field name, the user's original
+    wording as the quote, and ``source="user_input"``.  Only the user's
+    request can create an unsupported item — retrieval context cannot
+    fabricate new items.
+    """
+
+    canonical_label: str
+    original_quote: str
+    source: str = "user_input"
+
+
+@dataclass(frozen=True)
 class V4FixtureCase:
     """Minimal evaluator fixture, containing no model output or secrets."""
 
@@ -87,6 +103,9 @@ class V4FixtureResult:
     decision_options: frozenset[str]
     normalized_bore: NormalizedLength | None
     unsupported_labels: tuple[str, ...]
+    retrieval_bore_raw: object | None = None
+    retrieval_acknowledged: bool = False
+    unsupported_evidence: tuple[UnsupportedEvidence, ...] = ()
 
     @property
     def answer_allowed(self) -> bool:
@@ -119,15 +138,57 @@ def canonicalize_unsupported(label: str) -> str:
     return _UNSUPPORTED_ALIASES.get(key, key)
 
 
+def resolve_bore_precedence(
+    user_bore: NormalizedLength | None,
+    retrieval_bore_value: object | None,
+) -> NormalizedLength | None:
+    """Return the bore to use, enforcing that the user claim controls.
+
+    The retrieval value is untrusted reference context.  It is never
+    promoted to a user claim, never treated as ``user_input`` evidence,
+    and never fills in for a missing ``bore_d``.
+
+    * When the user explicitly stated a ``bore_d``, the normalized user
+      claim is returned regardless of what retrieval shows.
+    * When the user bore is absent, ``None`` is returned — the retrieval
+      value does **not** become the extracted claim.
+    """
+
+    # ``retrieval_bore_value`` is acknowledged as present but never
+    # promoted: its presence does not change the return value.
+    _ = retrieval_bore_value  # explicitly unused
+    return user_bore
+
+
 def evaluate_fixture(case: V4FixtureCase) -> V4FixtureResult:
     """Evaluate v4 decision options for a synthetic, offline fixture."""
 
-    normalized = None
+    # Step 1: normalize the user's bore claim (None when absent).
+    user_bore: NormalizedLength | None = None
     if case.bore_value is not None:
-        normalized = normalize_length_to_mm(
+        user_bore = normalize_length_to_mm(
             case.bore_value, case.bore_unit, case.evidence_quote
         )
-    labels = tuple(dict.fromkeys(canonicalize_unsupported(item) for item in case.unsupported_terms))
+
+    # Step 2: resolve precedence — retrieval never promotes to user claim.
+    normalized = resolve_bore_precedence(user_bore, case.retrieval_bore_value)
+    retrieval_acknowledged = case.retrieval_bore_value is not None
+
+    # Step 3: canonicalize unsupported labels and build evidence entries.
+    # De-duplicate by canonical label while preserving each original quote.
+    seen: dict[str, UnsupportedEvidence] = {}
+    for term in case.unsupported_terms:
+        label = canonicalize_unsupported(term)
+        if label not in seen:
+            seen[label] = UnsupportedEvidence(
+                canonical_label=label,
+                original_quote=term,
+                source="user_input",
+            )
+    labels = tuple(seen.keys())
+    evidence = tuple(seen.values())
+
+    # Step 4: compute decision options via the v3 allowed_decisions gate.
     present = normalized is not None
     bore_number = normalized.value_mm if normalized is not None else None
     in_range = (
@@ -149,4 +210,11 @@ def evaluate_fixture(case: V4FixtureCase) -> V4FixtureResult:
             unsupported_request_names=labels,
         )
     )
-    return V4FixtureResult(options, normalized, labels)
+    return V4FixtureResult(
+        decision_options=options,
+        normalized_bore=normalized,
+        unsupported_labels=labels,
+        retrieval_bore_raw=case.retrieval_bore_value,
+        retrieval_acknowledged=retrieval_acknowledged,
+        unsupported_evidence=evidence,
+    )
