@@ -3,7 +3,7 @@
 - 日期：2026-11-07
 - Agent：CC
 - 任务：APP-001-DECISION-POLICY-V3-DRAFT
-- 状态：candidate draft，未冻结、未激活
+- 状态：candidate draft，未冻结、未激活；已按 Codex review 做窄范围修正，等待复审
 - 分支：`cc/APP-001-DECISION-POLICY-V3-DRAFT`（未 push，未合并到 main）
 
 ## 范围
@@ -54,6 +54,8 @@ v3 候选变更：
 
 - `prompt_version`: `app001-extraction.v2` → `app001-extraction.v3`（候选）
 - prompt 内容：新增 decision-gate 表、自洽性检查、不支持请求证据要求
+- 决策参考：候选 prompt 附带 15 行冻结 GN 705 目录表及 `second_screw = 1 iff bore_d > 70` 规则；checker 静态比对 prompt 表与 CAD-003 `CATALOG_ROWS`，未修改 Schema
+- `answer` 对 `bore_d` 的限制从仅数值范围修正为必须为精确目录值；增加 `bore_d=75` 单独出现的拒绝案例和 A06 `bore_d=70` 边界正常案例
 
 激活 v3 需更新的冻结接口（需新 ADR）：
 
@@ -61,19 +63,19 @@ v3 候选变更：
 - `parser.py` 的版本检查
 - `prompt_loader.py` 的 `FROZEN_PROMPT_PATH` / `FROZEN_PROMPT_VERSION` / `FROZEN_PROMPT_FILE_SHA256`
 
-## 离线验证
+## 离线验证（Codex 窄修复复核）
 
 | 检查 | 命令 | 结果 |
 |---|---|---|
-| v3 专项测试 | `PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -v` | 44 passed |
-| LLM 全量回归 | `PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q` | 560 passed, 8 skipped |
+| v3 专项测试 | `PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -v` | 48 passed |
+| LLM 全量回归 | `PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q` | 564 passed, 8 skipped |
 | Schema 测试 | `PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q` | 17 passed |
 | py_compile | `python3 -m py_compile src/llm/decision_policy_v3_candidate.py tests/llm/test_decision_policy_v3_candidate.py` | OK |
 | git diff --check | `git diff --check` | CLEAN |
 
-Python 版本：3.10.12
+Python 版本：3.15.2（当前环境；未在 Python 3.11.18 复核）
 
-8 个 skip 为既有 FUSE 文件锁限制，不是本工作单元引入。
+8 个 skip 为既有 FUSE 文件锁限制，不是本工作单元引入。专项正常案例包括 A01/A02/A06；拒绝/澄清案例包括 A04/A05/A07/A07-only/A09。静态测试逐行比较 prompt 表和 CAD-003 冻结目录。
 
 ## 测试覆盖
 
@@ -98,13 +100,16 @@ handoff_self_check:
     src/llm/decision_policy_v3_candidate.py (新增)
     tests/llm/test_decision_policy_v3_candidate.py (新增)
   commands=
-    PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -v → Ran 44, OK
-    PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 560, OK (skipped=8)
+    python3 --version → Python 3.15.2
+    PYTHONPATH=src:. python3 -m unittest tests.llm.test_decision_policy_v3_candidate -v → Ran 48, OK
+    PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 564, OK (skipped=8)
     PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
     python3 -m py_compile src/llm/decision_policy_v3_candidate.py tests/llm/test_decision_policy_v3_candidate.py → OK
     git diff --check → CLEAN
   confirmed=
-    v3 decision-gate 逻辑与 acceptance-set A04/A05/A07/A09 期望行为一致
+    v3 离线 decision-gate 对 acceptance-set A04/A05/A07/A09 的已识别案例状态给出预期集合；prompt 提供 A05/A09 所需目录行/规则，但单元测试不证明模型能正确识别
+    候选离散目录表与冻结 CAD-003 常量逐行一致；bore_d=75 即使无其他 unsupported 请求也不允许 answer
+    A06 的 bore_d=70 / second_screw=0 边界仍允许 answer
     A01/A02 正常案例允许 answer（策略不会过度拒绝）
     字段主张保留检测覆盖静默改值和缺失
     不支持请求证据要求覆盖每个 unsupported_request
@@ -113,13 +118,27 @@ handoff_self_check:
     未调用真实模型、未读取密钥、未修改正式批次
   unresolved=
     v3 候选未激活；激活需新 ADR 更新 contract.py/parser.py/prompt_loader.py
-    v3 prompt 对 A05/A09 的目录/规则冲突检测依赖模型判断力，模型不持有完整目录表；确定性 CAD-003 层仍是安全门
-    未在 Python 3.11.18 环境复核（当前为 3.10.12）
+    真实模型能否根据目录表稳定识别耦合/规则冲突未经验证；确定性 CAD-003 层仍是最终安全门
+    未在 Python 3.11.18 环境复核（当前为 3.15.2）
     未产生模型效果结论；不授权新正式批次
   next_agent_focus=
-    中枢审查 v3 decision-gate 规则是否正确映射 acceptance-set 期望行为
-    确认 v3 候选不改变 I/O 契约 envelope 结构和构造门定义
-    若项目负责人决定激活 v3，需新 ADR 并更新 contract.py/parser.py/prompt_loader.py
+    项目负责人决定是否继续保留或启动版本化激活决策；真实模型效果如需验证，必须另行审批唯一批次
+    若激活 v3，需新 ADR 并更新 contract.py/parser.py/prompt_loader.py
+```
+
+## handoff_successor_check
+
+```text
+handoff_successor_check:
+  predecessor=APP-001-DECISION-POLICY-V3-DRAFT 原始交付 9a32756 + Codex review a9b95ed；本次窄修工作树改动待提交
+  files_format=候选 prompt/spec/checker/测试/checkpoint 均存在；checker 仍未接入 adapter/parser/runner；冻结生产文件未改
+  core_rerun=专项测试 48/48；LLM 全量 564 passed/8 skipped；Schema 17/17；Python 3.15.2；py_compile 与 diff --check 通过
+  normal_case=A01/A02 answer 可用；A06 的 bore_d=70、second_screw=0 边界 answer 可用
+  failure_case=A07-only 的 bore_d=75 返回 refuse；envelope 中 bore_d=75 + answer 被一致性检查拒绝；A04/A05/A07/A09 不允许 answer
+  interface=仍保持 app001-io.v1、9-key envelope、decision/evidence 结构和构造门；只更新未激活候选 prompt 内容
+  limits=静态表格一致性和离线策略测试不证明真实模型识别能力；未在 Python 3.11.18 复核；8 个 FUSE skip
+  result=pass（仅指可在既定边界内继续；候选整体仍待负责人决策）
+  blocking_issue=无代码/接口阻塞；不授权激活或模型运行
 ```
 
 ## 限制

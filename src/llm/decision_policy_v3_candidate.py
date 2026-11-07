@@ -31,6 +31,7 @@ from .contract import (
     EVIDENCE_SOURCE_VALUES,
     EXTRACTABLE_FIELDS,
 )
+from ..schema.set_screw_shaft_collar import CATALOG_ROWS as FROZEN_CATALOG_ROWS
 
 # ---------------------------------------------------------------------------
 # Candidate constants (NOT in contract.py; not activated)
@@ -42,7 +43,7 @@ CANDIDATE_PROMPT_VERSION: Final[str] = "app001-extraction.v3"
 # membership checks.  Sourced from src/schema/set_screw_shaft_collar.py
 # CATALOG_ROWS column 0 (read-only reference, not a modification).
 _CATALOG_BORE_D_VALUES: Final[frozenset[int]] = frozenset(
-    {5, 6, 8, 10, 12, 16, 20, 24, 30, 35, 40, 50, 60, 70, 80}
+    row[0] for row in FROZEN_CATALOG_ROWS
 )
 CATALOG_BORE_D_MIN: Final[int] = 5
 CATALOG_BORE_D_MAX: Final[int] = 80
@@ -72,12 +73,9 @@ CANDIDATE_PROMPT_PATH: Final[Path] = (
 class CaseCharacteristics:
     """Characteristics of a user request case, as seen by the v3 policy.
 
-    Some fields represent what the model CAN detect from user input alone
-    (bore_d_present, bore_d_in_range, has_unsupported_requests,
-    has_direct_contradiction).  Others represent what the deterministic
-    CAD-003 layer WOULD detect (bore_d_in_catalog, has_catalog_conflict,
-    has_rule_conflict).  The offline checker uses both to test the ideal
-    behavior expected by the frozen acceptance set.
+    The candidate prompt exposes the frozen discrete bore choices and
+    parameter/rule mapping, so catalog and rule conflicts represented here
+    are detectable from prompt-visible user claims plus that reference.
     """
 
     bore_d_present: bool
@@ -110,6 +108,7 @@ def allowed_decisions(case: CaseCharacteristics) -> frozenset[str]:
     # --- answer: all preconditions met ---
     answer_allowed = (
         case.bore_d_present
+        and case.bore_d_in_catalog
         and case.bore_d_in_range
         and not case.has_unsupported_requests
         and not case.has_missing_required
@@ -128,7 +127,8 @@ def allowed_decisions(case: CaseCharacteristics) -> frozenset[str]:
         or case.has_rule_conflict
     )
     hard_refuse = case.has_unsupported_requests or (
-        case.bore_d_present and not case.bore_d_in_range
+        case.bore_d_present
+        and (not case.bore_d_in_range or not case.bore_d_in_catalog)
     )
     if needs_clarification and not hard_refuse:
         allowed.add(ASK)
@@ -136,7 +136,10 @@ def allowed_decisions(case: CaseCharacteristics) -> frozenset[str]:
     # --- refuse: hard construction blocker or unresolvable ---
     refuse_allowed = (
         case.has_unsupported_requests
-        or (case.bore_d_present and not case.bore_d_in_range)
+        or (
+            case.bore_d_present
+            and (not case.bore_d_in_range or not case.bore_d_in_catalog)
+        )
         or case.has_catalog_conflict
         or case.has_rule_conflict
         or case.has_missing_required
@@ -206,7 +209,7 @@ def check_envelope_consistency(envelope: Mapping[str, Any]) -> ConsistencyResult
                 "unsupported features block construction"
             )
 
-    # Invariant 3: decision=answer => bore_d present and in range 5-80
+    # Invariant 3: decision=answer => bore_d is one of 15 frozen choices.
     if decision == ANSWER:
         if not isinstance(extracted, Mapping) or "bore_d" not in extracted:
             violations.append(
@@ -227,6 +230,11 @@ def check_envelope_consistency(envelope: Mapping[str, Any]) -> ConsistencyResult
                 violations.append(
                     f"decision=answer but bore_d={bore_num} is outside "
                     f"catalog range {CATALOG_BORE_D_MIN}-{CATALOG_BORE_D_MAX}"
+                )
+            elif not is_catalog_bore_d(bore_num):
+                violations.append(
+                    f"decision=answer but bore_d={bore_num} is not one of the "
+                    "15 frozen GN 705 catalog choices"
                 )
 
     # Invariant 4: each unsupported request has corresponding evidence
@@ -429,6 +437,23 @@ def check_prompt_interface_compatibility(
                 f"evidence source value '{source_val}' not found in prompt text"
             )
 
+    # Check that the candidate's prompt-visible decision table exactly mirrors
+    # the frozen CAD-003 catalog, so model-visible rules cannot silently drift.
+    table_rows = re.findall(
+        r"^\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$",
+        text,
+        re.MULTILINE,
+    )
+    parsed_catalog = tuple(tuple(int(value) for value in row) for row in table_rows)
+    expected_prompt_rows = tuple(
+        (bore, outer, width, screw_d, screw_len, int(bore > 70))
+        for bore, outer, screw_d, screw_len, width in FROZEN_CATALOG_ROWS
+    )
+    if parsed_catalog != expected_prompt_rows:
+        violations.append(
+            "candidate decision reference catalog rows do not exactly match frozen CAD-003 CATALOG_ROWS"
+        )
+
     return InterfaceCompatResult(
         ok=len(violations) == 0,
         contract_version=contract_version,
@@ -445,7 +470,7 @@ def check_prompt_interface_compatibility(
 
 
 def is_catalog_bore_d(value: float | int) -> bool:
-    """True when ``value`` is one of the 15 frozen GN 705 catalog bore_d values."""
+    """True when value is one of the frozen GN 705 catalog bore_d choices."""
     return value in _CATALOG_BORE_D_VALUES
 
 

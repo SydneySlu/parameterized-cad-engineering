@@ -29,11 +29,35 @@ Return this envelope, using exactly these keys and literal values:
 Emit `answer` ONLY when ALL of the following preconditions are true. If any precondition is false, do not emit `answer`.
 
 1. `bore_d` is present in `extracted_parameters` with a value explicitly stated by the user. If `bore_d` is absent, it must be listed in `missing_fields`, and you must not emit `answer`.
-2. `bore_d` is within the catalog range 5 to 80 mm. If `bore_d` is explicitly stated but falls outside 5 to 80 mm, it is out of catalog; preserve the claim and emit `refuse`.
+2. `bore_d` is exactly one of the 15 catalog selectors listed in the frozen decision reference below. The numeric range 5 to 80 mm is not sufficient: values such as 75 mm are not valid catalog choices. Preserve an explicit non-catalog value and emit `refuse`; never snap it to a nearby row.
 3. `unsupported_requests` is empty. If the user requests any feature outside the frozen `set_screw_shaft_collar` family (flange, keyway, material, coating, thread pitch, chamfer, manufacturing tolerance, or any other non-family feature), record each item in `unsupported_requests` and emit `refuse`. Do not claim any unsupported feature is supported.
 4. No self-contradiction is detectable from the user input alone. If the user provides explicit values that directly contradict each other in the same request (for example, specifying `second_screw: 0` alongside a bore that the family rule requires two screws for, or giving two different values for the same field), preserve both claims and emit `ask` or `refuse`.
 
-You do not have the catalog table and cannot verify catalog coupling (whether `outer_d`, `width`, `screw_d`, or `screw_len` match the row selected by `bore_d`). The deterministic CAD-003 layer checks that. If the user provides both `bore_d` and another coupled parameter, and you have no reason to suspect a contradiction from the user input alone, `answer` is acceptable; the deterministic layer will reject the projection if the values conflict. If you do suspect a contradiction from the user's wording, prefer `ask`.
+### Frozen decision reference (read-only)
+
+Use this table only to detect catalog membership and whether explicitly supplied coupled values conflict. Do not copy values the user did not state into `extracted_parameters`; CAD-003 remains responsible for deriving omitted values and is the final validator.
+
+| bore_d | outer_d | width | screw_d | screw_len | second_screw |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 10 | 6 | 3 | 4 | 0 |
+| 6 | 12 | 8 | 4 | 5 | 0 |
+| 8 | 16 | 8 | 4 | 6 | 0 |
+| 10 | 20 | 10 | 5 | 8 | 0 |
+| 12 | 22 | 12 | 6 | 8 | 0 |
+| 16 | 28 | 12 | 6 | 8 | 0 |
+| 20 | 32 | 14 | 6 | 8 | 0 |
+| 24 | 40 | 16 | 8 | 12 | 0 |
+| 30 | 45 | 16 | 8 | 10 | 0 |
+| 35 | 56 | 16 | 8 | 12 | 0 |
+| 40 | 63 | 18 | 10 | 16 | 0 |
+| 50 | 80 | 18 | 10 | 16 | 0 |
+| 60 | 90 | 20 | 10 | 16 | 0 |
+| 70 | 100 | 20 | 10 | 20 | 0 |
+| 80 | 110 | 22 | 12 | 20 | 1 |
+
+For an explicitly supplied `bore_d` and any explicitly supplied coupled parameter (`outer_d`, `width`, `screw_d`, `screw_len`), compare the user claims with the matching row. If a supplied value conflicts with that row, preserve the user claim and emit `ask` or `refuse`; do not change the claim. The deterministic CAD-003 layer independently checks the complete projected input and remains authoritative.
+
+The family rule is `second_screw = 1 iff bore_d > 70`; otherwise it is `0`. If the user explicitly asks for a value that conflicts with this rule, preserve the claim and emit `ask` or `refuse`. At the boundary `bore_d=70`, `second_screw=0` is valid; `bore_d=80` requires `1`.
 
 ### When to emit `ask`
 
@@ -71,8 +95,9 @@ Before emitting your response, verify the following invariants. If any is violat
 
 1. If `missing_fields` is non-empty, `decision` must not be `answer`.
 2. If `unsupported_requests` is non-empty, `decision` must not be `answer`.
-3. `decision` is `answer` only when `bore_d` is present and within 5 to 80 mm.
-4. You have not silently changed, snapped, or replaced any explicit claim. Every value in `extracted_parameters` is traceable to a user quote in `evidence`.
+3. `decision` is `answer` only when `bore_d` is present and is one of the 15 exact catalog choices above.
+4. Compare every explicitly supplied catalog-coupled value and `second_screw` with the frozen decision reference; if any conflict, `decision` must not be `answer`.
+5. You have not silently changed, snapped, or replaced any explicit claim. Every value in `extracted_parameters` is traceable to a user quote in `evidence`.
 
 ## User message template
 

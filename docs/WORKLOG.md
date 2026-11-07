@@ -1137,6 +1137,21 @@ limits=验证使用 Python 3.10.12（VM 内无 python3.11）；用户须在 Mac 
 next=用户用 python3.11 复核 → git commit → git push -u origin cc/APP-001-PHASE1-FIX → Codex 中枢独立审查
 commit=待提交
 
+[2026-11-07] agent=Codex task=APP-001-DECISION-POLICY-V3-DRAFT-NARROW-REVIEW status=review
+scope=复核候选 v3 窄修是否解决目录可见性和离散 bore_d 成员缺口；不激活、不调用模型、不修改冻结接口或正式批次
+动作=
+  1) 以共享仓库当前分支和工作树为事实源，读取 PROJECT_STATUS/PROJECT_PLAN/DECISIONS/WORKLOG、交接协议、候选 checkpoint/spec/prompt/checker/tests 和原 Codex 审查记录
+  2) 独立检查 CAD-003 CATALOG_ROWS 与候选 prompt 15 行表的排序/列映射；确认候选 checker 未被 adapter/parser/runner 导入
+  3) 重跑候选专项、LLM 全量、Schema 全量、py_compile、git diff --check；检查 A01/A02/A06 正常路径与 A04/A05/A07/A09/A07-only 拒绝/澄清路径
+  4) 补充 checkpoint successor check 和本审查记录；明确离线测试不证明模型识别能力
+verified=
+  Python 3.15.2；候选专项 48/48；LLM 564 passed/8 skipped；Schema 17/17；py_compile 与 git diff --check 通过
+  目录表静态映射与 CAD-003 CATALOG_ROWS 一致；bore_d=75 不允许 answer；bore_d=70 的 A06 边界及 A01/A02 正常行为保持
+  冻结生产文件和正式批次未修改；候选未激活；未发起网络/模型请求、未读取密钥
+limits=8 个 FUSE 文件锁 skip；未在 Python 3.11.18 环境复核；真实模型是否能稳定识别目录/规则冲突未验证
+next=候选策略窄修通过中枢复核；由项目负责人决定是否进入候选冻结/激活决策。任何模型效果评测须新 ADR/版本及单独批次授权
+commit=待提交
+
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
 scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
 动作=

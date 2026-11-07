@@ -80,6 +80,18 @@ A09 = CaseCharacteristics(
     has_missing_required=False, has_catalog_conflict=False,
     has_rule_conflict=True, has_direct_contradiction=False,
 )
+A06 = CaseCharacteristics(
+    bore_d_present=True, bore_d_value=70, bore_d_in_catalog=True,
+    bore_d_in_range=True, has_unsupported_requests=False,
+    has_missing_required=False, has_catalog_conflict=False,
+    has_rule_conflict=False, has_direct_contradiction=False,
+)
+A07_BORE_ONLY = CaseCharacteristics(
+    bore_d_present=True, bore_d_value=75, bore_d_in_catalog=False,
+    bore_d_in_range=True, has_unsupported_requests=False,
+    has_missing_required=False, has_catalog_conflict=False,
+    has_rule_conflict=False, has_direct_contradiction=False,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +245,14 @@ class TestAllowedDecisions(unittest.TestCase):
         self.assertIn("ask", allowed)
         self.assertIn("refuse", allowed)
 
+    def test_a06_boundary_answer_allowed(self):
+        """A06: bore_d=70 and second_screw=0 is the valid strict boundary."""
+        self.assertEqual(allowed_decisions(A06), frozenset({"answer"}))
+
+    def test_bore_d_75_alone_refused(self):
+        """75 is in range but not one of the frozen discrete selectors."""
+        self.assertEqual(allowed_decisions(A07_BORE_ONLY), frozenset({"refuse"}))
+
     def test_all_results_subset_of_frozen_contract(self):
         """Every case's allowed decisions must be a subset of DECISION_VALUES."""
         for case in (A01, A02, A04, A05, A07, A09):
@@ -333,6 +353,13 @@ class TestEnvelopeConsistency(unittest.TestCase):
             any("outside catalog range" in v for v in result.violations),
             f"Expected range violation: {result.violations}",
         )
+
+    def test_answer_with_in_range_non_catalog_bore_fails(self):
+        """bore_d=75 is numerically in range but not a catalog selector."""
+        bad = _envelope("answer", {"bore_d": 75})
+        result = check_envelope_consistency(bad)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("15 frozen GN 705 catalog choices" in v for v in result.violations))
 
 
 # ---------------------------------------------------------------------------
@@ -491,6 +518,11 @@ class TestCatalogHelpers(unittest.TestCase):
         self.assertFalse(is_catalog_bore_d(75), "75 is not a catalog value")
         self.assertFalse(is_catalog_bore_d(4), "4 is below catalog range")
         self.assertFalse(is_catalog_bore_d(81), "81 is above catalog range")
+
+    def test_prompt_table_matches_frozen_catalog(self):
+        """The model-visible candidate table must match CAD-003 exactly."""
+        result = check_prompt_interface_compatibility()
+        self.assertTrue(result.ok, result.violations)
 
     def test_range_check(self):
         self.assertTrue(is_in_range(5))

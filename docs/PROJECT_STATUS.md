@@ -53,7 +53,7 @@
 | APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
-| APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与离线行为测试 | CC + Codex | review | 候选结构/隔离和 44 项测试通过；独立复核发现 A05/A09 冲突判定依赖模型不可见状态，且仅有 bore_d=75 时允许 answer；需窄修后再评估，见 `agent-work/reviews/APP-001-DECISION-POLICY-V3-DRAFT-codex-review.md` |
+| APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与离线行为测试 | CC + Codex | review | 按中枢意见补入候选可见的冻结目录/规则表，checker 静态核对 CAD-003 表，新增 bore_d=75 拒绝与 A06 边界用例；48 项专项测试通过，待中枢复审；仍未激活 |
 
 ## 阻塞项
 
@@ -65,7 +65,7 @@
 - APP-001-AUDIT-EVIDENCE-R1 仅修补失败响应的受控留存和请求前阻塞记录；不改变 Prompt、输出协议、RET-002 策略、重试上限或 provider 配置，不调用真实模型；已合入 main 并通过中枢审查。
 - A04 C1 因用户输入缺少 `bore_d` 而正确阻塞；A07 C1 因 `bore_d=75` 不满足 envelope 的 CAD-003 目录校验，且不具备 flat 查询所需六字段而正确阻塞。不得从 evaluator-only 标签补值或猜字段。样例级回归由 Codex 在本工作单元后独立补齐/验收。
 - 8 个 Schema 拒绝的只读决策质量分析已完成；若要改 Prompt/输出策略，必须版本化、另建批次，并另行取得新模型运行授权。
-- APP-001-DECISION-POLICY-V3-DRAFT 已创建候选决策策略 v3 和 44 项离线测试；中枢确认接口隔离、未激活状态及测试可复现，但 A05/A09 的候选 gate 使用了模型不可见的冲突标记，且 prompt 仅检查 bore_d 范围而非 15 个目录选项。修正前不得宣称候选已解决这些行为偏差。冻结接口与正式批次保持不变；激活仍需新 ADR 和负责人决策，不产生模型效果结论、不授权新批次。
+- APP-001-DECISION-POLICY-V3-DRAFT 原有缺口已在同一候选分支窄修：候选 prompt 提供冻结目录行和螺钉规则作为可见判定参考，静态测试核对该表与 CAD-003 完全一致；`answer` 要求 `bore_d` 为离散目录值，新增 bore_d=75 拒绝及 A06 边界正常用例。修正已提交/合并前仍待中枢复审；候选未激活、不产生模型效果结论，不授权新正式批次。
 - DeepSeek 5xx 继续按 ADR-0010 当前最多两次重试；除非服务状态或错误证据支持，不调整 provider 配置或重试策略。
 
 ## 下一步

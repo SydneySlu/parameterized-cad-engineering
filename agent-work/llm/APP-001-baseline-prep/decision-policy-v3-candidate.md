@@ -14,6 +14,8 @@ APP-001 第四批次 8 条 Schema 拒绝的只读分析（`agent-work/reviews/AP
 - 具体偏差：A04 缺 bore_d 仍 answer；A05 目录耦合冲突仍 answer（DeepSeek C1 除外，正确 ask）；A07 目录外 + 不支持请求仍 answer；A09 规则冲突仍 answer。
 - A07 Ollama 的 unsupported evidence 覆盖不完整。
 
+本次 Codex 复核指出：原候选 prompt 未向模型提供目录/规则信息，因此 A05/A09 的隐藏冲突标记测试不能证明模型可从可见输入识别冲突；原 prompt 把 5–80 的数值范围误当作完整目录有效性检查。本修正将冻结目录和 second_screw 规则作为候选 prompt 的只读判定参考，并对照 CAD-003 常量验证表格一致性。
+
 主要问题在 `decision` 行为，不是抽取错误或 CAD-003 规则错误。
 
 ## 2. 冻结 I/O 契约允许的 decision 值
@@ -39,11 +41,11 @@ v3 候选策略不改 I/O 契约的 decision 值集合，不改构造门定义�
 | # | 前置条件 | 模型可检测性 |
 |---|---|---|
 | 1 | `bore_d` 出现在 `extracted_parameters` 中 | 可检测（用户是否说了 bore_d） |
-| 2 | `bore_d` 在目录范围 5–80 mm | 可检测（范围检查，不需要完整目录表） |
+| 2 | `bore_d` 是冻结 CAD-003 目录表中的 15 个精确值之一；仅处于 5–80 mm 范围不够 | 可检测（候选 prompt 附带只读目录决策表） |
 | 3 | `unsupported_requests` 为空 | 可检测（用户是否请求了非族特征） |
 | 4 | 用户输入中无可直接检测的自相矛盾 | 可检测（用户是否在同一段话中给出直接矛盾的值） |
 
-模型不持有完整目录表，无法验证目录耦合（outer_d/width/screw_d/screw_len 是否与 bore_d 选中的目录行一致）。确定性 CAD-003 层负责检查。如果用户提供了 bore_d 和另一个耦合参数，且从用户措辞本身看不出矛盾，`answer` 是可接受的；确定性层会在投影后拒绝不匹配的组合。
+候选 prompt 的 model-visible context 包含从冻结 CAD-003 `CATALOG_ROWS` 派生的只读表和 `second_screw = 1 iff bore_d > 70` 规则。模型可据此识别被明确提供的耦合参数冲突，并将其作为追问/拒绝依据；它不得据表补造用户未说的字段。确定性 CAD-003 仍会独立验证完整投影并保持最终权威。静态兼容性测试逐行核对 prompt 表与 CAD-003 常量完全一致。
 
 ### 3.2 `ask` 的条件
 
@@ -57,7 +59,7 @@ v3 候选策略不改 I/O 契约的 decision 值集合，不改构造门定义�
 
 当在冻结族范围内无法构造时，输出 `refuse`：
 
-- `bore_d` 显式给出但超出目录范围（< 5 或 > 80 mm）：保留主张，拒绝构造，不吸附到最近目录值。
+- `bore_d` 显式给出但不属于 15 个离散目录选项（包括范围内的 75 mm，或低于 5 / 高于 80 mm）：保留主张，拒绝构造，不吸附到最近目录值。
 - 用户请求冻结族之外的特征（法兰、键槽、材料、镀层、螺纹螺距、倒角、制造公差等）：逐项记入 `unsupported_requests`，拒绝构造。
 - 请求根本超出 `set_screw_shaft_collar` 族范围。
 
@@ -71,7 +73,7 @@ v3 候选策略不改 I/O 契约的 decision 值集合，不改构造门定义�
 
 1. 如果 `missing_fields` 非空，`decision` 不得为 `answer`。
 2. 如果 `unsupported_requests` 非空，`decision` 不得为 `answer`。
-3. `decision` 为 `answer` 仅当 `bore_d` 存在且在 5–80 mm 范围内。
+3. `decision` 为 `answer` 仅当 `bore_d` 存在且属于 15 个离散目录选项。
 4. 未静默改值、吸附或替换任何显式主张；`extracted_parameters` 中每个值可追溯到 `evidence` 中的用户引用。
 
 ### 3.6 不支持请求的证据要求
@@ -88,7 +90,8 @@ v3 候选策略不改 I/O 契约的 decision 值集合，不改构造门定义�
 | A04 | 缺 bore_d | `ask` 或 `refuse` | v2 返回 answer（偏差） |
 | A05 | 目录耦合冲突（bore_d=20, outer_d=40） | `ask` 或 `refuse` | v2 3/4 返回 answer（偏差），1/4 正确 ask |
 | A06 | second_screw 边界（bore_d=70, second_screw=0） | `answer` | 无偏差（边界规则允许 0） |
-| A07 | 目录外 + 不支持请求（bore_d=75, 法兰/键槽/阳极氧化） | `refuse` | v2 返回 answer（偏差） |
+| A07 | 非目录值 + 不支持请求（bore_d=75, 法兰/键槽/阳极氧化） | `refuse` | v2 返回 answer（偏差） |
+| A07-only | 仅非目录值 bore_d=75，无 unsupported 请求 | `refuse` | 候选边界回归，防止把数值范围误当目录选择 |
 | A08 | 检索示例不可照抄 | `answer` | 无偏差 |
 | A09 | 规则冲突（bore_d=80, second_screw=0） | `ask` 或 `refuse` | v2 返回 answer（偏差） |
 
@@ -121,7 +124,8 @@ v3 候选不改变 `FORMAL_EVALUATION_ALLOWED = False`，不授权新正式批�
 本文档定义的策略通过以下离线方式验证：
 
 - `src/llm/decision_policy_v3_candidate.py`：纯函数实现 v3 decision-gate 逻辑，输入案例特征，输出允许的 decision 值集合。
-- `tests/llm/test_decision_policy_v3_candidate.py`：对 A04/A05/A07/A09 和正常案例 A01/A02 做离线回归。
-- prompt 内容接口兼容性静态检查：envelope 键集、decision 值、字段集合与冻结契约一致。
+- `tests/llm/test_decision_policy_v3_candidate.py`：对 A04/A05/A06/A07/A07-only/A09 和正常案例 A01/A02 做离线回归。
+- prompt 内容接口兼容性静态检查：envelope 键集、decision 值、字段集合与冻结契约一致，并逐行核对 prompt 的冻结目录表与 CAD-003 `CATALOG_ROWS` 完全一致。
+- `CaseCharacteristics` 中的冲突标记是面向离线策略单测的已识别状态；候选 prompt 已提供可识别冲突所需的目录行与阈值规则。测试不运行模型，不构成模型识别能力/效果证据。
 
 不调用真实模型；不修改正式批次；不产生模型效果结论。
