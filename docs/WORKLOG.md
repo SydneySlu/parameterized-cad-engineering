@@ -1358,3 +1358,25 @@ verified=
   git diff --check → CLEAN
 no_network=无真实模型调用、无密钥读取、无修改正式批次
 commit=待提交
+
+[2026-11-07] agent=Codex task=APP-001-PHASE1-20261107-04-CODEX-REVIEW status=review
+scope=对已授权完成的 APP-001 第四批次做只读独立核对；不重新运行模型、不修改代码或旧批次
+动作=
+  1) 确认仓库根目录为 `/Users/syd/Desktop/参数化 cad 工程辅助设计`，起始状态 `main...origin/main` 干净，HEAD `1ccc504`；读取 PROJECT_STATUS、PROJECT_PLAN、DECISIONS、交接复核协议、ADR-0014/0015 和第三批次报告；
+  2) 只读分析批次 `work/app001-runs/app001-phase1-20261107-04/` 的 36 条 runs 记录、预算账本和 Git 忽略状态；不输出 raw 正文；
+  3) 核对组合唯一性、请求与账本计数、重试上限、C1 阻塞、parse/schema stage、显式字段、DeepSeek usage/cost、Ollama 延迟、模型 digest、raw 留存和凭据特征；
+  4) 新建 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md`，更新本状态页。
+verified=
+  36 条记录 / 36 个逻辑运行 ID 唯一；32 条发出模型调用，4 条 C1 请求前阻塞；54 次模型调用尝试（32 初次 + 22 次重试）；每逻辑运行不超过 3 次；
+  账本 70 次物理 HTTP：DeepSeek 38、Ollama tags 16 + chat 16；不超过 108 总限额及各 provider 54 限额；账本无未 claim/pending；
+  25 个可解析输出，17/25 Schema pass，8 条规则拒绝；显式字段核对 DeepSeek 14/14（仅对有响应样本）、Ollama 27/27；
+  DeepSeek 9 个 usage 响应合计 9,051 tokens / CNY 0.00545856；Ollama 16 条延迟均值 8,289.38 ms、中位数 7,678.67 ms；
+  raw 保留 25 文件且与记录一致，批次路径被 `.gitignore` 排除；凭据特征扫描无命中；`ollama --version` 为 0.40.14，模型 digest 与 ADR-0015 匹配；
+  仅分析 `-04`，未发起额外模型请求，未触碰 `-01/-02/-03`，C2/IR/CAD/geometry/STEP 未运行。
+limits=
+  6 个 DeepSeek 逻辑运行连续 3 次 HTTP 5xx；A03 C0 在一次 5xx 后得到 HTTP 200 但 invalid JSON，raw 正文未保留；
+  28 个 ledger `transient_retryable` 是可重试错误类别尝试数，其中 22 个导致实际重试、6 个是在第 3 次尝试后终止；没有超过最多两次重试；
+  4 条请求前阻塞记录缺 run_id、acceptance-set hash、软件版本及 prompt hash；
+  不能据此声称全批次抽取成功或 CAD/STEP 端到端成功，APP-001 仍为 review。
+next=请项目负责人决定是否接受该批次作为首轮诊断结果，以及是否另行处理 DeepSeek 稳定性、失败正文安全留存、A04/A07 C1 前置阻塞；若需任何新增模型调用，须另有新的唯一批次及明确授权。
+commit=待提交；原始运行产物留在 Git 忽略的 work/ 下，不提交。

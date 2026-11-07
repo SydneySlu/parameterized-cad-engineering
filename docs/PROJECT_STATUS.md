@@ -50,16 +50,16 @@
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 修复后第三批次 `app001-phase1-20261107-03` 已完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP；DeepSeek envelope 16/16、Ollama C1 7/7 通过，Ollama C0 有 8 条严格类型拒绝。usage/cost、延迟和显式字段诊断已落盘，但 CAD/STEP 未运行，不能发布端到端构造指标。Ollama 本地 active baseline 已按 ADR-0015 冻结为 Homebrew 0.40.14，Schema-object smoke 和 evidence null 修正均已通过中枢测试，且已合入 `main`（`830f65b`）；新的唯一批次仍需授权。详见 `agent-work/reviews/APP-001-phase1-20261107-03-codex-review.md` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 三批次均保留且处于 review：第三批次验证了 loader 修复，但 Ollama C0 的 8 条响应因显式数值类型不合规被严格拒绝。旧批次不能回填或重算；A04/A07 的 4 条 C1 请求前安全阻塞保持原样。Ollama structured-output 已在 Homebrew Ollama 0.40.14 上完成无密钥 Schema-object 兼容性 smoke，并按 ADR-0015 冻结；evidence null 修正已合入 `main` 并通过 Python 3.11.18 回归。正式评测整体仍需新的唯一批次授权。
+- APP-001 四个批次均保留且处于 review：第四批次已完成实际运行，但 DeepSeek 有 7 条逻辑运行无可评估输出，Ollama/DeepSeek 共 8 条响应未通过 CAD-003 Schema；A04/A07 的 4 条 C1 请求前安全阻塞仍存在。第四批次账本符合授权预算与重试上限，但一条 invalid JSON 正文未保留，4 条阻塞记录的审计元数据较简略。C2、IR/CAD/geometry/STEP 未运行；不能发布端到端构造指标。是否接受第四批次作为首轮诊断结果、是否修复这些独立缺口，等待项目负责人决定；不得重写旧批次或自行启动额外模型调用。
 
 ## 下一步
 
-1. 由项目负责人决定是否按 ADR-0014/0015 授权新的唯一批次；不得修改三个既有批次。
-2. 获得授权后再执行正式 runner；三个既有批次不覆盖或混合统计。
-3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；任何新批次仍严格遵守 ADR-0014 的 36 逻辑运行与 108 物理 HTTP 上限。
+1. 由项目负责人审阅第四批次独立报告，决定是否接受其作为 APP-001 第一阶段诊断结果。
+2. 如需继续，先明确处理范围：DeepSeek 暂时故障表现、失败响应留存、A04/A07 C1 前置阻塞；任何追加模型请求都需要新的唯一批次和明确授权。
+3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
