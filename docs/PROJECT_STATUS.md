@@ -50,16 +50,16 @@
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第二批次 `app001-phase1-20261107-02` 已完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP；DeepSeek usage/cost 与 Ollama 延迟已落盘，但 32 条响应均未通过冻结 envelope 解析，不能发布抽取效果指标。详见 `agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第二批次 `app001-phase1-20261107-02` 保留为诊断证据：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP；DeepSeek usage/cost 与 Ollama 延迟已落盘，但 32 条响应均因 loader 缺陷未通过冻结 envelope。`APP-001-PHASE1-ENVELOPE-FIX` 已由中枢复核并合入主线 `f460dd0`；尚未启动修复后的新正式批次，不能发布抽取效果指标。详见 `agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md` 与 `agent-work/reviews/APP-001-PHASE1-ENVELOPE-FIX-codex-review.md` |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 第二批次已完成但处于 review：usage/token/费用链已恢复，C1 对可验证输入已能提供检索上下文；32 条模型响应仍未通过冻结 envelope，A04/A07 的 4 条 C1 运行安全阻塞。旧批次必须保留，未解决响应契约前不再启动新真实批次。
+- APP-001 第二批次仍处于 review：旧批次的 32 条响应失败原因已定位为 `prompt_loader` 剥离 system 段 fenced envelope 内容，修复已合入 `main`；旧批次不能回填或重算，必须保留。A04/A07 的 4 条 C1 请求前安全阻塞仍保持原样。
 
 ## 下一步
 
-1. 先冻结并修复模型响应 envelope 契约，补无网络解析/服务响应 fixture；同时明确 A04/A07 的 C1 覆盖口径。
-2. 中枢审查通过后才创建新的唯一批次；保留 `app001-phase1-20261107-01` 和 `app001-phase1-20261107-02`，不覆盖或混合统计。
+1. 将主线 merge `f460dd0` 推送到 `origin/main`；随后由项目负责人明确授权新的唯一正式批次，并先确认 A04/A07 的 C1 覆盖口径。
+2. 新批次只验证修复后的 envelope 链路；保留 `app001-phase1-20261107-01` 和 `app001-phase1-20261107-02`，不覆盖或混合统计。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；任何新批次仍严格遵守 ADR-0014 的 36 逻辑运行与 108 物理 HTTP 上限。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。

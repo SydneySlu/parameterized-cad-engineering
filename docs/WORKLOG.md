@@ -976,6 +976,20 @@ limits=验证使用 Python 3.10（VM 内无 python3.11）；用户须在 Mac 本
 next=用户在本机：rm .git/index.lock → 运行 python3.11 验证 → git commit；Codex 中枢独立审查；通过后按 ADR-0014 放行 APP-001
 commit=待提交（index.lock 阻塞）
 
+[2026-11-07] agent=Codex task=APP-001-PHASE1-ENVELOPE-FIX-CLOSEOUT status=review
+scope=独立复核 envelope 修复，完成主线合入和状态同步；不启动新的真实模型批次
+动作=
+  1) 核对远端分支 `origin/cc/APP-001-PHASE1-ENVELOPE-FIX` 已指向 `acdabc1`；
+  2) 在 Python 3.11.18 下重跑 envelope 专项 38 项、LLM 全量 453 项（8 项既有 FUSE skip）、Schema 17 项、py_compile 和 diff check，全部通过；
+  3) 确认 prompt-v2.md hash 未变、正式批次 `-01`/`-02` 未改、未发起真实请求；
+  4) 将修复合入 `main`，生成 merge commit `f460dd0`；
+  5) 更新 PROJECT_STATUS/PROJECT_PLAN，明确旧批次只作诊断证据，修复后新批次需负责人重新授权。
+verified=
+  `acdabc1` 包含 checkpoint、docstring 修正、源码和 38 项无网络测试；主线合入后工作区代码回归通过。
+limits=本地 `main` 尚未推送；修复后尚未运行新真实批次；A04/A07 C1 安全阻塞口径未改变。
+next=用户推送 `f460dd0` 到 `origin/main`；明确新唯一批次授权和 A04/A07 覆盖口径后，再启动正式评测。
+commit=f460dd0
+
 [2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R4 status=review
 scope=R3-FIX-R3 续任；仅补齐 Ollama tags/chat 预算记账顺序的集成测试，不修改生产代码
 动作=
