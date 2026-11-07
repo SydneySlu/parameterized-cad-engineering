@@ -333,3 +333,40 @@ ir_cad_geometry_step_disabled: True
 - 同批次并发运行通过排他锁文件拒绝。
 - 真实 transport 在 `send()` 内才读取 `DEEPSEEK_API_KEY`，读后立即清除局部变量，不存储、不日志。
 - 正式九样例评测在本 ADR 生效时尚未运行；本 ADR 只建立合法授权路径。
+
+## ADR-0015：APP-001 本地 Ollama 运行时升级与冻结
+
+- 日期：2026-11-07
+- 状态：accepted
+- 决策人：项目负责人 + Codex
+- 关联：ADR-0010、ADR-0012、ADR-0014；`APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX`
+
+### 决策
+
+APP-001 后续本地基线使用 Homebrew formula 提供的 Ollama，不再使用旧的 Ollama.app 服务：
+
+```text
+distribution: Homebrew formula ollama
+formula_version: 0.40.14
+service: sh.brew.ollama
+api_base: http://127.0.0.1:11434
+api_version: 0.40.14
+model: qwen3:8b
+model_digest_prefix: 500a1f067a9f
+model_digest_full: 500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41
+format_schema_version: ollama-app001-io-v1.0
+format_schema_sha256: d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043
+```
+
+旧 Ollama.app 0.33.2 保留为历史环境证据，不再作为 APP-001 active local baseline。模型名称必须是唯一精确的 `qwen3:8b`，digest 必须匹配冻结前缀；更换发行来源、Ollama 版本、模型 digest、硬件或量化方式都必须重新建立环境记录并进入 review。
+
+### 兼容性证据
+
+2026-11-07 在本机对 `http://127.0.0.1:11434/api/chat` 完成一次无密钥、无正式批次、无 raw 落盘的 smoke：使用冻结 `prompt-v2.md`、`OLLAMA_FORMAT_SCHEMA`、`think=false`、固定解码参数和 `qwen3:8b`。HTTP 200，响应 `done=true`，返回完整九个 envelope 顶层键，`contract_version=app001-io.v1`、`prompt_version=app001-extraction.v2`，显式 `bore_d` 为 JSON integer 24。该证据证明 0.40.14 接受本项目的 Schema 对象 `format`；不构成模型质量指标或正式评测授权。
+
+### 边界
+
+- 三个既有正式批次保持只读，不回填、不重算、不混合统计。
+- 本 ADR 不改变 `FormalRunAuthorization`、36 个逻辑运行、108 个物理 HTTP 上限或 C2/IR/CAD/STEP 禁用范围。
+- 在 evidence `null` 契约偏差得到单独决策并完成中枢复核前，不启动新的正式批次。
+- 旧 0.33.2 probe 只作历史对照；新的正式运行必须在本 ADR 冻结的服务、版本、模型和 Schema hash 下重新取得唯一批次授权。

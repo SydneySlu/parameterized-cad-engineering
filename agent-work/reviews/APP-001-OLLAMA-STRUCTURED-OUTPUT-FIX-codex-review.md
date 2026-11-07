@@ -50,12 +50,21 @@ Schema 要求 evidence 的 `field`/`quote`/`source` 为 string，但当前 parse
 
 本机 Python 3.11 环境没有 `jsonschema` 包。结构和 parser 回归测试通过，但没有 Draft 2020-12 引擎验证；这属于证据限制，不是失败。
 
+## 运行时升级后的补充复核
+
+项目负责人选择升级并冻结本地运行时，已新增 ADR-0015。当前本机事实为：
+
+```text
+distribution: Homebrew formula ollama
+formula/service: 0.40.14 / sh.brew.ollama
+api: http://127.0.0.1:11434 (0.40.14)
+model: qwen3:8b
+digest: 500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41
+```
+
+使用冻结 `prompt-v2.md`、`OLLAMA_FORMAT_SCHEMA`、`think=false` 和固定解码参数完成一次无密钥、无正式批次、无 raw 落盘的 `/api/chat` smoke：HTTP 200，`done=true`，返回九个 envelope 顶层键，`contract_version=app001-io.v1`、`prompt_version=app001-extraction.v2`，`bore_d` 为 JSON integer 24。该结果证明 0.40.14 接受项目的 Schema-object `format`；不代表质量指标或新批次授权。
+
 ## 结论
 
-代码范围和离线回归测试通过，任务保持 `review`。当前不能合入 `main` 或授权新批次。下一步应由项目负责人决定是否：
-
-1. 保持 Ollama 0.33.2，撤回/隔离对象形式，继续使用旧 `format="json"`；或
-2. 明确升级 Ollama，新增决策记录并在新运行环境中完成无密钥的请求兼容性 smoke test；随后再决定是否以唯一新批次重跑。
-
-无论选择哪条路径，都应先补齐 evidence null 契约处理和 JSON Schema validator/等价验证证据。三个既有正式批次保持只读，不混合统计。
+代码范围、离线回归测试和 0.40.14 运行时兼容性 smoke 均有证据，Ollama active baseline 已按 ADR-0015 冻结。任务仍保持 `review`，因为 evidence `field`/`quote`/`source` 的显式 `null` 行为与当前 Schema 声称的 string 约束尚未完成单独决策和复核；不能据此授权新的正式批次。三个既有正式批次保持只读，不混合统计。
 

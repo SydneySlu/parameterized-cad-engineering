@@ -279,8 +279,14 @@ These are computed from `OLLAMA_FORMAT_SCHEMA` / `OLLAMA_FORMAT_SCHEMA_SHA256` i
 
 ### Ollama version compatibility
 
-Ollama structured output (JSON Schema as `format`) requires **Ollama ≥ 0.4**.
-The project baseline is Ollama 0.33.2 (ADR / baseline contract).  Whether to
-upgrade Ollama, add an ADR, or accept the schema as a forward-looking constraint
-is **pending Codex hub review** — this task records the implementation but does
-not authorize or perform a new model run.
+The active APP-001 local runtime is the Homebrew formula `ollama` **0.40.14**
+(`sh.brew.ollama`, API `http://127.0.0.1:11434`).  The exact model is
+`qwen3:8b`, whose frozen digest prefix is `500a1f067a9f`.  The schema fingerprint
+is `d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043`.
+
+On 2026-11-07, a no-key, no-artifact compatibility smoke using the frozen
+Prompt and this schema returned HTTP 200 with all nine envelope keys and an
+integer `bore_d`.  This proves runtime acceptance of the schema-object
+`format` on 0.40.14; it does not authorize a new formal batch or establish
+model-quality results.  The old Ollama.app 0.33.2 remains historical evidence
+only.  See ADR-0015 for the frozen runtime boundary.

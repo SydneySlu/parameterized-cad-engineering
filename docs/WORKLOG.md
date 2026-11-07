@@ -1282,6 +1282,7 @@ unresolved=
 next=Codex 中枢独立审查：Ollama 版本兼容性、Schema 结构正确性、快照一致性、parser 行为不变；
   审查后再判断是否需要新 ADR/协议版本及新的唯一批次授权；本任务不得擅自重跑
 commit=待提交（不 push、不合并、不标 done）
+
 [2026-11-07] agent=Codex task=APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX-CODEX-REVIEW status=review
 scope=独立验收 Ollama JSON Schema 输出约束窄修正，不启动新批次
 动作=
@@ -1296,3 +1297,26 @@ limits=
   `jsonschema` 第三方验证器在本机不可用；Ollama 0.33.2 对 JSON Schema `format` 对象的实机兼容性未验证；APP-001 保持 review。
 next=项目负责人决定保持 0.33.2 并隔离该修正，或升级 Ollama 并新增 ADR/兼容性 smoke test；随后再决定是否启动唯一新批次；先处理 evidence null 契约偏差。
 commit=待提交（当前 CC 分支上追加中枢审查记录）
+
+[2026-11-07] agent=Codex task=APP-001-OLLAMA-RUNTIME-FREEZE status=review
+scope=升级并冻结 APP-001 本地 Ollama 运行时；不启动正式批次，不修改历史批次
+动作=
+  1) 以本地仓库和服务事实为准复核：Homebrew formula Ollama 0.40.14，服务 label=sh.brew.ollama，API=127.0.0.1:11434；旧 Ollama.app 0.33.2 不再作为 active 服务；
+  2) 核对 `/api/tags`：唯一模型为 `qwen3:8b`，完整 digest 为
+     `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`，与冻结前缀一致；
+  3) 使用冻结 prompt-v2、`OLLAMA_FORMAT_SCHEMA`、think=false 和固定解码参数执行一次无密钥、无 raw 落盘的 `/api/chat` smoke；
+  4) 新增 ADR-0015，更新 LLM README、PROJECT_STATUS 和 Ollama 中枢审查记录，明确 active baseline、Schema hash、历史版本边界和正式批次限制。
+verified=
+  `ollama --version` → 0.40.14；`/api/tags` → qwen3:8b、digest prefix 500a1f067a9f；
+  smoke HTTP 200、done=true、完整九键 envelope、contract_version=app001-io.v1、prompt_version=app001-extraction.v2、bore_d 为 integer 24；
+  format_schema_sha256=d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043
+not_modified=
+  正式批次 app001-phase1-20261107-01/-02/-03、prompt-v2.md、parser/adapter/runner、ADR-0014、正式指标；
+  未读取或输出 DEEPSEEK_API_KEY，未保存 smoke raw response
+decision=
+  ADR-0015 accepted：后续 APP-001 本地 active baseline 固定为 Homebrew Ollama 0.40.14 + qwen3:8b + 冻结 digest/schema；
+  旧 0.33.2 仅作历史证据；版本、来源、digest、硬件或量化变化需重新 review
+unresolved=
+  evidence 的显式 null 行为与当前 Schema string 约束仍需单独窄范围决策和复核；本次不授权新的正式批次
+next=先完成 evidence null 契约处理；通过中枢复核后，由项目负责人按 ADR-0014/0015 再授权唯一新批次
+commit=待提交（文档同步工作单元）

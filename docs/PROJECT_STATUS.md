@@ -50,16 +50,16 @@
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 修复后第三批次 `app001-phase1-20261107-03` 已完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP；DeepSeek envelope 16/16、Ollama C1 7/7 通过，Ollama C0 有 8 条严格类型拒绝。usage/cost、延迟和显式字段诊断已落盘，但 CAD/STEP 未运行，不能发布端到端构造指标。详见 `agent-work/reviews/APP-001-phase1-20261107-03-codex-review.md` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 修复后第三批次 `app001-phase1-20261107-03` 已完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、48 次物理 HTTP；DeepSeek envelope 16/16、Ollama C1 7/7 通过，Ollama C0 有 8 条严格类型拒绝。usage/cost、延迟和显式字段诊断已落盘，但 CAD/STEP 未运行，不能发布端到端构造指标。Ollama 本地 active baseline 已按 ADR-0015 冻结为 Homebrew 0.40.14，Schema-object 兼容性 smoke 已通过；仍需处理 evidence null 契约后才能申请新批次。详见 `agent-work/reviews/APP-001-phase1-20261107-03-codex-review.md` |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 三批次均保留且处于 review：第三批次验证了 loader 修复，但 Ollama C0 的 8 条响应因显式数值类型不合规被严格拒绝。旧批次不能回填或重算；A04/A07 的 4 条 C1 请求前安全阻塞保持原样。Ollama structured-output 窄修正的离线代码测试通过，但当前本机基线仍为 Ollama 0.33.2，JSON Schema 对象 `format` 的运行时兼容性未证明，不能据此启动新批次。
+- APP-001 三批次均保留且处于 review：第三批次验证了 loader 修复，但 Ollama C0 的 8 条响应因显式数值类型不合规被严格拒绝。旧批次不能回填或重算；A04/A07 的 4 条 C1 请求前安全阻塞保持原样。Ollama structured-output 窄修正已在 Homebrew Ollama 0.40.14 上完成无密钥 Schema-object 兼容性 smoke，并按 ADR-0015 冻结；该 smoke 不等于正式评测授权。
 
 ## 下一步
 
-1. 决定是否接受 Ollama C0 严格类型拒绝作为首轮结果，或先解决 Ollama structured-output 运行时兼容性；不得修改三个既有批次。
-2. 若继续修正，先明确 Ollama 版本/ADR、补 evidence null 契约处理和兼容性证据，再创建新的唯一批次；三个既有批次不覆盖或混合统计。
+1. 先处理 evidence `null` 与冻结 Ollama Schema 的契约偏差并完成中枢复核；不得修改三个既有批次。
+2. 契约修正通过后，再按 ADR-0014/0015 申请新的唯一批次；三个既有批次不覆盖或混合统计。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；任何新批次仍严格遵守 ADR-0014 的 36 逻辑运行与 108 物理 HTTP 上限。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
