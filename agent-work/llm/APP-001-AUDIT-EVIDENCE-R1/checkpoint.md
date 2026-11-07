@@ -69,4 +69,26 @@ next_agent_focus=
 
 ## Git
 
-Commit：`86a6bc7`。未 push、未合并。原始运行材料仍位于 Git 忽略目录，不纳入提交。
+原始 R1 实现 commit：`0a49fb2`。未 push、未合并。原始运行材料仍位于 Git 忽略目录，不纳入提交。
+
+## APP-001-AUDIT-EVIDENCE-R1-TRANSPORT-SHAPE 增补
+
+- 日期：2026-11-07
+- 状态：review
+- 基线：`0a49fb2`；仅修正 2xx response wrapper 的键存在性和 usage details 类型检查。
+- 变更：DeepSeek 与 Ollama parser 要求 `message` 是对象、实际包含 `content` 且其值为字符串；DeepSeek `prompt_tokens_details` 存在时要求对象（显式 null 也拒绝）。异常形状归为既有 `invalid_json`，进入已有受控 2xx diagnostic retention。顶层 usage 缺失/null、details 缺失保持兼容。
+- 验证环境：Python 3.15.2。
+- 专项：`PYTHONPATH=src:. python3 -m unittest tests.llm.test_audit_evidence_r1 -v`：14 项通过。
+- 全量：`PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q`：516 项通过，8 项因既有 FUSE 限制跳过；`tests/schema`：17 项通过。
+- 其他：相关 `py_compile`、`git diff --check` 通过。未调用真实网络、未读取密钥、未修改旧批次。Python 3.11.18 复核仍待执行。
+
+```text
+handoff_self_check:
+  changed=src/llm/real_transport.py; tests/llm/test_audit_evidence_r1.py; 本 checkpoint; docs/WORKLOG.md
+  commands=专项 14/14；LLM 516 passed, 8 skipped；Schema 17/17；py_compile OK；git diff --check OK
+  confirmed=缺失 message/content、非对象（包括 null）prompt_tokens_details 都抛 invalid_json 且由真实解析路径调用 retainer；异常 message/repr 不含 body；顶层 usage absent/null 及 details absent 兼容；5xx body 仍不读取
+  unresolved=仅 Python 3.15.2 验证；8 项 FUSE skip；无真实 provider 行为验证
+  next_agent_focus=独立检查变更范围与错误分类；APP-001 保持 review，不启动新批次
+```
+
+Commit：待提交。仅提交上述任务文件；不纳入未跟踪的 Codex C1 回归测试。

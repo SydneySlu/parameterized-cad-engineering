@@ -1409,3 +1409,21 @@ limits=
   Python 3.11.18 环境复核待做；8 个 skip 不计为通过；无线上供应商行为证据；A04/A07 样例回归由中枢另行处理。
 next=Codex 中枢独立审查变更和边界，重跑适用检查；APP-001 保持 review，不据此启动新批次或放行
 commit=86a6bc7
+
+[2026-11-07] agent=Codex task=APP-001-AUDIT-EVIDENCE-R1-TRANSPORT-SHAPE status=review
+scope=补齐 2xx transport wrapper 缺键及 DeepSeek prompt_tokens_details 形状校验；不改重试策略、契约、provider 或旧批次
+动作=
+  1) 在实际基线 0a49fb2 上先重跑 audit evidence 专项 11 项，全部通过；确认只处理 real_transport.py 与对应专项测试
+  2) DeepSeek/Ollama response parser 现在要求 message 对象和实际 content 键，content 必须为字符串；DeepSeek prompt_tokens_details 存在时必须为对象
+  3) 为 DeepSeek/Ollama 缺 message/content、DeepSeek prompt_tokens_details 非对象增加真实 parser shape 测试；断言 invalid_json、retainer 得到原始 2xx body、异常 message/repr 不包含 body
+  4) 增加 details 缺失及顶层 usage 缺失/null 的兼容测试；显式 details=null 按“字段存在时必须为对象”拒绝；保留 5xx body 不读取测试
+verified=
+  Python 3.15.2
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_audit_evidence_r1 -v -> 14 passed
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q -> 516 passed, 8 skipped（既有 FUSE 限制）
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q -> 17 passed
+  py_compile src/llm/real_transport.py tests/llm/test_audit_evidence_r1.py -> passed
+  git diff --check -> clean
+limits=尚未在 Python 3.11.18 环境复核；8 个 FUSE skip 不是通过项；未调用真实模型、未读取密钥、未修改 work/app001-runs
+next=独立中枢复核本窄补丁；APP-001 保持 review
+commit=待提交

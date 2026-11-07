@@ -448,14 +448,14 @@ class DeepSeekTransport:
                 http_status=status,
                 message="response choice is not an object",
             )
-        message = choice.get("message", {})
-        if not isinstance(message, dict) or not isinstance(message.get("content", ""), str):
+        message = choice.get("message")
+        if not isinstance(message, dict) or "content" not in message or not isinstance(message["content"], str):
             raise TransportError(
                 condition=COND_INVALID_JSON,
                 http_status=status,
-                message="response choice message/content has invalid shape",
+                message="response choice message/content is missing or has invalid shape",
             )
-        body = message.get("content", "")
+        body = message["content"]
         # Runtime identity (safe fields only -- no key, no Authorization)
         runtime_model = data.get("model")
         runtime_provider = data.get("provider")  # may be None per baseline-contract
@@ -469,13 +469,20 @@ class DeepSeekTransport:
                 http_status=status,
                 message="response usage is not an object",
             )
+        usage_details = usage_raw.get("prompt_tokens_details", {})
+        if not isinstance(usage_details, dict):
+            raise TransportError(
+                condition=COND_INVALID_JSON,
+                http_status=status,
+                message="response prompt_tokens_details is not an object",
+            )
         usage = {
             "prompt_tokens": usage_raw.get("prompt_tokens"),
             "completion_tokens": usage_raw.get("completion_tokens"),
             "total_tokens": usage_raw.get("total_tokens"),
             "prompt_cache_hit_tokens": usage_raw.get(
                 "prompt_cache_hit_tokens",
-                usage_raw.get("prompt_tokens_details", {}).get("cached_tokens"),
+                usage_details.get("cached_tokens"),
             ),
             "prompt_cache_miss_tokens": usage_raw.get("prompt_cache_miss_tokens"),
         }
@@ -750,14 +757,14 @@ class OllamaTransport:
                 http_status=status,
                 message="Ollama response is not a JSON object",
             )
-        message = data.get("message", {})
-        if not isinstance(message, dict) or not isinstance(message.get("content", ""), str):
+        message = data.get("message")
+        if not isinstance(message, dict) or "content" not in message or not isinstance(message["content"], str):
             raise TransportError(
                 condition=COND_INVALID_JSON,
                 http_status=status,
-                message="Ollama response message/content has invalid shape",
+                message="Ollama response message/content is missing or has invalid shape",
             )
-        body = message.get("content", "")
+        body = message["content"]
         # Runtime identity — actual values from /api/chat (not frozen constants)
         runtime_model = data.get("model")
         if runtime_model != OLLAMA_MODEL:

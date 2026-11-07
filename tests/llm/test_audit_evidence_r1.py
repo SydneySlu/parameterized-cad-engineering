@@ -133,6 +133,72 @@ class AuditEvidenceR1Tests(unittest.TestCase):
                 self.assertEqual(raised.exception.condition, COND_INVALID_JSON)
                 self.assertEqual(retained, [raw])
 
+    def test_missing_message_and_content_keys_are_invalid_json_and_retained(self):
+        from llm.real_transport import (
+            DeepSeekTransport,
+            OllamaTransport,
+            _parse_with_diagnostic_retention,
+        )
+        from llm.transport import COND_INVALID_JSON, TransportError
+
+        cases = (
+            ("deepseek_missing_message", "deepseek", '{"choices":[{}]}'),
+            ("deepseek_missing_content", "deepseek", '{"choices":[{"message":{}}]}'),
+            ("ollama_missing_message", "ollama", '{}'),
+            ("ollama_missing_content", "ollama", '{"message":{}}'),
+        )
+        deepseek = object.__new__(DeepSeekTransport)
+        ollama = object.__new__(OllamaTransport)
+        for case_name, provider, raw in cases:
+            with self.subTest(case=case_name):
+                retained = []
+                parser = deepseek._parse_response if provider == "deepseek" else (
+                    lambda status, body: ollama._parse_response(status, body, 0.0)
+                )
+                with self.assertRaises(TransportError) as raised:
+                    _parse_with_diagnostic_retention(
+                        lambda: parser(200, raw), raw, retained.append
+                    )
+                self.assertEqual(raised.exception.condition, COND_INVALID_JSON)
+                self.assertEqual(retained, [raw])
+                self.assertNotIn(raw, raised.exception.message)
+                self.assertNotIn(raw, repr(raised.exception))
+
+    def test_prompt_tokens_details_non_object_is_invalid_json_and_retained(self):
+        from llm.real_transport import DeepSeekTransport, _parse_with_diagnostic_retention
+        from llm.transport import COND_INVALID_JSON, TransportError
+
+        transport = object.__new__(DeepSeekTransport)
+        for value in (None, [], "invalid", 7, False):
+            raw = (
+                '{"choices":[{"message":{"content":"{}"}}],'
+                '"usage":{"prompt_tokens_details":' + __import__("json").dumps(value) + '}}'
+            )
+            retained = []
+            with self.subTest(value=value), self.assertRaises(TransportError) as raised:
+                _parse_with_diagnostic_retention(
+                    lambda: transport._parse_response(200, raw), raw, retained.append
+                )
+            self.assertEqual(raised.exception.condition, COND_INVALID_JSON)
+            self.assertEqual(retained, [raw])
+            self.assertNotIn(raw, raised.exception.message)
+            self.assertNotIn(raw, repr(raised.exception))
+
+    def test_usage_absent_or_null_and_details_absent_remain_compatible(self):
+        import json
+        from llm.real_transport import DeepSeekTransport
+
+        transport = object.__new__(DeepSeekTransport)
+        for case_name, usage in (("missing", "missing"), ("null", None), ("empty", {})):
+            raw = json.dumps({
+                "choices": [{"message": {"content": "{}"}}],
+                **({} if usage == "missing" else {"usage": usage}),
+            })
+            with self.subTest(case=case_name):
+                response = transport._parse_response(200, raw)
+                self.assertEqual(response.body, "{}")
+                self.assertIsNone(response.usage["prompt_cache_hit_tokens"])
+
     def test_retention_metadata_is_bounded_and_hashed(self):
         import llm.adapter as adapter
         import shutil
