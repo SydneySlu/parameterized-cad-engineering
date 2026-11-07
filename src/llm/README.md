@@ -232,9 +232,61 @@ this adapter can drive end-to-end CAD/STEP.
 | `response_format: {type: json_object}` | ✓ | ✗ |
 | `max_tokens` | ✓ | ✗ |
 | `think: false` | ✗ | ✓ |
-| `format: "json"` | ✗ | ✓ |
+| `format` (structured JSON Schema, `OLLAMA_FORMAT_SCHEMA`) | ✗ | ✓ |
 | `num_predict` (in `options`) | ✗ | ✓ |
 | `seed: 271828` | ✓ (body) | ✓ (`options`) |
 | `temperature: 0` | ✓ (body) | ✓ (`options`) |
 | `top_p: 1` | ✓ (body) | ✓ (`options`) |
 | `authorization` | None (mock path) | None (always) |
+
+---
+
+## Ollama structured output schema (APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX)
+
+`build_ollama_request()` sets `body["format"]` to `OLLAMA_FORMAT_SCHEMA`, a JSON
+Schema object aligned with the `app001-io.v1` envelope contract.  This is a
+generation constraint (sampling hint), not a guarantee; `parse_response()` remains
+the authoritative gating layer.
+
+### Schema alignment with parser contract
+
+| Field | Schema constraint | Parser enforcement |
+|---|---|---|
+| Top-level keys | `required` = all 9 ENVELOPE_KEYS; `additionalProperties: false` | `MISSING_ENVELOPE_KEY` / `EXTRA_ENVELOPE_KEY` |
+| `contract_version` | `const: "app001-io.v1"` | `CONTRACT_VERSION_MISMATCH` |
+| `prompt_version` | `const: "app001-extraction.v2"` | `PROMPT_VERSION_MISMATCH` |
+| `decision` | `enum: [answer, ask, refuse]` | `DECISION_INVALID` |
+| Length fields (5) | `oneOf: [number, {value, unit}]` — string excluded | `EXTRACTED_TYPE_ERROR` |
+| `second_screw` | `integer` | `EXTRACTED_TYPE_ERROR` |
+| `confidence` | `null` | `CONFIDENCE_NOT_NULL` |
+| Array fields | `string` items | `ARRAY_ELEMENT_TYPE_ERROR` |
+| `evidence` entries | `additionalProperties: false`; `field/quote/source` required strings; `source` enum | `EVIDENCE_ENTRY_*` |
+
+### Schema does NOT encode
+
+- Numeric value ranges, catalog rows, or CAD-003 rules (those remain in the deterministic Schema/adapter layer).
+- Evaluator-only labels, expected outputs, or derived-value annotations.
+
+### Snapshot
+
+`decoding_parameters_snapshot(OLLAMA_PROVIDER)` records:
+
+- `format_schema_sha256`: SHA-256 of the serialised schema (sorted keys)
+- `format_schema_version`: `"ollama-app001-io-v1.0"`
+
+These are computed from `OLLAMA_FORMAT_SCHEMA` / `OLLAMA_FORMAT_SCHEMA_SHA256` in
+`providers.py`, ensuring the snapshot cannot drift from the actual request body.
+
+### Ollama version compatibility
+
+The active APP-001 local runtime is the Homebrew formula `ollama` **0.40.14**
+(`sh.brew.ollama`, API `http://127.0.0.1:11434`).  The exact model is
+`qwen3:8b`, whose frozen digest prefix is `500a1f067a9f`.  The schema fingerprint
+is `d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043`.
+
+On 2026-11-07, a no-key, no-artifact compatibility smoke using the frozen
+Prompt and this schema returned HTTP 200 with all nine envelope keys and an
+integer `bore_d`.  This proves runtime acceptance of the schema-object
+`format` on 0.40.14; it does not authorize a new formal batch or establish
+model-quality results.  The old Ollama.app 0.33.2 remains historical evidence
+only.  See ADR-0015 for the frozen runtime boundary.

@@ -168,5 +168,113 @@ class ParserFailureTests(unittest.TestCase):
         self.assertEqual(result.errors[0].code, "RESPONSE_NOT_UTF8")
 
 
+class EvidenceNullFieldTests(unittest.TestCase):
+    """APP-001-EVIDENCE-CONTRACT-FIX: evidence field/quote/source must be str.
+
+    Previously the parser used ``if val is not None and not isinstance(val, str)``
+    which silently allowed explicit ``null`` values.  The fix removes the
+    ``is not None`` guard so that ``null`` (Python ``None``) is rejected with
+    ``EVIDENCE_FIELD_TYPE_ERROR``, aligning the parser with the Ollama JSON
+    Schema which declares these fields as ``{type: string}``.
+    """
+
+    def _ev(self, **kw):
+        """Build a valid body with one evidence entry overriding given keys."""
+        entry = {"field": "bore_d", "quote": "20 mm", "source": "user_input"}
+        entry.update(kw)
+        return _valid_body(evidence=[entry])
+
+    # ------------------------------------------------------------------ normal
+
+    def test_valid_string_evidence_passes(self):
+        """A well-formed evidence entry with all-string values must pass."""
+        result = parse_response(_valid_body(
+            evidence=[{"field": "bore_d", "quote": "20 mm", "source": "user_input"}]
+        ))
+        self.assertTrue(result.ok, [e.as_dict() for e in result.errors])
+
+    def test_empty_evidence_array_passes(self):
+        """An empty evidence array is valid."""
+        result = parse_response(_valid_body(evidence=[]))
+        self.assertTrue(result.ok)
+
+    # ------------------------------------------------------------------ null cases
+
+    def test_field_null_rejected(self):
+        """evidence[*].field = null must fail with EVIDENCE_FIELD_TYPE_ERROR."""
+        result = parse_response(self._ev(field=None))
+        self.assertFalse(result.ok)
+        codes = [e.code for e in result.errors]
+        self.assertIn("EVIDENCE_FIELD_TYPE_ERROR", codes)
+
+    def test_field_null_has_correct_path(self):
+        """Error fields must pinpoint evidence[0].field."""
+        result = parse_response(self._ev(field=None))
+        err = next(e for e in result.errors if e.code == "EVIDENCE_FIELD_TYPE_ERROR")
+        self.assertIn("evidence[0].field", err.fields)
+
+    def test_quote_null_rejected(self):
+        """evidence[*].quote = null must fail with EVIDENCE_FIELD_TYPE_ERROR."""
+        result = parse_response(self._ev(quote=None))
+        self.assertFalse(result.ok)
+        codes = [e.code for e in result.errors]
+        self.assertIn("EVIDENCE_FIELD_TYPE_ERROR", codes)
+
+    def test_quote_null_has_correct_path(self):
+        """Error fields must pinpoint evidence[0].quote."""
+        result = parse_response(self._ev(quote=None))
+        err = next(e for e in result.errors if e.code == "EVIDENCE_FIELD_TYPE_ERROR")
+        self.assertIn("evidence[0].quote", err.fields)
+
+    def test_source_null_rejected(self):
+        """evidence[*].source = null must fail with EVIDENCE_FIELD_TYPE_ERROR."""
+        result = parse_response(self._ev(source=None))
+        self.assertFalse(result.ok)
+        codes = [e.code for e in result.errors]
+        self.assertIn("EVIDENCE_FIELD_TYPE_ERROR", codes)
+
+    def test_source_null_has_correct_path(self):
+        """Error fields must pinpoint evidence[0].source."""
+        result = parse_response(self._ev(source=None))
+        err = next(e for e in result.errors if e.code == "EVIDENCE_FIELD_TYPE_ERROR")
+        self.assertIn("evidence[0].source", err.fields)
+
+    def test_all_three_null_produces_three_errors(self):
+        """Three null values must produce three EVIDENCE_FIELD_TYPE_ERROR entries."""
+        result = parse_response(self._ev(field=None, quote=None, source=None))
+        self.assertFalse(result.ok)
+        type_errors = [e for e in result.errors if e.code == "EVIDENCE_FIELD_TYPE_ERROR"]
+        self.assertEqual(len(type_errors), 3)
+        paths = {f for e in type_errors for f in e.fields}
+        self.assertIn("evidence[0].field", paths)
+        self.assertIn("evidence[0].quote", paths)
+        self.assertIn("evidence[0].source", paths)
+
+    # ------------------------------------------------------------------ non-string (pre-existing behaviour preserved)
+
+    def test_field_integer_still_rejected(self):
+        """Non-string non-null values still produce EVIDENCE_FIELD_TYPE_ERROR."""
+        result = parse_response(self._ev(field=42))
+        self.assertFalse(result.ok)
+        codes = [e.code for e in result.errors]
+        self.assertIn("EVIDENCE_FIELD_TYPE_ERROR", codes)
+
+    def test_field_bool_still_rejected(self):
+        result = parse_response(self._ev(field=True))
+        self.assertFalse(result.ok)
+        self.assertIn("EVIDENCE_FIELD_TYPE_ERROR", [e.code for e in result.errors])
+
+    # ------------------------------------------------------------------ source enum check still applies
+
+    def test_source_wrong_string_still_evidence_source_invalid(self):
+        """A non-null string source that is not in the enum still produces
+        EVIDENCE_SOURCE_INVALID (not a type error)."""
+        result = parse_response(self._ev(source="guess"))
+        self.assertFalse(result.ok)
+        codes = [e.code for e in result.errors]
+        self.assertIn("EVIDENCE_SOURCE_INVALID", codes)
+        self.assertNotIn("EVIDENCE_FIELD_TYPE_ERROR", codes)
+
+
 if __name__ == "__main__":
     unittest.main()

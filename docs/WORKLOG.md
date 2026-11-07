@@ -949,6 +949,18 @@ limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件�
 next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
 commit=待提交
 
+[2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CODEX-REVIEW status=review
+scope=独立复核 evidence null 契约修正；不启动正式批次
+verified=
+  Python 3.11.18 下定向 119 项通过；tests/llm 全量 499 项通过（8 项既有 FUSE skip）；tests/schema 17 项通过；py_compile 和 git diff --check 通过；正常字符串 evidence 通过，field/quote/source=null 均准确拒绝
+confirmed=
+  parser 与 OLLAMA_FORMAT_SCHEMA 的非空字符串约束已对齐；未修改 Ollama、Prompt、adapter、runner、预算、授权或正式批次
+git_state=
+  本地 HEAD=352ef8a、工作区干净；fetch 后 origin/cc/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX 仍为 2bb12ec，origin/main 为 16f0d1f；push 尚未在当前远端事实中确认
+no_network=无真实模型调用、无密钥读取、无正式批次修改
+next=先同步并合入 main；合入前不启动新批次，合入后按 ADR-0014/0015 重新申请唯一批次
+commit=待提交（中枢审查记录）
+
 [2026-11-06] agent=CC task=APP-001-RUNNER-R3-FIX-R2 status=review
 scope=Git commit 阻塞记录
 动作=尝试 git add / git commit，发现 .git/index.lock 存在（0 字节，本进程所有，18:27 由 git status 留下，FUSE 无法清理）
@@ -1225,3 +1237,113 @@ unresolved=
   Python 3.11.18 不可用（VM 仅有 3.10.12），用户须在 Mac 本机用 /opt/homebrew/bin/python3.11 复核
 next=用户在本机删除 .git/index.lock → Python 3.11.18 复核验证 → git commit → git push -u origin cc/APP-001-PHASE1-ENVELOPE-FIX → Codex 中枢独立审查；审查通过后是否启动新正式批次由项目负责人按 ADR-0014 授权；本任务保持 review
 commit=待提交（index.lock 阻塞）
+
+[2026-11-07] agent=CC task=APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX status=review
+scope=只处理 Ollama qwen3:8b 请求的结构化 JSON 类型约束和无网络测试；不修改 prompt-v2.md/parser/adapter/runner/正式批次/C1/C2/IR/CAD/STEP
+动作=
+  1) 启动检查：git rev-parse、status、log 确认从 main(16f0d1f) 创建 cc/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX；
+     交接定向复核：OllamaRequestTests.test_request_uses_frozen_fields 通过、parser 接受数字 bore_d=24、
+     parser 拒绝字符串 "24 mm"(EXTRACTED_TYPE_ERROR)、prompt-v2.md hash d95f853d 与主线冻结值一致；
+  2) src/llm/providers.py：新增 _build_ollama_format_schema() 构造与 app001-io.v1 对齐的 JSON Schema；
+     新增 OLLAMA_FORMAT_SCHEMA 常量（JSON round-trip 深拷贝）和 OLLAMA_FORMAT_SCHEMA_SHA256；
+     build_ollama_request() 的 body["format"] 从字符串 "json" 改为 schema 对象；
+     decoding_parameters_snapshot(OLLAMA) 从记录 "format":"json" 改为 format_schema_sha256 + format_schema_version；
+     更新模块 docstring；
+  3) tests/llm/test_providers.py：更新 2 个旧断言（format==json → dict）；新增 3 个测试类 33 项
+     （OllamaFormatSchemaStructureTests 22、OllamaSchemaVsParserAlignmentTests 7、OllamaDecodingSnapshotConsistencyTests 4）；
+  4) tests/llm/test_adapter.py：更新 test_ollama_no_think_field_in_request 断言（format==json → dict）；
+  5) tests/llm/test_envelope_fix.py：更新 test_format_is_json → test_format_is_schema_object；
+  6) src/llm/README.md：更新 provider 参数隔离表 format 行；新增 Ollama structured output schema 章节；
+  7) agent-work/llm/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX/checkpoint.md 和 handoff.md；
+  8) docs/WORKLOG.md 只追加（本记录）。
+root_cause=
+  build_ollama_request() 原来只设置 format="json"，仅要求 JSON 格式但不约束字段类型；
+  模型将数值字段序列化为带单位字符串，parser 正确拒绝。
+schema_design=
+  顶层 type=object, required=9 ENVELOPE_KEYS, additionalProperties=false；
+  contract_version/prompt_version 为 const；decision 为 enum；confidence 为 null type；
+  extracted_parameters 仅允许 6 字段，全可选，additionalProperties=false；
+  长度字段 oneOf[number, {value,unit}]（排除 string）；second_screw 为 integer；
+  evidence source 受 enum 约束；不含数值范围/catalog/evaluator 标签
+  Schema SHA-256: d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043
+  Schema 标识: ollama-app001-io-v1.0
+verified=
+  /usr/bin/python3 --version → Python 3.10.12（VM 无 python3.11）
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_providers tests.llm.test_envelope_fix -v → Ran 86, OK
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 487, OK (skipped=8)
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  python3 -m py_compile src/llm/providers.py src/llm/contract.py tests/llm/test_providers.py tests/llm/test_adapter.py → OK
+  git diff --check → CLEAN
+  快照 format_schema_sha256 与请求体 schema hash 一致（d82e53ad…）
+  parser 数字通过、字符串 "24 mm"/"1.6 cm"/"0" 仍被 EXTRACTED_TYPE_ERROR 拒绝
+  DeepSeek 请求和 provider 参数隔离维持原样
+  work/app001-runs/ 无变更；无 index.lock
+not_modified=
+  prompt-v2.md、其 SHA-256 锚点、Prompt 内容或版本
+  src/llm/parser.py 拒绝行为、adapter.py、runner/预算/授权逻辑
+  冻结 acceptance set、Schema/CAD-003、C1/C0 组装、ADR-0014
+  work/app001-runs/app001-phase1-20261107-01/-02/-03/ 下任何内容
+  DeepSeek 请求、模型/解码共享参数、正式评测门
+no_network=本任务无真实网络/模型调用、无访问密钥、无修改正式批次、无生成新正式指标
+unresolved=
+  Ollama 0.33.2（项目基线）是否支持 JSON Schema 作为 format 值未经验证；
+  可能需要升级 Ollama 或新 ADR，由中枢决策
+  Python 3.11.18 不可用（VM 仅 3.10.12），用户须在 Mac 复核
+  是否需要新 ADR 记录结构化输出约束变化由中枢决策
+  未运行真实模型批次；不能声称类型违规问题已端到端解决
+next=Codex 中枢独立审查：Ollama 版本兼容性、Schema 结构正确性、快照一致性、parser 行为不变；
+  审查后再判断是否需要新 ADR/协议版本及新的唯一批次授权；本任务不得擅自重跑
+commit=待提交（不 push、不合并、不标 done）
+
+[2026-11-07] agent=Codex task=APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX-CODEX-REVIEW status=review
+scope=独立验收 Ollama JSON Schema 输出约束窄修正，不启动新批次
+动作=
+  1) 核对 CC commit 0e1721f、checkpoint/handoff、实际 diff 和当前 Ollama 版本；
+  2) 使用 Python 3.11.18 重跑 86 项专项测试、487 项 LLM 测试（8 项既有 FUSE skip）和 17 项 Schema 测试；
+  3) 抽查数字/measurement object 正常解析、数值字符串严格拒绝、请求体与 snapshot schema hash 一致；
+  4) 发现运行时基线 Ollama 0.33.2 尚无 JSON Schema 对象 format 兼容性证据；发现 parser 对 evidence 显式 null 的实际行为与 Schema 的 string 声称不完全一致；
+  5) 新建 `agent-work/reviews/APP-001-OLLAMA-STRUCTURED-OUTPUT-FIX-codex-review.md` 并同步 PROJECT_STATUS。
+verified=
+  Python 3.11.18：86、487（skipped=8）、17 项测试分别通过；py_compile 与 git diff --check 通过；未调用模型、未访问密钥、未改正式批次。
+limits=
+  `jsonschema` 第三方验证器在本机不可用；Ollama 0.33.2 对 JSON Schema `format` 对象的实机兼容性未验证；APP-001 保持 review。
+next=项目负责人决定保持 0.33.2 并隔离该修正，或升级 Ollama 并新增 ADR/兼容性 smoke test；随后再决定是否启动唯一新批次；先处理 evidence null 契约偏差。
+commit=待提交（当前 CC 分支上追加中枢审查记录）
+
+[2026-11-07] agent=Codex task=APP-001-OLLAMA-RUNTIME-FREEZE status=review
+scope=升级并冻结 APP-001 本地 Ollama 运行时；不启动正式批次，不修改历史批次
+动作=
+  1) 以本地仓库和服务事实为准复核：Homebrew formula Ollama 0.40.14，服务 label=sh.brew.ollama，API=127.0.0.1:11434；旧 Ollama.app 0.33.2 不再作为 active 服务；
+  2) 核对 `/api/tags`：唯一模型为 `qwen3:8b`，完整 digest 为
+     `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`，与冻结前缀一致；
+  3) 使用冻结 prompt-v2、`OLLAMA_FORMAT_SCHEMA`、think=false 和固定解码参数执行一次无密钥、无 raw 落盘的 `/api/chat` smoke；
+  4) 新增 ADR-0015，更新 LLM README、PROJECT_STATUS 和 Ollama 中枢审查记录，明确 active baseline、Schema hash、历史版本边界和正式批次限制。
+verified=
+  `ollama --version` → 0.40.14；`/api/tags` → qwen3:8b、digest prefix 500a1f067a9f；
+  smoke HTTP 200、done=true、完整九键 envelope、contract_version=app001-io.v1、prompt_version=app001-extraction.v2、bore_d 为 integer 24；
+  format_schema_sha256=d82e53ad7de7676b5a63ac8cdbf276846a78201bec964d25d9771d9e775bb043
+not_modified=
+  正式批次 app001-phase1-20261107-01/-02/-03、prompt-v2.md、parser/adapter/runner、ADR-0014、正式指标；
+  未读取或输出 DEEPSEEK_API_KEY，未保存 smoke raw response
+decision=
+  ADR-0015 accepted：后续 APP-001 本地 active baseline 固定为 Homebrew Ollama 0.40.14 + qwen3:8b + 冻结 digest/schema；
+  旧 0.33.2 仅作历史证据；版本、来源、digest、硬件或量化变化需重新 review
+unresolved=
+  evidence 的显式 null 行为与当前 Schema string 约束仍需单独窄范围决策和复核；本次不授权新的正式批次
+next=先完成 evidence null 契约处理；通过中枢复核后，由项目负责人按 ADR-0014/0015 再授权唯一新批次
+commit=待提交（文档同步工作单元）
+
+[2026-11-07] agent=CC task=APP-001-EVIDENCE-CONTRACT-FIX status=review
+scope=修复 parser evidence null 放行 bug，与 OLLAMA_FORMAT_SCHEMA string 约束对齐；不修改 OLLAMA_FORMAT_SCHEMA/prompt-v2.md/adapter/runner/正式批次/ADR-0015
+修复=src/llm/parser.py evidence type-check 循环移除 val is not None 守护；None 现在产生 EVIDENCE_FIELD_TYPE_ERROR；其他 parser 行为不变
+测试=tests/llm/test_parser.py 新增 EvidenceNullFieldTests 12 项：合法 string 通过、field/quote/source null 各自失败并含准确路径、三个 null 产生三个错误、非枚举字符串仍为 EVIDENCE_SOURCE_INVALID、非字符串整数/bool 仍失败
+verified=
+  /usr/bin/python3 --version → Python 3.10.12
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_r1_regression tests.llm.test_providers -v → Ran 83, OK
+  PYTHONPATH=src:. python3 -m unittest tests.llm.test_parser -v → Ran 36, OK
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/llm -q → Ran 499, OK (skipped=8)
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -q → Ran 17, OK
+  python3 -m py_compile src/llm/parser.py → OK
+  git diff --check → CLEAN
+no_network=无真实模型调用、无密钥读取、无修改正式批次
+commit=待提交

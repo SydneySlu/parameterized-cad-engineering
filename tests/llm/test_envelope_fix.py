@@ -411,9 +411,11 @@ class DeepSeekRequestHasJsonObjectConstraint(unittest.TestCase):
 class OllamaRequestHasJsonFormat(unittest.TestCase):
     """Requirement 6: Ollama request must include a JSON format constraint."""
 
-    def test_format_is_json(self):
+    def test_format_is_schema_object(self):
+        """format must be a JSON Schema object (not the plain string 'json')."""
         req = build_ollama_request(system_prompt="s", user_prompt="u")
-        self.assertEqual(req.body["format"], "json")
+        self.assertIsInstance(req.body["format"], dict)
+        self.assertNotEqual(req.body["format"], "json")
 
     def test_think_is_false(self):
         req = build_ollama_request(system_prompt="s", user_prompt="u")

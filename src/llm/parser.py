@@ -208,10 +208,10 @@ def parse_response(raw: str | bytes) -> ParseResult:
                 errors.append(_err("EVIDENCE_ENTRY_MISSING_KEY", STAGE_CONTRACT, (f"evidence[{index}]",), f"evidence[{index}] missing key(s): {ev_missing}"))
             if ev_extra:
                 errors.append(_err("EVIDENCE_ENTRY_EXTRA_KEY", STAGE_CONTRACT, (f"evidence[{index}]",), f"evidence[{index}] unexpected key(s): {ev_extra}"))
-            # 3.5: field, quote, source must be strings.
+            # 3.5: field, quote, source must be strings.  null is not allowed.
             for str_field in ("field", "quote", "source"):
                 val = entry.get(str_field)
-                if val is not None and not isinstance(val, str):
+                if not isinstance(val, str):
                     errors.append(_err("EVIDENCE_FIELD_TYPE_ERROR", STAGE_CONTRACT, (f"evidence[{index}].{str_field}",), f"evidence[{index}].{str_field} must be a string, got {type(val).__name__}"))
             source = entry.get("source")
             if isinstance(source, str) and source not in EVIDENCE_SOURCE_VALUES:
