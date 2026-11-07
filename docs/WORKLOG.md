@@ -1555,3 +1555,12 @@ commit=待提交
 - 结果：`main` 与 `origin/main` 同为 `7dc7a37`；生产 `PROMPT_VERSION`/loader 为 v3，正式 gate 仍为 `False`；Adapter 继续使用严格 v3 parser；LLM 576 项、Schema 17 项通过，8 项为既有 FUSE skip。
 - 边界：未发起真实模型/网络请求，未读取密钥，未修改旧批次；v3 效果尚未测量。
 - 下一步：若启动 v3 效果评测，必须先完成新的运行前审查并取得唯一正式批次授权。
+
+### APP-001-PHASE1-V3-20261107-01 / Codex / review / 2026-11-07
+
+- 动作：完成获授权的 v3 Phase 1 正式批次并进行中枢独立审查；只读取 Git 忽略目录中的 `runs.jsonl`、`budget_ledger.json` 和 raw response，不运行 C2、IR/CAD/geometry/STEP，不修改旧批次。
+- 结果：36/36 逻辑记录；32 条模型响应；4 条 C1 请求前阻塞（A04/A07）；32/32 通过 v3 parse、contract、projection；显式字段 32/32 精确；Schema 20/32 通过；决策 29/32。Ollama A03 两条拒绝而期望 answer，A08 C1 一条 ask 而期望 answer；A07 Ollama unsupported 标签为 `anodized` 而冻结标签为 `anodizing`。
+- 预算与资源：48 个物理 HTTP（DeepSeek 16 次 chat，Ollama 16 次 tags + 16 次 chat）；总上限 108、单 provider 上限 54、每逻辑 run 模型尝试上限 3 均未触及。DeepSeek 输入/输出/总 token=36,510/1,677/38,187，费用 CNY 0.01411592；Ollama 平均墙钟 18,353.16 ms，中位数 17,325.03 ms，digest=`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`。
+- 记录：新增 `agent-work/reviews/APP-001-phase1-v3-20261107-01-codex-review.md`；同步 `docs/PROJECT_STATUS.md`。运行产物仍在 Git 忽略目录，未加入 Git。
+- 限制：批次运行记录环境为 Python 3.15.2/macOS arm64，不等同于项目 Python 3.11.18 固定复核基线；全局 `FORMAL_EVALUATION_ALLOWED=False` 未改变；结果不能解释为 CAD/STEP 端到端成绩。
+- 下一步：项目负责人审阅 v3 诊断结论；如修正模型决策策略，需版本化并新建唯一批次、重新授权。

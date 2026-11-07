@@ -50,7 +50,7 @@
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | 第四批次 `app001-phase1-20261107-04` 已按授权完成：36/36 逻辑记录、32 条模型调用、4 条 C1 请求前阻塞、54 次模型尝试、70 次物理 HTTP（预算内）。25 个响应通过 parse/contract，17/25 通过 CAD-003 Schema；DeepSeek 7 条无可评估输出（6 条 5xx 耗尽重试、1 条 invalid JSON）。字段、usage/cost、延迟结果已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-20261107-04-codex-review.md` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | v3 批次 `app001-phase1-v3-20261107-01` 已按授权完成：36/36 逻辑记录、32 条模型响应、4 条 C1 请求前阻塞、48 次物理 HTTP（含 16 次 Ollama `/api/tags`，预算内）。32/32 响应通过 parse/contract/projection，20/32 通过 CAD-003 Schema；显式字段 32/32 精确，决策 29/32，Ollama 有 3 条决策/unsupported 标签不一致。DeepSeek token/费用和 Ollama 延迟已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-v3-20261107-01-codex-review.md` |
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
@@ -58,7 +58,7 @@
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 四个批次均保留且处于 review：第四批次有 7 条逻辑运行无可评估输出，8 条响应未通过 CAD-003 Schema；A04/A07 的 4 条 C1 请求前安全阻塞仍存在。R1 证据留存和阻塞审计代码已合入 main。对 8 条拒绝的只读分析显示显式抽取正确、主要问题为 decision 与冲突/不支持状态不一致；C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
+- APP-001 既有批次均保留且处于 review：v3 批次有 32 条模型响应和 4 条 C1 请求前安全阻塞；显式字段全部精确，决策有 3 条不一致，确定性 Schema 20/32 通过。R1 证据留存和阻塞审计代码已合入 main。C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
 
 ## 当前工作单元边界
 
@@ -71,8 +71,8 @@
 
 ## 下一步
 
-1. 由项目负责人审阅第四批次独立报告，决定是否接受其作为 APP-001 第一阶段诊断结果。
-2. 如需继续，先明确处理范围：DeepSeek 暂时故障表现、失败响应留存、A04/A07 C1 前置阻塞；任何追加模型请求都需要新的唯一批次和明确授权。
+1. 由项目负责人审阅 v3 批次独立报告，决定是否接受其作为 APP-001 第一阶段 v3 诊断结果。
+2. 如需继续，先明确处理范围：Ollama 的 A03/A08 决策不一致与 A07 unsupported 标签变体；任何追加模型请求都需要新的唯一批次和明确授权。
 3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
 5. 如需测 v3 效果，先完成运行前审查并单独申请新的唯一正式批次授权。
