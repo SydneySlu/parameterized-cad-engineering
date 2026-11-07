@@ -45,3 +45,9 @@
 ## 激活边界
 
 修正上述 checker 证据后，才能进入下一次独立 activation review。即使 activation review 通过，仍需单独的激活实现提交，整体更新版本常量、parser 版本检查、prompt loader 路径/哈希、manifest 和兼容性测试；真实效果测试必须使用新的唯一批次并重新取得正式授权。历史 v2/v3 批次不得回写或混合统计。
+
+## 2026-11-08 复审补记
+
+P1/P2 已由 `APP-001-V4-CHECKER-FIX` 修正：`resolve_bore_precedence()` 明确保留用户 bore 并拒绝以 retrieval 填补缺失用户值；unsupported fixture 会同时保留规范标签、原始 quote 和 `user_input` source。Codex 在本机 Python 3.11.18 下独立重跑专项/回归/全量测试；v4 34/34、v3 candidate 55/55、parser 41/41、LLM 610 passed/8 skipped、Schema 17/17，py_compile 和 diff check 均通过。active v3 prompt、acceptance-set hash 和生产路径隔离保持不变。
+
+**复审结论：P1/P2 关闭，离线候选准备通过，可进入独立 v4 激活实现工作单元。**本结论只允许开始版本化实现和兼容测试，不把 v4 切换为生产版本，不打开正式运行 gate，也不授权任何真实模型请求。实现仍须作为可回滚单元独立审查；模型效果评测须另建唯一批次并取得明确授权。首轮报告中的 P1/P2 阻塞结论为当时状态，以上述补记作为后续状态。

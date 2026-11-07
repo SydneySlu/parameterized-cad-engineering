@@ -1638,3 +1638,10 @@ commit=待提交
 - 动作：提交已验证的 APP-001 v4 checker 修正、复核报告和项目级协作手册。
 - 结果：commit `6d1f90a`（`fix: complete APP-001 v4 checker review prep [APP-001-V4-CHECKER-FIX]`）；当前候选分支工作区干净，未 push、未合并。
 - 下一步：项目负责人 push 后由 Codex 核实远端 ref 与提交哈希，再判断 v4 activation implementation 的范围和决策状态。
+
+### APP-001-V4-ACTIVATION-REVIEW-FOLLOWUP / Codex / review / 2026-11-08
+
+- 动作：基于 checker 修正 commit `6d1f90a` 和 Python 3.11.18 全套验证，关闭先前 activation review 的 P1/P2。
+- 结果：离线候选准备通过，可进入独立 v4 激活实现工作单元；生产仍保持 v3，正式评测授权边界不变。本结论不代表 v4 已激活或模型效果通过。
+- 交付：更新 `APP-001-V4-ACTIVATION-REVIEW.md` 补记和 checker 复核报告；后续提交记录以 Git HEAD 为准。
+- 下一步：项目负责人 push 后核对远端；再单独排定 activation implementation 与 review，不运行模型。

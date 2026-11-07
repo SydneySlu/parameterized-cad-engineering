@@ -2,11 +2,11 @@
 
 日期：2026-11-08
 审查分支：`codex/APP-001-V3-DECISION-FIX-DRAFT`
-审查基线：`3665293` + 工作区未提交修正（`.git/index.lock` 存在，尚无本轮 commit）
+审查基线：`3665293`；修正提交 `6d1f90a`；交接记录提交 `2c7d199`
 
 ## 结论
 
-报告中的 P1/P2 修正已在当前工作区实现，目标用例通过，且没有触碰生产 v3 或冻结验收集。本轮可以接受为 **checker 修正已完成、等待 Git 提交和 Python 3.11.18 固定环境复核**。ADR-0017 仍保持 `proposed`；这次验收不等于 v4 activation review 通过，也不授权模型调用。
+报告中的 P1/P2 修正已在当前工作区实现，目标用例通过，且没有触碰生产 v3 或冻结验收集。本轮接受为 **checker 修正和离线候选准备已完成**。P1/P2 关闭，可进入独立的 v4 激活实现工作单元；这不等于生产激活或模型评测授权。
 
 ## 代码复核
 
@@ -19,7 +19,7 @@
 
 ## 独立验证
 
-当前 Codex 主机实际为 Python 3.15.2（macOS），不等于项目固定复核基线 Python 3.11.18，也不等于交付报告声称的 Linux Python 3.10.12。复跑结果：
+初次复跑使用 Python 3.15.2 后，按项目固定基线再用本机 Python 3.11.18 复跑，两个环境结果一致。固定环境命令使用 `/opt/homebrew/bin/python3.11`：
 
 - v4 checker：34/34 通过
 - v3 candidate：55/55 通过
@@ -32,6 +32,6 @@
 
 ## Git 状态和后续
 
-工作区显示本轮四个文件有未提交改动；HEAD 仍是 `3665293`。`.git/index.lock` 是 0 字节文件，符合交付报告。按交接约束，本次没有删除锁，也没有尝试 add/commit/push。
+原有 0 字节 `.git/index.lock` 已在检查无活动 Git 进程并获项目负责人授权后删除。修正及流程手册提交为 `6d1f90a`，交接哈希记录为 `2c7d199`；工作区干净，分支尚未 push。
 
-待用户在本机处理 stale lock 并提交后，再对提交对象进行最终核对；之后若要宣称 v4 可激活，仍须另行完成明确针对 activation bundle（prompt hash、manifest、contract/parser/loader 升级、兼容性和回滚）的审查。当前没有真实模型请求、密钥读取或历史批次变更。
+当前没有真实模型请求、密钥读取或历史批次变更。若启动 activation 实现，仍须独立核验 activation bundle 的 prompt hash、manifest、contract/parser/loader 升级、兼容性和回滚；真实效果仍需新的唯一批次和单独授权。
