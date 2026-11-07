@@ -1150,7 +1150,7 @@ verified=
   冻结生产文件和正式批次未修改；候选未激活；未发起网络/模型请求、未读取密钥
 limits=8 个 FUSE 文件锁 skip；未在 Python 3.11.18 环境复核；真实模型是否能稳定识别目录/规则冲突未验证
 next=候选策略窄修通过中枢复核；由项目负责人决定是否进入候选冻结/激活决策。任何模型效果评测须新 ADR/版本及单独批次授权
-commit=待提交
+commit=b757e9c（候选修复）+a64a537（审查状态同步）；本日志交付状态记录于后续文档提交
 
 [2026-11-07] agent=CC task=APP-001-PHASE1-FIX-TEST-ONLY status=review
 scope=补齐验收缺口：用脱敏 DeepSeek HTTP JSON fixture 验证 usage → RunRecord/cost 传递链
