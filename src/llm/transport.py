@@ -55,6 +55,8 @@ class TransportError(Exception):
     condition: str
     http_status: int | None
     message: str
+    # Safe metadata only. Never place response bodies or secrets here.
+    diagnostic_retention: dict[str, Any] | None = None
 
     def is_retryable(self) -> bool:
         return self.condition in RETRYABLE_CONDITIONS

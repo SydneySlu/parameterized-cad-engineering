@@ -48,6 +48,7 @@ class AttemptOutcome:
     error_condition: str | None
     error_stage: str | None
     error_fields: tuple[str, ...]
+    diagnostic_retention: dict | None = None
 
 
 def send_with_retry(
@@ -109,6 +110,7 @@ def send_with_retry(
                         error_condition=error_condition,
                         error_stage="transport",
                         error_fields=(error_condition or "unknown",),
+                        diagnostic_retention=exc.diagnostic_retention,
                     )
                 )
                 total_elapsed_ms = (clock() - overall_start) * 1000.0
@@ -125,6 +127,7 @@ def send_with_retry(
                         error_condition=error_condition,
                         error_stage="transport",
                         error_fields=(error_condition,),
+                        diagnostic_retention=exc.diagnostic_retention,
                     )
                 )
                 sleep_for = backoff[attempt - 1] if attempt - 1 < len(backoff) else backoff[-1]
@@ -141,6 +144,7 @@ def send_with_retry(
                         error_condition=error_condition,
                         error_stage="transport",
                         error_fields=(error_condition,),
+                        diagnostic_retention=exc.diagnostic_retention,
                     )
                 )
                 total_elapsed_ms = (clock() - overall_start) * 1000.0

@@ -22,10 +22,12 @@ from __future__ import annotations
 import json
 import os
 import time
+from dataclasses import replace
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
+from typing import Callable
 
 from .authorization import FormalRunAuthorization
 from .contract import (
@@ -49,6 +51,33 @@ from .transport import (
     TransportError,
     TransportResponse,
 )
+
+
+def _parse_with_diagnostic_retention(
+    parse_call: Callable[[], TransportResponse],
+    raw_body: str,
+    diagnostic_retainer: Callable[[str], dict[str, Any]] | None,
+) -> TransportResponse:
+    """Parse a successful HTTP body and retain only bounded failure evidence.
+
+    HTTPError responses do not pass through this helper. Retention failures
+    are deliberately swallowed so they cannot replace the original classified
+    transport error.
+    """
+    try:
+        return parse_call()
+    except TransportError as exc:
+        if exc.condition != COND_INVALID_JSON or diagnostic_retainer is None:
+            raise
+        try:
+            meta = diagnostic_retainer(raw_body)
+        except Exception:
+            meta = {
+                "retained": False,
+                "retention_failed": True,
+                "error": "DIAGNOSTIC_RETENTION_ERROR",
+            }
+        raise replace(exc, diagnostic_retention=meta) from exc
 
 
 class RealTransportError(RuntimeError):
@@ -268,6 +297,7 @@ class DeepSeekTransport:
         authorization: FormalRunAuthorization | None,
         *,
         timeout_seconds: float = 120.0,
+        diagnostic_retainer: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
         _require_authorization(authorization, "DeepSeekTransport")
         if DEEPSEEK_PROVIDER not in authorization.providers:
@@ -277,6 +307,7 @@ class DeepSeekTransport:
         self._auth = authorization
         self._timeout = timeout_seconds
         self._runtime_version: str | None = None
+        self._diagnostic_retainer = diagnostic_retainer
 
     @property
     def authorization(self) -> FormalRunAuthorization:
@@ -336,7 +367,9 @@ class DeepSeekTransport:
             return self._handle_http_error(exc)
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             return self._handle_connection_error(exc)
-        return self._parse_response(status, raw)
+        return _parse_with_diagnostic_retention(
+            lambda: self._parse_response(status, raw), raw, self._diagnostic_retainer
+        )
 
     def _handle_http_error(self, exc: urllib.error.HTTPError) -> TransportResponse:
         status = exc.code
@@ -409,13 +442,33 @@ class DeepSeekTransport:
                 message="response has no 'choices' array",
             )
         choice = choices[0]
+        if not isinstance(choice, dict):
+            raise TransportError(
+                condition=COND_INVALID_JSON,
+                http_status=status,
+                message="response choice is not an object",
+            )
         message = choice.get("message", {})
-        body = message.get("content", "") if isinstance(message, dict) else ""
+        if not isinstance(message, dict) or not isinstance(message.get("content", ""), str):
+            raise TransportError(
+                condition=COND_INVALID_JSON,
+                http_status=status,
+                message="response choice message/content has invalid shape",
+            )
+        body = message.get("content", "")
         # Runtime identity (safe fields only -- no key, no Authorization)
         runtime_model = data.get("model")
         runtime_provider = data.get("provider")  # may be None per baseline-contract
         # Usage (cloud token fields)
-        usage_raw = data.get("usage", {}) or {}
+        usage_raw = data.get("usage", {})
+        if usage_raw is None:
+            usage_raw = {}
+        if not isinstance(usage_raw, dict):
+            raise TransportError(
+                condition=COND_INVALID_JSON,
+                http_status=status,
+                message="response usage is not an object",
+            )
         usage = {
             "prompt_tokens": usage_raw.get("prompt_tokens"),
             "completion_tokens": usage_raw.get("completion_tokens"),
@@ -460,6 +513,7 @@ class OllamaTransport:
         *,
         host: str = OLLAMA_DEFAULT_HOST,
         timeout_seconds: float = 180.0,
+        diagnostic_retainer: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
         _require_authorization(authorization, "OllamaTransport")
         if OLLAMA_PROVIDER not in authorization.providers:
@@ -473,6 +527,7 @@ class OllamaTransport:
         self._verified_digest: bool = False
         self._actual_digest: str | None = None
         self._actual_model_name: str | None = None
+        self._diagnostic_retainer = diagnostic_retainer
 
     @property
     def authorization(self) -> FormalRunAuthorization:
@@ -588,7 +643,11 @@ class OllamaTransport:
                 message=f"Ollama connection interrupted: {msg}",
             )
         t_elapsed = time.monotonic() - t_start
-        return self._parse_response(status, raw, t_elapsed)
+        return _parse_with_diagnostic_retention(
+            lambda: self._parse_response(status, raw, t_elapsed),
+            raw,
+            self._diagnostic_retainer,
+        )
 
     def _verify_model_digest(self) -> None:
         """Check that the expected model is running locally with the correct digest.
@@ -692,7 +751,13 @@ class OllamaTransport:
                 message="Ollama response is not a JSON object",
             )
         message = data.get("message", {})
-        body = message.get("content", "") if isinstance(message, dict) else ""
+        if not isinstance(message, dict) or not isinstance(message.get("content", ""), str):
+            raise TransportError(
+                condition=COND_INVALID_JSON,
+                http_status=status,
+                message="Ollama response message/content has invalid shape",
+            )
+        body = message.get("content", "")
         # Runtime identity — actual values from /api/chat (not frozen constants)
         runtime_model = data.get("model")
         if runtime_model != OLLAMA_MODEL:

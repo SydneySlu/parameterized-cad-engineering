@@ -122,6 +122,9 @@ class AssembledInput:
     candidate_source_ids: tuple
     blocked_reason: Optional[str]
     bore_d_used_for_query: Optional[float] = None
+    blocked_stage: Optional[str] = None
+    error_code: Optional[str] = None
+    error_fields: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +177,9 @@ def assemble_c1(
                 "provided to runner; cannot generate C1 reference context"
             ),
             bore_d_used_for_query=None,
+            blocked_stage="c1_assembly",
+            error_code="BLOCKED_C1_NO_RETRIEVAL_INDEX",
+            error_fields=("retrieval_index",),
         )
     # Extract bore_d from natural language input only
     bore_d = _extract_bore_d_for_c1(case)
@@ -191,6 +197,9 @@ def assemble_c1(
                 "skipping this logical run"
             ),
             bore_d_used_for_query=None,
+            blocked_stage="c1_query_extraction",
+            error_code="C1_NO_SAFE_QUERY_PARAMETER",
+            error_fields=("bore_d",),
         )
     # Query RET-002 using the CAD-003 envelope form so the Schema can derive
     # the other five frozen fields from bore_d.  The flat_parameters form
@@ -209,6 +218,8 @@ def assemble_c1(
             top_k=top_k,
         )
     except Exception as exc:  # noqa: BLE001
+        retrieval_code = getattr(exc, "code", None)
+        retrieval_fields = getattr(exc, "fields", ())
         return AssembledInput(
             query_id=case.query_id,
             condition_id=CONDITION_C1,
@@ -218,6 +229,9 @@ def assemble_c1(
             candidate_source_ids=(),
             blocked_reason=f"BLOCKED_C1_RETRIEVAL_ERROR: {type(exc).__name__}: {exc}",
             bore_d_used_for_query=bore_d,
+            blocked_stage="retrieval_query",
+            error_code=str(retrieval_code or "BLOCKED_C1_RETRIEVAL_ERROR"),
+            error_fields=tuple(retrieval_fields) or ("retrieval_query",),
         )
     candidates = [
         entry
@@ -237,6 +251,9 @@ def assemble_c1(
                 "retrieval_source candidates"
             ),
             bore_d_used_for_query=bore_d,
+            blocked_stage="retrieval_result_filter",
+            error_code="BLOCKED_C1_NO_RETRIEVAL_SOURCE",
+            error_fields=("candidate_source_ids",),
         )
     ref_dict = _build_reference_context_dict(candidates)
     ref_str = json.dumps(ref_dict, ensure_ascii=False, sort_keys=True)

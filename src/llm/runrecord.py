@@ -50,6 +50,7 @@ class AttemptRecord:
     error_code: str | None
     error_stage: str | None
     error_fields: tuple[str, ...]
+    diagnostic_retention: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -61,6 +62,7 @@ class AttemptRecord:
             "error_code": self.error_code,
             "error_stage": self.error_stage,
             "error_fields": list(self.error_fields),
+            "diagnostic_retention": dict(self.diagnostic_retention),
         }
 
 

@@ -51,10 +51,14 @@ from .conditions import assemble_c0, assemble_c1
 from .contract import (
     ACCEPTANCE_SET_SHA256,
     ACCEPTANCE_SET_VERSION,
+    ADAPTER_VERSION,
+    CONTRACT_VERSION,
     DEEPSEEK_PROVIDER,
     FAMILY_ID,
     FORMAL_EVALUATION_ALLOWED,
     OLLAMA_PROVIDER,
+    PROMPT_VERSION,
+    SCHEMA_VERSION,
 )
 from .gate import FormalEvaluationBlockedError, require_formal_evaluation_allowed
 from .input_projection import AcceptanceSetProjection, project_acceptance_set
@@ -508,8 +512,12 @@ class App001Runner:
                 attempt_count=0,
                 final_outcome="blocked",
                 record=None,
-                record_dict=None,
                 blocked_reason="C1_reference_context_blocked",
+                record_dict=self._blocked_audit_record(
+                    combo, authorization, prompt_artifact, None,
+                    stage_name="c1_assembly", error_code="C1_REFERENCE_CONTEXT_BLOCKED",
+                    error_fields=("reference_context",),
+                ),
             )
         if hasattr(assembled_input, "blocked_reason") and assembled_input.blocked_reason:
             ledger.record_run_result(logical_run_id=lrid, result="blocked")
@@ -522,12 +530,27 @@ class App001Runner:
                 attempt_count=0,
                 final_outcome="blocked",
                 record=None,
-                record_dict=None,
                 blocked_reason=assembled_input.blocked_reason,
+                record_dict=self._blocked_audit_record(
+                    combo, authorization, prompt_artifact, assembled_input,
+                    stage_name=getattr(assembled_input, "blocked_stage", None) or "c1_assembly",
+                    error_code=getattr(assembled_input, "error_code", None) or "C1_REFERENCE_CONTEXT_BLOCKED",
+                    error_fields=tuple(getattr(assembled_input, "error_fields", ()) or ()),
+                ),
             )
         # Build real transport and wrap it with BudgetAwareTransport
-        inner_transport = self._build_transport(combo.provider, authorization)
         run_id = _safe(f"{authorization.batch_id}__{lrid}")
+        retention = RetentionPolicy(
+            retain_raw=True,
+            base_dir=f"work/app001-runs/{authorization.batch_id}",
+        )
+        inner_transport = self._build_transport(
+            combo.provider,
+            authorization,
+            diagnostic_retainer=lambda body: __import__(
+                "llm.adapter", fromlist=["_retain_response"]
+            )._retain_response(body, run_id, combo.query_id, retention),
+        )
         budget_transport = BudgetAwareTransport(
             inner_transport,
             ledger=ledger,
@@ -538,10 +561,6 @@ class App001Runner:
             adapter_run_id=run_id,
             query_id=combo.query_id,
             condition_id=combo.condition_id,
-        )
-        retention = RetentionPolicy(
-            retain_raw=True,
-            base_dir=f"work/app001-runs/{authorization.batch_id}",
         )
         adapter = Adapter(
             provider=combo.provider,
@@ -615,12 +634,58 @@ class App001Runner:
             blocked_reason=None,
         )
 
+    def _blocked_audit_record(
+        self, combo: LogicalRunCombination, authorization: FormalRunAuthorization,
+        prompt_artifact: object | None, assembled_input: object | None,
+        *, stage_name: str, error_code: str, error_fields: tuple[str, ...],
+    ) -> dict[str, Any]:
+        """Build non-sensitive evidence for a run blocked before request construction."""
+        prompt_hashes = {"system_prompt_sha256": None, "user_template_sha256": None,
+                         "unavailable_reason": "request_not_constructed"}
+        if prompt_artifact is not None:
+            prompt_hashes = {
+                "system_prompt_sha256": getattr(prompt_artifact, "system_prompt_sha256", None),
+                "user_template_sha256": getattr(prompt_artifact, "user_template_sha256", None),
+                "unavailable_reason": None,
+            }
+        import platform
+        import sys
+
+        return {
+            "logical_run_id": combo.logical_run_id,
+            "batch_id": authorization.batch_id,
+            "query_id": combo.query_id,
+            "condition_id": combo.condition_id,
+            "configured_provider": combo.provider,
+            "configured_model_name": combo.model,
+            "acceptance_set_version": ACCEPTANCE_SET_VERSION,
+            "acceptance_set_sha256": ACCEPTANCE_SET_SHA256,
+            "contract_version": CONTRACT_VERSION,
+            "prompt_version": PROMPT_VERSION,
+            "adapter_version": ADAPTER_VERSION,
+            "software_versions": {
+                "python": sys.version.split()[0],
+                "platform": platform.platform(),
+                "adapter": ADAPTER_VERSION,
+                "schema_version": SCHEMA_VERSION,
+            },
+            "prompt_hashes": prompt_hashes,
+            "blocked_stage": stage_name,
+            "error_code": error_code,
+            "error_fields": list(error_fields),
+            "bore_d_used_for_query": getattr(assembled_input, "bore_d_used_for_query", None),
+            "candidate_source_count": len(getattr(assembled_input, "candidate_source_ids", ()) or ()) if assembled_input else 0,
+            "candidate_source_ids": list(getattr(assembled_input, "candidate_source_ids", ()) or ()) if assembled_input else [],
+            "reference_context_sha256": getattr(assembled_input, "reference_context_sha256", None) if assembled_input else None,
+        }
+
     # ------------------------------------------------------------------
     # Transport construction
     # ------------------------------------------------------------------
 
     def _build_transport(
-        self, provider: str, authorization: FormalRunAuthorization
+        self, provider: str, authorization: FormalRunAuthorization,
+        *, diagnostic_retainer: Any = None,
     ) -> Any:
         """Construct the real transport for a provider.
 
@@ -629,9 +694,9 @@ class App001Runner:
         from .real_transport import DeepSeekTransport, OllamaTransport
 
         if provider == DEEPSEEK_PROVIDER:
-            return DeepSeekTransport(authorization)
+            return DeepSeekTransport(authorization, diagnostic_retainer=diagnostic_retainer)
         if provider == OLLAMA_PROVIDER:
-            return OllamaTransport(authorization)
+            return OllamaTransport(authorization, diagnostic_retainer=diagnostic_retainer)
         raise ValueError(f"unknown provider: {provider!r}")
 
     # ------------------------------------------------------------------
@@ -671,6 +736,9 @@ class App001Runner:
                             "BLOCKED_C1_NO_RETRIEVAL_INDEX: no retrieval index "
                             "provided to runner; cannot generate C1 reference context"
                         ),
+                        blocked_stage="c1_assembly",
+                        error_code="BLOCKED_C1_NO_RETRIEVAL_INDEX",
+                        error_fields=("retrieval_index",),
                     )
                 else:
                     assembled[combo.logical_run_id] = assemble_c1(

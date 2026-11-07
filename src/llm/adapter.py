@@ -75,6 +75,7 @@ from .transport import MockTransport, PreparedRequest, Transport, TransportRespo
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CANONICAL_RUN_DIR_NAME = "work/app001-runs"
 _CANONICAL_RUN_DIR = _REPO_ROOT / "work" / "app001-runs"
+_MAX_RETAINED_RESPONSE_BYTES = 64 * 1024
 
 
 def _resolve_canonical_path(base_dir: str | Path) -> Path:
@@ -197,11 +198,15 @@ def _retain_response(
     test-only bypass flag.  Tests that need a tempdir call ``_write_raw_to_dir``
     directly.
     """
-    body_len = len(body.encode("utf-8"))
-    body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    body_bytes = body.encode("utf-8")
+    body_len = len(body_bytes)
+    body_hash = hashlib.sha256(body_bytes).hexdigest()
+    truncated = body_len > _MAX_RETAINED_RESPONSE_BYTES
+    saved_body = body_bytes[:_MAX_RETAINED_RESPONSE_BYTES].decode("utf-8", errors="ignore") if truncated else body
+    saved_len = len(saved_body.encode("utf-8"))
 
     if not policy.retain_raw:
-        return {"retained": False, "body_length": body_len, "body_sha256": body_hash}
+        return {"retained": False, "body_length": body_len, "saved_length": 0, "body_sha256": body_hash, "truncated": truncated}
 
     # Resolve and validate the canonical path before writing.
     try:
@@ -211,12 +216,25 @@ def _retain_response(
             "retained": False,
             "retention_failed": True,
             "error": "RETENTION_PATH_OUTSIDE_IGNORED_DIR",
-            "error_detail": str(exc)[:200],
             "body_length": body_len,
+            "saved_length": 0,
             "body_sha256": body_hash,
+            "truncated": truncated,
         }
 
-    return _write_raw_to_dir(write_dir, body, run_id, query_id)
+    meta = _write_raw_to_dir(write_dir, saved_body, run_id, query_id)
+    if meta.get("retained") and meta.get("path"):
+        try:
+            meta["path"] = Path(meta["path"]).resolve().relative_to(_REPO_ROOT.resolve()).as_posix()
+        except (OSError, ValueError):
+            # A retained file without a safe repository-relative identity is
+            # treated as failed evidence; never expose an absolute path.
+            meta.pop("path", None)
+            meta["retained"] = False
+            meta["retention_failed"] = True
+            meta["error"] = "RETENTION_PATH_NOT_REPO_RELATIVE"
+    meta.update({"body_length": body_len, "saved_length": saved_len, "body_sha256": body_hash, "truncated": truncated})
+    return meta
 
 
 # ---------------------------------------------------------------------------
@@ -482,6 +500,7 @@ class Adapter:
                 error_code=o.error_condition,
                 error_stage=o.error_stage,
                 error_fields=o.error_fields,
+                diagnostic_retention=o.diagnostic_retention or {},
             )
             for o in attempts
         ]

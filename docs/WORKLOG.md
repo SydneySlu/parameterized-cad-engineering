@@ -1395,3 +1395,17 @@ limits=
   未改生产代码；未请求网络；未读取密钥；旧批次 -01 至 -04 保持只读
 next=将 docs/coordination/prompts/APP-001-AUDIT-EVIDENCE-R1.md 交 CC 执行；CC 交付后由 Codex 重跑核心正常/失败用例、专项和全量测试，随后独立补齐/审查 A04/A07 样例级回归
 commit=待提交（Codex 启动文档单元）
+
+[2026-11-07] agent=CC task=APP-001-AUDIT-EVIDENCE-R1 status=review
+scope=请求前 C1 阻塞审计与失败响应有界证据留存；不运行真实模型、不改旧批次或评测语义
+动作=
+  1) 复核仓库协作协议、项目事实源、R1 prompt 和第四批次只读审查；重跑草稿专项测试，发现并修复 Runner 缺 software-version helper 的测试错误；
+  2) 增加 C1 稳定阻塞字段和非敏感审计记录，prompt hash 可用时写真实值，不可用时显式写原因；
+  3) 对 HTTP 2xx wrapper JSON/结构失败进行有界留存，64 KiB UTF-8 字节上限、原文 hash/长度和相对路径；保持 HTTPError 不读取正文，留存错误不覆盖既有 invalid_json；
+  4) 增加专项测试、checkpoint，完成 LLM/Schema/编译检查。
+verified=
+  Python 3.15.2；tests.llm.test_audit_evidence_r1：11 passed；tests/llm 全量：513 passed、8 skipped（既有 FUSE 文件锁限制）；tests/schema：17 passed；py_compile 及 git diff --check 通过；无真实模型请求、无密钥读取。
+limits=
+  Python 3.11.18 环境复核待做；8 个 skip 不计为通过；无线上供应商行为证据；A04/A07 样例回归由中枢另行处理。
+next=Codex 中枢独立审查变更和边界，重跑适用检查；APP-001 保持 review，不据此启动新批次或放行
+commit=86a6bc7
