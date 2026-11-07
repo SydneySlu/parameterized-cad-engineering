@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Final, Mapping
 
 from .contract import (
     CONTRACT_VERSION,
@@ -121,6 +121,43 @@ def _err(code: str, stage: str, fields: tuple[str, ...], message: str) -> ParseE
 
 
 def parse_response(raw: str | bytes) -> ParseResult:
+    """Parse one response against the active production prompt version.
+
+    The default production path is intentionally strict: after the v3
+    activation it accepts only ``app001-extraction.v3``. Historical batches
+    must use :func:`parse_response_for_version` explicitly.
+    """
+    return _parse_response(raw, expected_prompt_version=PROMPT_VERSION)
+
+
+_LEGACY_AUDIT_PROMPT_VERSIONS: Final[frozenset[str]] = frozenset(
+    {"app001-extraction.v2"}
+)
+
+
+def parse_response_for_version(
+    raw: str | bytes, *, prompt_version: str
+) -> ParseResult:
+    """Parse a response for an explicitly selected production or legacy version.
+
+    This entry point exists only for read-only audit/replay of historical
+    batches. It never changes the default v3 parser used by the adapter. A
+    caller must name either the active v3 version or the explicitly retained
+    v2 legacy version; arbitrary version strings are rejected so an audit
+    cannot silently relabel a response.
+    """
+    allowed_versions = {PROMPT_VERSION, *_LEGACY_AUDIT_PROMPT_VERSIONS}
+    if prompt_version not in allowed_versions:
+        raise ValueError(
+            f"unsupported audit prompt version {prompt_version!r}; "
+            f"allowed versions are {sorted(allowed_versions)}"
+        )
+    return _parse_response(raw, expected_prompt_version=prompt_version)
+
+
+def _parse_response(
+    raw: str | bytes, *, expected_prompt_version: str
+) -> ParseResult:
     """Parse and strictly validate one model response body.
 
     Steps (each recorded as a distinct stage):
@@ -164,8 +201,8 @@ def parse_response(raw: str | bytes) -> ParseResult:
     if cv != CONTRACT_VERSION:
         errors.append(_err("CONTRACT_VERSION_MISMATCH", STAGE_CONTRACT, ("contract_version",), f"expected {CONTRACT_VERSION!r}, got {cv!r}"))
     pv = body.get("prompt_version")
-    if pv != PROMPT_VERSION:
-        errors.append(_err("PROMPT_VERSION_MISMATCH", STAGE_CONTRACT, ("prompt_version",), f"expected {PROMPT_VERSION!r}, got {pv!r}"))
+    if pv != expected_prompt_version:
+        errors.append(_err("PROMPT_VERSION_MISMATCH", STAGE_CONTRACT, ("prompt_version",), f"expected {expected_prompt_version!r}, got {pv!r}"))
 
     # --- Step 4: decision enum ---
     decision = body.get("decision")

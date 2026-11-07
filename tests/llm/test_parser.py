@@ -7,7 +7,7 @@ keys, extra keys, wrong version, bad enum, non-null confidence, type errors.
 import json
 import unittest
 
-from src.llm.parser import parse_response
+from src.llm.parser import parse_response, parse_response_for_version
 
 
 def _valid_body(**overrides):
@@ -69,6 +69,37 @@ class ParserFailureTests(unittest.TestCase):
         )
         self.assertFalse(result.ok)
         self.assertIn("PROMPT_VERSION_MISMATCH", [e.code for e in result.errors])
+
+    def test_explicit_v2_audit_parser_accepts_legacy_envelope(self):
+        result = parse_response_for_version(
+            _valid_body(prompt_version="app001-extraction.v2"),
+            prompt_version="app001-extraction.v2",
+        )
+        self.assertTrue(result.ok, [e.as_dict() for e in result.errors])
+        self.assertEqual(result.envelope.prompt_version, "app001-extraction.v2")
+
+    def test_explicit_v2_audit_parser_keeps_contract_failures(self):
+        body = json.loads(_valid_body(prompt_version="app001-extraction.v2"))
+        del body["decision"]
+        result = parse_response_for_version(
+            json.dumps(body), prompt_version="app001-extraction.v2"
+        )
+        self.assertFalse(result.ok)
+        self.assertEqual(result.errors[0].code, "MISSING_ENVELOPE_KEY")
+
+    def test_explicit_v2_audit_parser_does_not_relabel_v3_payload(self):
+        result = parse_response_for_version(
+            _valid_body(prompt_version="app001-extraction.v3"),
+            prompt_version="app001-extraction.v2",
+        )
+        self.assertFalse(result.ok)
+        self.assertEqual(result.errors[0].code, "PROMPT_VERSION_MISMATCH")
+
+    def test_audit_parser_rejects_unregistered_version(self):
+        with self.assertRaises(ValueError):
+            parse_response_for_version(
+                _valid_body(), prompt_version="app001-extraction.v1"
+            )
 
     def test_extra_prose_before_json_rejected(self):
         result = parse_response("here is the answer: " + _valid_body())

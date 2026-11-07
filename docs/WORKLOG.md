@@ -1541,3 +1541,10 @@ commit=待提交
 - 结果：激活实现提交为 `6260cd3`（当前功能分支）；状态仍为 `review`，尚未推送/合并到 `main`。没有发现额外生产范围变更。
 - 验证：Python 3.11.18 下全量 LLM 572 项通过（8 项既有 FUSE skip）、Schema 17 项通过、激活定向 153 项通过；closeout 后候选/manifest 专项 55 项再次通过；`git diff --check` CLEAN。
 - 下一步：按项目分支流程审查并合并 `6260cd3`；若之后要测 v3 模型效果，先另行取得唯一正式批次授权。
+
+### APP-001-V3-ACTIVATION-INDEPENDENT-REVIEW / Codex / review / 2026-11-07
+
+- 动作：在共享仓库独立复核 v3 激活和历史 v2 只读解析兼容；确认 Adapter/runner 仍使用严格 v3 `parse_response()`，版本化入口未接入正式路径；补充 v3 payload 不能通过显式 v2 入口重标记的回归测试。
+- 结果：Python 3.11.18 下 parser 41 项、LLM 全量 576 项（8 个既有 FUSE skip）、Schema 17 项通过；对只读旧批次 `app001-phase1-20261107-03` 的 32 条 v2 原始响应复放，24 条通过显式 v2 parser，8 条按原始 `EXTRACTED_TYPE_ERROR` 拒绝；默认 v3 parser 对 32 条均保留版本拒绝。
+- 边界：未发起真实模型/网络请求，未读取密钥，未修改 `work/` 或旧批次，未打开正式 gate；v3 效果仍需新的唯一正式批次授权。
+- 下一步：建议审查并合入 v3 激活与历史审计兼容提交；合入后再按独立授权决定是否运行 v3 正式批次。

@@ -248,6 +248,14 @@ Schema object aligned with the `app001-io.v1` envelope contract.  This is a
 generation constraint (sampling hint), not a guarantee; `parse_response()` remains
 the authoritative gating layer.
 
+After the v3 activation, `parse_response()` accepts only
+`app001-extraction.v3`. Historical v2 batches remain auditable through the
+explicit `parse_response_for_version(..., prompt_version="app001-extraction.v2")`
+entry point; this legacy path is never used by the production adapter and does
+not relabel the result as v3. Audit callers must retain the explicitly selected
+version alongside the parse outcome; successful results also preserve it in the
+parsed envelope.
+
 ### Schema alignment with parser contract
 
 | Field | Schema constraint | Parser enforcement |
