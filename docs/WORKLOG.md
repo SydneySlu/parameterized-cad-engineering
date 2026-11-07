@@ -947,7 +947,7 @@ verified=
   test_r3_fixes.py 25/25 通过
 limits=8 个 FUSE lock 删除限制 skip（@unittest.skip 标记，原生文件系统可运行；test_r3_regression 两个 symlink 测试现在通过，已转为 skip-on-FUSE 模式）；Ollama 18 次 tags 预检消耗 provider 配额，实际 chat 额度 ≤ 36 次；正式评测未放行；无真实 API 调用
 next=Codex 中枢独立审查本次修复；通过后项目负责人按既有授权流程推进正式 APP-001；本任务保持 review，未 push
-commit=待提交
+commit=6f4af27
 
 [2026-11-07] agent=Codex task=APP-001-EVIDENCE-CONTRACT-FIX-CODEX-REVIEW status=review
 scope=独立复核 evidence null 契约修正；不启动正式批次
