@@ -20,7 +20,7 @@ dependency-injection mechanism; production callers cannot specify arbitrary path
 
 Prompt artifact verification (R2 / 4.3):
 :func:`verify_adapter_input` checks the actual system prompt and user template
-against the frozen ``prompt-v3.md`` before any transport ``send()`` call.
+against the frozen ``prompt-v4.md`` before any transport ``send()`` call.
 
 Credential handling:
 The mock-path request builders never read environment variables or credentials.

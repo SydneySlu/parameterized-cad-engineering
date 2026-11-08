@@ -141,10 +141,10 @@ def parse_response_for_version(
     """Parse a response for an explicitly selected production or legacy version.
 
     This entry point exists only for read-only audit/replay of historical
-    batches. It never changes the default v3 parser used by the adapter. A
-    caller must name either the active v3 version or the explicitly retained
-    v2 legacy version; arbitrary version strings are rejected so an audit
-    cannot silently relabel a response.
+    batches. It never changes the default v4 parser used by the adapter. A
+    caller must name either the active v4 version or one of the explicitly
+    retained legacy versions (v3, v2); arbitrary version strings are rejected
+    so an audit cannot silently relabel a response.
     """
     allowed_versions = {PROMPT_VERSION, *_LEGACY_AUDIT_PROMPT_VERSIONS}
     if prompt_version not in allowed_versions:

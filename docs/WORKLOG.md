@@ -47,6 +47,28 @@
 - 限制：云端 provider 和 API 返回实际 `model` 字段仍待正式运行时记录；目前没有字段抽取、Schema、CAD、STEP 端到端实测结果。
 - 下一步：项目负责人 push 提交后，按 APP-001-PREP Prompt 完成验收集与 I/O 契约草案，中枢审查通过后再运行双模型基线。
 
+### APP-001-V4-ACTIVATION-CLOSEOUT-FIX / CC / review
+
+- 动作：在分支 `cc/APP-001-V4-ACTIVATION`（HEAD `85f9e71`）上执行窄范围文案收束。修正激活提交后残留的 v3 字符串（文档/注释），并修正 checkpoint.md 中的激活提交哈希记录。
+- 基线/HEAD：`85f9e71`（激活提交父节点 `1d84b12`）
+- 修改文件（仅文档、注释、交付记录；不改运行逻辑、不改测试）：
+  - `src/llm/prompt_loader.py` — `_parse_artifact` docstring：`prompt-v3` / `app001-extraction.v3` → `prompt-v4` / `app001-extraction.v4`
+  - `src/llm/parser.py` — `parse_response_for_version` docstring：默认 v3 parser → 默认 v4 parser；保留 v3/v2 历史路径说明
+  - `src/llm/adapter.py` — 顶层 docstring：`prompt-v3` → `prompt-v4`
+  - `src/llm/__init__.py` — 包 docstring：active protocol `v3` → `v4`；新增历史说明
+  - `src/llm/README.md` — active protocol 版本、prompt-v3 路径、schema 表 v3 const、Ollama 段落均更新为 v4；v3 历史/回滚引用保留并明确标注
+  - `agent-work/llm/APP-001-v4-activation/checkpoint.md` — 激活提交哈希 `3b1e353` → `85f9e71`；明确状态 review、未 push、未合入 main
+  - `docs/WORKLOG.md` — 本条追加（not rewriting prior entries）
+- 验证（CC 环境 Python 3.10.12；项目固定基线 3.11.18 须 Codex 中枢在 Mac 重跑）：
+  - `python3 -m py_compile src/llm/{prompt_loader,parser,adapter,__init__}.py` → OK
+  - `PYTHONPATH=src:. python3 -m unittest tests.llm.test_v4_activation -q` → 71/71 OK
+  - `git diff --check` → OK（无空白错误）
+  - grep active production 文档无错误 v3 字样 → OK（所有 v3 引用均在历史/legacy/rollback 语境）
+  - v4 prompt SHA-256 `73cb6b8f…` 未变 ✓；v3 rollback SHA-256 `3dd8bd55…` 未变 ✓；acceptance-set SHA-256 `ed59e2b6…` 未变 ✓
+- 限制：CC 环境 Python 3.10.12；Codex 中枢须在 `/opt/homebrew/bin/python3.11`（3.11.18）重验后方可合并。未调用模型，未读取密钥，未创建批次，未改运行逻辑，未修改测试文件。
+- 提交：`docs: close APP-001 v4 activation handoff [APP-001-V4-ACTIVATION-CLOSEOUT-FIX]`（提交 `d01eb81`，父 `85f9e71`）。
+- 下一步：Codex 中枢在 Mac 3.11.18 独立重验；通过后 push 并合并到 main。
+
 ## 2026-10-28
 
 ### INFRA-001 / Codex / done

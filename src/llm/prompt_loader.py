@@ -102,10 +102,10 @@ def _extract_code_blocks(markdown: str) -> list[str]:
 
 
 def _parse_artifact(text: str) -> tuple[str, str]:
-    """Parse the frozen prompt-v3.md and extract (system_prompt, user_template).
+    """Parse the frozen prompt-v4.md and extract (system_prompt, user_template).
 
     The artifact structure (as frozen):
-    - Contains the literal version string ``app001-extraction.v3``.
+    - Contains the literal version string ``app001-extraction.v4``.
     - The first fenced code block after ``## System message`` is the system
       prompt JSON envelope example.
     - The second fenced code block (```text) is the user message template.
@@ -120,7 +120,7 @@ def _parse_artifact(text: str) -> tuple[str, str]:
       JSON object naming ``contract_version`` and ``prompt_version``).
     - ``## User message template`` section → first code block body.
 
-    This parsing is tied to the actual structure of prompt-v3.md.
+    This parsing is tied to the actual structure of prompt-v4.md.
     """
     lines = text.splitlines()
     system_lines: list[str] = []

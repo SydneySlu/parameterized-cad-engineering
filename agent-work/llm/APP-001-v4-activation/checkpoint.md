@@ -6,7 +6,8 @@
 - Status: review (awaiting Codex hub independent review and merge to main)
 - Branch: `cc/APP-001-V4-ACTIVATION`
 - Baseline: `1d84b12` (`origin/codex/APP-001-V3-DECISION-FIX-DRAFT`)
-- Activation commit: `3b1e353`
+- Activation commit: `85f9e71`
+- Not pushed. Not merged to main.
 
 ## Approval basis
 
