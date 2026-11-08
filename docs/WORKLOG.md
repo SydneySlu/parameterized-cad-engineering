@@ -1776,3 +1776,10 @@ commit=待提交
 - 结果：两次均为 685 passed、8 个既有 FUSE skip；`TestR4OllamaTagsChatIntegration` 5 项和 `TestR3Fix2OllamaTagsFailChatBlocked` 2 项均通过。差异仅涉及测试 batch_id 隔离、checkpoint 和日志，未改生产代码、prompt、schema、预算、授权或正式批次。
 - 记录：独立审查写入 `agent-work/reviews/APP-001-PREFLIGHT-TEST-ISOLATION-FIX-codex-review.md`；当前分支工作区待提交，未 push、未合入 `main`。
 - 下一步：提交本审查记录后由项目负责人 push `cc/APP-001-PREFLIGHT-TEST-ISOLATION-FIX` 并核对远端哈希；合入前继续保持正式模型调用关闭。
+
+### APP-001-PREFLIGHT-TEST-ISOLATION-FIX-MERGE / Codex / done / 2026-11-08
+
+- 动作：核对项目负责人完成的 fast-forward 合并和远端推送；`origin/main` 与本地 `main` 均指向 `d422877`。
+- 验证：Python 3.11.18 下 `tests.llm.test_r3_fixes` 51/51、Schema 全量 17/17、LLM 全量 685 通过且 8 个既有 FUSE skip；`py_compile` 与 `git diff --check` 通过。
+- 结论：测试隔离修复已满足合并后验收，任务标记为 `done`。没有真实模型请求、没有读取密钥、没有创建正式批次。
+- 下一步：继续 v4 正式效果评测的授权门；项目负责人需要填写并明确批准新的唯一 `batch_id` 和冻结 scope，批准前保持模型调用关闭。
