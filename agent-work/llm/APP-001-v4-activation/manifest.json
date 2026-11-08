@@ -1,6 +1,6 @@
 {
   "package_id": "APP-001-v4-activation",
-  "status": "review",
+  "status": "done",
   "candidate_prompt_version": "app001-extraction.v4",
   "production_prompt_version": "app001-extraction.v4",
   "contract_version": "app001-io.v1",
@@ -17,8 +17,8 @@
   "production_files_changed": true,
   "formal_evaluation_authorized": false,
   "activation_requires": [
-    "Python 3.11.18 verification completed (CC run in VM 3.10.12; Codex hub must re-verify on Mac 3.11.18)",
-    "Codex independent review and merge to main required",
+    "Python 3.11.18 verification completed by Codex hub",
+    "Codex independent review and merge to main completed at c18fd35",
     "new unique formal batch authorization before any model calls"
   ],
   "rollback_target": "app001-extraction.v3",

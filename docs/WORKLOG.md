@@ -1724,3 +1724,11 @@ commit=待提交
 - 结果：三处 Git ref 均指向 `c18fd35`；工作区干净且无 `.git/index.lock`。v4 激活任务标记为 `done`，生产 `PROMPT_VERSION=app001-extraction.v4`、`FORMAL_EVALUATION_ALLOWED=False` 和 v3 回滚边界保持不变。Python 3.11.18 复核证据为 71 项 v4 专项、685 项 LLM 测试（8 个既有 FUSE skip）和 17 项 Schema 测试通过。
 - 边界：未调用真实模型、未读取密钥、未创建或修改正式批次，C2/IR/CAD/geometry/STEP 未运行。APP-001 整体仍为 `review`，v4 模型效果尚未测量。
 - 下一步：如需测量 v4 效果，先由 Codex 建立运行前审查清单和唯一批次授权模板，项目负责人明确批准后再由 CC 执行；旧批次只读且不混合统计。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-READINESS / Codex / planned / 2026-11-08
+
+- 动作：建立 v4 正式效果评测的运行前审查、授权模板和 checkpoint；核对当前生产版本、授权工厂、预算、Ollama 冻结环境、retrieval index 门和旧批次隔离边界。
+- 结果：确认当前 `main`/`origin/main` 为 `abcb8f0`，生产 prompt 为 `app001-extraction.v4`；授权代码动态绑定 v4，固定完整 scope 为 36 个逻辑运行、最多 108 次物理请求、每 provider 54 次、每 run 3 次。未调用模型、未读取密钥、未创建正式批次。
+- 阻塞：ADR-0015 的 evidence-null 单独决策门尚未在决策记录中关闭；ADR-0014 的历史授权表仍写 v2，需同步当前 v4 scope；项目负责人尚未批准新的唯一 batch_id。
+- 分工：Codex 负责关闭文档/决策门和运行前独立复核；项目负责人负责批次授权；CC 仅在授权后使用现有 runner 执行；另一 Codex 对话框保留给批次完成后的独立结果复核。
+- 产物：`agent-work/reviews/APP-001-V4-FORMAL-RUN-READINESS.md`、`agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md`、`agent-work/llm/APP-001-v4-effect-evaluation/checkpoint.md`。

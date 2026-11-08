@@ -56,6 +56,7 @@
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
 | APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向，相关激活已在 `main` 完成。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
 | APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC + Codex | done | 激活提交 `85f9e71`、closeout `f858be8` 和合入审查 `c18fd35` 已进入 `main`；Python 3.11.18 下 71 专项、685 LLM（8 个既有 FUSE skip）、17 Schema 通过，v4/v3/acceptance-set 哈希核对一致，正式 gate 仍关闭。真实 v4 模型效果尚未测量。 |
+| APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测准备 | Codex + 项目负责人 + CC | planned | 已建立运行前审查和授权模板；尚未授权或启动模型请求。需先关闭 evidence-null 决策门、同步 ADR-0014 的 v4 scope，并由项目负责人批准新的唯一批次。 |
 
 ## 阻塞项
 
@@ -74,7 +75,8 @@
 
 ## 下一步
 
-1. 若要测 v4 模型效果，先由 Codex 完成运行前审查清单和唯一批次授权模板，再由项目负责人明确批准批次 ID、模型范围、预算和 provider；在批准前不发起模型请求。
-2. 获得授权后由 CC 按现有 runner 执行新批次；Codex 独立复核 raw response、预算、身份、解析、Schema 和决策质量，旧批次只读且不混合统计。
-3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
-4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
+1. 关闭 `APP-001-V4-FORMAL-EFFECT-EVALUATION` 的 P1/P2 前置项：完成 evidence-null 决策记录，并同步 ADR-0014 的当前 v4 scope。
+2. Codex 根据 `agent-work/reviews/APP-001-V4-FORMAL-RUN-READINESS.md` 完成运行前审查；项目负责人填写并批准 `agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md`。
+3. 获得授权后由 CC 按现有 runner 执行新批次；Codex 独立复核 raw response、预算、身份、解析、Schema 和决策质量，旧批次只读且不混合统计。
+4. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
+5. 第二族扩展另行决策，不作为 APP-001 前置依赖。
