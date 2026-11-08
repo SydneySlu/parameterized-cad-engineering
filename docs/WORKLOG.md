@@ -1732,3 +1732,18 @@ commit=待提交
 - 阻塞：ADR-0015 的 evidence-null 单独决策门尚未在决策记录中关闭；ADR-0014 的历史授权表仍写 v2，需同步当前 v4 scope；项目负责人尚未批准新的唯一 batch_id。
 - 分工：Codex 负责关闭文档/决策门和运行前独立复核；项目负责人负责批次授权；CC 仅在授权后使用现有 runner 执行；另一 Codex 对话框保留给批次完成后的独立结果复核。
 - 产物：`agent-work/reviews/APP-001-V4-FORMAL-RUN-READINESS.md`、`agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md`、`agent-work/llm/APP-001-v4-effect-evaluation/checkpoint.md`。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-FINAL-PREFLIGHT / Codex / review / 2026-11-08
+
+- 动作：完成决策同步和 final preflight；修正 readiness、checkpoint 与状态页中的过期 baseline、P1/P2 状态和 Ollama Schema hash 口径。
+- 结果：`main` 与 `origin/main` 同步于 `7bafecb`；P1 evidence-null 门由 `ADR-0015-CLOSEOUT` 关闭，P2 当前 v4 继承 scope 由 `ADR-0014-AMENDMENT` 同步；v4 prompt SHA-256=`73cb6b8f…`；当前 v4 Ollama Schema SHA-256=`04d159d2…`，`d82e53ad…` 保留为 v2 历史 smoke hash。
+- 环境证据：`/opt/homebrew/bin/python3.11` 为 3.11.18；Ollama 0.40.14 可访问；`qwen3:8b` digest=`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`；RET-002 manifest SHA-256=`b7b6c737…`、candidate_roles=`('retrieval_source',)`、default_top_k=`3`。
+- 安全边界：当前 shell 未注入 `DEEPSEEK_API_KEY`，仓库根 `.env` 仅做存在性检查未读取；没有调用 DeepSeek/Ollama chat、没有创建新正式批次、没有修改旧批次，`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- 验证：prompt/loader/schema 哈希核对、main/origin 同步、runtime/model metadata、retrieval identity 和空批次目录检查均完成；工作区仍有本次文档改动待提交。
+- 下一步：项目负责人填写并明确批准 `agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md` 中的新唯一 `batch_id` 和完整 36-run scope；批准前不得让 CC 启动正式运行。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-PREFLIGHT-TEST-LIMIT / Codex / review / 2026-11-08
+
+- 结果：Python 3.11.18 下 v4 activation 专项 71/71、关键 parser/provider/R3 回归 114/114、Schema 17/17、`py_compile` 和 `git diff --check` 通过。
+- 限制：LLM 全量 685 项复跑出现 1 项既有时间戳批次 ID 碰撞（测试间复用了 `work/app001-runs` 目录）和 8 项既有 FUSE skip；失败测试单独复跑通过，R6 并发类单独运行通过。该问题属于测试隔离稳定性，不是本次文档同步引入，也未改生产代码。
+- 决策：preflight 仍保持 `review`，不将全量结果宣称为全绿；真实模型调用继续等待项目负责人批准新的唯一 `batch_id` 和完整固定 scope。

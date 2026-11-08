@@ -441,3 +441,48 @@ v3 正式批次的字段抽取与解析契约通过，但 Ollama 在 A03 单位�
 ### 当前结论
 
 本 ADR 已被项目负责人批准（策略方向）。CC 已完成激活实现单元，Codex 中枢已完成独立审查并将其合入 `main`（`c18fd35`）；版本常量、parser 版本校验、prompt loader 路径/哈希锚点和兼容性测试作为原子单元保留；v2/v3 历史只读审计路径保留；`FORMAL_EVALUATION_ALLOWED` 仍为 `False`。本 ADR 不包含真实模型评测授权，v4 效果仍需新的唯一批次和单独授权。
+
+## ADR-0015-CLOSEOUT：evidence `null` 契约门关闭记录
+
+- 日期：2026-11-08
+- 状态：closed；仅关闭 ADR-0015 的前置决策门，不授权新的正式批次
+- 依据：`APP-001-EVIDENCE-CONTRACT-FIX`，commit `352ef8a`；中枢独立审查 `agent-work/reviews/APP-001-EVIDENCE-CONTRACT-FIX-codex-review.md`
+- 关联：ADR-0015、ADR-0017；`APP-001-EVIDENCE-CONTRACT-FIX`
+
+### 结论
+
+`app001-io.v1` 的 evidence 契约要求 `field`、`quote`、`source` 为字符串。此前 parser 对显式 JSON `null` 使用了可选值守护，导致实现行为比已冻结 Ollama Schema 更宽松。`src/llm/parser.py` 已在 `352ef8a` 中移除该守护；三个字段的显式 `null` 现在统一返回 `EVIDENCE_FIELD_TYPE_ERROR`，合法字符串和空 evidence 数组保持通过，非枚举字符串 `source` 仍返回 `EVIDENCE_SOURCE_INVALID`。
+
+中枢已在 Python 3.11.18 下复核定向 parser/R1/provider 测试（119 项）、LLM 全量（499 项，通过，8 项既有 FUSE skip）、Schema 全量（17 项）、编译检查和空白检查。该修复未改变 prompt、Ollama Schema、adapter、runner、预算、授权 scope 或任何正式批次。
+
+### 边界
+
+本记录只关闭“evidence `null` 行为与 Schema 不一致”的文档决策门。它不等同于正式运行授权，不打开 `FORMAL_EVALUATION_ALLOWED`，不改变 36 个逻辑运行、108 次物理请求、provider 上限、C2/IR/CAD/geometry/STEP 禁用范围，也不允许修改或混合旧批次。
+
+## ADR-0014-AMENDMENT：当前 v4 运行继承 scope 同步记录
+
+- 日期：2026-11-08
+- 状态：synchronized；不是新的正式运行授权
+- 依据：当前 `main` 的 `src/llm/authorization.py`、`src/llm/contract.py`、v4 激活包和 `APP-001-V4-FORMAL-RUN-READINESS`
+- 关联：ADR-0014、ADR-0016、ADR-0017、ADR-0015
+
+### 目的
+
+ADR-0014 原始授权表保留 `app001-extraction.v2`，作为当时授权和历史批次的不可改写证据。v3、v4 激活均要求新批次和单独授权，因此不修改该历史表。当前授权工厂从生产 `PROMPT_VERSION` 动态读取协议版本；在 v4 已合入 `main` 后，任何新的授权申请实际继承以下同一窄范围边界：
+
+```text
+protocol_versions: {app001-io.v1, app001-extraction.v4}
+sample_set: acceptance-set-v0
+conditions: {C0, C1}
+providers: {DeepSeek, Ollama}
+models: {deepseek-flash, qwen3:8b}
+max_logical_runs: 36
+max_attempts_per_run: 3
+max_batch_attempts: 108
+max_provider_attempts: 54
+ir_cad_geometry_step_disabled: True
+```
+
+### 边界
+
+这是一条当前代码与冻结激活版本的事实同步，不构成 batch_id 批准、模型调用批准或任何旧批次重跑批准。新的正式运行仍必须使用新的唯一 `batch_id`，由项目负责人填写并明确批准授权模板；执行前仍需通过 Codex final preflight。旧 v2/v3 批次继续只读，统计不得与 v4 混合。
