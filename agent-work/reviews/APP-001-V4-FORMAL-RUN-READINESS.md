@@ -4,7 +4,7 @@
 - Status: `review`
 - Prepared by: Codex hub
 - Date: 2026-11-08
-- Baseline: `main` / `origin/main` at `7bafecb`
+- Preflight code baseline: `main` / `origin/main` at `7bafecb`; review record commit: `3c82117` (local, not pushed)
 - Scope: 只准备运行前审查和授权材料；不发起模型请求，不读取密钥值，不创建正式批次。
 
 ## 当前生产身份
