@@ -1858,3 +1858,13 @@ commit=待提交
   - `PYTHONPATH=src:. ~/.local/bin/python3.11 -m pytest tests/llm/test_run_script_v4_batch.py` → **22 passed**（Python 3.11.17）；
   - `PYTHONPATH=src:. python3 -m pytest tests/llm/test_run_script_v4_batch.py` → **22 passed**（Python 3.10.12）；
   - 本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-RUN-SCRIPT-FIX-REVIEW / Codex / review / 2026-11-09
+
+- 审查提交：`94ab151`（父提交 `6a5ac7c`），授权基线：`cc3dfbb`。
+- 独立核对：本地 `main` 是授权基线的后代；相对 `src/llm/`、`src/retrieval/`、`src/schema/`、`src/cad_compilation/`、冻结 prompt、acceptance set、RET-002 配置和 manifest 的生产差异为 0；目标正式批次目录不存在。
+- 代码入口：`preflight()` 已真实调用 `ensure_batch_dir_absent()` 和 `check_ollama_runtime()`；前者拒绝任何已存在批次目录，后者检查 Ollama version、model presence 和 digest。
+- Python 3.11.18 专项：`tests.llm.test_run_script_v4_batch` 22/22 通过；脚本/测试 `py_compile` 通过；`git diff --check` CLEAN。
+- 边界：本轮未调用 DeepSeek/Ollama chat，未启动 runner，未读取或输出密钥值，未修改旧批次。
+- 结论：窄范围修正通过中枢独立审查，可在 push 后进入已授权正式批次执行门。非阻塞改进项：`run_formal_not_called` 测试直接调用 helper，后续可补完整 `preflight()` 集成覆盖。
+- 下一步：用户 push 本地 `main` 的两个后代提交并核对远端哈希；之后按既有授权在 Mac 原生环境执行脚本，批次结果再由 Codex 独立复核。
