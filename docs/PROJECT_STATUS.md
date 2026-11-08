@@ -55,7 +55,7 @@
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
 | APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向。待 push 后核对远端。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
-| APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC | review | ADR-0017 accepted；CC 在分支 `cc/APP-001-V4-ACTIVATION` 完成激活单元：v4 冻结 prompt、manifest、prompt loader/contract/parser 原子更新、v2/v3 只读审计路径保留、71 个新专项测试、685 LLM + 17 Schema 全部通过；`FORMAL_EVALUATION_ALLOWED=False` 未改变；未调用模型、未读取密钥、未授权新批次。待 Codex 中枢独立审查后合并到 main |
+| APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC + Codex | review | 本地激活提交 `85f9e71` 与 closeout `f858be8` 已由中枢在 Python 3.11.18 下复核：71 专项、685 LLM（8 个既有 FUSE skip）、17 Schema 通过；文档收束正确，哈希和正式 gate 均未变。等待将 `cc/APP-001-V4-ACTIVATION` push 并核对远端 HEAD 后再做最终合入审查；未调用模型或读取密钥 |
 
 ## 阻塞项
 

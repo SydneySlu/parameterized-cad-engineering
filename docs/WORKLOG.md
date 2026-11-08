@@ -4,6 +4,15 @@
 
 ## 2026-11-08
 
+### APP-001-V4-ACTIVATION-CLOSEOUT-FIX-CODEX-REVIEW / Codex / review
+
+- 动作：按交接协议独立复核 `cc/APP-001-V4-ACTIVATION` 的 closeout 差异 `85f9e71..f858be8`，核对提交链、文档范围、冻结哈希、生产 gate，并在固定 Python 3.11.18 环境重跑验证。
+- 结果：仅 7 个文档/注释/交付记录文件变化；没有测试文件、冻结 prompt、acceptance-set、运行逻辑、预算/授权/provider/retry 配置变化。激活实现提交为 `85f9e71`，closeout 内容提交为 `d01eb81`，当前 HEAD `f858be8` 修正了 closeout 日志中的提交引用。
+- 验证：v4 activation 71 项通过；LLM 全量 685 项通过、8 个既有 FUSE skip；Schema 17 项通过；Python 3.11.18 `py_compile`、`git diff --check` 通过。正常 v4 envelope 通过默认 parser；旧 v3 envelope 被默认 parser 以 `PROMPT_VERSION_MISMATCH` 拒绝。
+- 身份/边界：v4 prompt SHA-256=`73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`；v3 rollback SHA-256=`3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b`；acceptance-set SHA-256=`ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf`；`FORMAL_EVALUATION_ALLOWED=False`。未调用模型、读取密钥或修改批次。
+- 限制：本地分支仍错误跟踪 `origin/codex/APP-001-V3-DECISION-FIX-DRAFT`；对 `origin/cc/APP-001-V4-ACTIVATION` 的 `git ls-remote` 超时，远端发布状态未确认，因此任务保持 review，暂不标记合入放行。
+- 下一步：项目负责人 push `cc/APP-001-V4-ACTIVATION` 当前完整本地分支，并将远端 ref 与 push 时 `git rev-parse HEAD` 输出核对一致；之后 Codex 再做最终合入审查。真实 v4 效果评测仍需新的唯一批次和明确授权。
+
 ### APP-001-V4-ACTIVATION / CC / review
 
 - 动作：按 ADR-0017（项目负责人批准策略方向）完成 APP-001 extraction v4 的版本化激活实现单元。在分支 `cc/APP-001-V4-ACTIVATION`（基线 `1d84b12`，来自 `origin/codex/APP-001-V3-DECISION-FIX-DRAFT`）上执行以下工作：
