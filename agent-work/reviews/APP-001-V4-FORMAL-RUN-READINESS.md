@@ -1,10 +1,10 @@
 # APP-001 v4 正式效果评测运行前审查
 
 - Task ID: `APP-001-V4-FORMAL-EFFECT-EVALUATION`
-- Status: `review`
+- Status: `in_progress` (authorization recorded; CC execution pending)
 - Prepared by: Codex hub
 - Date: 2026-11-08
-- Preflight code baseline: `main` / `origin/main` at `7bafecb`; review record commit: `3c82117` (local, not pushed)
+- Preflight code baseline: `main` / `origin/main` at `80cad1b7fc110e0aa10c63aced7271749c3ffadf`
 - Scope: 只准备运行前审查和授权材料；不发起模型请求，不读取密钥值，不创建正式批次。
 
 ## 当前生产身份
@@ -47,7 +47,7 @@ ir_cad_geometry_step_disabled: True
 
 ### P2：ADR-0014 scope 文档同步 — closed
 
-ADR-0014 的原始授权表保留 `app001-extraction.v2` 作为历史批次证据；`ADR-0014-AMENDMENT` 已同步当前生产 v4 的继承 scope。当前 `src/llm/authorization.py` 动态读取生产 `PROMPT_VERSION`，因此新的授权申请使用 v4，但仍须新的唯一 `batch_id` 和负责人批准。
+ADR-0014 的原始授权表保留 `app001-extraction.v2` 作为历史批次证据；`ADR-0014-AMENDMENT` 已同步当前生产 v4 的继承 scope。当前 `src/llm/authorization.py` 动态读取生产 `PROMPT_VERSION`，因此本批次使用 v4；唯一 `batch_id` 和负责人批准已记录在授权模板中。
 
 证据：`docs/DECISIONS.md`、v4 manifest、`src/llm/authorization.py` 和 runner 入口一致；旧 v2/v3 批次和历史授权证据保持只读。
 
@@ -75,7 +75,7 @@ ADR-0014 的原始授权表保留 `app001-extraction.v2` 作为历史批次证�
 
 已在当前共享仓库完成以下只读检查：
 
-- `main` 与 `origin/main` 同步：`7bafecb`；无 `.git/index.lock`；
+- `main` 与 `origin/main` 同步：`80cad1b7fc110e0aa10c63aced7271749c3ffadf`；无 `.git/index.lock`；
 - `/opt/homebrew/bin/python3.11 --version`：`Python 3.11.18`；
 - v4 prompt 文件 SHA-256、loader 常量和 manifest 一致：`73cb6b8f…`；
 - 当前 v4 Ollama Schema SHA-256：`04d159d2…`；旧 `d82e53ad…` 仅作 v2 历史证据；
@@ -83,31 +83,31 @@ ADR-0014 的原始授权表保留 `app001-extraction.v2` 作为历史批次证�
 - RET-002 冻结身份：manifest SHA-256 `b7b6c737…`、`candidate_roles=('retrieval_source',)`、`default_top_k=3`；
 - 旧批次目录保持存在且未修改；未创建拟议 v4 新批次目录；
 - Python 3.11.18 下 v4 activation 专项 71/71、关键 parser/provider/R3 回归 114/114、Schema 17/17、py_compile 和 `git diff --check` 通过；
-- LLM 全量 685 项复跑未完全清零：1 项既有时间戳批次 ID 碰撞导致的测试隔离失败、8 项既有 FUSE skip；该失败测试单独运行通过，未改生产代码；
+- LLM 全量 685 项在 `d422877` 的测试隔离修复后稳定通过，8 项既有 FUSE skip；该修复已合入当前主线，未改生产代码；
 - 未调用 DeepSeek/Ollama chat 接口、未读取密钥值、未产生正式运行产物。
 
-当前 preflight 结论为 `review`：技术前置项 P1/P2 已关闭，尚差项目负责人填写并批准授权模板中的新唯一 `batch_id` 和固定完整 scope。
+当前 preflight 结论为 `pass`：技术前置项 P1/P2 已关闭，项目负责人已批准新唯一 `batch_id` `app001-phase1-v4-20261109-01` 和固定完整 scope。授权 scope hash 为 `a57b69664e816be709cc7dfd049dbad389461203857f27ea3ffe302729d04c5f`。
 
 ## 放行顺序
 
-1. 项目负责人填写并明确批准授权模板中的唯一 `batch_id` 和固定完整 scope；当前代码只接受冻结的 36-run scope，不能临时缩小 provider 或样例范围。
-2. CC 使用现有 runner 执行；不得修改生产代码、prompt、Schema、预算或授权工厂。
+1. CC 使用现有 runner 执行已批准的 `app001-phase1-v4-20261109-01`；不得修改生产代码、prompt、Schema、预算或授权工厂。
 3. Codex 独立复核 raw response、预算、身份、解析、Schema、决策、失败证据和 provider 错误；真实效果结论与离线测试分开报告。
 
 ## 当前结论
 
-`APP-001-V4-FORMAL-EFFECT-EVALUATION` 处于 `review`。v4 已是生产离线契约，P1/P2 已关闭；在项目负责人批准新的唯一批次和固定 scope 前，仍不得启动真实模型批次。
+`APP-001-V4-FORMAL-EFFECT-EVALUATION` 处于 `in_progress`。v4 已是生产离线契约，P1/P2 已关闭，项目负责人已批准唯一批次和固定 scope；当前可由 CC 执行，Codex 尚未对任何模型结果作效果结论。
 
 ## handoff_self_check
 
 ```text
 changed=agent-work/reviews/APP-001-V4-FORMAL-RUN-READINESS.md,
+        agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md,
         agent-work/llm/APP-001-v4-effect-evaluation/checkpoint.md,
-        docs/PROJECT_STATUS.md, docs/DECISIONS.md, docs/WORKLOG.md
+        docs/PROJECT_STATUS.md, docs/WORKLOG.md
 commands=main/origin sync, Python 3.11.18, prompt/schema/hash and runtime identity checks;
          no model chat request and no key value access
-confirmed=v4 identity, dynamic authorization scope, 36/108/54 budget,
-          retrieval identity gate, old-batch read-only boundary, P1/P2 closed
-unresolved=owner batch authorization; no model request started
-next_agent_focus=project owner fills and approves authorization template, then hand CC the approved batch
+confirmed=v4 identity, approved batch identity, dynamic authorization scope, 36/108/54 budget,
+          retrieval identity gate, old-batch read-only boundary, P1/P2 closed, no model request started by Codex
+unresolved=CC execution and post-run Codex result review
+next_agent_focus=CC executes only the approved batch with the existing runner
 ```

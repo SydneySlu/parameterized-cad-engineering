@@ -1783,3 +1783,10 @@ commit=待提交
 - 验证：Python 3.11.18 下 `tests.llm.test_r3_fixes` 51/51、Schema 全量 17/17、LLM 全量 685 通过且 8 个既有 FUSE skip；`py_compile` 与 `git diff --check` 通过。
 - 结论：测试隔离修复已满足合并后验收，任务标记为 `done`。没有真实模型请求、没有读取密钥、没有创建正式批次。
 - 下一步：继续 v4 正式效果评测的授权门；项目负责人需要填写并明确批准新的唯一 `batch_id` 和冻结 scope，批准前保持模型调用关闭。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-AUTHORIZATION / Codex / in_progress / 2026-11-09
+
+- 动作：记录项目负责人 Wang sikai 对新批次 `app001-phase1-v4-20261109-01` 的明确批准，并完成无模型 final preflight。
+- 授权：36 个逻辑运行（9 × 2 条件 × 2 provider）；DeepSeek `deepseek-flash` 与 Ollama `qwen3:8b`；每 run 3 次、全批次 108 次、每 provider 54 次；C2/IR/CAD/geometry/STEP 禁用；旧批次只读且不混合统计。
+- 核验：main/origin/main=`80cad1b7fc110e0aa10c63aced7271749c3ffadf`；Python 3.11.18；v4 prompt SHA-256=`73cb6b8f…`；acceptance-set SHA-256=`ed59e2b6…`；Ollama 0.40.14、Schema SHA-256=`04d159d2…`；RET-002 manifest SHA-256=`b7b6c737…`；授权 scope hash=`a57b6966…`；新批次目录不存在；密钥值未读取，未发起模型请求。
+- 结果：Codex preflight=`pass`；授权模板和交接 checkpoint 已补全，等待 CC 使用现有 runner 执行唯一批准批次。

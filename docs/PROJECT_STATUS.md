@@ -57,13 +57,13 @@
 | APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向，相关激活已在 `main` 完成。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
 | APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC + Codex | done | 激活提交 `85f9e71`、closeout `f858be8` 和合入审查 `c18fd35` 已进入 `main`；Python 3.11.18 下 71 专项、685 LLM（8 个既有 FUSE skip）、17 Schema 通过，v4/v3/acceptance-set 哈希核对一致，正式 gate 仍关闭。真实 v4 模型效果尚未测量。 |
 | APP-001-PREFLIGHT-TEST-ISOLATION-FIX | 修复正式评测前置测试的 batch_id 碰撞 | CC + Codex | done | `e47af64` 实现 UUID 测试隔离，`d422877` 完成中枢独立审查并已合入 `main`；Python 3.11.18 下 `test_r3_fixes` 51/51、LLM 全量 685 通过（8 个既有 FUSE skip）、Schema 17/17 通过。未改变生产代码、授权范围或正式批次。 |
-| APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测准备 | Codex + 项目负责人 + CC | review | P1 evidence-null 决策门已由 ADR-0015-CLOSEOUT 关闭，ADR-0014 当前 v4 继承 scope 已同步；尚未授权或启动模型请求，等待 final preflight 结果和项目负责人批准新的唯一批次。 |
+| APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测 | Codex + 项目负责人 + CC | in_progress | 批次 `app001-phase1-v4-20261109-01` 已由 Wang sikai 于 2026-11-09 00:10 Asia/Shanghai 批准；最终无模型 preflight 通过，等待 CC 使用现有 runner 执行。 |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
-- APP-001 既有批次均保留且处于 review：v3 批次有 32 条模型响应和 4 条 C1 请求前安全阻塞；显式字段全部精确，决策有 3 条不一致，确定性 Schema 20/32 通过。R1 证据留存和阻塞审计代码已合入 main。C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
-- APP-001-V4-ACTIVATION 已由 Codex 中枢独立审查并合入 `main`（`c18fd35`）；v4 已是生产离线契约版本，但真实模型效果尚未测量。若要测 v4 效果，必须使用新的唯一批次 ID 并取得单独项目负责人授权。
+- APP-001 既有批次均保留且处于 review：v3 批次有 32 条模型响应和 4 条 C1 请求前安全阻塞；显式字段全部精确，决策有 3 条不一致，确定性 Schema 20/32 通过。R1 证据留存和阻塞审计代码已合入 main。C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或混合统计。
+- APP-001-V4-ACTIVATION 已由 Codex 中枢独立审查并合入 `main`（`c18fd35`）；v4 已是生产离线契约版本，但真实模型效果尚未测量。新的唯一批次和完整 scope 已由项目负责人批准，当前等待 CC 执行。
 - APP-001-PREFLIGHT-TEST-ISOLATION-FIX 已合入 `main`（`d422877`）。Python 3.11.18 下连续全量 LLM 测试稳定为 685 通过、8 个既有 FUSE skip；该修复只影响测试隔离，不构成真实模型效果证据。
 - `APP-001-EVIDENCE-CONTRACT-FIX` 已由 `352ef8a` 修复并经 Python 3.11.18 中枢复核；ADR-0015 的 evidence-null 前置门已关闭。ADR-0014 的历史 v2 授权表保留不改，当前 v4 继承 scope 已追加同步记录。
 
@@ -73,13 +73,13 @@
 - A04 C1 因用户输入缺少 `bore_d` 而正确阻塞；A07 C1 因 `bore_d=75` 不满足 envelope 的 CAD-003 目录校验，且不具备 flat 查询所需六字段而正确阻塞。不得从 evaluator-only 标签补值或猜字段。样例级回归由 Codex 在本工作单元后独立补齐/验收。
 - 8 个 Schema 拒绝的只读决策质量分析已完成；若要改 Prompt/输出策略，必须版本化、另建批次，并另行取得新模型运行授权。
 - APP-001-DECISION-POLICY-V3-DRAFT 原有缺口已在同一候选分支窄修并经中枢复审通过（`b757e9c`）：候选 prompt 提供冻结目录行和螺钉规则作为可见判定参考，静态测试核对该表与 CAD-003 完全一致；`answer` 要求 `bore_d` 为离散目录值，新增 bore_d=75 拒绝及 A06 边界正常用例。候选未激活，离线测试不构成模型效果结论；不授权新正式批次。
-- APP-001 extraction v3 的九样例离线验收已补齐：A01-A09 的 case ID、A03 单位换算、A08 retrieval reference 隔离、主张保留、拒绝/澄清边界和 prompt/激活包哈希均有测试。项目负责人已接受 ADR-0016；v3 激活与显式 v2 历史只读解析入口经 Codex 独立复核并合入 `main`（`7dc7a37`），Python 3.11.18 下 LLM 576 项通过（8 个既有环境 skip）、Schema 17 项通过。模型效果尚未验证，正式 gate 仍关闭，未授权新正式批次。
+- APP-001 extraction v3 的九样例离线验收已补齐：A01-A09 的 case ID、A03 单位换算、A08 retrieval reference 隔离、主张保留、拒绝/澄清边界和 prompt/激活包哈希均有测试。项目负责人已接受 ADR-0016；v3 激活与显式 v2 历史只读解析入口经 Codex 独立复核并合入 `main`（`7dc7a37`），Python 3.11.18 下 LLM 576 项通过（8 个既有环境 skip）、Schema 17 项通过。该段为历史版本记录；当前 v4 批次已单独授权，效果仍待测量。
 - DeepSeek 5xx 继续按 ADR-0010 当前最多两次重试；除非服务状态或错误证据支持，不调整 provider 配置或重试策略。
 
 ## 下一步
 
-1. Final preflight 的测试隔离问题已关闭；项目负责人填写并批准 `agent-work/llm/APP-001-v4-effect-evaluation/authorization-request-template.md` 中新的唯一 `batch_id` 和完整 scope。
-2. 在明确授权前不调用 DeepSeek/Ollama；授权后由 CC 按现有 runner 执行，不能修改生产代码或授权 scope。
-3. 获得授权后由 CC 按现有 runner 执行新批次；Codex 独立复核 raw response、预算、身份、解析、Schema 和决策质量，旧批次只读且不混合统计。
+1. Final preflight 和测试隔离问题已关闭；批准的 `app001-phase1-v4-20261109-01` 记录在授权模板中。
+2. CC 按现有 runner 执行该批次，不能修改生产代码、prompt、Schema、预算或授权 scope；遇到身份、预算、请求前阻塞或 5xx 证据异常立即停止并记录。
+3. 批次完成后由 Codex 独立复核 raw response、预算、身份、解析、Schema 和决策质量；旧批次只读且不混合统计。
 4. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
 5. 第二族扩展另行决策，不作为 APP-001 前置依赖。
