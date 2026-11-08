@@ -1868,3 +1868,13 @@ commit=待提交
 - 边界：本轮未调用 DeepSeek/Ollama chat，未启动 runner，未读取或输出密钥值，未修改旧批次。
 - 结论：窄范围修正通过中枢独立审查，可在 push 后进入已授权正式批次执行门。非阻塞改进项：`run_formal_not_called` 测试直接调用 helper，后续可补完整 `preflight()` 集成覆盖。
 - 下一步：用户 push 本地 `main` 的两个后代提交并核对远端哈希；之后按既有授权在 Mac 原生环境执行脚本，批次结果再由 Codex 独立复核。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-BATCH-REVIEW / Codex / review / 2026-11-09
+
+- 发现：目标批次目录已包含完整产物；重新启动脚本按目录保护在 preflight 中止，未发起新请求、未覆盖旧产物。
+- 批次核对：`runs.jsonl` 36 条逻辑记录；32 条模型响应、4 条 C1 请求前阻塞；DeepSeek/Ollama 和 C0/C1 各 18 条逻辑组合。
+- 预算核对：48 次物理 HTTP，DeepSeek 16 次 `/chat/completions`，Ollama 16 次 `/api/chat` + 16 次 `/api/tags`；全部成功，均低于 108 总上限和 54/provider 上限。
+- 证据核对：32 个 raw response 与记录长度/SHA-256 一致；v4/contract v1、模型身份、Python 3.11.18、prompt hash 和 schema 版本一致；未发现密钥模式。
+- 质量核对：32/32 parser、contract、projection 通过；显式字段、evidence 和 A07 unsupported 标签均精确。决策为 29/32 符合允许集合，3 条 Ollama 偏差（A02 C1、A03 C0、A08 C1）；DeepSeek A05 C0/C1 各有 `outer_d` 同时出现在 extracted 和 missing_fields 的自洽性问题。
+- 边界：Schema 20 pass/12 fail；construction gate 17 pass/15 fail；IR/CAD/geometry/STEP 未运行；旧批次未修改，正式结果不与旧批次混合。
+- 结论：批次证据和安全/预算边界通过，但任务保持 `review`，不能宣称 v4 决策策略已解决偏差。若修正，必须版本化并新建唯一批次、重新授权。
