@@ -10,12 +10,16 @@ Coverage:
     - descendant with zero production-path diffs passes
     - non-ancestor HEAD is rejected
     - descendant with production-path diff is rejected (each path class)
-  BatchDirProtection
+  BatchDirProtection (calls real ensure_batch_dir_absent)
     - absent directory passes
     - directory that already exists (empty) is rejected
     - directory that already exists with runs.jsonl is rejected
-  OllamaAbsentAbortsBeforeRunner
-    - preflight aborts when Ollama is unreachable before any runner call
+  OllamaRuntime (calls real check_ollama_runtime)
+    - unreachable → aborts
+    - unreachable → run_formal not called
+    - model missing → aborts
+    - digest mismatch → aborts
+    - good mock response → passes, returns digest
   SyntaxAndImport
     - py_compile passes on the script
   DryRun
@@ -222,112 +226,121 @@ class CommitValidationTests(unittest.TestCase):
         self.assertEqual(result, descendant)
 
 
-# ── BatchDirProtection ────────────────────────────────────────────────────────
+# ── BatchDirProtection (calls real ensure_batch_dir_absent) ───────────────────
 
 class BatchDirProtectionTests(unittest.TestCase):
 
     def test_absent_dir_passes(self):
-        """A batch directory that does not exist at all must pass the check."""
+        """ensure_batch_dir_absent must not raise when the directory is absent."""
         with tempfile.TemporaryDirectory() as tmp:
-            # batch_dir does NOT exist inside tmp
             batch_dir = Path(tmp) / "app001-phase1-v4-20261109-01"
             self.assertFalse(batch_dir.exists())
-            # no SystemExit should be raised
-            if batch_dir.exists():
-                self.fail("Directory should not exist")
+            # Must not raise SystemExit
+            _script.ensure_batch_dir_absent(batch_dir)
 
     def test_existing_empty_dir_rejected(self):
-        """An existing empty batch directory must cause an abort."""
+        """ensure_batch_dir_absent must abort on an existing empty directory."""
         with tempfile.TemporaryDirectory() as tmp:
             batch_dir = Path(tmp) / "app001-phase1-v4-20261109-01"
             batch_dir.mkdir()
-            # Simulate the check in preflight()
             with self.assertRaises(SystemExit) as ctx:
-                if batch_dir.exists():
-                    _script._abort(
-                        f"batch directory already exists: {batch_dir}"
-                    )
+                _script.ensure_batch_dir_absent(batch_dir)
             self.assertNotEqual(ctx.exception.code, 0)
 
     def test_existing_dir_with_runs_jsonl_rejected(self):
-        """An existing batch directory with runs.jsonl must also be rejected."""
+        """ensure_batch_dir_absent must abort on a directory with runs.jsonl."""
         with tempfile.TemporaryDirectory() as tmp:
             batch_dir = Path(tmp) / "app001-phase1-v4-20261109-01"
             batch_dir.mkdir()
             (batch_dir / "runs.jsonl").write_text("{}\n")
             with self.assertRaises(SystemExit) as ctx:
-                if batch_dir.exists():
-                    _script._abort(
-                        f"batch directory already exists: {batch_dir}"
-                    )
+                _script.ensure_batch_dir_absent(batch_dir)
             self.assertNotEqual(ctx.exception.code, 0)
 
 
-# ── OllamaAbsentAbortsBeforeRunner ────────────────────────────────────────────
+# ── OllamaRuntime (calls real check_ollama_runtime) ───────────────────────────
 
-class OllamaAbsentTests(unittest.TestCase):
+def _fake_urlopen_ok(*responses):
+    """Build a urlopen_fn that yields the given JSON response bodies in order."""
+    import io
+    import json as _json
+    iterator = iter(responses)
 
-    def test_ollama_unreachable_aborts_before_runner(self):
-        """When Ollama is unreachable, preflight aborts before any runner call.
+    class _FakeResp:
+        def __init__(self, body: str):
+            self._body = body.encode("utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def read(self):
+            return self._body
 
-        Uses patch to:
-        - Bypass git, sha256, retrieval, auth checks (already tested above).
-        - Make urllib.request.urlopen raise ConnectionRefusedError.
-        - Assert App001Runner.run_formal is never called.
-        """
-        import urllib.request as _urllib_request
+    def urlopen_fn(url, timeout=None):
+        body = next(iterator)
+        return _FakeResp(_json.dumps(body))
+    return urlopen_fn
 
-        def fake_urlopen(url, timeout=None):
-            raise ConnectionRefusedError("Connection refused (test)")
 
-        runner_called = []
+def _fake_urlopen_raises(exc: Exception):
+    """Build a urlopen_fn that always raises."""
+    def urlopen_fn(url, timeout=None):
+        raise exc
+    return urlopen_fn
 
-        with patch.object(_urllib_request, "urlopen", side_effect=fake_urlopen):
-            with self.assertRaises(SystemExit) as ctx:
-                # Only test the Ollama connectivity section in isolation.
-                try:
-                    with _urllib_request.urlopen(
-                        f"{_script.OLLAMA_HOST}/api/version", timeout=5
-                    ) as resp:
-                        pass
-                except Exception:
-                    # Simulate the abort path
-                    _script._abort("Ollama not reachable (test)")
-            self.assertNotEqual(ctx.exception.code, 0)
 
-        # run_formal was never called
-        self.assertEqual(runner_called, [])
+class OllamaRuntimeTests(unittest.TestCase):
 
-    def test_ollama_abort_happens_before_run_formal(self):
-        """Full preflight: Ollama failure exits before App001Runner.run_formal."""
-        import urllib.request as _urllib_request
+    def test_ollama_unreachable_aborts(self):
+        """check_ollama_runtime must abort when /api/version is unreachable."""
+        urlopen_fn = _fake_urlopen_raises(ConnectionRefusedError("refused"))
+        with self.assertRaises(SystemExit) as ctx:
+            _script.check_ollama_runtime(urlopen_fn=urlopen_fn)
+        self.assertNotEqual(ctx.exception.code, 0)
+
+    def test_ollama_unreachable_run_formal_not_called(self):
+        """When Ollama is unreachable, run_formal must never be called."""
         import src.llm.runner as _runner_module
 
         run_formal_called = []
 
-        def fake_urlopen(url, *args, **kwargs):
-            raise ConnectionRefusedError("no ollama (test)")
-
-        original_run_formal = _runner_module.App001Runner.run_formal
-
         def spy_run_formal(self, *a, **kw):
             run_formal_called.append(True)
-            return original_run_formal(self, *a, **kw)
 
-        with patch.object(_urllib_request, "urlopen", side_effect=fake_urlopen):
-            with patch.object(_runner_module.App001Runner, "run_formal", spy_run_formal):
-                with self.assertRaises(SystemExit):
-                    # Simulate the Ollama check + abort path directly
-                    try:
-                        with _urllib_request.urlopen(
-                            f"{_script.OLLAMA_HOST}/api/version", timeout=5
-                        ):
-                            pass
-                    except Exception:
-                        _script._abort("Ollama not reachable")
+        urlopen_fn = _fake_urlopen_raises(ConnectionRefusedError("refused"))
+        with patch.object(_runner_module.App001Runner, "run_formal", spy_run_formal):
+            with self.assertRaises(SystemExit):
+                _script.check_ollama_runtime(urlopen_fn=urlopen_fn)
 
         self.assertEqual(run_formal_called, [],
-                         "run_formal must not be called when Ollama is absent")
+                         "run_formal must not be called when Ollama is unreachable")
+
+    def test_ollama_model_missing_aborts(self):
+        """check_ollama_runtime must abort when the model is not in /api/tags."""
+        version_resp = {"version": "0.40.14"}
+        tags_resp = {"models": [{"name": "other-model", "digest": "abc"}]}
+        urlopen_fn = _fake_urlopen_ok(version_resp, tags_resp)
+        with self.assertRaises(SystemExit) as ctx:
+            _script.check_ollama_runtime(urlopen_fn=urlopen_fn)
+        self.assertNotEqual(ctx.exception.code, 0)
+
+    def test_ollama_digest_mismatch_aborts(self):
+        """check_ollama_runtime must abort when the digest prefix is wrong."""
+        version_resp = {"version": "0.40.14"}
+        tags_resp = {"models": [{"name": "qwen3:8b", "digest": "deadbeef" + "0" * 24}]}
+        urlopen_fn = _fake_urlopen_ok(version_resp, tags_resp)
+        with self.assertRaises(SystemExit) as ctx:
+            _script.check_ollama_runtime(urlopen_fn=urlopen_fn)
+        self.assertNotEqual(ctx.exception.code, 0)
+
+    def test_ollama_good_response_passes(self):
+        """check_ollama_runtime must return the digest on a valid response."""
+        good_digest = _script.OLLAMA_EXPECTED_DIGEST_PREFIX + "782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
+        version_resp = {"version": "0.40.14"}
+        tags_resp = {"models": [{"name": "qwen3:8b", "digest": good_digest}]}
+        urlopen_fn = _fake_urlopen_ok(version_resp, tags_resp)
+        result = _script.check_ollama_runtime(urlopen_fn=urlopen_fn)
+        self.assertEqual(result, good_digest)
 
 
 # ── SyntaxAndImport ───────────────────────────────────────────────────────────

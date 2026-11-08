@@ -203,6 +203,92 @@ def verify_commit(
     )
     return actual_commit
 
+# ── extracted preflight helpers ───────────────────────────────────────────────
+
+def ensure_batch_dir_absent(batch_dir: Path) -> None:
+    """Abort if the batch directory already exists for any reason.
+
+    Raises SystemExit immediately if ``batch_dir`` exists, regardless of
+    whether it is empty or contains files.  Never deletes or modifies the
+    existing directory.
+
+    Args:
+        batch_dir: Absolute path to the candidate batch output directory.
+    """
+    if batch_dir.exists():
+        _fail("batch directory already exists", str(batch_dir))
+        _abort(
+            f"batch directory already exists: {batch_dir}\n"
+            "  Refusing to overwrite or resume any existing batch.\n"
+            "  If this is a leftover empty directory, remove it manually before running."
+        )
+    _ok("batch dir absent", batch_dir.name)
+
+
+def check_ollama_runtime(
+    *,
+    host: str = OLLAMA_HOST,
+    model: str = OLLAMA_MODEL,
+    expected_digest_prefix: str = OLLAMA_EXPECTED_DIGEST_PREFIX,
+    urlopen_fn: Callable = urllib.request.urlopen,
+) -> str:
+    """Verify that Ollama is running and the expected model is loaded.
+
+    Performs two HTTP calls via ``urlopen_fn`` (injectable for tests):
+    1. GET ``<host>/api/version`` — confirms Ollama is reachable.
+    2. GET ``<host>/api/tags``    — confirms ``model`` is listed with the
+       expected digest prefix.
+
+    Returns the full digest string on success.
+    Raises SystemExit on any connectivity error, missing model, or digest
+    mismatch.
+
+    Args:
+        host: Base URL of the local Ollama service.
+        model: Model name to look for in ``/api/tags``.
+        expected_digest_prefix: Required prefix of the model digest.
+        urlopen_fn: Callable with the same signature as
+            ``urllib.request.urlopen``.  Defaults to the stdlib function;
+            override in tests to avoid real network calls.
+    """
+    print("  checking Ollama connectivity and model identity...")
+
+    # Step 1: version check
+    try:
+        with urlopen_fn(f"{host}/api/version", timeout=5) as resp:
+            version_data = json.loads(resp.read().decode())
+        ollama_version = version_data.get("version", "unknown")
+        _ok("Ollama reachable", f"version={ollama_version}")
+    except Exception as exc:
+        _fail(f"Ollama not reachable at {host}", str(exc))
+        _abort(
+            f"Ollama must be running at {host} with {model} loaded.\n"
+            "  Start Ollama: brew services start ollama\n"
+            f"  Pull model:  ollama pull {model}"
+        )
+
+    # Step 2: model digest check
+    try:
+        with urlopen_fn(f"{host}/api/tags", timeout=10) as resp:
+            tags_data = json.loads(resp.read().decode())
+        models = tags_data.get("models", [])
+        found = [m for m in models if m.get("name") == model]
+        if not found:
+            _abort(f"{model} not found in Ollama; run: ollama pull {model}")
+        digest = found[0].get("digest", "")
+        if not digest.startswith(expected_digest_prefix):
+            _fail("Ollama model digest mismatch",
+                  f"expected prefix {expected_digest_prefix!r}, got {digest[:20]!r}")
+            _abort("Wrong model version — re-pull or check Ollama")
+        _ok(f"Ollama {model} digest", f"{digest[:20]}...")
+        return digest
+    except SystemExit:
+        raise
+    except Exception as exc:
+        _abort(f"Ollama /api/tags check failed: {exc}")
+        return ""  # unreachable; keeps type checkers happy
+
+
 # ── preflight ─────────────────────────────────────────────────────────────────
 
 def preflight() -> None:
@@ -259,14 +345,7 @@ def preflight() -> None:
 
     # 7. Batch directory must not exist at all
     batch_dir = _REPO_ROOT / "work/app001-runs" / BATCH_ID
-    if batch_dir.exists():
-        _fail("batch directory already exists", str(batch_dir))
-        _abort(
-            f"batch directory already exists: {batch_dir}\n"
-            "  Refusing to overwrite or resume any existing batch.\n"
-            "  If this is a leftover empty directory, remove it manually before running."
-        )
-    _ok("batch dir absent", BATCH_ID)
+    ensure_batch_dir_absent(batch_dir)
 
     # 8. DEEPSEEK_API_KEY present (value not checked or printed)
     _load_env()
@@ -275,36 +354,7 @@ def preflight() -> None:
     _ok("DEEPSEEK_API_KEY present (value not shown)")
 
     # 9. Ollama reachable + model identity
-    print("  checking Ollama connectivity and model identity...")
-    try:
-        with urllib.request.urlopen(f"{OLLAMA_HOST}/api/version", timeout=5) as resp:
-            version_data = json.loads(resp.read().decode())
-        ollama_version = version_data.get("version", "unknown")
-        _ok("Ollama reachable", f"version={ollama_version}")
-    except Exception as exc:
-        _fail(f"Ollama not reachable at {OLLAMA_HOST}", str(exc))
-        _abort(
-            f"Ollama must be running at {OLLAMA_HOST} with {OLLAMA_MODEL} loaded.\n"
-            "  Start Ollama: brew services start ollama\n"
-            f"  Pull model:  ollama pull {OLLAMA_MODEL}"
-        )
-
-    # Check qwen3:8b digest
-    try:
-        with urllib.request.urlopen(f"{OLLAMA_HOST}/api/tags", timeout=10) as resp:
-            tags_data = json.loads(resp.read().decode())
-        models = tags_data.get("models", [])
-        found = [m for m in models if m.get("name") == OLLAMA_MODEL]
-        if not found:
-            _abort(f"{OLLAMA_MODEL} not found in Ollama; run: ollama pull {OLLAMA_MODEL}")
-        digest = found[0].get("digest", "")
-        if not digest.startswith(OLLAMA_EXPECTED_DIGEST_PREFIX):
-            _fail("Ollama model digest mismatch",
-                  f"expected prefix {OLLAMA_EXPECTED_DIGEST_PREFIX!r}, got {digest[:20]!r}")
-            _abort("Wrong qwen3:8b model version — re-pull or check Ollama")
-        _ok(f"Ollama {OLLAMA_MODEL} digest", f"{digest[:20]}...")
-    except Exception as exc:
-        _abort(f"Ollama /api/tags check failed: {exc}")
+    check_ollama_runtime()
 
     print("  [ok]  all preflight checks passed")
 

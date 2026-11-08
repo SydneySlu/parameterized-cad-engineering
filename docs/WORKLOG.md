@@ -1841,3 +1841,20 @@ commit=待提交
   - `git status`：仅 `docs/WORKLOG.md`（修改）、`scripts/run_app001_v4_formal_batch.py`（新增）、`tests/llm/test_run_script_v4_batch.py`（新增）；无生产路径变更。
 - 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有 prompt/schema/budget/授权范围/runner 生产逻辑或旧批次修改。
 - 下一步：项目负责人在 Mac 终端运行脚本执行正式批次，完成后 CC 追加结果 WORKLOG 条目并提交。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-TEST-EVIDENCE-STRENGTHEN / CC / in_progress / 2026-11-09
+
+- 动作：最小重构运行脚本和测试，将 batch 目录和 Ollama 检查提取为可测试的小函数，测试改为直接调用真实函数路径。
+- 脚本变化（`scripts/run_app001_v4_formal_batch.py`）：
+  - 新增 `ensure_batch_dir_absent(batch_dir)` — 仅在目录不存在时通过，任何已存在的目录（含空目录）立即 abort；
+  - 新增 `check_ollama_runtime(urlopen_fn=...)` — 接受可注入的 `urlopen_fn`，覆盖 `/api/version` 连通性和 `/api/tags` digest 验证；
+  - `preflight()` 改为调用上述两函数，行为不变，无生产逻辑修改。
+- 测试变化（`tests/llm/test_run_script_v4_batch.py`）：
+  - `BatchDirProtectionTests`：改为直接调用 `ensure_batch_dir_absent()`（3 个用例）；
+  - 原 `OllamaAbsentTests` 替换为 `OllamaRuntimeTests`：直接调用 `check_ollama_runtime(urlopen_fn=...)`（5 个用例：不可达/模型缺失/digest 不符/正常通过/run_formal 未调用）；
+  - 原有 commit 校验（8 个）、syntax（3 个）、dry_run（3 个）测试全部保留。
+- 验证：
+  - `~/.local/bin/python3.11 -m py_compile scripts/... tests/...` 通过；
+  - `PYTHONPATH=src:. ~/.local/bin/python3.11 -m pytest tests/llm/test_run_script_v4_batch.py` → **22 passed**（Python 3.11.17）；
+  - `PYTHONPATH=src:. python3 -m pytest tests/llm/test_run_script_v4_batch.py` → **22 passed**（Python 3.10.12）；
+  - 本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改。

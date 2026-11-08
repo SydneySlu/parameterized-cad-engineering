@@ -74,16 +74,28 @@ PYTHONPATH=src /opt/homebrew/bin/python3.11 scripts/run_app001_v4_formal_batch.p
 - Do not run C2, IR, CAD, geometry, or STEP.
 - Do not change production code, prompt, schema, budget, or authorization scope.
 
+## Test evidence (final)
+
+| Suite | Tests | Result | Runtime |
+|-------|-------|--------|---------|
+| CommitValidation | 8 | pass | Python 3.11.17 |
+| BatchDirProtection (ensure_batch_dir_absent) | 3 | pass | Python 3.11.17 |
+| OllamaRuntime (check_ollama_runtime) | 5 | pass | Python 3.11.17 |
+| SyntaxAndImport | 3 | pass | Python 3.11.17 |
+| DryRun | 3 | pass | Python 3.11.17 |
+| **Total** | **22** | **pass** | |
+
 ## handoff_self_check
 
 ```text
-changed=run script (commit validation + batch dir protection), offline tests (19),
-        checkpoint, WORKLOG
-commands=py_compile (script + tests), PYTHONPATH=src:. pytest 19/19,
-         verify_commit() against real HEAD (cc3dfbb, passes),
-         git status (only script/tests/docs modified)
+changed=run script (ensure_batch_dir_absent + check_ollama_runtime extracted),
+        tests (22, all call real helpers), checkpoint, WORKLOG
+commands=python3.11 py_compile (script + tests),
+         PYTHONPATH=src:. python3.11 pytest tests/llm/test_run_script_v4_batch.py → 22 passed,
+         same suite on python3.10 → 22 passed
 confirmed=production paths untouched, scope hash correct, batch dir absent,
-          no model request, no API key read or print
+          no model request, no API key read or print,
+          batch/Ollama tests call real extracted functions (not _abort mock)
 unresolved=Mac execution by Wang sikai; Codex result review
 next_agent_focus=after Mac run, CC appends result WORKLOG entry and commits;
                  then Codex reviews in separate session
