@@ -1769,3 +1769,10 @@ commit=待提交
 ### APP-001-V4-FORMAL-EFFECT-EVALUATION-BOOKKEEPING / Codex / review / 2026-11-08
 
 - 记录：preflight 文档状态修正提交 `ed9db84` 已完成；当前本地 `main` 比 `origin/main` ahead 2（`3c82117`、`ed9db84`），工作区干净，无 `.git/index.lock`。push 和正式批次授权仍由项目负责人决定。
+
+### APP-001-PREFLIGHT-TEST-ISOLATION-FIX / Codex / review / 2026-11-08
+
+- 动作：对 CC 提交 `e47af64` 做中枢独立验收；按交接协议在 Python 3.11.18 下连续两次运行 LLM 全量测试，并抽查 Ollama 正常与失败路径。
+- 结果：两次均为 685 passed、8 个既有 FUSE skip；`TestR4OllamaTagsChatIntegration` 5 项和 `TestR3Fix2OllamaTagsFailChatBlocked` 2 项均通过。差异仅涉及测试 batch_id 隔离、checkpoint 和日志，未改生产代码、prompt、schema、预算、授权或正式批次。
+- 记录：独立审查写入 `agent-work/reviews/APP-001-PREFLIGHT-TEST-ISOLATION-FIX-codex-review.md`；当前分支工作区待提交，未 push、未合入 `main`。
+- 下一步：提交本审查记录后由项目负责人 push `cc/APP-001-PREFLIGHT-TEST-ISOLATION-FIX` 并核对远端哈希；合入前继续保持正式模型调用关闭。
