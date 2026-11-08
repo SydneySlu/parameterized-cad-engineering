@@ -418,7 +418,7 @@ status: activation merged to main and independently reviewed (`7dc7a37`)
 - 日期：2026-11-07
 - 接受日期：2026-11-08
 - 状态：accepted；项目负责人已批准策略方向；允许执行 v4 版本化激活实现和离线验证，不包含真实模型评测授权
-- 决策人：Codex 中枢提出，项目负责人批准策略方向；激活实现由 CC 完成，待 Codex 中枢独立审查后合并到 main
+- 决策人：Codex 中枢提出，项目负责人批准策略方向；激活实现由 CC 完成，Codex 中枢独立审查后已合并到 `main`（`c18fd35`）
 - 关联：ADR-0013、ADR-0016；`APP-001-PHASE1-V3-20261107-01`
 
 ### 背景
@@ -440,4 +440,4 @@ v3 正式批次的字段抽取与解析契约通过，但 Ollama 在 A03 单位�
 
 ### 当前结论
 
-本 ADR 已被项目负责人批准（策略方向）。CC 已在 `cc/APP-001-V4-ACTIVATION` 分支完成激活实现单元；版本常量、parser 版本校验、prompt loader 路径/哈希锚点和兼容性测试已作为原子单元更新；v2/v3 历史只读审计路径保留；`FORMAL_EVALUATION_ALLOWED` 仍为 `False`；无真实模型请求、无密钥读取、无授权新批次。激活提交尚待 Codex 中枢独立审查并合并到 main 后，才能标记为 done。
+本 ADR 已被项目负责人批准（策略方向）。CC 已完成激活实现单元，Codex 中枢已完成独立审查并将其合入 `main`（`c18fd35`）；版本常量、parser 版本校验、prompt loader 路径/哈希锚点和兼容性测试作为原子单元保留；v2/v3 历史只读审计路径保留；`FORMAL_EVALUATION_ALLOWED` 仍为 `False`。本 ADR 不包含真实模型评测授权，v4 效果仍需新的唯一批次和单独授权。

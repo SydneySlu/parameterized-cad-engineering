@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-07
+更新时间：2026-11-08
 
 ## 当前结论
 
@@ -54,14 +54,14 @@
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
-| APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向。待 push 后核对远端。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
-| APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC + Codex | review | 本地激活提交 `85f9e71` 与 closeout `f858be8` 已由中枢在 Python 3.11.18 下复核：71 专项、685 LLM（8 个既有 FUSE skip）、17 Schema 通过；文档收束正确，哈希和正式 gate 均未变。等待将 `cc/APP-001-V4-ACTIVATION` push 并核对远端 HEAD 后再做最终合入审查；未调用模型或读取密钥 |
+| APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向，相关激活已在 `main` 完成。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
+| APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC + Codex | done | 激活提交 `85f9e71`、closeout `f858be8` 和合入审查 `c18fd35` 已进入 `main`；Python 3.11.18 下 71 专项、685 LLM（8 个既有 FUSE skip）、17 Schema 通过，v4/v3/acceptance-set 哈希核对一致，正式 gate 仍关闭。真实 v4 模型效果尚未测量。 |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
 - APP-001 既有批次均保留且处于 review：v3 批次有 32 条模型响应和 4 条 C1 请求前安全阻塞；显式字段全部精确，决策有 3 条不一致，确定性 Schema 20/32 通过。R1 证据留存和阻塞审计代码已合入 main。C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
-- APP-001-V4-ACTIVATION 已在 CC 分支完成激活实现，尚待 Codex 中枢独立审查并合并到 main；激活后如要测 v4 模型效果，需新 ID 正式批次和单独项目负责人授权。
+- APP-001-V4-ACTIVATION 已由 Codex 中枢独立审查并合入 `main`（`c18fd35`）；v4 已是生产离线契约版本，但真实模型效果尚未测量。若要测 v4 效果，必须使用新的唯一批次 ID 并取得单独项目负责人授权。
 
 ## 当前工作单元边界
 
@@ -74,7 +74,7 @@
 
 ## 下一步
 
-1. Codex 中枢独立审查 `cc/APP-001-V4-ACTIVATION` 分支：在 Mac Python 3.11.18 下重跑专项/全量测试，核对 v4 prompt/manifest/loader/parser 哈希，确认 v3 回滚文件未修改，确认 `FORMAL_EVALUATION_ALLOWED=False`，合并到 main。
-2. 若要测 v4 模型效果，先完成 Codex 中枢审查并合并到 main，再单独申请新的唯一正式批次授权（需新 ID，与 ADR-0014 相同粒度的授权）。
-3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有批次保持只读，不覆盖或混合统计。
+1. 若要测 v4 模型效果，先由 Codex 完成运行前审查清单和唯一批次授权模板，再由项目负责人明确批准批次 ID、模型范围、预算和 provider；在批准前不发起模型请求。
+2. 获得授权后由 CC 按现有 runner 执行新批次；Codex 独立复核 raw response、预算、身份、解析、Schema 和决策质量，旧批次只读且不混合统计。
+3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。

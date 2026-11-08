@@ -1,10 +1,11 @@
 # APP-001 v4 Activation Package
 
-## Status: review
+## Status: done
 
 This package implements the v4 extraction contract activation as approved by
-the project lead under ADR-0017.  It awaits Codex hub independent review and
-merge to `main` before production status changes to `done`.
+the project lead under ADR-0017.  The implementation and closeout were
+independently reviewed by the Codex hub and merged to `main` in `c18fd35`.
+This package still does not authorize a real-model evaluation batch.
 
 ## Contents
 

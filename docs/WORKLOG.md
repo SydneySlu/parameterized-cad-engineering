@@ -1717,3 +1717,10 @@ commit=待提交
 
 - 动作：同步状态页与 checkpoint，修正“待提交”的过期描述。
 - 结果：当前候选工作单元提交链为 `6d1f90a`、`2c7d199`、`9f424d0`；工作区干净，尚未 push。状态继续为 review，生产 v3 和 ADR-0017 proposed 边界不变。
+
+### APP-001-V4-ACTIVATION-MERGE-STATUS-SYNC / Codex / done / 2026-11-08
+
+- 动作：核对合入后的 `main`、`origin/main` 和 `origin/cc/APP-001-V4-ACTIVATION`，并同步 v4 激活包、ADR-0017、项目状态页和计划页中的交付状态。
+- 结果：三处 Git ref 均指向 `c18fd35`；工作区干净且无 `.git/index.lock`。v4 激活任务标记为 `done`，生产 `PROMPT_VERSION=app001-extraction.v4`、`FORMAL_EVALUATION_ALLOWED=False` 和 v3 回滚边界保持不变。Python 3.11.18 复核证据为 71 项 v4 专项、685 项 LLM 测试（8 个既有 FUSE skip）和 17 项 Schema 测试通过。
+- 边界：未调用真实模型、未读取密钥、未创建或修改正式批次，C2/IR/CAD/geometry/STEP 未运行。APP-001 整体仍为 `review`，v4 模型效果尚未测量。
+- 下一步：如需测量 v4 效果，先由 Codex 建立运行前审查清单和唯一批次授权模板，项目负责人明确批准后再由 CC 执行；旧批次只读且不混合统计。

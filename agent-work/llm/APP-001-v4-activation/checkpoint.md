@@ -3,11 +3,11 @@
 - Task ID: `APP-001-V4-ACTIVATION`
 - Date: 2026-11-08
 - Agent: CC
-- Status: review (awaiting Codex hub independent review and merge to main)
+- Status: done (independently reviewed and merged to main)
 - Branch: `cc/APP-001-V4-ACTIVATION`
 - Baseline: `1d84b12` (`origin/codex/APP-001-V3-DECISION-FIX-DRAFT`)
 - Activation commit: `85f9e71`
-- Not pushed. Not merged to main.
+- Merge commit: `c18fd35` (`main` and `origin/main`)
 
 ## Approval basis
 
@@ -163,7 +163,7 @@ handoff_self_check:
     Codex hub: re-run full suite on /opt/homebrew/bin/python3.11 (3.11.18);
     verify v4 prompt SHA-256 and manifest; confirm v3 rollback file unchanged;
     confirm FORMAL_EVALUATION_ALLOWED still False; confirm no key reads;
-    merge to main only after independent verification passes
+    merge to main completed at c18fd35 after independent verification passed
 ```
 
 ## Prohibition compliance
@@ -176,5 +176,5 @@ handoff_self_check:
   files, or old manifest modified.
 - No C2, IR, CAD, geometry, or STEP stages run.
 - No provider, budget, authorization, or retry config changes.
-- Not pushed. Not merged. Not committed to main.
+- Activation and closeout commits are published and merged to `main`; final merge review is `c18fd35`.
 - No git lock found or deleted.
