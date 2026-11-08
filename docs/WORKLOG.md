@@ -1747,3 +1747,7 @@ commit=待提交
 - 结果：Python 3.11.18 下 v4 activation 专项 71/71、关键 parser/provider/R3 回归 114/114、Schema 17/17、`py_compile` 和 `git diff --check` 通过。
 - 限制：LLM 全量 685 项复跑出现 1 项既有时间戳批次 ID 碰撞（测试间复用了 `work/app001-runs` 目录）和 8 项既有 FUSE skip；失败测试单独复跑通过，R6 并发类单独运行通过。该问题属于测试隔离稳定性，不是本次文档同步引入，也未改生产代码。
 - 决策：preflight 仍保持 `review`，不将全量结果宣称为全绿；真实模型调用继续等待项目负责人批准新的唯一 `batch_id` 和完整固定 scope。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-BOOKKEEPING / Codex / review / 2026-11-08
+
+- 记录：preflight 文档状态修正提交 `ed9db84` 已完成；当前本地 `main` 比 `origin/main` ahead 2（`3c82117`、`ed9db84`），工作区干净，无 `.git/index.lock`。push 和正式批次授权仍由项目负责人决定。
