@@ -51,7 +51,7 @@ from tests.llm._frozen_helpers import _frozen_input
 def _body():
     return json.dumps({
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v3",
+        "prompt_version": "app001-extraction.v4",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],

@@ -34,7 +34,7 @@ def _input(nl="轴孔直径 20 mm 的紧定螺钉轴环", ref=None, qid="q1", co
 def _envelope_body(**overrides):
     body = {
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v3",
+        "prompt_version": "app001-extraction.v4",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],

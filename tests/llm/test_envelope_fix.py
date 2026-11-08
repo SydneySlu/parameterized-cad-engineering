@@ -126,27 +126,39 @@ class PromptLoaderIncludesEnvelopeExample(unittest.TestCase):
         self.assertIn("prompt_version", self.artifact.system_prompt)
 
     def test_system_prompt_contains_envelope_json_example(self):
-        """The JSON envelope example object must be present verbatim."""
+        """The JSON envelope example object must be present verbatim with the
+        current production version string."""
         self.assertIn('"contract_version": "app001-io.v1"',
                       self.artifact.system_prompt)
-        self.assertIn('"prompt_version": "app001-extraction.v3"',
+        self.assertIn('"prompt_version": "app001-extraction.v4"',
                       self.artifact.system_prompt)
 
     def test_system_prompt_does_not_contain_code_fence_markers(self):
-        """No Markdown fence markers (`````````) should leak into the system
+        """No Markdown fence markers (```) should leak into the system
         prompt; the model should see a bare JSON object, consistent with the
         instruction "Return exactly one UTF-8 JSON object, with no Markdown
         fences"."""
         self.assertNotIn("```", self.artifact.system_prompt)
 
     def test_file_hash_anchor_still_matches(self):
-        """The production v3 prompt file hash is independently frozen."""
+        """The production v4 prompt file hash is independently frozen."""
+        import hashlib
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parents[2]
+        p = repo_root / "agent-work" / "llm" / "APP-001-v4-activation" / "prompt-v4.md"
+        actual = hashlib.sha256(p.read_bytes()).hexdigest()
+        self.assertEqual(actual, "73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc")
+
+    def test_legacy_v3_prompt_file_hash_is_unchanged(self):
+        """The legacy v3 prompt file must not have been modified.  It is the
+        rollback target for the v4 activation and is read-only history."""
         import hashlib
         from pathlib import Path
         repo_root = Path(__file__).resolve().parents[2]
         p = repo_root / "agent-work" / "llm" / "APP-001-v3-activation" / "prompt-v3.md"
         actual = hashlib.sha256(p.read_bytes()).hexdigest()
-        self.assertEqual(actual, "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b")
+        self.assertEqual(actual, "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b",
+                         "v3 prompt file was modified — rollback target integrity violated")
 
     def test_envelope_keys_all_mentioned_in_system_prompt(self):
         """Every key in ENVELOPE_KEYS must appear somewhere in the system

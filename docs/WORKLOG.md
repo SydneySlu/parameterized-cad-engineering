@@ -2,7 +2,43 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
-### APP-001-PREP / Codex / planned
+## 2026-11-08
+
+### APP-001-V4-ACTIVATION / CC / review
+
+- 动作：按 ADR-0017（项目负责人批准策略方向）完成 APP-001 extraction v4 的版本化激活实现单元。在分支 `cc/APP-001-V4-ACTIVATION`（基线 `1d84b12`，来自 `origin/codex/APP-001-V3-DECISION-FIX-DRAFT`）上执行以下工作：
+  1. 建立 `agent-work/llm/APP-001-v4-activation/`：冻结 prompt（SHA-256 `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`）、manifest（含候选源 hash、激活 hash、版本、回滚目标）、README、checkpoint。
+  2. 将 `src/llm/contract.py` 的 `PROMPT_VERSION` 切到 `app001-extraction.v4`。
+  3. 将 `src/llm/prompt_loader.py` 的 loader 路径、版本常量和文件哈希锚点更新为 v4。
+  4. 将 `src/llm/parser.py` 的 `_LEGACY_AUDIT_PROMPT_VERSIONS` 扩展为包含 v3，使 v3 历史批次仍可走只读审计路径；默认 parser 拒绝非 v4 版本。
+  5. 更新现有回归测试中的模拟响应体（v3→v4），更新 `test_envelope_fix.py` 的哈希/版本断言；新增 v3 未改动的独立哈希锁定断言。
+  6. 新增 `tests/llm/test_v4_activation.py`（71 个测试，覆盖激活包、parser 边界、retrieval 优先级、单位换算、unsupported 规范标签、75 mm/缺失 bore_d/拒绝边界、v3 回滚哈希锚点、授权/预算/C2/CAD 禁止边界）。
+  7. 将 ADR-0017 状态更新为 accepted，记录项目负责人批准日期 2026-11-08。
+  8. 更新 PROJECT_STATUS、WORKLOG。
+- 结果：
+  - `agent-work/llm/APP-001-v4-activation/` 完整创建，包含 4 个文件。
+  - `src/llm/{contract,parser,prompt_loader}.py` 原子更新。
+  - `tests/llm/test_v4_activation.py` 新增 71 个测试。
+  - 回归测试 7 个文件更新。
+- 验证（CC 环境 Python 3.10.12；项目固定基线为 3.11.18，须由 Codex 中枢在 Mac 重跑）：
+  - `test_v4_activation`：71/71 OK
+  - `discover tests/llm`：685 OK，8 个既有 FUSE skip
+  - `discover tests/schema`：17/17 OK
+  - `py_compile` 全部修改文件：OK
+  - `git diff --check`：OK
+- 哈希核对：
+  - v4 冻结 prompt SHA-256：`73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`
+  - v3 回滚 prompt SHA-256（未改）：`3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b`
+  - acceptance-set SHA-256（未改）：`ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf`
+  - `FORMAL_EVALUATION_ALLOWED=False` 未改变。
+- 限制：
+  - CC 运行环境为 Python 3.10.12，非项目固定的 3.11.18；Codex 中枢须在 Mac `/opt/homebrew/bin/python3.11` 重验。
+  - 模型效果未验证；不授权任何真实模型请求或新正式批次。
+  - 未调用 DeepSeek/Ollama，未读取密钥，未修改旧批次、旧 prompt 文件或冻结验收集。
+- 提交：本次工作提交为 `feat: activate APP-001 extraction v4 contract [APP-001-V4-ACTIVATION]`（提交 `3b1e353`）。
+- 下一步：Codex 中枢独立审查（在 Mac Python 3.11.18 下重跑全量测试，核对所有哈希，确认禁止范围未变），审查通过后合并到 main；如需测 v4 模型效果，须另建唯一正式批次并取得项目负责人明确授权。
+
+
 
 - 动作：根据项目负责人确认的云端 DeepSeek v4.1 Flash 1017、本地 Ollama `qwen3:8b`（digest `500a1f067a9f`）及 MacBook Air M5 设备条件，建立 APP-001 双基线契约和准备 Agent Prompt。
 - 结果：明确 APP-001 前冻结口径、不产生成绩；模型运行后测字段/Schema/追问，接入确定性 CAD/STEP 链后测几何和回读指标；未来 Windows CPU 结果单独记录。

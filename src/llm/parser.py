@@ -123,15 +123,15 @@ def _err(code: str, stage: str, fields: tuple[str, ...], message: str) -> ParseE
 def parse_response(raw: str | bytes) -> ParseResult:
     """Parse one response against the active production prompt version.
 
-    The default production path is intentionally strict: after the v3
-    activation it accepts only ``app001-extraction.v3``. Historical batches
+    The default production path is intentionally strict: after the v4
+    activation it accepts only ``app001-extraction.v4``. Historical batches
     must use :func:`parse_response_for_version` explicitly.
     """
     return _parse_response(raw, expected_prompt_version=PROMPT_VERSION)
 
 
 _LEGACY_AUDIT_PROMPT_VERSIONS: Final[frozenset[str]] = frozenset(
-    {"app001-extraction.v2"}
+    {"app001-extraction.v2", "app001-extraction.v3"}
 )
 
 

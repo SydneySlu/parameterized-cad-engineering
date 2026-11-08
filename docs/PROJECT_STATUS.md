@@ -54,12 +54,14 @@
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
-| APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | review | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；生产仍为 v3，ADR-0017 proposed，未调用模型。待 push 后核对远端。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
+| APP-001-V3-DECISION-FIX-DRAFT | v3 观测偏差对应的 v4 离线候选修正 | Codex | done | P1/P2 checker 修正和离线候选准备已在 Python 3.11.18 下复核并提交（`6d1f90a`、`9f424d0`）；ADR-0017 已被项目负责人批准策略方向。待 push 后核对远端。见 `agent-work/llm/APP-001-V3-DECISION-FIX-DRAFT/checkpoint.md` |
+| APP-001-V4-ACTIVATION | extraction v4 版本化激活实现 | CC | review | ADR-0017 accepted；CC 在分支 `cc/APP-001-V4-ACTIVATION` 完成激活单元：v4 冻结 prompt、manifest、prompt loader/contract/parser 原子更新、v2/v3 只读审计路径保留、71 个新专项测试、685 LLM + 17 Schema 全部通过；`FORMAL_EVALUATION_ALLOWED=False` 未改变；未调用模型、未读取密钥、未授权新批次。待 Codex 中枢独立审查后合并到 main |
 
 ## 阻塞项
 
 - CAD-005/006 本轮阻塞已解除。跨平台/跨进程及不同 CadQuery/OCP/STEP writer 环境仍未验证；当前实现证据仅覆盖固定软件基线，不构成跨环境承诺。
 - APP-001 既有批次均保留且处于 review：v3 批次有 32 条模型响应和 4 条 C1 请求前安全阻塞；显式字段全部精确，决策有 3 条不一致，确定性 Schema 20/32 通过。R1 证据留存和阻塞审计代码已合入 main。C2、IR/CAD/geometry/STEP 未运行，不能发布端到端构造指标。不得重写旧批次或自行启动额外模型调用。
+- APP-001-V4-ACTIVATION 已在 CC 分支完成激活实现，尚待 Codex 中枢独立审查并合并到 main；激活后如要测 v4 模型效果，需新 ID 正式批次和单独项目负责人授权。
 
 ## 当前工作单元边界
 
@@ -72,8 +74,7 @@
 
 ## 下一步
 
-1. 由项目负责人审阅 v3 批次独立报告，决定是否接受其作为 APP-001 第一阶段 v3 诊断结果。
-2. 独立审查 APP-001-V3-DECISION-FIX-DRAFT 的 checker、候选措辞和 proposed ADR-0017；若接受 v4 策略，再安排独立激活实现。任何追加模型请求都需要新的唯一批次和明确授权。
-3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有四个批次保持只读，不覆盖或混合统计。
+1. Codex 中枢独立审查 `cc/APP-001-V4-ACTIVATION` 分支：在 Mac Python 3.11.18 下重跑专项/全量测试，核对 v4 prompt/manifest/loader/parser 哈希，确认 v3 回滚文件未修改，确认 `FORMAL_EVALUATION_ALLOWED=False`，合并到 main。
+2. 若要测 v4 模型效果，先完成 Codex 中枢审查并合并到 main，再单独申请新的唯一正式批次授权（需新 ID，与 ADR-0014 相同粒度的授权）。
+3. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用；既有批次保持只读，不覆盖或混合统计。
 4. 第二族扩展另行决策，不作为 APP-001 前置依赖。
-5. 如需测 v3 效果，先完成运行前审查并单独申请新的唯一正式批次授权。

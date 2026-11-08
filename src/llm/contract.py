@@ -11,11 +11,11 @@ from __future__ import annotations
 from typing import Final
 
 # ---------------------------------------------------------------------------
-# Protocol versions (APP-001 v3 production prompt activated under ADR-0016)
+# Protocol versions (APP-001 v4 production prompt activated under ADR-0017)
 # ---------------------------------------------------------------------------
 
 CONTRACT_VERSION: Final[str] = "app001-io.v1"
-PROMPT_VERSION: Final[str] = "app001-extraction.v3"
+PROMPT_VERSION: Final[str] = "app001-extraction.v4"
 ACCEPTANCE_SET_VERSION: Final[str] = "acceptance-set-v0"
 # SHA-256 of the frozen acceptance-set-v0.json file, verified 2026-11-06.
 # Any content change — including NLI, query IDs, or evaluator-only fields —

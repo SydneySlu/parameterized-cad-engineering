@@ -11,9 +11,11 @@ from src.llm.parser import parse_response, parse_response_for_version
 
 
 def _valid_body(**overrides):
+    # Default body uses the current production version (app001-extraction.v4).
+    # Use prompt_version= to override for legacy audit tests.
     body = {
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v3",
+        "prompt_version": "app001-extraction.v4",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],
@@ -64,8 +66,20 @@ class ParserValidTests(unittest.TestCase):
 
 class ParserFailureTests(unittest.TestCase):
     def test_previous_prompt_version_is_rejected(self):
+        # v2 is a registered legacy version but not the active production version;
+        # the default parse_response() still rejects it.
         result = parse_response(
             _valid_body(prompt_version="app001-extraction.v2")
+        )
+        self.assertFalse(result.ok)
+        self.assertIn("PROMPT_VERSION_MISMATCH", [e.code for e in result.errors])
+
+    def test_v3_prompt_version_rejected_by_default_parser(self):
+        # After the v4 activation, v3 is a legacy history version.  The default
+        # production parse_response() must reject it so historical v3 batch
+        # responses are never silently relabelled as v4.
+        result = parse_response(
+            _valid_body(prompt_version="app001-extraction.v3")
         )
         self.assertFalse(result.ok)
         self.assertIn("PROMPT_VERSION_MISMATCH", [e.code for e in result.errors])
@@ -77,6 +91,16 @@ class ParserFailureTests(unittest.TestCase):
         )
         self.assertTrue(result.ok, [e.as_dict() for e in result.errors])
         self.assertEqual(result.envelope.prompt_version, "app001-extraction.v2")
+
+    def test_explicit_v3_audit_parser_accepts_legacy_v3_envelope(self):
+        # v3 is now a registered legacy audit version; historical batch responses
+        # should be re-parseable via the explicit audit entry point.
+        result = parse_response_for_version(
+            _valid_body(prompt_version="app001-extraction.v3"),
+            prompt_version="app001-extraction.v3",
+        )
+        self.assertTrue(result.ok, [e.as_dict() for e in result.errors])
+        self.assertEqual(result.envelope.prompt_version, "app001-extraction.v3")
 
     def test_explicit_v2_audit_parser_keeps_contract_failures(self):
         body = json.loads(_valid_body(prompt_version="app001-extraction.v2"))
@@ -91,6 +115,16 @@ class ParserFailureTests(unittest.TestCase):
         result = parse_response_for_version(
             _valid_body(prompt_version="app001-extraction.v3"),
             prompt_version="app001-extraction.v2",
+        )
+        self.assertFalse(result.ok)
+        self.assertEqual(result.errors[0].code, "PROMPT_VERSION_MISMATCH")
+
+    def test_explicit_v3_audit_parser_does_not_relabel_v4_payload(self):
+        # Even though v3 is now a registered legacy version, requesting the v3
+        # audit parser with a v4 response body must reject the mismatch.
+        result = parse_response_for_version(
+            _valid_body(prompt_version="app001-extraction.v4"),
+            prompt_version="app001-extraction.v3",
         )
         self.assertFalse(result.ok)
         self.assertEqual(result.errors[0].code, "PROMPT_VERSION_MISMATCH")

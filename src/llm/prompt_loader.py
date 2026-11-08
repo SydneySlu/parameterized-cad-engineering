@@ -1,9 +1,9 @@
 """Frozen prompt artifact loader and verifier for APP-001.
 
 This module loads the frozen system prompt and user message template from
-``agent-work/llm/APP-001-v3-activation/prompt-v3.md`` and verifies that:
+``agent-work/llm/APP-001-v4-activation/prompt-v4.md`` and verifies that:
 
-1. The artifact declares version ``app001-extraction.v3``.
+1. The artifact declares version ``app001-extraction.v4``.
 2. The system message content matches exactly (after whitespace normalization).
 3. The user message template content matches exactly (after normalization and
    placeholder form conversion).
@@ -21,6 +21,12 @@ loader converts double-brace to single-brace before comparison.
 - Verification failures raise :class:`FrozenPromptMismatchError` before any
   transport ``send()`` is called.
 - There is no ``skip_verification`` or ``allow_arbitrary_prompt`` parameter.
+
+**History:**
+- v3 activation (ADR-0016): prompt-v3.md, SHA-256
+  3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b
+- v4 activation (ADR-0017): prompt-v4.md, SHA-256
+  73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc
 """
 
 from __future__ import annotations
@@ -36,16 +42,16 @@ FROZEN_PROMPT_PATH = (
     _REPO_ROOT
     / "agent-work"
     / "llm"
-    / "APP-001-v3-activation"
-    / "prompt-v3.md"
+    / "APP-001-v4-activation"
+    / "prompt-v4.md"
 )
 
-FROZEN_PROMPT_VERSION = "app001-extraction.v3"
+FROZEN_PROMPT_VERSION = "app001-extraction.v4"
 
 # Known version string that must appear in the artifact.
-_VERSION_MARKER = "app001-extraction.v3"
+_VERSION_MARKER = "app001-extraction.v4"
 
-# Fixed SHA-256 anchor of the frozen prompt-v3.md file content (bytes).
+# Fixed SHA-256 anchor of the frozen prompt-v4.md file content (bytes).
 # This is a separate integrity check from the parsed system_prompt/user_template
 # hashes.  If the file is modified (even preserving the version string), the
 # file-level hash will not match and loading fails closed.
@@ -53,7 +59,11 @@ _VERSION_MARKER = "app001-extraction.v3"
 # Update procedure: when a new frozen prompt version is approved via ADR,
 # replace this constant with the new file's SHA-256 and update
 # FROZEN_PROMPT_VERSION.  Do NOT change this value to match a modified file.
-FROZEN_PROMPT_FILE_SHA256 = "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b"
+#
+# v3 history (ADR-0016):
+#   path: agent-work/llm/APP-001-v3-activation/prompt-v3.md
+#   sha256: 3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b
+FROZEN_PROMPT_FILE_SHA256 = "73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc"
 
 # Regex to extract fenced Markdown code block content.
 # Captures the text between ```...``` fences (the first code block found).
