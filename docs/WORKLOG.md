@@ -1790,3 +1790,54 @@ commit=待提交
 - 授权：36 个逻辑运行（9 × 2 条件 × 2 provider）；DeepSeek `deepseek-flash` 与 Ollama `qwen3:8b`；每 run 3 次、全批次 108 次、每 provider 54 次；C2/IR/CAD/geometry/STEP 禁用；旧批次只读且不混合统计。
 - 核验：main/origin/main=`80cad1b7fc110e0aa10c63aced7271749c3ffadf`；Python 3.11.18；v4 prompt SHA-256=`73cb6b8f…`；acceptance-set SHA-256=`ed59e2b6…`；Ollama 0.40.14、Schema SHA-256=`04d159d2…`；RET-002 manifest SHA-256=`b7b6c737…`；授权 scope hash=`a57b6966…`；新批次目录不存在；密钥值未读取，未发起模型请求。
 - 结果：Codex preflight=`pass`；授权模板和交接 checkpoint 已补全，等待 CC 使用现有 runner 执行唯一批准批次。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION / CC / in_progress / 2026-11-09
+
+- 动作：执行 APP-001-V4-FORMAL-EFFECT-EVALUATION 正式批次（batch_id=`app001-phase1-v4-20261109-01`）的 CC 执行前 preflight，发现执行环境约束并准备 Mac 原生运行脚本。
+- 环境核验（本次 CC 会话中完成）：
+  - HEAD=`cc3dfbbae3562b287860c04d7b3e72a161139386`；工作区干净；`main` 与 `origin/main` 一致
+  - acceptance-set sha256=`ed59e2b6…`  ✓
+  - prompt-v4.md 文件 sha256=`73cb6b8f…`  ✓（由 `load_frozen_prompt()` 内部验证）
+  - prompt version=`app001-extraction.v4`  ✓
+  - RET-002 manifest sha256=`b7b6c737…`  ✓
+  - authorization scope hash=`a57b6966…`  ✓
+  - batch dir `work/app001-runs/app001-phase1-v4-20261109-01` 不存在  ✓
+  - `.env` 含 `DEEPSEEK_API_KEY`（值未读取）  ✓
+  - `PYTHONPATH=src python3` 可导入全部运行依赖（`llm.runner`、`retrieval`、`schema`）  ✓
+  - RetrievalIndex 从冻结 config 构建成功  ✓
+  - 干跑（`runner.dry_run()`）返回 36 个逻辑组合  ✓
+- 执行环境阻塞（无法在当前 CC 沙箱 VM 中完成完整批次）：
+  - Ollama 服务运行于用户 Mac 本机 `http://127.0.0.1:11434`；VM 沙箱无法通过任何主机地址访问（172.16.10.1/192.168.64.1/10.0.2.2 均超时，127.0.0.1:11434 亦不可达）。在 VM 中强制执行将导致 18 个 Ollama run 全部以 non_retryable_error 记录，达不到模型身份和 raw response 保留要求。
+  - VM 内仅有 Python 3.10.12；授权模板指定 Python 3.11.18；venv Python symlink 在 VM 中为断链。
+- 处置：编写完整 Mac 原生运行脚本 `scripts/run_app001_v4_formal_batch.py`，包含所有 preflight 检查（commit、sha256 全套、Ollama 连通性与 digest 验证、batch dir 干净检查、.env 密钥存在性校验）；脚本直接调用现有 `App001Runner.run_formal()` 和 `authorize_phase1_run()`，不修改任何生产代码。
+- 下一步：项目负责人在 Mac 终端运行：
+  ```
+  cd "/Users/syd/Desktop/参数化 cad 工程辅助设计"
+  source .env
+  PYTHONPATH=src /opt/homebrew/bin/python3.11 scripts/run_app001_v4_formal_batch.py
+  ```
+  完成后将输出摘要追加至 WORKLOG，并提交 Git commit。
+- 边界：未发起任何 DeepSeek/Ollama 请求；未读取 API key 值；未修改生产代码、prompt、Schema、预算或授权范围；未修改旧批次。
+
+### APP-001-V4-FORMAL-EFFECT-EVALUATION-RUN-SCRIPT-FIX / CC / in_progress / 2026-11-09
+
+- 动作：窄范围执行前修正运行脚本，不启动任何真实模型请求。
+- 修正 A（commit 校验）：
+  - 保留生产基线 commit `cc3dfbb` 身份校验；
+  - 允许当前 HEAD 是该基线的后代，因为脚本和交付文档需要作为后续提交进入 Git；
+  - 新增 `git merge-base --is-ancestor` 和 `git diff --name-only` 跨 `PRODUCTION_PATHS` 检查，覆盖 `src/llm/`、`src/retrieval/`、`src/schema/`、`src/cad_compilation/`、`prompt-v4.md`、`acceptance-set-v0.json`、`retrieval-config.json`、`manifest-v0.jsonl`；任何生产路径变化立即 abort；
+  - 不放宽到任意 HEAD，不修改生产代码。
+- 修正 B（batch 目录保护）：
+  - 只要 `work/app001-runs/app001-phase1-v4-20261109-01` 已存在，立即 abort，不论是否包含 `runs.jsonl`；
+  - 不删除、不覆盖任何旧目录。
+- 修正 C（离线测试）：
+  - `tests/llm/test_run_script_v4_batch.py`，19 个测试，全部通过；
+  - 覆盖：基线/后继提交通过、非基线拒绝、`src/llm`/prompt/schema/retrieval 生产路径变化被拒、空 batch 目录被拒、Ollama 缺失在 runner 调用前 abort、`py_compile`、dry_run=36、两条件两 provider；
+  - 测试不调用 DeepSeek/Ollama chat，不读取或打印 API key 值。
+- 验证：
+  - `python3 -m py_compile scripts/run_app001_v4_formal_batch.py` 通过；
+  - `PYTHONPATH=src:. pytest tests/llm/test_run_script_v4_batch.py` → 19 passed；
+  - `verify_commit()` 对真实 HEAD（`cc3dfbb`）通过；
+  - `git status`：仅 `docs/WORKLOG.md`（修改）、`scripts/run_app001_v4_formal_batch.py`（新增）、`tests/llm/test_run_script_v4_batch.py`（新增）；无生产路径变更。
+- 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有 prompt/schema/budget/授权范围/runner 生产逻辑或旧批次修改。
+- 下一步：项目负责人在 Mac 终端运行脚本执行正式批次，完成后 CC 追加结果 WORKLOG 条目并提交。
