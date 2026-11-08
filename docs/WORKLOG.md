@@ -78,6 +78,24 @@
 - 提交：`docs: close APP-001 v4 activation handoff [APP-001-V4-ACTIVATION-CLOSEOUT-FIX]`（提交 `d01eb81`，父 `85f9e71`）。
 - 下一步：Codex 中枢在 Mac 3.11.18 独立重验；通过后 push 并合并到 main。
 
+## 2026-11-08
+
+### APP-001-PREFLIGHT-TEST-ISOLATION-FIX / CC / review
+
+- 动作：修复 `tests/llm/test_r3_fixes.py` 中 12 处 `int(time.time() * 1000) % N` batch_id 生成方式，替换为 `uuid.uuid4().hex[:8]`，消除 Python 3.11 快速执行时的目录碰撞问题。在 `cc/APP-001-PREFLIGHT-TEST-ISOLATION-FIX`（基线 `bf8117d`，`origin/main`）上执行。
+- 根因：取模运算在快速测试执行下会产生重复的 batch_id，导致多个测试共享同一 `work/app001-runs/<batch_id>/` 目录，引起预算记录重复和 concurrent claim 断言失败。
+- 修改文件：`tests/llm/test_r3_fixes.py`（新增 `import uuid`，替换 12 处 batch_id 模式）、`agent-work/llm/APP-001-PREFLIGHT-TEST-ISOLATION-FIX/checkpoint.md`（新建）、`docs/WORKLOG.md`（本条）。
+- 不修改：生产代码、Prompt、Schema、授权范围、预算、测试断言、业务逻辑、旧正式批次目录。
+- 验证（CC 环境 Python 3.10.12；项目固定基线 3.11.18 须 Codex 中枢重跑）：
+  - `py_compile tests/llm/test_r3_fixes.py` → OK
+  - `test_r3_fixes` 连续两次 → 各 51/51 OK
+  - `discover tests/llm` 连续两次 → 各 685 OK，8 个既有 FUSE skip
+  - `discover tests/schema` → 17/17 OK
+  - `git diff --check` → OK
+- 限制：CC 环境为 3.10.12，非项目固定的 3.11.18；Codex 中枢须在 `/opt/homebrew/bin/python3.11` 重验。未调用模型，未读取密钥。
+- 提交：`test: isolate APP-001 preflight batch IDs [APP-001-PREFLIGHT-TEST-ISOLATION-FIX]`（`51188b2`）。
+- 下一步：Codex 中枢在 Mac Python 3.11.18 重验，通过后合并到 main。
+
 ## 2026-10-28
 
 ### INFRA-001 / Codex / done

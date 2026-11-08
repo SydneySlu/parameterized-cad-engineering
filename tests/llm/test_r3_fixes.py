@@ -7,6 +7,7 @@ These tests verify:
 4. C1 gate requires a valid frozen RetrievalIndex
 """
 import json
+import uuid
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
@@ -76,7 +77,7 @@ class TestR3Fix2BudgetTokenBinding(unittest.TestCase):
         from pathlib import Path as _Path
         import time
 
-        batch_id = f"test-reuse-tkn-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-reuse-tkn-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = _Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -438,7 +439,7 @@ class TestR3ForgedTokenLedgerCheck(unittest.TestCase):
         """A token that references a ledger but has no matching pending record is rejected."""
         import time
         from pathlib import Path as _Path
-        batch_id = f"test-no-rec-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-no-rec-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = _Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -480,7 +481,7 @@ class TestR3BudgetSeparateHTTPModelCounts(unittest.TestCase):
     def setUp(self):
         from pathlib import Path as _Path
         import time
-        self._batch_id = f"test-sep-budget-{int(time.time() * 1000) % 99999}"
+        self._batch_id = f"test-sep-budget-{uuid.uuid4().hex[:8]}"
         repo_root = _Path(__file__).resolve().parents[2]
         self._batch_dir = repo_root / "work" / "app001-runs" / self._batch_id
         from llm.authorization import authorize_phase1_run
@@ -722,7 +723,7 @@ class TestR3Fix2OllamaTagsFailChatBlocked(unittest.TestCase):
         import time
         mock_urlopen.side_effect = _ue.URLError("Ollama not running")
 
-        batch_id = f"test-tags-fail-urlopen-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-tags-fail-urlopen-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -754,7 +755,7 @@ class TestR3Fix2OllamaTagsFailChatBlocked(unittest.TestCase):
         import time
         mock_urlopen.side_effect = _ue.URLError("Ollama not running")
 
-        batch_id = f"test-tags-fail-outcomes-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-tags-fail-outcomes-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -877,7 +878,7 @@ class TestR4OllamaTagsChatIntegration(unittest.TestCase):
 
         mock_urlopen.side_effect = side_effect
 
-        batch_id = f"test-r4-chat-ok-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-r4-chat-ok-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -934,7 +935,7 @@ class TestR4OllamaTagsChatIntegration(unittest.TestCase):
 
         mock_urlopen.side_effect = side_effect
 
-        batch_id = f"test-r4-chat-fail-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-r4-chat-fail-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -997,7 +998,7 @@ class TestR4OllamaTagsChatIntegration(unittest.TestCase):
 
         mock_urlopen.side_effect = side_effect
 
-        batch_id = f"test-r4-tags-retry-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-r4-tags-retry-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -1058,7 +1059,7 @@ class TestR4OllamaTagsChatIntegration(unittest.TestCase):
         import time
         from llm.budget import BudgetExhausted
 
-        batch_id = f"test-r4-tags-exhaust-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-r4-tags-exhaust-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -1113,7 +1114,7 @@ class TestR4OllamaTagsChatIntegration(unittest.TestCase):
 
         mock_urlopen.side_effect = side_effect
 
-        batch_id = f"test-r4-chat-exhaust-{int(time.time() * 1000) % 999999}"
+        batch_id = f"test-r4-chat-exhaust-{uuid.uuid4().hex[:8]}"
         auth = authorize_phase1_run(batch_id=batch_id)
         repo_root = Path(__file__).resolve().parents[2]
         batch_dir = repo_root / "work" / "app001-runs" / batch_id
@@ -1261,7 +1262,7 @@ class TestR5IssueAReservationAtomicity(unittest.TestCase):
     def setUp(self):
         import time
         from pathlib import Path as _Path
-        self._batch_id = f"test-r5a-{int(time.time() * 1000) % 999999}"
+        self._batch_id = f"test-r5a-{uuid.uuid4().hex[:8]}"
         from llm.authorization import authorize_phase1_run
         from llm.budget import BudgetLedger
         self._auth = authorize_phase1_run(batch_id=self._batch_id)
@@ -1487,7 +1488,7 @@ class TestR6TrueConcurrentClaimAtomicity(unittest.TestCase):
     def setUp(self):
         import time
         from pathlib import Path as _Path
-        self._batch_id = f"test-r6-conc-{int(time.time() * 1000) % 999999}"
+        self._batch_id = f"test-r6-conc-{uuid.uuid4().hex[:8]}"
         from llm.authorization import authorize_phase1_run
         from llm.budget import BudgetLedger
         self._auth = authorize_phase1_run(batch_id=self._batch_id)
