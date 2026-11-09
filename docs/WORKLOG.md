@@ -1905,3 +1905,10 @@ commit=待提交
   - 全量 LLM 回归中 74 个 pre-existing 失败和 11 个 pre-existing error 均非本次引入（stash 验证：baseline 74 failed / 551 passed；加入 v5 后 74 failed / 602 passed，净增 51 passed / 0 new failure）。
 - 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改；`FORMAL_EVALUATION_ALLOWED` 保持 `False`；`PROMPT_VERSION` 保持 `app001-extraction.v4`；`FROZEN_PROMPT_*` 锚点不变。
 - 限制：离线 checker 通过 ≠ 模型效果通过；若未来要测候选，必须另建唯一 `batch_id`、走新授权和 Codex preflight。
+
+### APP-001-V4-QUALITY-FIX-CANDIDATE-REVIEW / Codex / review / 2026-11-09
+
+- 独立复核提交 `1a0bd94`：专项 unittest 51/51 通过，定向回归 191 通过、6 skipped，生产文件和旧批次未修改。
+- 发现两个阻塞：`PYTHONPATH=src` 下 `import llm.decision_policy_v5_candidate` 因 `from ..schema` 失败；checker 未实现任务要求的 `answer` 与确定性目录/规则冲突检查，A05/A09 answer 反例会被放过。
+- 追加边界要求：补测 `bore_d=24.0`、`{"value":1.6,"unit":"cm"}` 的 Schema 归一化，以及正式导入路径 smoke test。
+- 结论：候选保持 `review`，不得合并/激活或创建新正式批次；CC 需做窄范围修正后再由 Codex 独立复核。
