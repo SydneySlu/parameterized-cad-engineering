@@ -1912,3 +1912,10 @@ commit=待提交
 - 发现两个阻塞：`PYTHONPATH=src` 下 `import llm.decision_policy_v5_candidate` 因 `from ..schema` 失败；checker 未实现任务要求的 `answer` 与确定性目录/规则冲突检查，A05/A09 answer 反例会被放过。
 - 追加边界要求：补测 `bore_d=24.0`、`{"value":1.6,"unit":"cm"}` 的 Schema 归一化，以及正式导入路径 smoke test。
 - 结论：候选保持 `review`，不得合并/激活或创建新正式批次；CC 需做窄范围修正后再由 Codex 独立复核。
+
+### APP-001-V4-QUALITY-FIX-CANDIDATE-R1 / Codex / planned / 2026-11-09
+
+- 动作：新增 R1 窄范围修正 prompt：`docs/coordination/prompts/APP-001-V4-QUALITY-FIX-CANDIDATE-R1-cc-agent.md`。
+- 范围：修正 `PYTHONPATH=src` 正式导入、目录/规则冲突判定，以及 `24.0`/厘米 measurement object 的数值归一化边界；继续保持 checker 离线、未激活和生产隔离。
+- 禁止项：不修改生产 v4、冻结 prompt/Schema、预算/授权、旧批次，不运行真实模型，不创建新 batch_id。
+- 下一步：CC 在当前候选分支执行 R1 并提交；Codex 中枢复核修正后的专项测试、正式导入和冲突反例。
