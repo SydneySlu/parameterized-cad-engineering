@@ -1885,3 +1885,23 @@ commit=待提交
 - 范围：只做离线策略/checker/fixture 测试，针对 Ollama 合法输入过度拒绝和 A05 `missing_fields` 自洽性问题；不修改生产 v4、解析/Schema/预算/授权、旧批次或正式运行入口。
 - 验收边界：候选版本不激活、不调用模型、不读取密钥；未来若测候选，必须另建唯一 `batch_id`、重新授权并通过 Codex preflight。
 - 下一步：CC 按 prompt 建立候选与测试并提交；Codex 中枢随后独立复核，决定是否进入版本化激活准备。
+
+### APP-001-V4-QUALITY-FIX-CANDIDATE / CC / in_progress / 2026-11-09
+
+- 动作：建立未激活、无网络、无模型调用的版本化候选策略和离线测试，针对正式批次 `app001-phase1-v4-20261109-01` 的两类已核实偏差。
+- 分支：`cc/APP-001-V4-QUALITY-FIX-CANDIDATE`（基线 `b1a31b9`，是授权基线 `cc3dfbb` 的后代）。
+- 新增文件：
+  - `src/llm/decision_policy_v5_candidate.py`：纯函数离线 checker，实现 P1（过度拒绝检测）和 P2（envelope 自洽性）规则；不被 adapter/parser/runner/contract/prompt_loader 导入；
+  - `tests/llm/test_decision_policy_v5_candidate.py`：51 个离线测试；
+  - `agent-work/llm/APP-001-v4-quality-fix-candidate/`：candidate-strategy.md、checkpoint.md、handoff.md。
+- P1 规则：当 `decision` 为 refuse/ask 且 bore_d 是有效目录值、`missing_fields=[]`、`unsupported_requests=[]` 时，判定为过度拒绝（P1-1）；检查与 condition_id 无关（P1-2）；单位归一化后的合法目录值不因原始单位被拒（P1-3）；C1 检索上下文不能制造缺失或 unsupported（P1-4）。
+- P2 规则：已出现在 `extracted_parameters` 的字段不得同时出现在 `missing_fields`（P2-1/P2-2）；`decision=answer` 不得与非空 missing_fields 或 unsupported 共存（P2-3）；missing_fields 不得有重复条目（P2-4）。
+- 测试覆盖：A02/A03/A08 C0/C1 过度拒绝检测；A01/A06 正常通过；A04/A05/A07/A09 正确拒绝不被误报；A05 C0/C1 envelope 自洽性；反向测试（缺失/越界/冲突时 P1 不触发）；版本/接口兼容；生产模块隔离（AST + 文本扫描）；py_compile；convenience wrapper。
+- 验证：
+  - `py_compile`（3.11.17）：通过；
+  - `PYTHONPATH=src:. python3.11 -m pytest tests/llm/test_decision_policy_v5_candidate.py -v` → **51 passed**；
+  - 定向回归（v3/v4 candidate + authorization + parser + budget + run-script）→ **236 passed, 6 skipped**；
+  - `git diff --check HEAD`：clean；
+  - 全量 LLM 回归中 74 个 pre-existing 失败和 11 个 pre-existing error 均非本次引入（stash 验证：baseline 74 failed / 551 passed；加入 v5 后 74 failed / 602 passed，净增 51 passed / 0 new failure）。
+- 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改；`FORMAL_EVALUATION_ALLOWED` 保持 `False`；`PROMPT_VERSION` 保持 `app001-extraction.v4`；`FROZEN_PROMPT_*` 锚点不变。
+- 限制：离线 checker 通过 ≠ 模型效果通过；若未来要测候选，必须另建唯一 `batch_id`、走新授权和 Codex preflight。
