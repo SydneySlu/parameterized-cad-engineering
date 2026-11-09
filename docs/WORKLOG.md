@@ -1920,6 +1920,12 @@ commit=待提交
 - 禁止项：不修改生产 v4、冻结 prompt/Schema、预算/授权、旧批次，不运行真实模型，不创建新 batch_id。
 - 下一步：CC 在当前候选分支执行 R1 并提交；Codex 中枢复核修正后的专项测试、正式导入和冲突反例。
 
+### APP-001-V4-QUALITY-FIX-CANDIDATE-R1-REVIEW / Codex / review / 2026-11-09
+
+- 独立复核提交 `d706639`：Python 3.11.18 下专项 78/78 通过，定向回归 191 通过、6 个既有 FUSE skip；`PYTHONPATH=src` 顶层 `llm` 导入成功。
+- 关键反例通过：A02/A08 过度拒绝、A05 目录冲突、A09 second_screw 规则冲突；合法 ask/refuse 不被 P1 误报；`24.0` 和 `1.6 cm` 归一化边界通过。
+- 结论：离线候选 gate 通过，但仍未合并/激活；真实模型效果未测量，新正式批次未授权。下一步是独立 v5 prompt 候选/激活准备。
+
 ### APP-001-V4-QUALITY-FIX-CANDIDATE-R1 / CC / in_progress / 2026-11-09
 
 - 动作：修正 Codex 对提交 `1a0bd94` 的三项独立审查阻塞问题（R1-1/R1-2/R1-3）。
