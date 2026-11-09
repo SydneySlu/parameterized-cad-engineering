@@ -1878,3 +1878,10 @@ commit=待提交
 - 质量核对：32/32 parser、contract、projection 通过；显式字段、evidence 和 A07 unsupported 标签均精确。决策为 29/32 符合允许集合，3 条 Ollama 偏差（A02 C1、A03 C0、A08 C1）；DeepSeek A05 C0/C1 各有 `outer_d` 同时出现在 extracted 和 missing_fields 的自洽性问题。
 - 边界：Schema 20 pass/12 fail；construction gate 17 pass/15 fail；IR/CAD/geometry/STEP 未运行；旧批次未修改，正式结果不与旧批次混合。
 - 结论：批次证据和安全/预算边界通过，但任务保持 `review`，不能宣称 v4 决策策略已解决偏差。若修正，必须版本化并新建唯一批次、重新授权。
+
+### APP-001-V4-QUALITY-FIX-CANDIDATE / Codex / planned / 2026-11-09
+
+- 动作：根据 v4 正式批次的只读审查结果，新增 CC 窄范围候选任务 prompt：`docs/coordination/prompts/APP-001-V4-QUALITY-FIX-CANDIDATE-cc-agent.md`。
+- 范围：只做离线策略/checker/fixture 测试，针对 Ollama 合法输入过度拒绝和 A05 `missing_fields` 自洽性问题；不修改生产 v4、解析/Schema/预算/授权、旧批次或正式运行入口。
+- 验收边界：候选版本不激活、不调用模型、不读取密钥；未来若测候选，必须另建唯一 `batch_id`、重新授权并通过 Codex preflight。
+- 下一步：CC 按 prompt 建立候选与测试并提交；Codex 中枢随后独立复核，决定是否进入版本化激活准备。
