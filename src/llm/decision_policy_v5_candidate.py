@@ -1,4 +1,4 @@
-"""Offline executable checker for APP-001 v5 quality-fix candidate.
+"""Offline executable checker for APP-001 v5 quality-fix candidate (R1).
 
 CANDIDATE VERSION — NOT ACTIVATED.
 
@@ -18,33 +18,56 @@ Confirmed deviations this candidate addresses:
     parameter that is explicit and unambiguous in the user request merely
     because untrusted retrieval context contains a different value."
 
-  P2 — Envelope self-consistency (2 cases):
-    DeepSeek A05 C0 and C1: ``outer_d=40`` was present in both
-    ``extracted_parameters`` and ``missing_fields``.  An extracted field cannot
-    simultaneously be missing.
+  P2 — Envelope self-consistency (5 rules):
+    P2-1/P2-2  Field overlap: extracted field also in missing_fields.
+               DeepSeek A05 C0/C1: outer_d=40 in both extracted_parameters
+               and missing_fields.
+    P2-3       decision=answer + non-empty missing_fields or unsupported.
+    P2-4       Duplicate entries in missing_fields.
+    P2-5       decision=answer + deterministic CAD-003 catalog/rule conflict:
+               (a) bore_d value maps to a catalog row but another explicit
+                   extracted field disagrees with that row (catalog conflict);
+               (b) second_screw value contradicts the bore_d > 70 rule.
 
-This checker works exclusively on model-output envelopes in app001-io.v1 format.
-It does not re-implement the full production parse/project/schema pipeline.
-Passing this checker does NOT mean a model response passes acceptance; it means
-the envelope is self-consistent under the v5 rules.
+R1 additions (Codex review 2026-11-09, issue #2 and #3):
+  - P2-5: catalog/rule conflict check (A05 answer, A09 answer).
+  - Numeric normalization: bore_d=24.0 treated as catalog value 24;
+    measurement-object bore_d {"value":1.6,"unit":"cm"} normalised to 16 mm.
 
 Isolation guarantee
 -------------------
 This module imports only:
-  - Python stdlib
+  - Python stdlib (decimal, dataclasses, typing)
   - ``schema.set_screw_shaft_collar.CATALOG_ROWS`` (read-only, no side effects)
 
 It does NOT import from llm.contract, llm.parser, llm.adapter, llm.runner,
 llm.prompt_loader, llm.budget, llm.gate, or any production path.
+
+Import path
+-----------
+The module uses an absolute import ``schema.set_screw_shaft_collar`` so it
+works under the project-standard ``PYTHONPATH=src`` entry point:
+
+    PYTHONPATH=src python3 -c 'import llm.decision_policy_v5_candidate as m'
+
+It also works as ``src.llm.decision_policy_v5_candidate`` when tests add the
+repo root to ``PYTHONPATH``.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Final, Mapping, Sequence
+from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
+from typing import Any, Final, Mapping
 
-# Read-only catalog import — same data as production, no production code path.
-from ..schema.set_screw_shaft_collar import CATALOG_ROWS as _CATALOG_ROWS
+# ---------------------------------------------------------------------------
+# Catalog import — absolute path for PYTHONPATH=src compatibility (R1-1).
+# The module lives in src/llm/ and schema/ is a sibling package under src/.
+# Using an absolute import instead of ``from ..schema...`` avoids the
+# "attempted relative import beyond top-level package" error when the module
+# is imported via the plain ``llm`` package (PYTHONPATH=src).
+# ---------------------------------------------------------------------------
+from schema.set_screw_shaft_collar import CATALOG_ROWS as _CATALOG_ROWS  # type: ignore[import]
 
 # ---------------------------------------------------------------------------
 # Candidate identity
@@ -55,21 +78,39 @@ CONTRACT_VERSION: Final[str] = "app001-io.v1"  # unchanged I/O contract
 
 # ---------------------------------------------------------------------------
 # Catalog constants (derived from the same frozen CATALOG_ROWS as production)
+# CATALOG_ROWS columns: (bore_d, outer_d, screw_d, screw_len, width)
 # ---------------------------------------------------------------------------
 
+# Set of the 15 valid bore_d values.
 _CATALOG_BORE_D: Final[frozenset[int]] = frozenset(row[0] for row in _CATALOG_ROWS)
 _CATALOG_BORE_D_MIN: Final[int] = min(_CATALOG_BORE_D)
 _CATALOG_BORE_D_MAX: Final[int] = max(_CATALOG_BORE_D)
 
-# The complete set of extractable fields in app001-io.v1 (mirrors contract.py
-# EXTRACTABLE_FIELDS without importing it).
-_EXTRACTABLE_FIELDS: Final[frozenset[str]] = frozenset({
-    "bore_d", "outer_d", "width", "screw_d", "screw_len", "second_screw",
-})
+# Map bore_d → expected outer_d (from the catalog row).
+# Used for P2-5 catalog-conflict detection.
+_CATALOG_BORE_TO_OUTER: Final[dict[int, int]] = {row[0]: row[1] for row in _CATALOG_ROWS}
+
+# second_screw rule: second_screw == 1 iff bore_d > 70 (GN 705 note).
+# bore_d = 70 → expected second_screw = 0 (strict threshold, not >=).
+_SECOND_SCREW_THRESHOLD: Final[int] = 70
+
+# Unit conversion factors to mm.
+_MM_PER_UNIT: Final[dict[str, Decimal]] = {
+    "mm": Decimal("1"),
+    "millimeter": Decimal("1"),
+    "millimeters": Decimal("1"),
+    "cm": Decimal("10"),
+    "centimeter": Decimal("10"),
+    "centimeters": Decimal("10"),
+    "m": Decimal("1000"),
+    "meter": Decimal("1000"),
+    "meters": Decimal("1000"),
+}
 
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class V5ViolationDetail:
@@ -102,69 +143,115 @@ class V5CheckResult:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Internal helpers
 # ---------------------------------------------------------------------------
 
-def _bore_d_from_envelope(extracted: Mapping[str, Any]) -> float | int | None:
-    """Extract a numeric bore_d from the extracted_parameters sub-object.
 
-    Handles both bare-number and ``{"value": N, "unit": "mm"}`` object forms.
-    Returns None if bore_d is absent or non-numeric.
+def _normalize_bore_d(raw: Any) -> int | None:
+    """Return the numeric bore_d as an integer mm value, or None.
+
+    Handles three forms:
+      1. Bare integer or float: bore_d=24 or bore_d=24.0 → 24
+      2. Measurement object: {"value": 1.6, "unit": "cm"} → 16
+      3. Anything else (bool, string, None, unknown unit) → None
+
+    Only returns a value when the result is a whole-number mm value that
+    could potentially be a catalog entry.  Non-finite values, non-integer
+    results after unit conversion, and unknown units all return None.
+    """
+    if isinstance(raw, Mapping) and "value" in raw:
+        unit = str(raw.get("unit", "mm")).strip().lower()
+        factor = _MM_PER_UNIT.get(unit)
+        if factor is None:
+            return None  # unknown unit — not a valid catalog bore
+        try:
+            converted = Decimal(str(raw["value"])) * factor
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+        if not converted.is_finite():
+            return None
+        if converted != converted.to_integral_value():
+            return None  # fractional mm — no catalog entry is fractional
+        return int(converted)
+
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, float):
+        # Only accept finite whole-number floats (e.g. 24.0 → 24).
+        import math
+        if not math.isfinite(raw) or raw != int(raw):
+            return None
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    return None
+
+
+def _bore_d_from_envelope(extracted: Mapping[str, Any]) -> int | None:
+    """Extract a normalized integer bore_d (mm) from extracted_parameters.
+
+    Returns None if bore_d is absent, non-numeric, uses an unknown unit,
+    or produces a non-integer mm value after conversion.
     """
     if not isinstance(extracted, Mapping) or "bore_d" not in extracted:
         return None
-    raw = extracted["bore_d"]
-    if isinstance(raw, Mapping) and "value" in raw:
-        raw = raw["value"]
-    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
-        return None
-    return raw
+    return _normalize_bore_d(extracted["bore_d"])
 
 
-def _is_catalog_bore_d(value: float | int) -> bool:
+def _is_catalog_bore_d(value: int) -> bool:
     """True when value is one of the 15 frozen GN 705 catalog bore_d values."""
-    return isinstance(value, int) and value in _CATALOG_BORE_D
-
-
-def _is_in_catalog_range(value: float | int) -> bool:
-    """True when value is within the catalog range (inclusive)."""
-    return _CATALOG_BORE_D_MIN <= value <= _CATALOG_BORE_D_MAX
+    return value in _CATALOG_BORE_D
 
 
 # ---------------------------------------------------------------------------
 # P1 — No over-refusal when user input is unambiguously complete
 # ---------------------------------------------------------------------------
 
+
+def _has_deterministic_conflict(extracted: Mapping[str, Any], bore_d: int) -> bool:
+    """True when extracted_parameters contain a deterministic CAD-003 conflict.
+
+    Used by P1-1 to distinguish legitimate ask/refuse (conflict exists) from
+    over-refusal (no conflict exists).  Checks the same conditions as P2-5
+    but as a boolean gate, without recording violation details.
+
+    A conflict exists when:
+    (a) explicit outer_d disagrees with the catalog row for bore_d; OR
+    (b) explicit second_screw violates the bore_d > 70 rule.
+    """
+    expected_outer = _CATALOG_BORE_TO_OUTER.get(bore_d)
+    if "outer_d" in extracted and expected_outer is not None:
+        outer_mm = _normalize_bore_d(extracted["outer_d"])
+        if outer_mm is not None and outer_mm != expected_outer:
+            return True
+
+    if "second_screw" in extracted:
+        raw_ss = extracted["second_screw"]
+        if isinstance(raw_ss, bool) or not isinstance(raw_ss, (int, float)):
+            pass
+        else:
+            ss_val = int(raw_ss) if isinstance(raw_ss, float) and raw_ss == int(raw_ss) else raw_ss
+            if isinstance(ss_val, int) and ss_val in (0, 1):
+                expected_ss = 1 if bore_d > _SECOND_SCREW_THRESHOLD else 0
+                if ss_val != expected_ss:
+                    return True
+
+    return False
+
+
 def _check_p1(
     envelope: Mapping[str, Any],
     condition_id: str | None,
 ) -> list[V5ViolationDetail]:
-    """Apply P1 rules: a ``refuse`` is not justified when the envelope already
-    shows a valid catalog bore_d, empty missing_fields, and empty
-    unsupported_requests.
+    """Apply P1 rules.
 
-    Rules:
-      P1-1  If bore_d is present in extracted_parameters (numeric, in catalog)
-            AND missing_fields == []
-            AND unsupported_requests == []
-            THEN decision=refuse is an over-refusal.
+    P1-1  If bore_d is present and is a valid catalog value AND
+          missing_fields == [] AND unsupported_requests == [] THEN
+          decision=refuse or decision=ask is an over-refusal; decision=answer
+          is required.
 
-      P1-2  C0 and C1 condition must not produce different answer/ask/refuse
-            decisions when the envelope structure is otherwise identical
-            (checked at the batch level; this per-envelope rule only flags
-            refuse when the envelope itself already satisfies the answer
-            preconditions, regardless of condition).
-
-      P1-3  A unit-converted bore_d (e.g. 1.6 cm → 16 mm) that lands on a
-            valid catalog value must not be refused solely because the original
-            unit was non-mm.  This is captured by P1-1 using the normalized
-            value already present in extracted_parameters.
-
-      P1-4  Retrieval reference context (C1) must not fabricate
-            missing_fields or unsupported_requests that are absent from the
-            user's own input.  This rule is enforced transitively: when
-            missing_fields and unsupported_requests are already empty and
-            bore_d is valid, P1-1 fires regardless of condition_id.
+    P1-2/P1-3/P1-4 are captured by P1-1 (condition-agnostic; unit-converted
+    and retrieval-context cases all reduce to the same envelope check).
     """
     violations: list[V5ViolationDetail] = []
 
@@ -173,20 +260,27 @@ def _check_p1(
     missing_fields: Any = envelope.get("missing_fields", [])
     unsupported: Any = envelope.get("unsupported_requests", [])
 
-    # Normalise to lists defensively.
     if not isinstance(missing_fields, list):
         missing_fields = []
     if not isinstance(unsupported, list):
         unsupported = []
 
     bore_d = _bore_d_from_envelope(extracted if isinstance(extracted, Mapping) else {})
-    bore_d_present = bore_d is not None
-    bore_d_valid_catalog = bore_d_present and _is_catalog_bore_d(bore_d)
+    bore_d_valid_catalog = bore_d is not None and _is_catalog_bore_d(bore_d)
 
-    # P1-1: refuse when bore_d valid, missing_fields empty, unsupported empty.
+    # Suppress P1-1 when there is a deterministic catalog/rule conflict in the
+    # extracted fields.  A catalog conflict is a legitimate reason for ask/refuse
+    # (e.g. A05: bore_d=20 but outer_d=40 conflicts with the catalog row).
+    has_conflict = (
+        bore_d_valid_catalog
+        and isinstance(extracted, Mapping)
+        and _has_deterministic_conflict(extracted, bore_d)
+    )
+
     if (
-        decision == "refuse"
+        decision in ("refuse", "ask")
         and bore_d_valid_catalog
+        and not has_conflict
         and len(missing_fields) == 0
         and len(unsupported) == 0
     ):
@@ -194,64 +288,36 @@ def _check_p1(
         violations.append(V5ViolationDetail(
             rule_id="P1-1",
             message=(
-                f"decision=refuse is not justified when bore_d is a valid catalog "
-                f"value, missing_fields=[], and unsupported_requests=[]"
+                f"decision={decision} is not justified when bore_d is a valid "
+                f"catalog value, missing_fields=[], and unsupported_requests=[]"
                 f"{cond_note}; the v5 candidate rule requires decision=answer "
                 f"in this situation"
             ),
-            evidence=f"bore_d={bore_d}  missing_fields={missing_fields}  "
-                     f"unsupported_requests={unsupported}",
-        ))
-
-    # P1-1 also applies when decision=ask under the same conditions — asking
-    # is also unjustified when all required info is present and valid.
-    if (
-        decision == "ask"
-        and bore_d_valid_catalog
-        and len(missing_fields) == 0
-        and len(unsupported) == 0
-    ):
-        cond_note = f" (condition={condition_id})" if condition_id else ""
-        violations.append(V5ViolationDetail(
-            rule_id="P1-1",
-            message=(
-                f"decision=ask is not justified when bore_d is a valid catalog "
-                f"value, missing_fields=[], and unsupported_requests=[]"
-                f"{cond_note}; the v5 candidate rule requires decision=answer "
-                f"in this situation"
+            evidence=(
+                f"bore_d={bore_d}  missing_fields={missing_fields}  "
+                f"unsupported_requests={unsupported}"
             ),
-            evidence=f"bore_d={bore_d}  missing_fields={missing_fields}  "
-                     f"unsupported_requests={unsupported}",
         ))
 
     return violations
 
 
 # ---------------------------------------------------------------------------
-# P2 — Envelope self-consistency
+# P2 — Envelope self-consistency (including catalog/rule conflict)
 # ---------------------------------------------------------------------------
 
+
 def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
-    """Apply P2 rules: the envelope must not contradict itself.
+    """Apply P2 rules.
 
-    Rules:
-      P2-1  No field that appears in extracted_parameters may also appear
-            in missing_fields.  A field is either extracted (present) or
-            missing — never both.
-
-      P2-2  No field in missing_fields may appear as a key in
-            extracted_parameters (same invariant, stated from the other side,
-            to catch both directions in tests).
-
-      P2-3  decision=answer must not coexist with non-empty missing_fields or
-            non-empty unsupported_requests (pre-existing invariant, restated
-            here for completeness; violations also appear in P1 context).
-
-      P2-4  No duplicate entries within missing_fields (each field may appear
-            at most once).
-
-    Note: P2-1 and P2-2 are the same mathematical invariant.  Both are
-    checked explicitly so tests can target either direction.
+    P2-1/P2-2  Field in extracted_parameters also appears in missing_fields.
+    P2-3       decision=answer + non-empty missing_fields or unsupported.
+    P2-4       Duplicate entries in missing_fields.
+    P2-5       decision=answer + deterministic catalog/rule conflict:
+               (a) explicit outer_d disagrees with the catalog row for bore_d;
+               (b) explicit second_screw violates the bore_d > 70 rule.
+               The checker records the conflict without modifying or removing
+               any explicit claim.
     """
     violations: list[V5ViolationDetail] = []
 
@@ -270,7 +336,7 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
     extracted_keys = set(extracted.keys())
     missing_set = {f for f in missing_fields if isinstance(f, str)}
 
-    # P2-1 / P2-2: intersection of extracted_keys and missing_set must be empty.
+    # P2-1/P2-2: overlap between extracted_parameters and missing_fields.
     overlap = extracted_keys & missing_set
     for field_name in sorted(overlap):
         violations.append(V5ViolationDetail(
@@ -286,7 +352,7 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
             ),
         ))
 
-    # P2-3: decision=answer must not coexist with non-empty missing_fields.
+    # P2-3: answer + non-empty missing_fields.
     if decision == "answer" and len(missing_fields) > 0:
         violations.append(V5ViolationDetail(
             rule_id="P2-3",
@@ -297,7 +363,7 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
             evidence=f"missing_fields={missing_fields}",
         ))
 
-    # P2-3: decision=answer must not coexist with non-empty unsupported_requests.
+    # P2-3: answer + non-empty unsupported_requests.
     if decision == "answer" and len(unsupported) > 0:
         violations.append(V5ViolationDetail(
             rule_id="P2-3",
@@ -308,7 +374,7 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
             evidence=f"unsupported_requests={unsupported}",
         ))
 
-    # P2-4: no duplicate entries in missing_fields.
+    # P2-4: duplicate entries in missing_fields.
     seen_missing: set[str] = set()
     for f in missing_fields:
         if isinstance(f, str):
@@ -318,15 +384,87 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
                     message=f"field '{f}' appears more than once in missing_fields",
                     evidence=f"missing_fields={missing_fields}",
                 ))
-                break  # one violation per duplicate is enough
+                break
             seen_missing.add(f)
 
+    # P2-5: decision=answer + deterministic catalog/rule conflict.
+    # Only checked when decision=answer (other decisions are expected to
+    # reflect a conflict by using ask/refuse; flagging them here would
+    # produce false positives for correct ask/refuse envelopes).
+    if decision == "answer":
+        bore_d = _bore_d_from_envelope(extracted)
+        if bore_d is not None and _is_catalog_bore_d(bore_d):
+            _check_p2_5_catalog(bore_d, extracted, violations)
+
     return violations
+
+
+def _check_p2_5_catalog(
+    bore_d: int,
+    extracted: Mapping[str, Any],
+    violations: list[V5ViolationDetail],
+) -> None:
+    """Check P2-5 catalog/rule conflicts for a decision=answer envelope.
+
+    (a) outer_d conflict: the explicit outer_d disagrees with the catalog row.
+    (b) second_screw rule conflict: the explicit second_screw violates the
+        bore_d > 70 threshold.
+
+    Violations are appended to ``violations`` in-place.
+    The checker never modifies, removes, or rewrites any explicit claim.
+    """
+    expected_outer_d = _CATALOG_BORE_TO_OUTER.get(bore_d)
+
+    # (a) outer_d catalog conflict.
+    if "outer_d" in extracted and expected_outer_d is not None:
+        raw_outer = extracted["outer_d"]
+        outer_mm = _normalize_bore_d(raw_outer)  # reuse normalization
+        if outer_mm is not None and outer_mm != expected_outer_d:
+            violations.append(V5ViolationDetail(
+                rule_id="P2-5",
+                message=(
+                    f"decision=answer but explicit outer_d conflicts with the "
+                    f"catalog row for bore_d={bore_d}: "
+                    f"catalog expects outer_d={expected_outer_d}, "
+                    f"envelope has outer_d={outer_mm}; "
+                    f"construction cannot proceed with conflicting dimensions"
+                ),
+                evidence=(
+                    f"bore_d={bore_d}  explicit_outer_d={outer_mm}  "
+                    f"catalog_outer_d={expected_outer_d}"
+                ),
+            ))
+
+    # (b) second_screw rule conflict.
+    if "second_screw" in extracted:
+        raw_ss = extracted["second_screw"]
+        if isinstance(raw_ss, bool) or not isinstance(raw_ss, (int, float)):
+            pass  # non-numeric second_screw: let schema handle it
+        else:
+            ss_val = int(raw_ss) if isinstance(raw_ss, float) and raw_ss == int(raw_ss) else raw_ss
+            if isinstance(ss_val, int) and ss_val in (0, 1):
+                expected_ss = 1 if bore_d > _SECOND_SCREW_THRESHOLD else 0
+                if ss_val != expected_ss:
+                    violations.append(V5ViolationDetail(
+                        rule_id="P2-5",
+                        message=(
+                            f"decision=answer but explicit second_screw={ss_val} "
+                            f"violates the GN 705 rule: "
+                            f"bore_d={bore_d} {'>' if bore_d > _SECOND_SCREW_THRESHOLD else '<='} "
+                            f"{_SECOND_SCREW_THRESHOLD}, so second_screw must be "
+                            f"{expected_ss}"
+                        ),
+                        evidence=(
+                            f"bore_d={bore_d}  explicit_second_screw={ss_val}  "
+                            f"required_second_screw={expected_ss}"
+                        ),
+                    ))
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def check_v5_envelope(
     envelope: Mapping[str, Any],
@@ -339,23 +477,15 @@ def check_v5_envelope(
     Args:
         envelope: A parsed app001-io.v1 envelope (dict-like).  This is the
             model's JSON response object, already parsed.  No network call is
-            made; no API keys are read or examined.
+            made; no API keys are read or examined.  The input is never
+            modified.
         condition_id: Optional condition identifier (``"C0"`` or ``"C1"``)
-            for auditability.  Does not change the P1/P2 rule logic — the
-            rules are condition-agnostic by design (C0 and C1 must produce the
-            same decision when the envelope structure is otherwise equivalent).
+            for auditability.  Does not change the P1/P2 rule logic.
 
     Returns:
-        A :class:`V5CheckResult` with:
-          - ``ok=True`` when no violations are found.
-          - Separate ``p1_violations`` and ``p2_violations`` tuples.
-          - Combined ``violations`` tuple for convenience.
-
-    This function never modifies the input envelope, never logs or prints
-    API keys or secrets, and never makes network calls.
+        A :class:`V5CheckResult` with ``ok=True`` when no violations are found.
     """
     if not isinstance(envelope, Mapping):
-        # Non-mapping input: cannot check; return a structural violation.
         v = V5ViolationDetail(
             rule_id="P2-0",
             message="envelope is not a JSON object (Mapping); cannot check",
@@ -385,16 +515,10 @@ def is_over_refusal(
     envelope: Mapping[str, Any],
     condition_id: str | None = None,
 ) -> bool:
-    """True when the envelope contains a P1 over-refusal violation.
-
-    Convenience wrapper over :func:`check_v5_envelope`.
-    """
+    """True when the envelope contains a P1 over-refusal violation."""
     return len(check_v5_envelope(envelope, condition_id=condition_id).p1_violations) > 0
 
 
 def is_self_consistent(envelope: Mapping[str, Any]) -> bool:
-    """True when the envelope passes all P2 self-consistency checks.
-
-    Convenience wrapper over :func:`check_v5_envelope`.
-    """
+    """True when the envelope passes all P2 self-consistency checks."""
     return len(check_v5_envelope(envelope).p2_violations) == 0

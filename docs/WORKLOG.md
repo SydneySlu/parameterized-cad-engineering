@@ -1919,3 +1919,21 @@ commit=待提交
 - 范围：修正 `PYTHONPATH=src` 正式导入、目录/规则冲突判定，以及 `24.0`/厘米 measurement object 的数值归一化边界；继续保持 checker 离线、未激活和生产隔离。
 - 禁止项：不修改生产 v4、冻结 prompt/Schema、预算/授权、旧批次，不运行真实模型，不创建新 batch_id。
 - 下一步：CC 在当前候选分支执行 R1 并提交；Codex 中枢复核修正后的专项测试、正式导入和冲突反例。
+
+### APP-001-V4-QUALITY-FIX-CANDIDATE-R1 / CC / in_progress / 2026-11-09
+
+- 动作：修正 Codex 对提交 `1a0bd94` 的三项独立审查阻塞问题（R1-1/R1-2/R1-3）。
+- R1-1（导入兼容）：`from schema.set_screw_shaft_collar`（绝对导入）替换 `from ..schema...`（相对导入）。现在 `PYTHONPATH=src python3.11 -c 'import llm.decision_policy_v5_candidate as m'` 可正常导入，且 `PYTHONPATH=src:.` 下的 `src.llm` 命名空间同时保留。测试补充 `ImportSmokeTests`（subprocess 调用验证真实 `PYTHONPATH=src` 路径）。
+- R1-2（P2-5 目录/规则冲突）：新增 `_has_deterministic_conflict()` 和 `_check_p2_5_catalog()` — 当 `decision=answer` 且 extracted_parameters 中含 outer_d 与目录行不符，或 second_screw 违反 bore_d > 70 规则时，返回 P2-5 violation；不修改或删除任何显式 claim。P1-1 新增冲突抑制逻辑：ask/refuse 附带确定性目录/规则冲突时，冲突本身是合法原因，P1-1 不触发。
+- R1-3（数值和单位边界）：新增 `_normalize_bore_d()`，统一处理 bare int/float（24.0 → 24）、measurement object（{"value":1.6,"unit":"cm"} → 16）、未知单位 → None、非有限值 → None、分数毫米 → None。`_bore_d_from_envelope()` 委托给此函数。
+- 测试扩展：78 个测试（R1 前 51 个），新增 ImportSmokeTests、P2CatalogRuleConflictTests、NumericNormalizationTests、EnvelopeImmutabilityTests；全部离线，不调用模型/网络/API key。
+- 实际验证（Python 3.11.17 VM）：
+  - `py_compile`（两个文件）：通过；
+  - `PYTHONPATH=src import llm.decision_policy_v5_candidate` → `app001-extraction.v5-candidate`；
+  - `PYTHONPATH=src:. python3.11 -m unittest tests.llm.test_decision_policy_v5_candidate -q` → **Ran 78 tests OK**；
+  - 回归（v4/v3 candidate + authorization + parser + budget + run-script）→ **Ran 191 tests OK（skipped=6）**；
+  - `git diff --check` → clean。
+- 正常案例：`check_v5_envelope({'decision':'answer','extracted_parameters':{'bore_d':24},...})` → `ok=True`；
+- 失败案例（P1-1）：`check_v5_envelope({'decision':'refuse','extracted_parameters':{'bore_d':24},...}, condition_id='C1')` → `ok=False, p1=[P1-1]`；
+- 失败案例（P2-5）：`check_v5_envelope({'decision':'answer','extracted_parameters':{'bore_d':20,'outer_d':40},...})` → `ok=False, p2=[P2-5]`。
+- 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改；`FORMAL_EVALUATION_ALLOWED` 保持 `False`；`PROMPT_VERSION` 保持 `app001-extraction.v4`。离线 checker 通过 ≠ 模型效果通过；候选仍处于 `review`，不合并 main，不激活 v5，不创建新正式批次。
