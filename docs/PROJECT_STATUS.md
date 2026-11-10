@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-08
+更新时间：2026-11-11
 
 ## 当前结论
 
@@ -59,7 +59,8 @@
 | APP-001-PREFLIGHT-TEST-ISOLATION-FIX | 修复正式评测前置测试的 batch_id 碰撞 | CC + Codex | done | `e47af64` 实现 UUID 测试隔离，`d422877` 完成中枢独立审查并已合入 `main`；Python 3.11.18 下 `test_r3_fixes` 51/51、LLM 全量 685 通过（8 个既有 FUSE skip）、Schema 17/17 通过。未改变生产代码、授权范围或正式批次。 |
 | APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测 | Codex + 项目负责人 + CC | review | 批次 `app001-phase1-v4-20261109-01` 已完成 36 条逻辑记录、32 条模型响应和 4 条 C1 请求前阻塞；48 次物理 HTTP 均在预算内。字段/证据/解析 32/32 通过，但有 3 条 Ollama 决策偏差和 2 条 DeepSeek A05 envelope 自洽性问题；详见 `agent-work/reviews/APP-001-phase1-v4-20261109-01-codex-review.md`。 |
 | APP-001-V4-QUALITY-FIX-CANDIDATE | v4 决策质量离线候选修正 | CC + Codex | review | R1 提交 `d706639` 已经 Codex 离线复核：78 项专项、191 项定向回归通过，正式 `llm` 导入、P2-5 冲突和数值归一化边界通过；候选仍未合并/激活。 |
-| APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | review | 候选 prompt 与 A01-A09 策略映射已准备；checker 对所有显式目录耦合字段的冲突覆盖已补齐。Python 3.11.18 下 LLM 800 项（8 个既有 skip）、Schema 17 项通过；未激活、未运行模型，等待独立审查。 |
+| APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | review | 独立离线审查通过，提交 `582a123`；尚未合入 `main`。未激活、未运行模型。 |
+| APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | review | 独立激活准备包、hash manifest、v4 回滚锚点、离线 preflight 与 ADR-0018 proposed 已准备；生产仍为 v4，等待项目负责人审阅决策。无模型评测授权。 |
 
 ## 阻塞项
 
@@ -81,7 +82,8 @@
 ## 下一步
 
 1. 批次 `app001-phase1-v4-20261109-01` 已完成并经 Codex 独立复核；保留 raw、账本和阻塞证据，不删除或覆盖。
-2. `APP-001-V5-PROMPT-CANDIDATE` 当前处于 review；需独立审查 prompt、checker/策略一致性、冻结接口兼容和交付证据。生产 v4、正式 gate 和旧批次保持不变。
-3. v5 候选通过独立审查后，再由项目负责人决定是否进入版本化激活；任何模型效果测试都必须建立新版本、新唯一 batch_id 和新授权，不得重跑同一批次或混合统计。
-4. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
-5. 第二族扩展另行决策，不作为 APP-001 前置依赖。
+2. `APP-001-V5-PROMPT-CANDIDATE` 已通过独立离线审查；候选提交 `582a123`。
+3. `APP-001-V5-ACTIVATION-PREP` 当前处于 review：项目负责人审阅 ADR-0018 proposed 和准备包后，决定是否接受策略方向并授权独立激活实现。生产仍为 v4，正式 gate 与旧批次保持不变。
+4. 即使接受 ADR-0018，真实模型效果测试仍需新版本激活完成后另建唯一 batch_id、新授权和 Codex preflight；不得重跑同一批次或混合统计。
+5. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
+6. 第二族扩展另行决策，不作为 APP-001 前置依赖。

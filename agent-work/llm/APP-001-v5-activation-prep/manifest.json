@@ -1,0 +1,30 @@
+{
+  "package_id": "APP-001-v5-activation-prep",
+  "status": "proposed",
+  "candidate_prompt_version": "app001-extraction.v5",
+  "production_prompt_version": "app001-extraction.v4",
+  "contract_version": "app001-io.v1",
+  "prompt_file": "prompt-v5.md",
+  "prompt_file_sha256": "21177d7107923a4afd7a19ffcff22c73f4ea53811b79b44bd91a0e62b329f957",
+  "source_candidate": "../APP-001-v5-prompt-candidate/prompt-v5-candidate.md",
+  "source_candidate_sha256": "6e969ae68f75c0cd6a188bd589a84c378b50055a42f75ff2b3b3259252f6bdfe",
+  "acceptance_set": "../APP-001-baseline-prep/acceptance-set-v0.json",
+  "acceptance_set_sha256": "ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf",
+  "acceptance_set_version": "acceptance-set-v0",
+  "acceptance_case_count": 9,
+  "cad_schema_version": "set_screw_shaft_collar.v0",
+  "cad_schema_source_commit": "035f467142888edfd0bd7cd73906f9b155c8f43c",
+  "production_files_changed": false,
+  "formal_evaluation_authorized": false,
+  "activation_requires": [
+    "Project owner reviews and accepts proposed ADR-0018 strategy direction",
+    "Separate activation implementation updates contract.py, parser.py, prompt_loader.py, activation manifest, and compatibility tests as one atomic change",
+    "Codex independent review and required Python 3.11.18 tests pass before merge to main",
+    "New unique batch_id and explicit project-owner authorization before any model calls"
+  ],
+  "rollback_target": "app001-extraction.v4",
+  "rollback_prompt_file": "../APP-001-v4-activation/prompt-v4.md",
+  "rollback_prompt_file_sha256": "73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc",
+  "activation_baseline_commit": "582a1234e5603861ad98f605d76af4efaf9b1334",
+  "decision_record": "ADR-0018 (proposed; not accepted)"
+}

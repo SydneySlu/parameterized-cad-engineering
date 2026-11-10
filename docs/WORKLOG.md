@@ -1961,3 +1961,14 @@ commit=待提交
 - 不变量：冻结 v4 prompt SHA-256 `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc` 与 acceptance-set SHA-256 `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf` 未变；生产版本仍为 v4，formal gate 仍关闭；未改旧批次，未读取 `.env`/密钥，未调用网络或模型，未创建正式 batch。
 - 限制：checker 只看 envelope，不能判定原始自然语言是否歧义或 evidence 是否真实支持 claim；静态/离线通过不证明模型遵循 v5。
 - 下一步：完成差异与状态核对、提交本候选工作单元并交 Codex 独立审查；在候选审查和版本化激活决定前保持生产 v4。
+
+### APP-001-V5-ACTIVATION-PREP / Codex / review / 2026-11-11
+
+- 动作：在 v5 prompt 候选独立离线审查通过后，准备可供项目负责人审阅的版本化激活包和 proposed ADR；不切换生产版本，不调用模型。
+- 新增激活准备包 `agent-work/llm/APP-001-v5-activation-prep/`：`prompt-v5.md`、`manifest.json`、`README.md`、`checkpoint.md`、`handoff.md`。prompt 副本仅规范化候选版本字符串和 heading 标签；候选源 hash 与准备副本 hash 分开记录；v4 prompt 为明确回滚目标。
+- 新增 `tests/llm/test_v5_activation_prep.py`：离线检查包状态、源/副本/验收集/回滚哈希、v4 生产常量、正式 gate 关闭、候选 checker 与生产模块隔离，以及激活前置条件。
+- 在 `docs/DECISIONS.md` 追加 ADR-0018（proposed）：提议保留 `app001-io.v1` 契约并将 v5 策略版本化；明确项目负责人决策、独立激活实现/审查和单独正式批次授权是不同门。尚未接受。
+- 同步 PROJECT_STATUS、PROJECT_PLAN，记录 v5 候选审查通过和激活准备待审状态。
+- 验证（Mac Python 3.11.18）：激活准备/v5 prompt/checker 专项 **103 项通过**；LLM 全量 **810 项通过、8 项既有 FUSE skip**；Schema **17 项通过**；新增测试 `py_compile` 和 `git diff --check` 通过。run-script 测试预期会打印模拟 abort/fail 场景，整体退出码为 0。
+- 哈希：v5 候选源 `6e969ae6…`；版本规范化准备副本 `21177d71…`；v4 回滚 prompt `73cb6b8f…`；acceptance-set `ed59e2b6…`。
+- 当前不改变任何生产常量、parser、loader、预算、授权或旧批次；生产仍 v4，formal gate 仍关闭。下一步为独立审查本准备包和 ADR-0018 proposed，并由项目负责人决定是否接受策略方向。

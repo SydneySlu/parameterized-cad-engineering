@@ -486,3 +486,30 @@ ir_cad_geometry_step_disabled: True
 ### 边界
 
 这是一条当前代码与冻结激活版本的事实同步，不构成 batch_id 批准、模型调用批准或任何旧批次重跑批准。新的正式运行仍必须使用新的唯一 `batch_id`，由项目负责人填写并明确批准授权模板；执行前仍需通过 Codex final preflight。旧 v2/v3 批次继续只读，统计不得与 v4 混合。
+
+## ADR-0018：APP-001 extraction v5 策略与激活提案（proposed）
+
+- 日期：2026-11-11
+- 状态：proposed；等待项目负责人审阅策略方向；未授权生产激活或真实模型评测
+- 决策人：Codex 中枢提出；项目负责人待决
+- 关联：ADR-0013、ADR-0014、ADR-0017；`APP-001-V5-PROMPT-CANDIDATE`；`APP-001-V5-ACTIVATION-PREP`
+- 候选材料：`agent-work/llm/APP-001-v5-prompt-candidate/`；激活准备副本：`agent-work/llm/APP-001-v5-activation-prep/`
+
+### 背景
+
+v4 唯一正式效果批次 `app001-phase1-v4-20261109-01` 的独立审查发现 3 条完整、无冲突输入被 Ollama 误拒绝（A02 C1、A03 C0、A08 C1），以及 DeepSeek A05 C0/C1 将 `outer_d` 同时列入 `extracted_parameters` 和 `missing_fields`。离线 v5 checker/prompt 候选已针对这些行为准备并通过独立离线审查；这不构成模型效果结论。
+
+### 提议决策
+
+若项目负责人接受本 ADR，后续可以将 `app001-extraction.v5` 作为新的生产 prompt 策略版本准备激活。策略仅明确：完整、目录有效、无缺失/unsupported/显式目录或规则冲突时，C0/C1 均应 `answer`，retrieval 不能创建或覆盖用户意图；并强化 envelope 字段互斥、缺失字段去重及 answer 自洽规则。保留 v4 的九键 `app001-io.v1` 契约、显式主张/证据规则、目录边界、不支持请求拒绝、冲突保留和 CAD-003 最终校验。
+
+### 边界
+
+- 本 ADR 当前为 proposed；生产继续使用 `app001-extraction.v4`，`FORMAL_EVALUATION_ALLOWED=False`。
+- 接受策略方向不等于激活实现完成。生产切换必须由独立工作单元原子更新 `contract.py`、parser 版本检查、prompt-loader 路径/版本/hash 锚点、激活 manifest 和兼容测试；随后需 Codex 中枢独立复核并合入 `main`。
+- 不修改冻结 `acceptance-set-v0`、CAD-003 Schema、预算、授权逻辑、旧批次或历史 prompt。C2、IR/CAD/geometry/STEP 保持禁用。
+- 本 ADR 不授权任何模型请求。若激活后需验证效果，必须使用新的唯一 `batch_id`、单独明确授权并通过 Codex final preflight；旧批次只读且不得与 v5 结果混合。
+
+### 当前状态
+
+仅准备提案、候选版本副本和离线 package preflight；项目负责人待审本 ADR。候选 prompt 哈希、源哈希和 v4 回滚哈希记录于激活准备包 manifest。无生产文件变更、无模型调用、无正式批次授权。
