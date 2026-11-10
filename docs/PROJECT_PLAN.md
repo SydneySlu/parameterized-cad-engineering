@@ -53,7 +53,7 @@
 
 ## APP-001 v5 后续门
 
-- [ ] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过，提交 `582a123` 尚待合入；未激活）
+- [x] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过并随激活链合入 `main`）
 - [x] 项目负责人接受 ADR-0018 策略方向（2026-11-11）
-- [ ] 独立审查并合入 v5 版本化激活（APP-001-V5-ACTIVATION；当前 review；不含模型评测授权）
-- [ ] 若需测模型效果，另行批准新的唯一 batch_id，并完成 Codex final preflight；v4 旧批次只读且不得混合统计
+- [x] 独立审查并合入 v5 版本化激活（APP-001-V5-ACTIVATION；`2c70225` 已在 `main`，中枢审查通过）
+- [ ] v5 真实模型效果评测（APP-001-V5-FORMAL-EFFECT-EVALUATION；受控入口、唯一 batch_id、final preflight 后执行；v4 旧批次只读且不得混合统计）

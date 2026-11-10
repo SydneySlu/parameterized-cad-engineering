@@ -59,9 +59,10 @@
 | APP-001-PREFLIGHT-TEST-ISOLATION-FIX | 修复正式评测前置测试的 batch_id 碰撞 | CC + Codex | done | `e47af64` 实现 UUID 测试隔离，`d422877` 完成中枢独立审查并已合入 `main`；Python 3.11.18 下 `test_r3_fixes` 51/51、LLM 全量 685 通过（8 个既有 FUSE skip）、Schema 17/17 通过。未改变生产代码、授权范围或正式批次。 |
 | APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测 | Codex + 项目负责人 + CC | review | 批次 `app001-phase1-v4-20261109-01` 已完成 36 条逻辑记录、32 条模型响应和 4 条 C1 请求前阻塞；48 次物理 HTTP 均在预算内。字段/证据/解析 32/32 通过，但有 3 条 Ollama 决策偏差和 2 条 DeepSeek A05 envelope 自洽性问题；详见 `agent-work/reviews/APP-001-phase1-v4-20261109-01-codex-review.md`。 |
 | APP-001-V4-QUALITY-FIX-CANDIDATE | v4 决策质量离线候选修正 | CC + Codex | review | R1 提交 `d706639` 已经 Codex 离线复核：78 项专项、191 项定向回归通过，正式 `llm` 导入、P2-5 冲突和数值归一化边界通过；候选仍未合并/激活。 |
-| APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | review | 独立离线审查通过，提交 `582a123`；尚未合入 `main`。未激活、未运行模型。 |
-| APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | review | 准备包及 v4 回滚锚点已在 `687495b`；项目负责人已接受 ADR-0018 策略方向，相关提交尚未合入 main。 |
-| APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | review | 当前工作分支的 runtime prompt/parser 切换至 v5，保留 v2/v3/v4 显式历史审计路径；manifest 锚定 v5 与 v4 回滚哈希。待独立审查和合入 main（main 当前仍为 v4）；formal gate 仍关闭，模型效果未测。 |
+| APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | done | 独立离线审查通过，候选提交 `582a123` 已随 v5 激活链合入 `main`；离线候选不构成模型效果证据。 |
+| APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | done | 准备包及 v4 回滚锚点 `687495b` 已合入 `main`；ADR-0018 已接受。 |
+| APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | done | `2c70225` 已合入并推送至 `main`；中枢审查通过，Python 3.11.18 激活/兼容专项 72 项通过。运行时默认 v5，v2/v3/v4 保留显式历史审计；formal evaluation gate 仍为 `False`。 |
+| APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | in_progress | 项目负责人已授权推进到真实模型评测；正在准备独立 v5 批次入口、唯一 batch_id、离线回归和 final preflight。尚未发起模型请求；仅在 scope、服务身份和 preflight 全部通过后运行。 |
 
 ## 阻塞项
 
@@ -84,7 +85,7 @@
 
 1. 批次 `app001-phase1-v4-20261109-01` 已完成并经 Codex 独立复核；保留 raw、账本和阻塞证据，不删除或覆盖。
 2. `APP-001-V5-PROMPT-CANDIDATE` 已通过独立离线审查；候选提交 `582a123`。
-3. 项目负责人已于 2026-11-11 接受 ADR-0018。`APP-001-V5-ACTIVATION` 激活实现当前待 Codex 中枢审查；合入 `main` 前生产 branch 的离线配置为 v5，formal gate 仍关闭。
-4. v5 激活合入 `main` 后，若需测真实模型效果，仍须先准备支持 v5 的受控批次入口、另建唯一 batch_id、新授权和 Codex preflight；不得用 v4 专用脚本重跑或混合旧批次统计。
-5. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
-6. 第二族扩展另行决策，不作为 APP-001 前置依赖。
+3. 项目负责人已接受 ADR-0018；v5 激活 `2c70225` 已由中枢审查并合入、推送到 `main`，激活专项 72 项通过。
+4. APP-001-V5-FORMAL-EFFECT-EVALUATION 已获项目负责人推进到真实模型测试的明确指示。先完成 v5 专用受控入口、唯一批次身份和 final preflight；不使用 v4 专用脚本，不修改或混合旧批次。
+5. v5 批次边界沿用已冻结的 36 逻辑运行、DeepSeek `deepseek-flash` + Ollama `qwen3:8b`、最多 108 次物理请求（provider 各 54、每 run 最多 3 次）；C2、IR、CAD、geometry、STEP 禁用。若 preflight 或实际服务身份不匹配则停止并记录。
+6. DeepSeek 5xx 继续遵循 ADR-0010 的重试上限；第二族扩展另行决策，不作为 APP-001 前置依赖。
