@@ -1943,3 +1943,21 @@ commit=待提交
 - 失败案例（P1-1）：`check_v5_envelope({'decision':'refuse','extracted_parameters':{'bore_d':24},...}, condition_id='C1')` → `ok=False, p1=[P1-1]`；
 - 失败案例（P2-5）：`check_v5_envelope({'decision':'answer','extracted_parameters':{'bore_d':20,'outer_d':40},...})` → `ok=False, p2=[P2-5]`。
 - 边界：本轮没有真实模型请求、没有 API key 读取或打印、没有生产代码/prompt/schema/预算/授权范围/旧批次修改；`FORMAL_EVALUATION_ALLOWED` 保持 `False`；`PROMPT_VERSION` 保持 `app001-extraction.v4`。离线 checker 通过 ≠ 模型效果通过；候选仍处于 `review`，不合并 main，不激活 v5，不创建新正式批次。
+
+### APP-001-V5-PROMPT-CANDIDATE / Codex / review / 2026-11-11
+
+- 动作：基于 v4 正式批次已确认的 3 条过度拒绝和 A05 envelope 重叠问题，准备独立、未激活的 v5 prompt 候选与策略映射；不运行模型。
+- 新增：
+  - `agent-work/llm/APP-001-v5-prompt-candidate/prompt-v5-candidate.md`：从冻结 v4 prompt 独立复制，候选版本标识为 `app001-extraction.v5-candidate`；补充完整无冲突输入必须 `answer`（C0/C1 一致、retrieval 不干扰）和 envelope 自洽性规则。
+  - `agent-work/llm/APP-001-v5-prompt-candidate/strategy.md`：列出 A01-A09 的候选预期行为、保持的安全门、checker 限制与后续授权门。
+  - `tests/llm/test_prompt_v5_candidate.py`：新增 9 项离线结构/版本/hash 检查。
+- 发现并修正候选 checker 与 prompt 规则的覆盖差异：P1 合法冲突抑制和 P2-5 answer 冲突判定由仅覆盖 `outer_d` 扩展到冻结目录中所有显式耦合尺寸（`outer_d`、`width`、`screw_d`、`screw_len`），并保留 `second_screw` 的严格 `bore_d > 70` 规则；为 width/screw_d/screw_len 正常冲突和 answer/ask/refuse 路径补测试。
+- 验证（Mac Python 3.11.18）：
+  - `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.llm.test_decision_policy_v5_candidate tests.llm.test_prompt_v5_candidate -v` → **93 项通过**。
+  - v3/v4 candidate、authorization、parser、budget、run-script 定向回归 → **191 项通过，6 个既有 skip**。
+  - LLM 全量 → **800 项通过，8 个既有环境 skip**；Schema 全量 → **17 项通过**。
+  - `py_compile`（checker 与相关测试）及 `git diff --check` → 通过。
+  - 正常例：A02 `answer + bore_d=24` → checker 通过；失败例：A05 冲突 `ask/refuse` 不报 P1、冲突 `answer` 报 P2-5；新增 width/screw_d/screw_len 冲突均有对应 P1/P2 覆盖。
+- 不变量：冻结 v4 prompt SHA-256 `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc` 与 acceptance-set SHA-256 `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf` 未变；生产版本仍为 v4，formal gate 仍关闭；未改旧批次，未读取 `.env`/密钥，未调用网络或模型，未创建正式 batch。
+- 限制：checker 只看 envelope，不能判定原始自然语言是否歧义或 evidence 是否真实支持 claim；静态/离线通过不证明模型遵循 v5。
+- 下一步：完成差异与状态核对、提交本候选工作单元并交 Codex 独立审查；在候选审查和版本化激活决定前保持生产 v4。

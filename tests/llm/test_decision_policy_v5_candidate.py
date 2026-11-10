@@ -8,7 +8,7 @@ in batch app001-phase1-v4-20261109-01 (Codex review 2026-11-09).
 
 R1 additions (Codex review 2026-11-09):
   - ImportSmokeTests: PYTHONPATH=src 'import llm.decision_policy_v5_candidate'
-  - P2CatalogRuleConflictTests: P2-5 for A05 answer+outer_d and A09 answer+second_screw
+  - P2CatalogRuleConflictTests: P2-5 for all explicit catalog dimensions and second_screw
   - NumericNormalizationTests: bore_d=24.0 and {"value":1.6,"unit":"cm"} recognized
 
 Coverage:
@@ -248,6 +248,18 @@ class P1OverRefusalTests(unittest.TestCase):
         env = _env(decision="refuse", bore_d=20, extra_extracted={"outer_d": 40})
         self.assertEqual(len(check_v5_envelope(env).p1_violations), 0)
 
+    def test_width_conflict_suppresses_p1_for_ask(self):
+        env = _env(decision="ask", bore_d=20, extra_extracted={"width": 15})
+        self.assertEqual(check_v5_envelope(env).p1_violations, ())
+
+    def test_screw_d_conflict_suppresses_p1_for_refuse(self):
+        env = _env(decision="refuse", bore_d=20, extra_extracted={"screw_d": 7})
+        self.assertEqual(check_v5_envelope(env).p1_violations, ())
+
+    def test_screw_len_conflict_suppresses_p1_for_ask(self):
+        env = _env(decision="ask", bore_d=20, extra_extracted={"screw_len": 9})
+        self.assertEqual(check_v5_envelope(env).p1_violations, ())
+
     def test_a09_ask_with_second_screw_conflict_p1_suppressed(self):
         """A09 ask: bore_d=80, second_screw=0 conflict. P1 suppressed."""
         env = _env(decision="ask", bore_d=80, extra_extracted={"second_screw": 0})
@@ -354,6 +366,24 @@ class P2CatalogRuleConflictTests(unittest.TestCase):
         v = next(v for v in r.p2_violations if v.rule_id == "P2-5")
         self.assertIn("outer_d", v.message)
         self.assertIn("32", v.message)  # expected outer_d from catalog
+
+    def test_answer_width_conflict_triggers_p2_5(self):
+        env = _env(decision="answer", bore_d=20, extra_extracted={"width": 15})
+        r = check_v5_envelope(env)
+        self.assertIn("P2-5", [v.rule_id for v in r.p2_violations])
+        self.assertIn("width", next(v.message for v in r.p2_violations if v.rule_id == "P2-5"))
+
+    def test_answer_screw_d_conflict_triggers_p2_5(self):
+        env = _env(decision="answer", bore_d=20, extra_extracted={"screw_d": 7})
+        r = check_v5_envelope(env)
+        self.assertIn("P2-5", [v.rule_id for v in r.p2_violations])
+        self.assertIn("screw_d", next(v.message for v in r.p2_violations if v.rule_id == "P2-5"))
+
+    def test_answer_screw_len_conflict_triggers_p2_5(self):
+        env = _env(decision="answer", bore_d=20, extra_extracted={"screw_len": 9})
+        r = check_v5_envelope(env)
+        self.assertIn("P2-5", [v.rule_id for v in r.p2_violations])
+        self.assertIn("screw_len", next(v.message for v in r.p2_violations if v.rule_id == "P2-5"))
 
     def test_a09_answer_second_screw_conflict_triggers_p2_5(self):
         """A09: decision=answer with bore_d=80, second_screw=0 → P2-5 (rule: bore_d>70 → ss=1)."""

@@ -86,9 +86,15 @@ _CATALOG_BORE_D: Final[frozenset[int]] = frozenset(row[0] for row in _CATALOG_RO
 _CATALOG_BORE_D_MIN: Final[int] = min(_CATALOG_BORE_D)
 _CATALOG_BORE_D_MAX: Final[int] = max(_CATALOG_BORE_D)
 
-# Map bore_d → expected outer_d (from the catalog row).
-# Used for P2-5 catalog-conflict detection.
-_CATALOG_BORE_TO_OUTER: Final[dict[int, int]] = {row[0]: row[1] for row in _CATALOG_ROWS}
+_CATALOG_BORE_TO_FIELDS: Final[dict[int, dict[str, int]]] = {
+    row[0]: {
+        "outer_d": row[1],
+        "screw_d": row[2],
+        "screw_len": row[3],
+        "width": row[4],
+    }
+    for row in _CATALOG_ROWS
+}
 
 # second_screw rule: second_screw == 1 iff bore_d > 70 (GN 705 note).
 # bore_d = 70 → expected second_screw = 0 (strict threshold, not >=).
@@ -215,14 +221,16 @@ def _has_deterministic_conflict(extracted: Mapping[str, Any], bore_d: int) -> bo
     over-refusal (no conflict exists).  Checks the same conditions as P2-5
     but as a boolean gate, without recording violation details.
 
-    A conflict exists when:
-    (a) explicit outer_d disagrees with the catalog row for bore_d; OR
-    (b) explicit second_screw violates the bore_d > 70 rule.
+    A conflict exists when any explicitly supplied catalog-coupled dimension
+    disagrees with the catalog row for bore_d, or second_screw violates the
+    bore_d > 70 rule.
     """
-    expected_outer = _CATALOG_BORE_TO_OUTER.get(bore_d)
-    if "outer_d" in extracted and expected_outer is not None:
-        outer_mm = _normalize_bore_d(extracted["outer_d"])
-        if outer_mm is not None and outer_mm != expected_outer:
+    expected_fields = _CATALOG_BORE_TO_FIELDS.get(bore_d, {})
+    for field_name, expected_value in expected_fields.items():
+        if field_name not in extracted:
+            continue
+        actual_value = _normalize_bore_d(extracted[field_name])
+        if actual_value is not None and actual_value != expected_value:
             return True
 
     if "second_screw" in extracted:
@@ -314,8 +322,8 @@ def _check_p2(envelope: Mapping[str, Any]) -> list[V5ViolationDetail]:
     P2-3       decision=answer + non-empty missing_fields or unsupported.
     P2-4       Duplicate entries in missing_fields.
     P2-5       decision=answer + deterministic catalog/rule conflict:
-               (a) explicit outer_d disagrees with the catalog row for bore_d;
-               (b) explicit second_screw violates the bore_d > 70 rule.
+               any explicit outer_d/width/screw_d/screw_len disagrees with the
+               catalog row, or explicit second_screw violates bore_d > 70.
                The checker records the conflict without modifying or removing
                any explicit claim.
     """
@@ -406,36 +414,34 @@ def _check_p2_5_catalog(
 ) -> None:
     """Check P2-5 catalog/rule conflicts for a decision=answer envelope.
 
-    (a) outer_d conflict: the explicit outer_d disagrees with the catalog row.
-    (b) second_screw rule conflict: the explicit second_screw violates the
-        bore_d > 70 threshold.
+    Explicit outer_d, width, screw_d, and screw_len must match the row selected
+    by bore_d. Explicit second_screw must satisfy the strict bore_d > 70 rule.
 
     Violations are appended to ``violations`` in-place.
     The checker never modifies, removes, or rewrites any explicit claim.
     """
-    expected_outer_d = _CATALOG_BORE_TO_OUTER.get(bore_d)
-
-    # (a) outer_d catalog conflict.
-    if "outer_d" in extracted and expected_outer_d is not None:
-        raw_outer = extracted["outer_d"]
-        outer_mm = _normalize_bore_d(raw_outer)  # reuse normalization
-        if outer_mm is not None and outer_mm != expected_outer_d:
+    expected_fields = _CATALOG_BORE_TO_FIELDS.get(bore_d, {})
+    for field_name, expected_value in expected_fields.items():
+        if field_name not in extracted:
+            continue
+        actual_value = _normalize_bore_d(extracted[field_name])
+        if actual_value is not None and actual_value != expected_value:
             violations.append(V5ViolationDetail(
                 rule_id="P2-5",
                 message=(
-                    f"decision=answer but explicit outer_d conflicts with the "
+                    f"decision=answer but explicit {field_name} conflicts with the "
                     f"catalog row for bore_d={bore_d}: "
-                    f"catalog expects outer_d={expected_outer_d}, "
-                    f"envelope has outer_d={outer_mm}; "
+                    f"catalog expects {field_name}={expected_value}, "
+                    f"envelope has {field_name}={actual_value}; "
                     f"construction cannot proceed with conflicting dimensions"
                 ),
                 evidence=(
-                    f"bore_d={bore_d}  explicit_outer_d={outer_mm}  "
-                    f"catalog_outer_d={expected_outer_d}"
+                    f"bore_d={bore_d}  explicit_{field_name}={actual_value}  "
+                    f"catalog_{field_name}={expected_value}"
                 ),
             ))
 
-    # (b) second_screw rule conflict.
+    # second_screw rule conflict.
     if "second_screw" in extracted:
         raw_ss = extracted["second_screw"]
         if isinstance(raw_ss, bool) or not isinstance(raw_ss, (int, float)):
