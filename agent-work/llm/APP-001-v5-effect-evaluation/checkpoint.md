@@ -163,5 +163,9 @@ follow-up model experiment requires a new batch ID and separate authorization.
 - This checkpoint and `docs/PROJECT_PLAN.md` now explicitly distinguish the
   historical batch-root layout from the corrected future `batch/raw/` layout.
 - Status remains `review`; no merge or push is included in this work unit. The
-  next gate is to commit the documentation alignment and return the package
-  for final review before merge.
+  documentation alignment is committed as `8da34d9`. The independent reviewer
+  has since found stale next-step/status wording in this checkpoint and the
+  earlier review record. This follow-up corrects those current-state references
+  while preserving the initial finding as historical evidence. The next gate
+  is independent review of this documentation-only follow-up; merge remains
+  pending Codex acceptance.

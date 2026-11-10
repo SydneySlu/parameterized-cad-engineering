@@ -2036,3 +2036,12 @@ commit=待提交
 - 对齐：checkpoint 将“未来需修改 runner/增加路径测试”的过时措辞更新为“窄修正已完成，等待独立审查”；约束段区分原批次执行时的边界与后续单独授权的生产路径修正。PROJECT_PLAN 同步记录实际历史路径与未来 `batch/raw/` 行为。
 - 验证：运行 `git diff --check` 和文档一致性核对；未运行模型或读取批次 raw 正文。
 - 状态：review；本工作单元不合并、不 push。下一步为提交文档收束并交最终复核。
+
+### APP-001-V5-RETENTION-PATH-DOC-ALIGNMENT-R1 / Codex 中枢 / review / 2026-11-11
+
+- 动作：根据独立复核结果继续收束交接状态；保留原日志条目作为 `8da34d9` 提交前的真实状态记录，不改写追加式历史。
+- 原因：`8da34d9` 已提交文档对齐后，checkpoint 的 Current handoff state 仍称下一步要提交文档；原始 v5 closeout review 中“未来应修改 runner”的建议也未标明已由 `a35f14b` 完成，因此当前状态读取存在时间线歧义。
+- 修正：checkpoint 更新为当前待处理独立复核；审查报告新增 Follow-up status，说明 runner 修正已实现并验证、历史批次偏离仍保留，并将原建议保留为历史审查上下文；本条 WORKLOG 作为前条“提交文档收束”下一步的后续状态记录。
+- 边界：仅更新审查/交接记录；不改代码、授权原文或批次，不读取 raw 正文，不运行模型，不 push/合并。
+- 验证：`git diff --check` 通过；逐项确认 checkpoint、PROJECT_PLAN、审查报告和本追加日志均区分历史根目录偏离、未来 `batch/raw/` 修正已完成、当前仍待独立复核。未运行测试或模型。
+- 状态：review；提交后交独立复核确认，之后由 Codex 中枢决定是否可合入。

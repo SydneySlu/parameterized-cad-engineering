@@ -3,7 +3,7 @@
 **Task:** `APP-001-V5-FORMAL-EFFECT-EVALUATION`
 **Batch:** `app001-phase1-v5-20261111-01`
 **Review date:** 2026-11-11 (Asia/Shanghai)
-**Result:** `review` — the authorized real-model run and read-only evidence audit are complete; closeout correction is prepared for independent review and merge. This does not authorize another model run.
+**Initial review result:** `review` — at the time of the initial audit, the authorized real-model run and read-only evidence audit were complete, and closeout correction was prepared for independent review and merge. The current follow-up status is recorded at the end of this report. This does not authorize another model run.
 
 ## Scope and provenance
 
@@ -87,3 +87,23 @@ The 8 LLM skips are existing FUSE lock-file limitations. The live run completed 
 ## Decision and next gate
 
 The fixed batch provides real-model effect evidence and the v5 decision paths match the candidate policy on the exercised cases. The 20/32 Schema pass rate remains an important separate downstream result. The sample size and envelope-only checker limit generalization; there is no C2/CAD end-to-end evidence. Preserve the batch unchanged. Independently review this closeout and merge the documentation/reporter correction before marking the task done. Any further model evaluation or prompt/policy change needs a new versioned scope, unique batch ID, and separate authorization.
+
+## Follow-up status (2026-11-11)
+
+The preceding retention-path section records the finding and recommendation as
+they stood during the initial closeout review. The recommended narrow runner
+correction was subsequently implemented in `a35f14b` and independently
+reviewed: future formal raw retention now targets
+`work/app001-runs/<batch_id>/raw/`, with a regression that writes a synthetic
+response and checks both the resolved directory and metadata path. The recorded
+Python 3.11.18 runner, LLM, Schema, and `git diff --check` validations passed.
+
+The correction applies only to future runs. The 32 historical raw files remain
+at the v5 batch root, preserving the documented deviation; they were not
+moved, rewritten, or rerun. Commit `8da34d9` aligned the checkpoint and project
+plan with that distinction. A subsequent independent review found stale
+handoff wording in this report/checkpoint and the WORKLOG next-step entry. This
+follow-up updates those current-state references while preserving the earlier
+recommendation as historical review context. The documentation-only follow-up
+is now presented for independent confirmation. Task status remains `review`,
+and no merge or additional model run is authorized by this addendum.
