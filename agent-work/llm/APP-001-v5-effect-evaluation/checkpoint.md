@@ -66,6 +66,19 @@ The batch itself was not rerun or modified.
   8,621.8 ms (range 6,000.2–19,793.2 ms).
 - C2, IR, CAD, geometry, and STEP were not run. Old batches remain separate.
 
+## Independent-review finding: retention path mismatch
+
+The authorization says raw responses belong under
+`work/app001-runs/<batch_id>/raw/`, but the actual runner configured
+`RetentionPolicy.base_dir` as `work/app001-runs/<batch_id>`. The 32 retained
+files are at the ignored batch root; all paths exist and match their recorded
+length/hash, and there is no `raw/` subdirectory. This is a path-layout
+deviation from the approved record, even though the files stayed inside the
+ignored batch directory. Do not move or rewrite historical evidence. For a
+future run, separately change the retention directory, add an exact-path test,
+and align the future authorization template; this batch must not be rerun.
+Details are in `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`.
+
 ## Handoff successor check
 
 ```text
@@ -78,7 +91,7 @@ handoff_successor_check:
   interface=retention path read from raw_response_retention.path; decisions parsed using active v5 parser; no response text emitted
   limits=Schema 20/32 only; no C2/IR/CAD/geometry/STEP; checker is diagnostic; no causal comparison or broad model-quality claim
   result=review
-  blocking_issue=none for this batch; independent closeout and main merge remain outstanding
+  blocking_issue=authorization said batch/raw but runtime wrote to batch root; preserve files and require explicit disposition before calling closeout pass
 ```
 
 ## Validation and next gate

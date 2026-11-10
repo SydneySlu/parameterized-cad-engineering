@@ -2018,3 +2018,5 @@ commit=待提交
 - 修复：`_print_jsonl_stats()` 改为使用 `raw_response_retention` 元数据、将请求前阻塞标记为 blocked，并通过活动 parser 只提取 decision enum，不输出 raw 正文；新增 3 项测试。Python 3.11.18 下入口专项 30 项通过、LLM 全量 841 项通过且有 8 个既有 FUSE skip、Schema 17 项通过；`py_compile` 与 `git diff --check` 通过。
 - 审查档案：`agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`；任务 checkpoint、PROJECT_STATUS、PROJECT_PLAN 已同步。批次 raw 和账本仍处于 Git 忽略目录，不会提交。
 - 提交：`1f2811f docs: close APP-001 v5 effect evaluation audit [APP-001-V5-FORMAL-EFFECT-EVALUATION]`。状态保持 `review`，待独立收束复核和合入；本批次不得复跑/覆盖，任何后续模型调用需要新 batch_id 与单独授权。
+- 独立复核补充发现：授权记录指定 raw 目录为 `work/app001-runs/<batch_id>/raw/`，但 `src/llm/runner.py` 为本批次配置 `RetentionPolicy.base_dir` 时只给了 `work/app001-runs/<batch_id>`，导致 32 个文件位于批次根目录。只读核对确认文件均存在、hash/长度匹配且仍在 git-ignore 区；未移动或修改历史文件，也未改写授权记录。该授权/运行路径不一致已追加到 checkpoint 和审查报告，任务维持 `review`。
+- 建议未来窄修：runner 的 raw `base_dir` 增加 `/raw`；增加测试断言准确目录与写出 metadata path；未来授权模板保持同一绝对/相对布局。该修正应单独审查，不能用于重跑本批次；任何后续模型请求仍需新 batch ID 和单独授权。

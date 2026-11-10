@@ -37,6 +37,29 @@ Raw retention: retained=32 missing=0
 
 Three offline regression tests cover the real retention field and decision parsing, request-before blocks, and a missing raw file for a completed model run. No batch content or production runtime behavior was changed.
 
+## Retention-path deviation and remediation
+
+The authorization record specifies `work/app001-runs/<batch_id>/raw/`. The
+actual v5 execution configured `RetentionPolicy.base_dir` as
+`work/app001-runs/<batch_id>` in `src/llm/runner.py`, so all 32 retained raw
+files are at the batch root and no `raw/` subdirectory exists. A read-only
+metadata check confirmed that all recorded paths resolve to existing files;
+the directory remains git-ignored. The files and JSONL metadata were not moved
+or rewritten, because that would alter the historical evidence after execution.
+
+This is an authorization-to-runtime path mismatch and must remain an explicit
+review finding. It did not expose the files outside the ignored batch area,
+but it means the run did not follow the authorized directory layout. The
+authorization text is preserved as written; the discrepancy is documented
+here rather than silently editing the approval record.
+
+For any future run, make a separate narrow implementation change to configure
+raw retention under `<batch_dir>/raw/`, add a test asserting the exact resolved
+directory and resulting metadata path, and update the future authorization
+template/checkpoint to match the implementation. Do not use that code change
+to rerun or resume this batch. Any additional model request needs a new batch
+ID and separate authorization.
+
 ## Verification
 
 On Python 3.11.18:
