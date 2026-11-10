@@ -23,7 +23,7 @@ class V5ActivationPreparationTests(unittest.TestCase):
     def test_package_is_proposed_and_non_active(self):
         self.assertEqual(MANIFEST["status"], "proposed")
         self.assertEqual(MANIFEST["candidate_prompt_version"], "app001-extraction.v5")
-        self.assertEqual(MANIFEST["production_prompt_version"], "app001-extraction.v4")
+        self.assertEqual(MANIFEST["production_prompt_version"], "app001-extraction.v4")  # identity at preparation time
         self.assertFalse(MANIFEST["production_files_changed"])
         self.assertFalse(MANIFEST["formal_evaluation_authorized"])
 
@@ -62,12 +62,12 @@ class V5ActivationPreparationTests(unittest.TestCase):
         self.assertEqual(_sha(rollback), MANIFEST["rollback_prompt_file_sha256"])
         self.assertEqual(MANIFEST["rollback_target"], "app001-extraction.v4")
 
-    def test_production_constants_remain_v4_and_gate_closed(self):
+    def test_current_production_is_v5_and_gate_closed(self):
         from src.llm.contract import FORMAL_EVALUATION_ALLOWED, PROMPT_VERSION
         from src.llm.prompt_loader import FROZEN_PROMPT_VERSION, FROZEN_PROMPT_FILE_SHA256
-        self.assertEqual(PROMPT_VERSION, "app001-extraction.v4")
-        self.assertEqual(FROZEN_PROMPT_VERSION, "app001-extraction.v4")
-        self.assertEqual(FROZEN_PROMPT_FILE_SHA256, MANIFEST["rollback_prompt_file_sha256"])
+        self.assertEqual(PROMPT_VERSION, "app001-extraction.v5")
+        self.assertEqual(FROZEN_PROMPT_VERSION, "app001-extraction.v5")
+        self.assertNotEqual(FROZEN_PROMPT_FILE_SHA256, MANIFEST["rollback_prompt_file_sha256"])
         self.assertFalse(FORMAL_EVALUATION_ALLOWED)
 
     def test_candidate_checker_not_in_production_imports(self):
@@ -81,12 +81,12 @@ class V5ActivationPreparationTests(unittest.TestCase):
         self.assertIn("independent review", requirements)
         self.assertIn("unique batch_id", requirements)
 
-    def test_adr_0018_is_proposed_and_separates_decision_gates(self):
+    def test_adr_0018_was_accepted_and_separates_decision_gates(self):
         decisions = (ROOT / "docs/DECISIONS.md").read_text(encoding="utf-8")
         adr = decisions.split("## ADR-0018：", 1)[1]
-        self.assertIn("状态：proposed", adr)
+        self.assertIn("状态：accepted", adr)
         self.assertIn("本 ADR 不授权任何模型请求", adr)
-        self.assertIn("不等于激活实现完成", adr)
+        self.assertIn("不等于真实效果已验证", adr)
 
 
 if __name__ == "__main__":

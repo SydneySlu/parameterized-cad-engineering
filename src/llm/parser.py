@@ -123,15 +123,15 @@ def _err(code: str, stage: str, fields: tuple[str, ...], message: str) -> ParseE
 def parse_response(raw: str | bytes) -> ParseResult:
     """Parse one response against the active production prompt version.
 
-    The default production path is intentionally strict: after the v4
-    activation it accepts only ``app001-extraction.v4``. Historical batches
+    The default production path is intentionally strict: after the v5
+    activation it accepts only ``app001-extraction.v5``. Historical batches
     must use :func:`parse_response_for_version` explicitly.
     """
     return _parse_response(raw, expected_prompt_version=PROMPT_VERSION)
 
 
 _LEGACY_AUDIT_PROMPT_VERSIONS: Final[frozenset[str]] = frozenset(
-    {"app001-extraction.v2", "app001-extraction.v3"}
+    {"app001-extraction.v2", "app001-extraction.v3", "app001-extraction.v4"}
 )
 
 
@@ -142,8 +142,8 @@ def parse_response_for_version(
 
     This entry point exists only for read-only audit/replay of historical
     batches. It never changes the default v4 parser used by the adapter. A
-    caller must name either the active v4 version or one of the explicitly
-    retained legacy versions (v3, v2); arbitrary version strings are rejected
+    caller must name either the active v5 version or one of the explicitly
+    retained legacy versions (v4, v3, v2); arbitrary version strings are rejected
     so an audit cannot silently relabel a response.
     """
     allowed_versions = {PROMPT_VERSION, *_LEGACY_AUDIT_PROMPT_VERSIONS}

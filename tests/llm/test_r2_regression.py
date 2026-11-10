@@ -67,7 +67,7 @@ def _input(**kw):
 def _body():
     return json.dumps({
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v4",
+        "prompt_version": "app001-extraction.v5",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],

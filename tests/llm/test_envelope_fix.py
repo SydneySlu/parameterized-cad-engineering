@@ -130,7 +130,7 @@ class PromptLoaderIncludesEnvelopeExample(unittest.TestCase):
         current production version string."""
         self.assertIn('"contract_version": "app001-io.v1"',
                       self.artifact.system_prompt)
-        self.assertIn('"prompt_version": "app001-extraction.v4"',
+        self.assertIn('"prompt_version": "app001-extraction.v5"',
                       self.artifact.system_prompt)
 
     def test_system_prompt_does_not_contain_code_fence_markers(self):

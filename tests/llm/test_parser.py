@@ -11,11 +11,11 @@ from src.llm.parser import parse_response, parse_response_for_version
 
 
 def _valid_body(**overrides):
-    # Default body uses the current production version (app001-extraction.v4).
+    # Default body uses the current production version (app001-extraction.v5).
     # Use prompt_version= to override for legacy audit tests.
     body = {
         "contract_version": "app001-io.v1",
-        "prompt_version": "app001-extraction.v4",
+        "prompt_version": "app001-extraction.v5",
         "decision": "answer",
         "extracted_parameters": {"bore_d": 20},
         "unsupported_requests": [],
@@ -123,7 +123,7 @@ class ParserFailureTests(unittest.TestCase):
         # Even though v3 is now a registered legacy version, requesting the v3
         # audit parser with a v4 response body must reject the mismatch.
         result = parse_response_for_version(
-            _valid_body(prompt_version="app001-extraction.v4"),
+            _valid_body(prompt_version="app001-extraction.v5"),
             prompt_version="app001-extraction.v3",
         )
         self.assertFalse(result.ok)

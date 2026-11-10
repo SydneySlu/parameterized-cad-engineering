@@ -1972,3 +1972,13 @@ commit=待提交
 - 验证（Mac Python 3.11.18）：激活准备/v5 prompt/checker 专项 **103 项通过**；LLM 全量 **810 项通过、8 项既有 FUSE skip**；Schema **17 项通过**；新增测试 `py_compile` 和 `git diff --check` 通过。run-script 测试预期会打印模拟 abort/fail 场景，整体退出码为 0。
 - 哈希：v5 候选源 `6e969ae6…`；版本规范化准备副本 `21177d71…`；v4 回滚 prompt `73cb6b8f…`；acceptance-set `ed59e2b6…`。
 - 当前不改变任何生产常量、parser、loader、预算、授权或旧批次；生产仍 v4，formal gate 仍关闭。下一步为独立审查本准备包和 ADR-0018 proposed，并由项目负责人决定是否接受策略方向。
+
+### APP-001-V5-ACTIVATION / Codex / review / 2026-11-11
+
+- 决策同步：项目负责人明确接受 ADR-0018 的 v5 策略方向；将 ADR 状态记录为 accepted。该接受仅授权版本化激活工作，不授权真实模型请求或正式批次。
+- 实现：在 `codex/APP-001-V5-ACTIVATION` 分支把生产 prompt 版本从 `app001-extraction.v4` 切换到 `app001-extraction.v5`；prompt loader 路径、版本标记、固定文件 SHA-256 指向冻结 v5 prompt；parser 默认仅接受 v5，并把 v4 加入显式只读历史审计 allowlist（保留 v2/v3）。`app001-io.v1` 未变。
+- 新增激活包 `agent-work/llm/APP-001-v5-activation/`（冻结 prompt、manifest、README、checkpoint、handoff）和离线测试 `tests/llm/test_v5_activation.py`；将旧 v4 激活测试转为归档完整性/显式审计兼容测试；生产 fixture 更新为 v5。同步 README、PROJECT_STATUS、PROJECT_PLAN。
+- 哈希确认：v5 prompt `18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9`；v4 回滚 prompt `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`；候选源 `6e969ae68f75c0cd6a188bd589a84c378b50055a42f75ff2b3b3259252f6bdfe`；acceptance-set `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf`。
+- 验证（Mac Python 3.11.18）：激活/准备/候选/parser/adapter/envelope 定向 **226 项通过**；`tests/llm` 全量 **809 项通过、8 个既有 FUSE skip**；`tests/schema` **17 项通过**；修改 Python 文件 `py_compile` 通过；`git diff --check` 通过。全量测试中的 `[ABORT]`/`[FAIL]` 文本来自模拟拒绝路径，整体退出码为 0。
+- 边界：`FORMAL_EVALUATION_ALLOWED=False`；预算、重试、授权逻辑、Schema、acceptance-set 和旧批次未改；没有模型/网络调用或密钥读取；C2/IR/CAD/geometry/STEP 仍禁用。
+- 状态：激活实现待 Codex 独立审查并合入 main；生产效果尚未测量。下一步由 Codex 审查当前分支与 v5/v4 哈希、版本边界及全量测试；之后才可讨论新的唯一 batch_id 和单独正式运行授权。

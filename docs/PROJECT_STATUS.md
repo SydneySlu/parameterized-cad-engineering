@@ -60,7 +60,8 @@
 | APP-001-V4-FORMAL-EFFECT-EVALUATION | v4 真实模型效果评测 | Codex + 项目负责人 + CC | review | 批次 `app001-phase1-v4-20261109-01` 已完成 36 条逻辑记录、32 条模型响应和 4 条 C1 请求前阻塞；48 次物理 HTTP 均在预算内。字段/证据/解析 32/32 通过，但有 3 条 Ollama 决策偏差和 2 条 DeepSeek A05 envelope 自洽性问题；详见 `agent-work/reviews/APP-001-phase1-v4-20261109-01-codex-review.md`。 |
 | APP-001-V4-QUALITY-FIX-CANDIDATE | v4 决策质量离线候选修正 | CC + Codex | review | R1 提交 `d706639` 已经 Codex 离线复核：78 项专项、191 项定向回归通过，正式 `llm` 导入、P2-5 冲突和数值归一化边界通过；候选仍未合并/激活。 |
 | APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | review | 独立离线审查通过，提交 `582a123`；尚未合入 `main`。未激活、未运行模型。 |
-| APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | review | 独立激活准备包、hash manifest、v4 回滚锚点、离线 preflight 与 ADR-0018 proposed 已准备；生产仍为 v4，等待项目负责人审阅决策。无模型评测授权。 |
+| APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | review | 准备包及 v4 回滚锚点已在 `687495b`；项目负责人已接受 ADR-0018 策略方向，相关提交尚未合入 main。 |
+| APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | review | 当前工作分支的 runtime prompt/parser 切换至 v5，保留 v2/v3/v4 显式历史审计路径；manifest 锚定 v5 与 v4 回滚哈希。待独立审查和合入 main（main 当前仍为 v4）；formal gate 仍关闭，模型效果未测。 |
 
 ## 阻塞项
 
@@ -83,7 +84,7 @@
 
 1. 批次 `app001-phase1-v4-20261109-01` 已完成并经 Codex 独立复核；保留 raw、账本和阻塞证据，不删除或覆盖。
 2. `APP-001-V5-PROMPT-CANDIDATE` 已通过独立离线审查；候选提交 `582a123`。
-3. `APP-001-V5-ACTIVATION-PREP` 当前处于 review：项目负责人审阅 ADR-0018 proposed 和准备包后，决定是否接受策略方向并授权独立激活实现。生产仍为 v4，正式 gate 与旧批次保持不变。
-4. 即使接受 ADR-0018，真实模型效果测试仍需新版本激活完成后另建唯一 batch_id、新授权和 Codex preflight；不得重跑同一批次或混合统计。
+3. 项目负责人已于 2026-11-11 接受 ADR-0018。`APP-001-V5-ACTIVATION` 激活实现当前待 Codex 中枢审查；合入 `main` 前生产 branch 的离线配置为 v5，formal gate 仍关闭。
+4. v5 激活合入 `main` 后，若需测真实模型效果，仍须先准备支持 v5 的受控批次入口、另建唯一 batch_id、新授权和 Codex preflight；不得用 v4 专用脚本重跑或混合旧批次统计。
 5. 继续保持 C2 和 IR/CAD/geometry/STEP 禁用，除非另行取得明确授权；DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
 6. 第二族扩展另行决策，不作为 APP-001 前置依赖。

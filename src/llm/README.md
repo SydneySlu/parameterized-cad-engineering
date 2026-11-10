@@ -5,14 +5,15 @@
 but no formal run starts until the runner safety review is complete.
 
 This package implements the injectable adapter layer for the frozen APP-001
-extraction protocol (`app001-io.v1` / `app001-extraction.v4`, ADR-0017).  It
+extraction protocol (`app001-io.v1` / `app001-extraction.v5`, ADR-0018).  It
 never performs real network calls by default, never reads credentials in the
 mock path, and the formal evaluation gate is always closed in this task.
 
 **Protocol history (read-only):**
 - v3 activation (ADR-0016): `app001-extraction.v3` — legacy audit path, see
   `agent-work/llm/APP-001-v3-activation/` for rollback evidence
-- v4 activation (ADR-0017): `app001-extraction.v4` — current production
+- v4 activation (ADR-0017): `app001-extraction.v4` — legacy audit path; rollback target
+- v5 activation (ADR-0018): `app001-extraction.v5` — current production
 
 ---
 
@@ -149,7 +150,7 @@ same complete wall clock, including any backoff on retried requests).
 ## Prompt artifact verification (R3)
 
 `Adapter.run()` **unconditionally** loads and verifies the frozen prompt
-artifact (`agent-work/llm/APP-001-v4-activation/prompt-v4.md`) before any
+artifact (`agent-work/llm/APP-001-v5-activation/prompt-v5.md`) before any
 transport `send()` call.  There is **no parameter** to skip, replace, or bypass
 this check -- `verify_frozen_prompt` and `_prompt_loader_path` were removed in
 R3.
@@ -159,7 +160,7 @@ Verification checks:
 1. **File-level SHA-256 anchor** (`FROZEN_PROMPT_FILE_SHA256`): the file bytes
    must match the pinned hash.  A tampered file that preserves the version
    string but changes content is rejected.
-2. **Version marker**: the file must contain `app001-extraction.v4`.
+2. **Version marker**: the file must contain `app001-extraction.v5`.
 3. **Parsed system prompt**: must match the `AdapterInput.system_prompt`.
 4. **Parsed user template**: must match the `AdapterInput.user_prompt_template`
    (after `{{placeholder}}` → `{placeholder}` normalization).
@@ -253,12 +254,12 @@ Schema object aligned with the `app001-io.v1` envelope contract.  This is a
 generation constraint (sampling hint), not a guarantee; `parse_response()` remains
 the authoritative gating layer.
 
-After the v4 activation, `parse_response()` accepts only
-`app001-extraction.v4`. Historical v3 and v2 batches remain auditable through
+After the v5 activation, `parse_response()` accepts only
+`app001-extraction.v5`. Historical v4, v3 and v2 batches remain auditable through
 the explicit `parse_response_for_version(..., prompt_version="app001-extraction.v3")`
 and `parse_response_for_version(..., prompt_version="app001-extraction.v2")`
 entry points; these legacy paths are never used by the production adapter and
-do not relabel results as v4. Audit callers must retain the explicitly selected
+do not relabel results as v5. Audit callers must retain the explicitly selected
 version alongside the parse outcome; successful results also preserve it in the
 parsed envelope.
 
@@ -268,7 +269,7 @@ parsed envelope.
 |---|---|---|
 | Top-level keys | `required` = all 9 ENVELOPE_KEYS; `additionalProperties: false` | `MISSING_ENVELOPE_KEY` / `EXTRA_ENVELOPE_KEY` |
 | `contract_version` | `const: "app001-io.v1"` | `CONTRACT_VERSION_MISMATCH` |
-| `prompt_version` | `const: "app001-extraction.v4"` | `PROMPT_VERSION_MISMATCH` |
+| `prompt_version` | `const: "app001-extraction.v5"` | `PROMPT_VERSION_MISMATCH` |
 | `decision` | `enum: [answer, ask, refuse]` | `DECISION_INVALID` |
 | Length fields (5) | `oneOf: [number, {value, unit}]` — string excluded | `EXTRACTED_TYPE_ERROR` |
 | `second_screw` | `integer` | `EXTRACTED_TYPE_ERROR` |

@@ -1,9 +1,9 @@
 """Frozen prompt artifact loader and verifier for APP-001.
 
 This module loads the frozen system prompt and user message template from
-``agent-work/llm/APP-001-v4-activation/prompt-v4.md`` and verifies that:
+``agent-work/llm/APP-001-v5-activation/prompt-v5.md`` and verifies that:
 
-1. The artifact declares version ``app001-extraction.v4``.
+1. The artifact declares version ``app001-extraction.v5``.
 2. The system message content matches exactly (after whitespace normalization).
 3. The user message template content matches exactly (after normalization and
    placeholder form conversion).
@@ -27,6 +27,8 @@ loader converts double-brace to single-brace before comparison.
   3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b
 - v4 activation (ADR-0017): prompt-v4.md, SHA-256
   73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc
+- v5 activation (ADR-0018): prompt-v5.md, SHA-256
+  18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9
 """
 
 from __future__ import annotations
@@ -42,16 +44,16 @@ FROZEN_PROMPT_PATH = (
     _REPO_ROOT
     / "agent-work"
     / "llm"
-    / "APP-001-v4-activation"
-    / "prompt-v4.md"
+    / "APP-001-v5-activation"
+    / "prompt-v5.md"
 )
 
-FROZEN_PROMPT_VERSION = "app001-extraction.v4"
+FROZEN_PROMPT_VERSION = "app001-extraction.v5"
 
 # Known version string that must appear in the artifact.
-_VERSION_MARKER = "app001-extraction.v4"
+_VERSION_MARKER = "app001-extraction.v5"
 
-# Fixed SHA-256 anchor of the frozen prompt-v4.md file content (bytes).
+# Fixed SHA-256 anchor of the frozen prompt-v5.md file content (bytes).
 # This is a separate integrity check from the parsed system_prompt/user_template
 # hashes.  If the file is modified (even preserving the version string), the
 # file-level hash will not match and loading fails closed.
@@ -63,7 +65,7 @@ _VERSION_MARKER = "app001-extraction.v4"
 # v3 history (ADR-0016):
 #   path: agent-work/llm/APP-001-v3-activation/prompt-v3.md
 #   sha256: 3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b
-FROZEN_PROMPT_FILE_SHA256 = "73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc"
+FROZEN_PROMPT_FILE_SHA256 = "18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9"
 
 # Regex to extract fenced Markdown code block content.
 # Captures the text between ```...``` fences (the first code block found).
@@ -102,10 +104,10 @@ def _extract_code_blocks(markdown: str) -> list[str]:
 
 
 def _parse_artifact(text: str) -> tuple[str, str]:
-    """Parse the frozen prompt-v4.md and extract (system_prompt, user_template).
+    """Parse the frozen prompt-v5.md and extract (system_prompt, user_template).
 
     The artifact structure (as frozen):
-    - Contains the literal version string ``app001-extraction.v4``.
+    - Contains the literal version string ``app001-extraction.v5``.
     - The first fenced code block after ``## System message`` is the system
       prompt JSON envelope example.
     - The second fenced code block (```text) is the user message template.
@@ -120,7 +122,7 @@ def _parse_artifact(text: str) -> tuple[str, str]:
       JSON object naming ``contract_version`` and ``prompt_version``).
     - ``## User message template`` section → first code block body.
 
-    This parsing is tied to the actual structure of prompt-v4.md.
+    This parsing is tied to the actual structure of prompt-v5.md.
     """
     lines = text.splitlines()
     system_lines: list[str] = []
