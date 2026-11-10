@@ -484,13 +484,37 @@ def _print_jsonl_stats(runs_jsonl: Path) -> None:
     for r in records:
         prov = r.get("provider") or r.get("configured_provider", "unknown")
         cond = r.get("condition_id", "unknown")
-        outcome = r.get("final_outcome", "unknown")
+        outcome = r.get("final_outcome")
+        if outcome is None:
+            outcome = "blocked" if r.get("blocked_stage") else "unknown"
         provider_outcomes.setdefault(prov, Counter())[outcome] += 1
         condition_outcomes.setdefault(cond, Counter())[outcome] += 1
 
-        dec = r.get("decision") or (r.get("extracted_parameters") and "answer") or None
-        if dec:
-            decisions[dec] += 1
+        retention = r.get("raw_response_retention")
+        if isinstance(retention, dict) and retention.get("retained"):
+            raw_path = Path(str(retention.get("path", "")))
+            if not raw_path.is_absolute():
+                raw_path = _REPO_ROOT / raw_path
+            if raw_path.is_file():
+                raw_retained += 1
+                # Decision is not duplicated at the run-record top level. Parse
+                # only the retained response and emit its decision enum; never
+                # print or copy the response body into the summary.
+                try:
+                    from llm.parser import parse_response
+
+                    parsed = parse_response(raw_path.read_bytes())
+                    if parsed.ok:
+                        decisions[parsed.envelope.decision] += 1
+                except OSError:
+                    raw_missing += 1
+            else:
+                raw_missing += 1
+        elif r.get("final_outcome") == "success" or any(
+            isinstance(stage, dict) and stage.get("stage") == "model_call"
+            for stage in r.get("stages", [])
+        ):
+            raw_missing += 1
 
         for stage in r.get("stages", []):
             if isinstance(stage, dict) and stage.get("stage") == "schema":
@@ -501,11 +525,6 @@ def _print_jsonl_stats(runs_jsonl: Path) -> None:
                     schema_fail += 1
                 else:
                     schema_missing += 1
-
-        if r.get("raw_response_path"):
-            raw_retained += 1
-        elif r.get("final_outcome") == "success":
-            raw_missing += 1
 
     print(f"\n  Per-provider outcomes:")
     for prov in sorted(provider_outcomes):

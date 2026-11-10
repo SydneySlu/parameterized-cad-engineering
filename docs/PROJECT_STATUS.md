@@ -50,7 +50,7 @@
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
-| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | v3 批次 `app001-phase1-v3-20261107-01` 已按授权完成：36/36 逻辑记录、32 条模型响应、4 条 C1 请求前阻塞、48 次物理 HTTP（含 16 次 Ollama `/api/tags`，预算内）。32/32 响应通过 parse/contract/projection，20/32 通过 CAD-003 Schema；显式字段 32/32 精确，决策 29/32，Ollama 有 3 条决策/unsupported 标签不一致。DeepSeek token/费用和 Ollama 延迟已独立复核；C2、IR/CAD/geometry/STEP 未运行。批次仍为 review，详见 `agent-work/reviews/APP-001-phase1-v3-20261107-01-codex-review.md` |
+| APP-001 | LLM 结构化抽取与 Prompt 对照 | LLM Agent + 用户 | review | v3/v4 历史批次保持只读；v5 批次 `app001-phase1-v5-20261111-01` 已真实运行并待中枢收束审查：36 条记录、32 个模型响应、4 个 C1 请求前阻塞、48 次账本尝试（预算内）；32/32 解析通过，20/32 通过 CAD-003 Schema，决策分布 answer=20/ask=2/refuse=10。未运行 C2/IR/CAD/geometry/STEP，详见 `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md` |
 | APP-001-AUDIT-EVIDENCE-R1 | 失败响应证据留存与请求前阻塞审计补强 | CC + Codex | done | `0a49fb2`、`2581a10` 及中枢审查 `60f4fa2` 已在 main；Python 3.11.18 专项/全量和 A02/A04/A07 回归复核通过，8 个既有 FUSE 限制 skip；详见 `agent-work/reviews/APP-001-AUDIT-EVIDENCE-R1-codex-review.md` |
 | APP-001-DECISION-QUALITY-ANALYSIS | 第四批次 8 条 Schema 拒绝行为诊断 | Codex | review | 只读逐条核对完成：8/8 显式字段值与冻结样例一致，拒绝均符合 CAD-003；7/8 `decision=answer` 与样例要求的澄清/拒绝不符，详见 `agent-work/reviews/APP-001-phase1-20261107-04-schema-decision-analysis.md` |
 | APP-001-DECISION-POLICY-V3-DRAFT | 候选决策策略 v3 与版本化激活 | CC + Codex | done | ADR-0016 已接受；v3 激活与 v2 历史审计入口经 Codex 独立复核并合入 `main`（`7dc7a37`），LLM 576 项通过（8 个既有 FUSE skip）、Schema 17 项通过。真实模型效果未测，FORMAL_EVALUATION_ALLOWED 仍为 False |
@@ -62,7 +62,7 @@
 | APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | done | 独立离线审查通过，候选提交 `582a123` 已随 v5 激活链合入 `main`；离线候选不构成模型效果证据。 |
 | APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | done | 准备包及 v4 回滚锚点 `687495b` 已合入 `main`；ADR-0018 已接受。 |
 | APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | done | `2c70225` 已合入并推送至 `main`；中枢审查通过，Python 3.11.18 激活/兼容专项 72 项通过。运行时默认 v5，v2/v3/v4 保留显式历史审计；formal evaluation gate 仍为 `False`。 |
-| APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | in_progress | 项目负责人已授权推进到真实模型评测；正在准备独立 v5 批次入口、唯一 batch_id、离线回归和 final preflight。尚未发起模型请求；仅在 scope、服务身份和 preflight 全部通过后运行。 |
+| APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | review | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配。中枢已修复摘要统计字段错配并完成 Python 3.11.18 回归；待交付审查记录复核与合入。批次证据在 git-ignored `work/app001-runs/`，不得重跑/覆盖。 |
 
 ## 阻塞项
 
@@ -86,6 +86,6 @@
 1. 批次 `app001-phase1-v4-20261109-01` 已完成并经 Codex 独立复核；保留 raw、账本和阻塞证据，不删除或覆盖。
 2. `APP-001-V5-PROMPT-CANDIDATE` 已通过独立离线审查；候选提交 `582a123`。
 3. 项目负责人已接受 ADR-0018；v5 激活 `2c70225` 已由中枢审查并合入、推送到 `main`，激活专项 72 项通过。
-4. APP-001-V5-FORMAL-EFFECT-EVALUATION 已获项目负责人推进到真实模型测试的明确指示。先完成 v5 专用受控入口、唯一批次身份和 final preflight；不使用 v4 专用脚本，不修改或混合旧批次。
-5. v5 批次边界沿用已冻结的 36 逻辑运行、DeepSeek `deepseek-flash` + Ollama `qwen3:8b`、最多 108 次物理请求（provider 各 54、每 run 最多 3 次）；C2、IR、CAD、geometry、STEP 禁用。若 preflight 或实际服务身份不匹配则停止并记录。
-6. DeepSeek 5xx 继续遵循 ADR-0010 的重试上限；第二族扩展另行决策，不作为 APP-001 前置依赖。
+4. APP-001-V5-FORMAL-EFFECT-EVALUATION 的唯一真实批次 `app001-phase1-v5-20261111-01` 已按授权执行；Codex 中枢正在完成只读证据审查和摘要统计器修正的交付收束。禁止重跑、覆盖或与旧批次混合。
+5. v5 真实批次观察到 32/32 解析通过、20/32 CAD-003 Schema 通过；决策分布 answer=20、ask=2、refuse=10，符合九样例候选策略映射，离线 checker 无 P1/P2 告警。小样本和 checker 限制不支持广泛模型质量结论；C2、IR、CAD、geometry、STEP 未运行。
+6. 下一步先复核/合入本轮审查交付，再由项目负责人根据真实批次结果决定是否启动新版本或新批次；任何 follow-up 模型调用都需新的唯一 batch_id 和单独授权。DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。

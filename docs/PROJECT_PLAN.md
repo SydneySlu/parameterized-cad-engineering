@@ -56,4 +56,7 @@
 - [x] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过并随激活链合入 `main`）
 - [x] 项目负责人接受 ADR-0018 策略方向（2026-11-11）
 - [x] 独立审查并合入 v5 版本化激活（APP-001-V5-ACTIVATION；`2c70225` 已在 `main`，中枢审查通过）
-- [ ] v5 真实模型效果评测（APP-001-V5-FORMAL-EFFECT-EVALUATION；受控入口、唯一 batch_id、final preflight 后执行；v4 旧批次只读且不得混合统计）
+- [ ] v5 真实模型效果评测（APP-001-V5-FORMAL-EFFECT-EVALUATION；唯一批次已执行，独立收束审查和合入待完成；v4 旧批次只读且不得混合统计）
+  - 唯一批次 `app001-phase1-v5-20261111-01`：36 条逻辑记录、32 个真实模型响应、4 个 C1 请求前阻塞、48 次账本尝试；32 个 raw 文件存在且长度/SHA-256 与留存元数据一致。
+  - 结果：32/32 响应解析通过；CAD-003 Schema 20/32 通过；决策 answer=20、ask=2、refuse=10；C2/IR/CAD/geometry/STEP 未运行。结果与限制见 `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`。
+  - 收束期间修复入口摘要字段错配并增加测试；真实 batch 未重跑。独立复核和合入前保持 `review`。

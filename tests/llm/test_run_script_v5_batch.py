@@ -28,6 +28,9 @@ Coverage:
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import py_compile
 import subprocess
 import sys
@@ -419,6 +422,96 @@ class SyntaxTests(unittest.TestCase):
         # the module-level code.  We just confirm the constant name is safe.
         self.assertNotIn("DEEPSEEK_API_KEY", repr(_script.BASELINE_COMMIT))
         self.assertNotIn("DEEPSEEK_API_KEY", repr(_script.EXPECTED_SCOPE_HASH))
+
+
+class JsonlSummaryTests(unittest.TestCase):
+
+    def _write_records(self, root: Path, records: list[dict]) -> Path:
+        path = root / "runs.jsonl"
+        path.write_text(
+            "".join(json.dumps(record) + "\n" for record in records),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_summary_reads_retention_metadata_and_decision_from_raw_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            response = {
+                "contract_version": "app001-io.v1",
+                "prompt_version": "app001-extraction.v5",
+                "decision": "ask",
+                "extracted_parameters": {"bore_d": 20},
+                "unsupported_requests": [],
+                "evidence": [],
+                "missing_fields": ["outer_d"],
+                "questions": ["Please clarify outer_d."],
+                "confidence": None,
+            }
+            raw_path = root / "response.json"
+            raw_path.write_text(json.dumps(response), encoding="utf-8")
+            runs = self._write_records(root, [{
+                "configured_provider": "DeepSeek",
+                "condition_id": "C0",
+                "final_outcome": "success",
+                "stages": [{"stage": "schema", "status": "pass"}],
+                "raw_response_retention": {
+                    "retained": True,
+                    "path": str(raw_path),
+                    "saved_length": raw_path.stat().st_size,
+                },
+            }])
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                _script._print_jsonl_stats(runs)
+
+            summary = output.getvalue()
+            self.assertIn("DeepSeek", summary)
+            self.assertIn("Decision distribution: ask=1", summary)
+            self.assertIn("Raw retention: retained=1  missing=0", summary)
+            self.assertNotIn("Please clarify", summary)
+
+    def test_summary_counts_request_before_block_and_does_not_infer_answer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runs = self._write_records(root, [{
+                "configured_provider": "Ollama",
+                "condition_id": "C1",
+                "blocked_stage": "retrieval",
+                "error_code": "RETRIEVAL_BLOCKED",
+                "extracted_parameters": {"bore_d": 24},
+                "stages": [],
+            }])
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                _script._print_jsonl_stats(runs)
+
+            summary = output.getvalue()
+            self.assertIn("blocked=1", summary)
+            self.assertNotIn("Decision distribution:", summary)
+            self.assertNotIn("Raw retention:", summary)
+
+    def test_summary_marks_missing_response_file_for_successful_model_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runs = self._write_records(root, [{
+                "configured_provider": "DeepSeek",
+                "condition_id": "C0",
+                "final_outcome": "success",
+                "stages": [{"stage": "model_call", "status": "pass"}],
+                "raw_response_retention": {
+                    "retained": True,
+                    "path": str(root / "missing.json"),
+                },
+            }])
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                _script._print_jsonl_stats(runs)
+
+            self.assertIn("Raw retention: retained=0  missing=1", output.getvalue())
 
 
 # ── DryRun ────────────────────────────────────────────────────────────────────
