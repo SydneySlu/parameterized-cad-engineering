@@ -2,7 +2,7 @@
 
 Coverage map (per APP-001-V5-ACTIVATION task requirements):
 
-  1. v5 prompt matches manifest/hash; loader loads v4 and rejects hash/version
+  1. v5 prompt matches manifest/hash; loader loads v5 and rejects hash/version
      tampering ................................................ TestV5PromptLoaderActivation
   2. v5 envelope passes default parser; v3/v2 history uses read-only compat
      entry; default parser rejects wrong version ............. TestV5ParserVersionBoundaries
@@ -66,16 +66,16 @@ class TestV5PromptLoaderActivation(unittest.TestCase):
         cls.declared_version = FROZEN_PROMPT_VERSION
         cls.declared_sha256 = FROZEN_PROMPT_FILE_SHA256
 
-    def test_loader_points_to_v4_activation_directory(self):
+    def test_loader_points_to_v5_activation_directory(self):
         """The production loader path must be inside APP-001-v5-activation/."""
         self.assertIn("APP-001-v5-activation", str(self.path))
         self.assertTrue(self.path.name == "prompt-v5.md")
 
-    def test_loader_declared_version_is_v4(self):
+    def test_loader_declared_version_is_v5(self):
         """FROZEN_PROMPT_VERSION constant must be app001-extraction.v5."""
         self.assertEqual(self.declared_version, "app001-extraction.v5")
 
-    def test_loader_artifact_version_is_v4(self):
+    def test_loader_artifact_version_is_v5(self):
         """Parsed artifact version must be app001-extraction.v5."""
         self.assertEqual(self.artifact.version, "app001-extraction.v5")
 
@@ -89,8 +89,8 @@ class TestV5PromptLoaderActivation(unittest.TestCase):
         self.assertEqual(actual_sha256, manifest["prompt_file_sha256"],
                          "Loader SHA256 does not match manifest prompt_file_sha256")
 
-    def test_loader_file_sha256_is_v4_value(self):
-        """The frozen sha256 must be the known v4 value, not the v3 value."""
+    def test_loader_file_sha256_is_v5_value(self):
+        """The frozen sha256 must be the pinned v5 value, distinct from v3."""
         v3_sha256 = "3dd8bd5505e62f6c96b851b292a83a8905743306de62356a4e093b1d0cd1d86b"
         self.assertNotEqual(self.declared_sha256, v3_sha256,
                             "Loader is still pointing at v3 SHA256 anchor")
@@ -131,8 +131,8 @@ class TestV5PromptLoaderActivation(unittest.TestCase):
         finally:
             os.unlink(tmp)
 
-    def test_system_prompt_contains_v4_version_string(self):
-        """The parsed system prompt must contain the v4 version literal so the
+    def test_system_prompt_contains_v5_version_string(self):
+        """The parsed system prompt must contain the v5 version literal so the
         model is instructed to declare it in its response."""
         self.assertIn('"prompt_version": "app001-extraction.v5"',
                       self.artifact.system_prompt)
@@ -166,7 +166,7 @@ class TestV5PromptLoaderActivation(unittest.TestCase):
 
 
 class TestV5ParserVersionBoundaries(unittest.TestCase):
-    """The default parser accepts v4 and rejects all other versions.
+    """The default parser accepts v5 and rejects historical versions.
     Historical v2/v3 are accessible via the explicit legacy audit entry point.
     """
 
@@ -186,7 +186,7 @@ class TestV5ParserVersionBoundaries(unittest.TestCase):
         return json.dumps(base)
 
     # Normal cases
-    def test_v4_envelope_accepted_by_default_parser(self):
+    def test_v5_envelope_accepted_by_default_parser(self):
         """A valid v5 envelope must parse OK with no errors."""
         from src.llm.parser import parse_response
         result = parse_response(self._body())
@@ -214,12 +214,27 @@ class TestV5ParserVersionBoundaries(unittest.TestCase):
     # Rejection cases
     def test_v3_envelope_rejected_by_default_parser(self):
         """REJECTION: the default parser must reject v3 so historical batch
-        responses are never silently relabelled as v4."""
+        responses are never silently relabelled as v5."""
         from src.llm.parser import parse_response
         result = parse_response(self._body(prompt_version="app001-extraction.v3"))
         self.assertFalse(result.ok)
         self.assertIn("PROMPT_VERSION_MISMATCH",
                       [e.code for e in result.errors])
+
+    def test_v4_envelope_rejected_by_default_parser(self):
+        """REJECTION: archived v4 must not pass the v5 production parser."""
+        from src.llm.parser import parse_response
+        result = parse_response(self._body(prompt_version="app001-extraction.v4"))
+        self.assertFalse(result.ok)
+        self.assertIn("PROMPT_VERSION_MISMATCH", [e.code for e in result.errors])
+
+    def test_v4_envelope_accepted_via_explicit_legacy_audit_path(self):
+        """Historical v4 is accepted only when explicitly selected for audit."""
+        from src.llm.parser import parse_response_for_version
+        body = self._body(prompt_version="app001-extraction.v4")
+        result = parse_response_for_version(body, prompt_version="app001-extraction.v4")
+        self.assertTrue(result.ok, [e.as_dict() for e in result.errors])
+        self.assertEqual(result.envelope.prompt_version, "app001-extraction.v4")
 
     def test_v2_envelope_rejected_by_default_parser(self):
         """REJECTION: the default parser must reject v2."""
@@ -229,8 +244,8 @@ class TestV5ParserVersionBoundaries(unittest.TestCase):
         self.assertIn("PROMPT_VERSION_MISMATCH",
                       [e.code for e in result.errors])
 
-    def test_v3_audit_parser_does_not_relabel_v4_envelope(self):
-        """REJECTION: the explicit v3 audit parser must reject a v4 body."""
+    def test_v3_audit_parser_does_not_relabel_v5_envelope(self):
+        """REJECTION: the explicit v3 audit parser must reject a v5 body."""
         from src.llm.parser import parse_response_for_version
         result = parse_response_for_version(
             self._body(prompt_version="app001-extraction.v5"),

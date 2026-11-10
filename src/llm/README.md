@@ -256,8 +256,9 @@ the authoritative gating layer.
 
 After the v5 activation, `parse_response()` accepts only
 `app001-extraction.v5`. Historical v4, v3 and v2 batches remain auditable through
-the explicit `parse_response_for_version(..., prompt_version="app001-extraction.v3")`
-and `parse_response_for_version(..., prompt_version="app001-extraction.v2")`
+the explicit `parse_response_for_version(..., prompt_version="app001-extraction.v4")`,
+`parse_response_for_version(..., prompt_version="app001-extraction.v3")`, and
+`parse_response_for_version(..., prompt_version="app001-extraction.v2")`
 entry points; these legacy paths are never used by the production adapter and
 do not relabel results as v5. Audit callers must retain the explicitly selected
 version alongside the parse outcome; successful results also preserve it in the

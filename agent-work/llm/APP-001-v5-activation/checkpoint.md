@@ -21,7 +21,7 @@
 ```text
 handoff_self_check:
   changed=prompt-v5.md, manifest.json, README.md, checkpoint.md, contract.py, prompt_loader.py, parser.py, compatibility tests, project status/plan, WORKLOG, ADR-0018
-  commands=Python 3.11.18 targeted activation/prep/candidate/parser/adapter/envelope tests: 226 passed; LLM discover: 809 passed, 8 skipped; Schema discover: 17 passed; py_compile and git diff --check passed
+  commands=Python 3.11.18 targeted activation/prep/candidate/parser/adapter/envelope tests: 279 passed after independent review fixes; LLM discover: 811 passed, 8 skipped; Schema discover: 17 passed; py_compile and full main-to-worktree git diff --check passed
   confirmed=owner accepted ADR-0018; v5 candidate normal and refusal/conflict paths are covered offline; v4 frozen hash remains the rollback anchor
   unresolved=Codex independent review and merge to main remain; existing formal batch script is v4-specific and cannot run v5; no real model effect evidence
   next_agent_focus=verify prompt and manifest hashes; default parser accepts v5 and rejects v4; explicit v4 audit works; formal gate remains false; tests under Python 3.11.18

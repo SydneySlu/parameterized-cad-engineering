@@ -4,7 +4,7 @@
 
 修正 Codex 对提交 `1a0bd94` 的独立审查发现，仅完善未激活的离线 v5 候选 checker 和测试。当前候选仍处于 `review`，不得合并到 `main`、不得激活 v5、不得创建新正式批次。
 
-执行者：CC  
+执行者：CC
 建议分支：继续使用 `cc/APP-001-V4-QUALITY-FIX-CANDIDATE`，从当前 HEAD `18941af` 继续。
 
 ## 开始前必须执行

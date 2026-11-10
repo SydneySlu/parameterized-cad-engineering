@@ -1984,3 +1984,12 @@ commit=待提交
 - 状态：激活实现待 Codex 独立审查并合入 main；生产效果尚未测量。下一步由 Codex 审查当前分支与 v5/v4 哈希、版本边界及全量测试；之后才可讨论新的唯一 batch_id 和单独正式运行授权。
 
 - Git：激活实现已提交为 `d48cc66`（`feat: activate APP-001 extraction v5 contract [APP-001-V5-ACTIVATION]`）；工作区提交后干净。该提交在 `main` 之外，等待 Codex 中枢独立审查。
+
+
+### APP-001-V5-ACTIVATION-R1 / Codex / review / 2026-11-11
+
+- 根据独立审查报告修复：在 `test_v5_activation.py` 增加默认 parser 拒绝 v4 的直接断言，并验证显式 v4 audit 仍接受；更新 parser/README/测试中的 v5 生产版本说明；清理 main..激活分支差异中 7 处行尾空白。
+- 保留 v4 激活历史覆盖的核心内容于 v5 激活套件；`test_v4_activation.py` 保留为归档哈希、默认拒绝和显式审计兼容检查。
+- 验证（Python 3.11.18）：指定定向套件 279/279；LLM 全量 811 通过、8 个既有 FUSE skip；Schema 17/17；`py_compile` 通过；`git diff --check main` 全分支差异 CLEAN。
+- 独立审查报告认为的 P1/P2 已处理。尚未将独立审查者未能运行的测试直接视作通过；由当前目标分支在 Mac Python 3.11.18 上完成上述实际重跑。未调用模型、未读密钥、未触碰批次。
+- 下一步：提交 R1 修正，交回独立审查者确认 findings closure；之后中枢决定是否合入。
