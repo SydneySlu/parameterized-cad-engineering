@@ -133,10 +133,12 @@ hashes to `7c201710fae0ff3cc3b811c28739393762f1886a5e79bd255cbda8671ac03143`;
 the authorization record and test now pin this recomputed active hash. This
 was corrected before any model call.
 
-Next: obtain independent review of the completed retention-path correction
-and its aligned audit records. The one authorized real batch has already been
-run; do not rerun, resume, overwrite, or combine it with any older batch. Any
-follow-up model experiment requires a new batch ID and separate authorization.
+At the time this checkpoint section was first recorded, the next gate was
+independent review of the retention-path correction. That review and Codex's
+final branch acceptance are now complete; see `Current handoff state` below.
+The one authorized real batch has already been run; do not rerun, resume,
+overwrite, or combine it with any older batch. Any follow-up model experiment
+requires a new batch ID and separate authorization.
 
 ## Constraints
 
@@ -167,5 +169,8 @@ follow-up model experiment requires a new batch ID and separate authorization.
   has since found stale next-step/status wording in this checkpoint and the
   earlier review record. This follow-up corrects those current-state references
   while preserving the initial finding as historical evidence. The next gate
-  is independent review of this documentation-only follow-up; merge remains
-  pending Codex acceptance.
+  passed independent review and Codex final acceptance on the current branch.
+  Python 3.11.18 verification: LLM 842 passed / 8 existing FUSE skips, Schema
+  17 passed, relevant `py_compile` passed, and full branch `git diff --check`
+  passed. Next: project owner pushes and merges this branch; then Codex verifies
+  main and performs post-merge targeted checks before status can become `done`.

@@ -1,10 +1,16 @@
-# APP-001-V5-FORMAL-EFFECT-EVALUATION handoff
+# APP-001-V5-FORMAL-EFFECT-EVALUATION handoff (historical pre-run instructions)
 
-The v5 effect run must use `scripts/run_app001_v5_formal_batch.py`, the unique
-batch authorization in this directory, and the frozen runtime versions/hashes.
-Do not reuse the v4 script or batch directory. Before any model request, review
-the task diff, rerun the v5 script tests and relevant LLM/Schema suites, then
-run the script preflight. A successful offline test or dry run is not a model
-effect result. If preflight succeeds, execute the real batch and preserve its
-raw/run records under the git-ignored batch directory; review the evidence
-before writing conclusions.
+These were the controlled execution instructions before the authorized v5
+batch ran. The sole authorized batch `app001-phase1-v5-20261111-01` has already
+run and must not be resumed, rerun, overwritten, or combined with another
+batch. Its 32 raw files remain at the batch root as a documented deviation
+from the authorized `raw/` subdirectory; preserve them unchanged.
+
+The future-run retention path is now corrected and independently reviewed:
+`src/llm/runner.py` writes formal raw responses under
+`work/app001-runs/<batch_id>/raw/`. Any future model run still requires a
+reviewed entrypoint baseline, a new unique batch ID, and separate explicit
+authorization. The implementation and document follow-up through `3a55cc1`
+passed independent review, and Codex's final acceptance passed. The project
+owner must push/merge the accepted branch, after which Codex will verify `main`
+and rerun targeted checks before the task can be marked `done`.

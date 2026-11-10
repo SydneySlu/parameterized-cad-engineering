@@ -2045,3 +2045,11 @@ commit=待提交
 - 边界：仅更新审查/交接记录；不改代码、授权原文或批次，不读取 raw 正文，不运行模型，不 push/合并。
 - 验证：`git diff --check` 通过；逐项确认 checkpoint、PROJECT_PLAN、审查报告和本追加日志均区分历史根目录偏离、未来 `batch/raw/` 修正已完成、当前仍待独立复核。未运行测试或模型。
 - 状态：review；提交后交独立复核确认，之后由 Codex 中枢决定是否可合入。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION-FINAL-ACCEPTANCE / Codex 中枢 / review / 2026-11-11
+
+- 动作：在独立审查通过 `3a55cc1` 文档状态跟进后，对完整 v5 评测分支做合入前最终验收。
+- 差异：验收时分支基于 `main=2c702257`；HEAD `3a55cc1`，工作区干净。完整差异 11 个文件，涉及 v5 授权/档案/审查报告、专用入口及测试、`src/llm/runner.py` 的未来 raw 路径修正、项目状态/计划/工作日志；无旧批次 tracked 文件改动。生产代码差异仅为正式 raw retention 目标改为 `work/app001-runs/<batch_id>/raw/`。最终状态同步还将明确标注预运行 handoff 为历史指令，避免误将已完成批次再次执行。
+- 验证（Mac Python 3.11.18）：`PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -q` → 842 passed、8 个既有 FUSE skip；Schema 全量 17/17；runner、v5 batch script 和相关测试 `py_compile` 通过；`git diff --check main...HEAD` 与目标提交 `git show --check` 通过。
+- 审查：独立复核结论 pass；Codex 中枢确认历史 32 个 raw 位于批次根目录的偏离被如实保留，未来路径修正不追溯改变旧批次。C2/IR/CAD/geometry/STEP 未运行；没有读取 raw 正文、密钥或发起模型请求。
+- 结论：分支可供项目负责人 push/合入；状态继续为 `review`，待 main 合入和合入后核验才可标 `done`。不授权新批次或额外模型调用。

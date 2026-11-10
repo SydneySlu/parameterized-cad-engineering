@@ -84,9 +84,9 @@ On Python 3.11.18:
 
 The 8 LLM skips are existing FUSE lock-file limitations. The live run completed before the reporter correction; the reporter fix was validated against the already-preserved batch and did not issue requests.
 
-## Decision and next gate
+## Initial review decision and next gate
 
-The fixed batch provides real-model effect evidence and the v5 decision paths match the candidate policy on the exercised cases. The 20/32 Schema pass rate remains an important separate downstream result. The sample size and envelope-only checker limit generalization; there is no C2/CAD end-to-end evidence. Preserve the batch unchanged. Independently review this closeout and merge the documentation/reporter correction before marking the task done. Any further model evaluation or prompt/policy change needs a new versioned scope, unique batch ID, and separate authorization.
+At the time of the initial review, the fixed batch provided real-model effect evidence and the v5 decision paths matched the candidate policy on the exercised cases. The 20/32 Schema pass rate remains an important separate downstream result. The sample size and envelope-only checker limit generalization; there is no C2/CAD end-to-end evidence. Preserve the batch unchanged. The initial next gate was independent review and merge of the closeout/documentation correction; later status is recorded in the follow-up section. Any further model evaluation or prompt/policy change needs a new versioned scope, unique batch ID, and separate authorization.
 
 ## Follow-up status (2026-11-11)
 
@@ -105,5 +105,10 @@ plan with that distinction. A subsequent independent review found stale
 handoff wording in this report/checkpoint and the WORKLOG next-step entry. This
 follow-up updates those current-state references while preserving the earlier
 recommendation as historical review context. The documentation-only follow-up
-is now presented for independent confirmation. Task status remains `review`,
-and no merge or additional model run is authorized by this addendum.
+passed independent review. Codex's final branch acceptance also passed on
+`3a55cc1`; Python 3.11.18 checks recorded for this acceptance were LLM 842
+passed with 8 existing FUSE skips, Schema 17 passed, relevant `py_compile`
+passed, and full-branch `git diff --check` passed. The branch is ready for
+project-owner push/merge. Task status remains `review` until merge and
+post-merge verification; no additional model run is authorized by this
+addendum.
