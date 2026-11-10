@@ -62,7 +62,7 @@
 | APP-001-V5-PROMPT-CANDIDATE | 针对 v4 已确认决策偏差准备 v5 离线 prompt 候选 | Codex | done | 独立离线审查通过，候选提交 `582a123` 已随 v5 激活链合入 `main`；离线候选不构成模型效果证据。 |
 | APP-001-V5-ACTIVATION-PREP | v5 版本化激活准备与 ADR-0018 提案 | Codex + 项目负责人 | done | 准备包及 v4 回滚锚点 `687495b` 已合入 `main`；ADR-0018 已接受。 |
 | APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | done | `2c70225` 已合入并推送至 `main`；中枢审查通过，Python 3.11.18 激活/兼容专项 72 项通过。运行时默认 v5，v2/v3/v4 保留显式历史审计；formal evaluation gate 仍为 `False`。 |
-| APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | review | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配。中枢已修复摘要统计字段错配并完成 Python 3.11.18 回归；待交付审查记录复核与合入。批次证据在 git-ignored `work/app001-runs/`，不得重跑/覆盖。 |
+| APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | review | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配，但实际位于批次根目录，偏离授权指定的 `raw/` 子目录。runner 已窄修为后续正式运行写入 `batch/raw/`，并通过 Python 3.11.18 回归；历史批次未移动/重跑。待独立复核并合入。 |
 
 ## 阻塞项
 
@@ -86,6 +86,6 @@
 1. 批次 `app001-phase1-v4-20261109-01` 已完成并经 Codex 独立复核；保留 raw、账本和阻塞证据，不删除或覆盖。
 2. `APP-001-V5-PROMPT-CANDIDATE` 已通过独立离线审查；候选提交 `582a123`。
 3. 项目负责人已接受 ADR-0018；v5 激活 `2c70225` 已由中枢审查并合入、推送到 `main`，激活专项 72 项通过。
-4. APP-001-V5-FORMAL-EFFECT-EVALUATION 的唯一真实批次 `app001-phase1-v5-20261111-01` 已按授权执行；Codex 中枢正在完成只读证据审查和摘要统计器修正的交付收束。禁止重跑、覆盖或与旧批次混合。
+4. APP-001-V5-FORMAL-EFFECT-EVALUATION 的唯一真实批次 `app001-phase1-v5-20261111-01` 已完成；实际 raw 路径偏离授权（批次根目录而非 `raw/`），已如实记录且历史文件未移动。runner 已窄修为未来正式运行使用 `batch/raw/`，Python 3.11.18 全量回归通过；当前修正待独立复核和合入。禁止重跑、覆盖或与旧批次混合。
 5. v5 真实批次观察到 32/32 解析通过、20/32 CAD-003 Schema 通过；决策分布 answer=20、ask=2、refuse=10，符合九样例候选策略映射，离线 checker 无 P1/P2 告警。小样本和 checker 限制不支持广泛模型质量结论；C2、IR、CAD、geometry、STEP 未运行。
-6. 下一步先复核/合入本轮审查交付，再由项目负责人根据真实批次结果决定是否启动新版本或新批次；任何 follow-up 模型调用都需新的唯一 batch_id 和单独授权。DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。
+6. 下一步先独立复核/合入路径修正；若要再次测模型效果，需基于修正后的 runner 建立新受控入口基线、新唯一 batch_id 和单独授权。本次路径修正本身不授权新的模型调用。DeepSeek 5xx 继续遵循 ADR-0010 的重试上限。

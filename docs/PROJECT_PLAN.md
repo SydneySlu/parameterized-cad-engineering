@@ -59,4 +59,4 @@
 - [ ] v5 真实模型效果评测（APP-001-V5-FORMAL-EFFECT-EVALUATION；唯一批次已执行，独立收束审查和合入待完成；v4 旧批次只读且不得混合统计）
   - 唯一批次 `app001-phase1-v5-20261111-01`：36 条逻辑记录、32 个真实模型响应、4 个 C1 请求前阻塞、48 次账本尝试；32 个 raw 文件存在且长度/SHA-256 与留存元数据一致。
   - 结果：32/32 响应解析通过；CAD-003 Schema 20/32 通过；决策 answer=20、ask=2、refuse=10；C2/IR/CAD/geometry/STEP 未运行。结果与限制见 `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`。
-  - 收束期间修复入口摘要字段错配并增加测试；真实 batch 未重跑。独立复核和合入前保持 `review`。
+  - 收束期间修复入口摘要字段错配并增加测试；后续 runner raw 留存路径也窄修为精确写入 `batch/raw/`，新增真实文件路径断言。v5 真实 batch 未重跑；runner 专项、LLM 全量和 Schema 测试通过。该生产 runner 修正待独立复核和合入；后续真实运行需新入口基线、新 batch ID 和单独授权。

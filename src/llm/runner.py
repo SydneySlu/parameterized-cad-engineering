@@ -85,6 +85,14 @@ def _safe(value: str) -> str:
     return _SAFE_RE.sub("_", value)
 
 
+def _formal_raw_retention_policy(batch_id: str) -> RetentionPolicy:
+    """Build the authorized raw-response location for one formal batch."""
+    return RetentionPolicy(
+        retain_raw=True,
+        base_dir=f"work/app001-runs/{batch_id}/raw",
+    )
+
+
 def _utc_now_iso() -> str:
     from datetime import datetime, timezone
 
@@ -540,10 +548,7 @@ class App001Runner:
             )
         # Build real transport and wrap it with BudgetAwareTransport
         run_id = _safe(f"{authorization.batch_id}__{lrid}")
-        retention = RetentionPolicy(
-            retain_raw=True,
-            base_dir=f"work/app001-runs/{authorization.batch_id}",
-        )
+        retention = _formal_raw_retention_policy(authorization.batch_id)
         inner_transport = self._build_transport(
             combo.provider,
             authorization,

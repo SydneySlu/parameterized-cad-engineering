@@ -79,19 +79,36 @@ future run, separately change the retention directory, add an exact-path test,
 and align the future authorization template; this batch must not be rerun.
 Details are in `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`.
 
+## Narrow retention-path correction
+
+- Changed `src/llm/runner.py` so formal raw retention uses
+  `work/app001-runs/<batch_id>/raw/` as specified by the authorization contract.
+- Added `test_formal_batch_raw_retention_uses_authorized_raw_subdirectory` in
+  `tests/llm/test_runner.py`. It resolves the policy, writes one synthetic raw
+  response under a unique ignored test batch, asserts the returned metadata
+  path's parent is exactly `raw/`, and removes only that test-owned directory.
+- Verification on Python 3.11.18: the new path test 1/1; `tests.llm.test_runner`
+  71 passed, 1 existing skip; full `tests/llm` 842 passed, 8 existing FUSE
+  skips; `tests/schema` 17 passed; `py_compile` and `git diff --check` passed.
+- The historical v5 batch directory and its records were not touched. This
+  production-path change causes the old v5 batch entrypoint's baseline guard
+  to reject a later run; future evaluation requires a reviewed runner baseline,
+  a new unique batch ID, and separate authorization. No new model test was run
+  or authorized by this narrow correction.
+
 ## Handoff successor check
 
 ```text
 handoff_successor_check:
-  predecessor=APP-001-V5-FORMAL-EFFECT-EVALUATION / 2ddea89 / checkpoint.md
+  predecessor=APP-001-V5-FORMAL-EFFECT-EVALUATION / b20fe44 / checkpoint.md
   files_format=36 valid JSONL records; 48 ledger entries; 32 retained raw files; raw files and ledger remain ignored
-  core_rerun=Python 3.11.18; v5 batch runner tests 30 passed; llm 841 passed, 8 existing FUSE skips; schema 17 passed
-  normal_case=32 retained responses parse successfully; decision summaries recomputed from frozen batch raw files
-  failure_case=4 request-before blocks recorded for A04/A07 C1; reporter now counts them as blocked and no raw response as expected
-  interface=retention path read from raw_response_retention.path; decisions parsed using active v5 parser; no response text emitted
+  core_rerun=Python 3.11.18; retention path test 1 passed; runner suite 71 passed, 1 skip; llm 842 passed, 8 FUSE skips; schema 17 passed
+  normal_case=synthetic retention write returns metadata path under unique batch/raw/
+  failure_case=path mismatch finding confirmed read-only; old batch remains untouched and existing block paths remain covered by summary tests
+  interface=RetentionPolicy resolves to work/app001-runs/<batch_id>/raw/; adapter metadata stays repo-relative
   limits=Schema 20/32 only; no C2/IR/CAD/geometry/STEP; checker is diagnostic; no causal comparison or broad model-quality claim
   result=review
-  blocking_issue=authorization said batch/raw but runtime wrote to batch root; preserve files and require explicit disposition before calling closeout pass
+  blocking_issue=historical batch path deviation remains; correction only applies to future runs, and the old entrypoint correctly rejects changed production baseline
 ```
 
 ## Validation and next gate

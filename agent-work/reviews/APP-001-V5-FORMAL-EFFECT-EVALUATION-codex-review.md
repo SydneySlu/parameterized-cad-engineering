@@ -60,6 +60,17 @@ template/checkpoint to match the implementation. Do not use that code change
 to rerun or resume this batch. Any additional model request needs a new batch
 ID and separate authorization.
 
+The narrow code correction is now prepared in `src/llm/runner.py`: formal
+retention uses `work/app001-runs/<batch_id>/raw/`. A new runner regression
+creates one synthetic response under a unique ignored test batch and asserts
+both the resolved directory and returned metadata path. Python 3.11.18 checks:
+the new test 1/1; `tests.llm.test_runner` 71 passed, 1 existing skip; full LLM
+suite 842 passed, 8 existing FUSE skips; Schema 17 passed; `py_compile` and
+`git diff --check` passed. The old batch was not touched. Since `src/llm/` is
+production scope, the existing v5 batch script intentionally rejects a future
+run against its old baseline; any later evaluation needs a refreshed reviewed
+entrypoint baseline, a new batch ID, and separate authorization.
+
 ## Verification
 
 On Python 3.11.18:
