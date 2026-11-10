@@ -2000,3 +2000,12 @@ commit=待提交
 - 关键不变量：v5 prompt hash `18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9`；v4 rollback hash `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`；acceptance-set hash `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf`；`FORMAL_EVALUATION_ALLOWED=False`。
 - 项目负责人随后明确要求推进 v5 效果测试并必须到真实模型阶段。新工作单元 `APP-001-V5-FORMAL-EFFECT-EVALUATION` 启动；将准备独立 v5 受控入口与唯一批次，旧 v4 批次保持只读且分开统计。当前尚未发起任何模型请求。
 - 下一步：实现和审查 v5 专用批次执行入口及离线保护测试，再完成模型服务/凭据存在性/批次目录/preflight 核验；仅在完整 preflight 通过后执行授权范围内的真实请求，并记录结果和限制。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION / Codex / in_progress / 2026-11-11
+
+- 新工作分支：`codex/APP-001-V5-FORMAL-EFFECT-EVALUATION`，基线为已合入 v5 激活的 `2c70225`；档案同步提交 `8dc03da`。
+- 记录项目负责人明确要求推进到 v5 真实模型评测。拟定唯一批次 `app001-phase1-v5-20261111-01`，采用既有冻结 Phase 1 scope：9 cases × C0/C1 × DeepSeek/Ollama = 36 logical runs，单 run 最多 3 次，预算账本总 attempt 上限 108、每 provider 54；C2/IR/CAD/geometry/STEP 禁用。完整授权记录见新任务 `authorization.md`。
+- 新建 v5 专用受控入口 `scripts/run_app001_v5_formal_batch.py` 和 `tests/llm/test_run_script_v5_batch.py`，不复用 v4 脚本。入口验证基线祖先关系、生产路径无差异、工作区干净、Python 3.11.18、prompt/activation manifest/acceptance-set/RET-002 哈希、授权 scope hash、batch 目录不存在、DeepSeek key 存在但不输出其值，以及 Ollama 运行时、模型 digest 和 structured-output schema 身份。
+- 初始测试发现 ADR-0015 中 `d82e53ad…` 是 v2 schema hash，不能用于 active v5。当前代码的 v5 schema hash 为 `7c201710fae0ff3cc3b811c28739393762f1886a5e79bd255cbda8671ac03143`；已将它作为 v5 锚点并加入离线复算测试。此前失败的单项测试是发现该不一致的有效拒绝，不是模型请求。
+- Python 3.11.18 验证：v5 入口专项 27/27；LLM 全量 838 通过、8 个既有 FUSE skip；Schema 17/17；dry-run 36 组合；`py_compile` 与 `git diff --check` 通过。所有验证均离线，尚未发起真实请求。
+- 下一步：提交受控入口与档案；随后由该入口在线 preflight 核验本机 Ollama 0.40.14 / `qwen3:8b` digest、凭据存在性和唯一 batch 目录。只有 preflight 通过才启动真实 v5 batch；任何检查失败则停止并记录。
