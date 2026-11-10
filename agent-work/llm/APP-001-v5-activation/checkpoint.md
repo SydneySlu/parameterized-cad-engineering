@@ -10,6 +10,12 @@
 - Switch only the active prompt version/path/hash and parser default version; retain explicit v2/v3/v4 historical audit versions.
 - Preserve `app001-io.v1`, CAD schema, budget/retry/authorization, `FORMAL_EVALUATION_ALLOWED=False`, and all prior batches.
 
+## Git state
+
+- Branch: `codex/APP-001-V5-ACTIVATION`
+- Activation implementation commit: `d48cc66`
+- The worktree was clean immediately after the implementation commit.
+
 ## Handoff self-check
 
 ```text

@@ -1982,3 +1982,5 @@ commit=待提交
 - 验证（Mac Python 3.11.18）：激活/准备/候选/parser/adapter/envelope 定向 **226 项通过**；`tests/llm` 全量 **809 项通过、8 个既有 FUSE skip**；`tests/schema` **17 项通过**；修改 Python 文件 `py_compile` 通过；`git diff --check` 通过。全量测试中的 `[ABORT]`/`[FAIL]` 文本来自模拟拒绝路径，整体退出码为 0。
 - 边界：`FORMAL_EVALUATION_ALLOWED=False`；预算、重试、授权逻辑、Schema、acceptance-set 和旧批次未改；没有模型/网络调用或密钥读取；C2/IR/CAD/geometry/STEP 仍禁用。
 - 状态：激活实现待 Codex 独立审查并合入 main；生产效果尚未测量。下一步由 Codex 审查当前分支与 v5/v4 哈希、版本边界及全量测试；之后才可讨论新的唯一 batch_id 和单独正式运行授权。
+
+- Git：激活实现已提交为 `d48cc66`（`feat: activate APP-001 extraction v5 contract [APP-001-V5-ACTIVATION]`）；工作区提交后干净。该提交在 `main` 之外，等待 Codex 中枢独立审查。
