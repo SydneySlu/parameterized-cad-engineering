@@ -53,7 +53,10 @@
 
 ## APP-001 v5 后续门
 
-- [ ] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过，提交 `582a123` 尚待合入；未激活）
+- [x] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过并随激活链合入 `main`）
 - [x] 项目负责人接受 ADR-0018 策略方向（2026-11-11）
-- [ ] 独立审查并合入 v5 版本化激活（APP-001-V5-ACTIVATION；当前 review；不含模型评测授权）
-- [ ] 若需测模型效果，另行批准新的唯一 batch_id，并完成 Codex final preflight；v4 旧批次只读且不得混合统计
+- [x] 独立审查并合入 v5 版本化激活（APP-001-V5-ACTIVATION；`2c70225` 已在 `main`，中枢审查通过）
+- [ ] v5 真实模型效果评测（APP-001-V5-FORMAL-EFFECT-EVALUATION；唯一批次已执行，独立审查和 Codex 中枢最终验收通过，待项目负责人 push/合入及合入后核验；v4 旧批次只读且不得混合统计）
+  - 唯一批次 `app001-phase1-v5-20261111-01`：36 条逻辑记录、32 个真实模型响应、4 个 C1 请求前阻塞、48 次账本尝试；32 个 raw 文件实际位于批次根目录（`work/app001-runs/<batch_id>/`），不在授权指定的 `raw/` 子目录；长度/SHA-256 与留存元数据一致。历史文件未移动、改写或重跑。
+  - 结果：32/32 响应解析通过；CAD-003 Schema 20/32 通过；决策 answer=20、ask=2、refuse=10；C2/IR/CAD/geometry/STEP 未运行。结果与限制见 `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`。
+  - 收束期间修复入口摘要字段错配并增加测试；后续 runner raw 留存路径也窄修为未来正式运行精确写入 `batch/raw/`，新增真实文件路径断言。历史批次仍保持上述根目录布局，未重跑；独立审查与 Codex 中枢最终验收通过，Python 3.11.18 下 LLM 842 项通过（8 项既有 FUSE skip）、Schema 17 项通过；分支待项目负责人 push/合入和合入后核验。后续真实运行需新入口基线、新 batch ID 和单独授权。

@@ -704,6 +704,34 @@ class RawResponseRetentionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _resolve_canonical_path("work/app001-runs/../../etc/passwd")
 
+    def test_formal_batch_raw_retention_uses_authorized_raw_subdirectory(self):
+        import shutil
+        import uuid
+
+        from src.llm.adapter import _retain_response
+        from src.llm.runner import _formal_raw_retention_policy
+
+        batch_id = f"test-retention-path-{uuid.uuid4().hex}"
+        expected_dir = _RUN_CANONICAL_ROOT / batch_id / "raw"
+        policy = _formal_raw_retention_policy(batch_id)
+        try:
+            self.assertEqual(
+                policy.resolved_dir(),
+                expected_dir.resolve(),
+            )
+            meta = _retain_response(
+                '{"decision":"ask"}',
+                "run-1",
+                "query-1",
+                policy,
+            )
+            self.assertTrue(meta.get("retained"), meta)
+            raw_path = _REPO_ROOT / meta["path"]
+            self.assertEqual(raw_path.parent, expected_dir.resolve())
+            self.assertTrue(raw_path.is_file())
+        finally:
+            shutil.rmtree(_RUN_CANONICAL_ROOT / batch_id, ignore_errors=True)
+
     def test_symlink_escape_rejected(self, ):
         import tempfile as _tf
         from src.llm.adapter import _write_raw_to_dir

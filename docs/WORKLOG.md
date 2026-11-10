@@ -1993,3 +1993,63 @@ commit=待提交
 - 验证（Python 3.11.18）：指定定向套件 279/279；LLM 全量 811 通过、8 个既有 FUSE skip；Schema 17/17；`py_compile` 通过；`git diff --check main` 全分支差异 CLEAN。
 - 独立审查报告认为的 P1/P2 已处理。尚未将独立审查者未能运行的测试直接视作通过；由当前目标分支在 Mac Python 3.11.18 上完成上述实际重跑。未调用模型、未读密钥、未触碰批次。
 - 下一步：提交 R1 修正，交回独立审查者确认 findings closure；之后中枢决定是否合入。
+### APP-001-V5-ACTIVATION / Codex 中枢 / done / 2026-11-11
+
+- 核验用户报告的合入状态：本机仓库 `/Users/syd/Desktop/参数化 cad 工程辅助设计`，`main` 与 `origin/main` 均指向 `2c702257ed56b3d9e49209f0455c2aaffb608b8b`；该提交同时为 v5 激活 R1 收束提交，工作区干净。
+- 合入前复审结论为 pass；本机 Python 3.11.18 重跑 `tests.llm.test_v5_activation tests.llm.test_v4_activation`，72 项通过；目标提交 `git show --check` 通过。
+- 关键不变量：v5 prompt hash `18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9`；v4 rollback hash `73cb6b8fbc38de09fe72a7714c172cf0598835dc845aca175c90cbd2f263a8bc`；acceptance-set hash `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf`；`FORMAL_EVALUATION_ALLOWED=False`。
+- 项目负责人随后明确要求推进 v5 效果测试并必须到真实模型阶段。新工作单元 `APP-001-V5-FORMAL-EFFECT-EVALUATION` 启动；将准备独立 v5 受控入口与唯一批次，旧 v4 批次保持只读且分开统计。当前尚未发起任何模型请求。
+- 下一步：实现和审查 v5 专用批次执行入口及离线保护测试，再完成模型服务/凭据存在性/批次目录/preflight 核验；仅在完整 preflight 通过后执行授权范围内的真实请求，并记录结果和限制。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION / Codex / in_progress / 2026-11-11
+
+- 新工作分支：`codex/APP-001-V5-FORMAL-EFFECT-EVALUATION`，基线为已合入 v5 激活的 `2c70225`；档案同步提交 `8dc03da`。
+- 记录项目负责人明确要求推进到 v5 真实模型评测。拟定唯一批次 `app001-phase1-v5-20261111-01`，采用既有冻结 Phase 1 scope：9 cases × C0/C1 × DeepSeek/Ollama = 36 logical runs，单 run 最多 3 次，预算账本总 attempt 上限 108、每 provider 54；C2/IR/CAD/geometry/STEP 禁用。完整授权记录见新任务 `authorization.md`。
+- 新建 v5 专用受控入口 `scripts/run_app001_v5_formal_batch.py` 和 `tests/llm/test_run_script_v5_batch.py`，不复用 v4 脚本。入口验证基线祖先关系、生产路径无差异、工作区干净、Python 3.11.18、prompt/activation manifest/acceptance-set/RET-002 哈希、授权 scope hash、batch 目录不存在、DeepSeek key 存在但不输出其值，以及 Ollama 运行时、模型 digest 和 structured-output schema 身份。
+- 初始测试发现 ADR-0015 中 `d82e53ad…` 是 v2 schema hash，不能用于 active v5。当前代码的 v5 schema hash 为 `7c201710fae0ff3cc3b811c28739393762f1886a5e79bd255cbda8671ac03143`；已将它作为 v5 锚点并加入离线复算测试。此前失败的单项测试是发现该不一致的有效拒绝，不是模型请求。
+- Python 3.11.18 验证：v5 入口专项 27/27；LLM 全量 838 通过、8 个既有 FUSE skip；Schema 17/17；dry-run 36 组合；`py_compile` 与 `git diff --check` 通过。所有验证均离线，尚未发起真实请求。
+- 下一步：提交受控入口与档案；随后由该入口在线 preflight 核验本机 Ollama 0.40.14 / `qwen3:8b` digest、凭据存在性和唯一 batch 目录。只有 preflight 通过才启动真实 v5 batch；任何检查失败则停止并记录。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION / Codex 中枢 / review / 2026-11-11
+
+- 动作：按用户明确要求推进到真实模型测试；完成唯一 v5 批次的只读审计，并收束执行摘要中的留存/决策统计字段错误。批次 `app001-phase1-v5-20261111-01` 未重跑或修改。
+- 真实结果：36 条逻辑记录，32 条 DeepSeek/Ollama 模型响应，4 条 C1 请求前阻塞（A04/A07 各两家）；48 次账本尝试（DeepSeek chat 16、Ollama chat 16、Ollama `/api/tags` 16），预算内且 32 次 chat 全部 HTTP 200；未见重试、5xx、API 错误。32 个留存 raw 文件均存在且长度/SHA-256 与记录元数据匹配。
+- 效果：32/32 parse 通过；决策 `answer=20 / ask=2 / refuse=10`，与本轮候选策略对九样例的预期路径一致；离线 v5 checker 无 P1/P2 告警。CAD-003 Schema 20/32 通过、12/32 拒绝（A04 缺 bore_d、A05 目录冲突、A07 越界 bore_d、A09 second_screw 规则冲突）；不得把策略决策匹配表述为 Schema 全通过。C2/IR/CAD/geometry/STEP 未运行。
+- 修复：`_print_jsonl_stats()` 改为使用 `raw_response_retention` 元数据、将请求前阻塞标记为 blocked，并通过活动 parser 只提取 decision enum，不输出 raw 正文；新增 3 项测试。Python 3.11.18 下入口专项 30 项通过、LLM 全量 841 项通过且有 8 个既有 FUSE skip、Schema 17 项通过；`py_compile` 与 `git diff --check` 通过。
+- 审查档案：`agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`；任务 checkpoint、PROJECT_STATUS、PROJECT_PLAN 已同步。批次 raw 和账本仍处于 Git 忽略目录，不会提交。
+- 提交：`1f2811f docs: close APP-001 v5 effect evaluation audit [APP-001-V5-FORMAL-EFFECT-EVALUATION]`。状态保持 `review`，待独立收束复核和合入；本批次不得复跑/覆盖，任何后续模型调用需要新 batch_id 与单独授权。
+- 独立复核补充发现：授权记录指定 raw 目录为 `work/app001-runs/<batch_id>/raw/`，但 `src/llm/runner.py` 为本批次配置 `RetentionPolicy.base_dir` 时只给了 `work/app001-runs/<batch_id>`，导致 32 个文件位于批次根目录。只读核对确认文件均存在、hash/长度匹配且仍在 git-ignore 区；未移动或修改历史文件，也未改写授权记录。该授权/运行路径不一致已追加到 checkpoint 和审查报告，任务维持 `review`。
+- 建议未来窄修：runner 的 raw `base_dir` 增加 `/raw`；增加测试断言准确目录与写出 metadata path；未来授权模板保持同一绝对/相对布局。该修正应单独审查，不能用于重跑本批次；任何后续模型请求仍需新 batch ID 和单独授权。
+
+### APP-001-V5-RETENTION-PATH-FIX / Codex / review / 2026-11-11
+
+- 动作：按独立复核发现做窄范围修正，将未来正式批次的 raw 留存位置改为授权要求的 `<batch_dir>/raw/`；不移动或改写 `app001-phase1-v5-20261111-01` 的任何文件，不调用模型。
+- 代码：`src/llm/runner.py` 新增 `_formal_raw_retention_policy(batch_id)`，正式 runner 使用 `work/app001-runs/<batch_id>/raw`；`tests/llm/test_runner.py` 新增实际写文件回归，验证 policy resolved dir 与 retention metadata path 的 parent 均精确为 batch `raw/`，并仅清理该测试创建的 UUID 临时目录。
+- 验证（Python 3.11.18）：新增路径测试 1/1；`tests.llm.test_runner` 71 项通过、1 项既有 skip；LLM 全量 842 项通过、8 项既有 FUSE skip；Schema 17 项通过；`py_compile`、`git diff --check` 通过。
+- 边界：历史 v5 批次仍保持批次根目录的实际布局，32 个文件完整且原样保留；授权原文不改。生产 `src/llm/` 改动会触发旧 v5 batch entrypoint 的生产路径基线保护，因此不得复用旧脚本再跑；未来任何模型运行需新受控入口基线、新唯一 batch_id 和单独授权。
+- 状态：review，交独立复核 runner 改动与审计记录；真实效果任务仍未关闭，路径偏离如实保留为历史限制。
+
+### APP-001-V5-RETENTION-PATH-DOC-ALIGNMENT / Codex 中枢 / review / 2026-11-11
+
+- 动作：按独立审查报告对齐 v5 留存路径修正的交接档案；只改 checkpoint 与项目计划，不改代码、授权原文或批次数据。
+- 核对：明确记录 `app001-phase1-v5-20261111-01` 的 32 个 raw 文件实际位于批次根目录，偏离授权指定的 `raw/` 子目录；明确历史文件未移动、未改写、未重跑。
+- 对齐：checkpoint 将“未来需修改 runner/增加路径测试”的过时措辞更新为“窄修正已完成，等待独立审查”；约束段区分原批次执行时的边界与后续单独授权的生产路径修正。PROJECT_PLAN 同步记录实际历史路径与未来 `batch/raw/` 行为。
+- 验证：运行 `git diff --check` 和文档一致性核对；未运行模型或读取批次 raw 正文。
+- 状态：review；本工作单元不合并、不 push。下一步为提交文档收束并交最终复核。
+
+### APP-001-V5-RETENTION-PATH-DOC-ALIGNMENT-R1 / Codex 中枢 / review / 2026-11-11
+
+- 动作：根据独立复核结果继续收束交接状态；保留原日志条目作为 `8da34d9` 提交前的真实状态记录，不改写追加式历史。
+- 原因：`8da34d9` 已提交文档对齐后，checkpoint 的 Current handoff state 仍称下一步要提交文档；原始 v5 closeout review 中“未来应修改 runner”的建议也未标明已由 `a35f14b` 完成，因此当前状态读取存在时间线歧义。
+- 修正：checkpoint 更新为当前待处理独立复核；审查报告新增 Follow-up status，说明 runner 修正已实现并验证、历史批次偏离仍保留，并将原建议保留为历史审查上下文；本条 WORKLOG 作为前条“提交文档收束”下一步的后续状态记录。
+- 边界：仅更新审查/交接记录；不改代码、授权原文或批次，不读取 raw 正文，不运行模型，不 push/合并。
+- 验证：`git diff --check` 通过；逐项确认 checkpoint、PROJECT_PLAN、审查报告和本追加日志均区分历史根目录偏离、未来 `batch/raw/` 修正已完成、当前仍待独立复核。未运行测试或模型。
+- 状态：review；提交后交独立复核确认，之后由 Codex 中枢决定是否可合入。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION-FINAL-ACCEPTANCE / Codex 中枢 / review / 2026-11-11
+
+- 动作：在独立审查通过 `3a55cc1` 文档状态跟进后，对完整 v5 评测分支做合入前最终验收。
+- 差异：验收时分支基于 `main=2c702257`；HEAD `3a55cc1`，工作区干净。完整差异 11 个文件，涉及 v5 授权/档案/审查报告、专用入口及测试、`src/llm/runner.py` 的未来 raw 路径修正、项目状态/计划/工作日志；无旧批次 tracked 文件改动。生产代码差异仅为正式 raw retention 目标改为 `work/app001-runs/<batch_id>/raw/`。最终状态同步还将明确标注预运行 handoff 为历史指令，避免误将已完成批次再次执行。
+- 验证（Mac Python 3.11.18）：`PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -q` → 842 passed、8 个既有 FUSE skip；Schema 全量 17/17；runner、v5 batch script 和相关测试 `py_compile` 通过；`git diff --check main...HEAD` 与目标提交 `git show --check` 通过。
+- 审查：独立复核结论 pass；Codex 中枢确认历史 32 个 raw 位于批次根目录的偏离被如实保留，未来路径修正不追溯改变旧批次。C2/IR/CAD/geometry/STEP 未运行；没有读取 raw 正文、密钥或发起模型请求。
+- 结论：分支可供项目负责人 push/合入；状态继续为 `review`，待 main 合入和合入后核验才可标 `done`。不授权新批次或额外模型调用。
