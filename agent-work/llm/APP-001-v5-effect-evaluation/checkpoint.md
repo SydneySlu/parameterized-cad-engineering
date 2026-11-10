@@ -69,15 +69,20 @@ The batch itself was not rerun or modified.
 ## Independent-review finding: retention path mismatch
 
 The authorization says raw responses belong under
-`work/app001-runs/<batch_id>/raw/`, but the actual runner configured
-`RetentionPolicy.base_dir` as `work/app001-runs/<batch_id>`. The 32 retained
-files are at the ignored batch root; all paths exist and match their recorded
-length/hash, and there is no `raw/` subdirectory. This is a path-layout
-deviation from the approved record, even though the files stayed inside the
-ignored batch directory. Do not move or rewrite historical evidence. For a
-future run, separately change the retention directory, add an exact-path test,
-and align the future authorization template; this batch must not be rerun.
-Details are in `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`.
+`work/app001-runs/<batch_id>/raw/`, but the runner used for this batch
+configured `RetentionPolicy.base_dir` as `work/app001-runs/<batch_id>`. All 32
+retained files therefore remain at the ignored batch root; all paths exist and
+match their recorded length/hash, and there is no `raw/` subdirectory. This is
+a path-layout deviation from the approved record, even though the files stayed
+inside the ignored batch directory. Do not move or rewrite this historical
+evidence, and do not rerun this batch. The deviation remains part of the
+permanent batch record.
+
+The separately scoped future-run correction is now implemented below: formal
+raw retention targets `<batch_dir>/raw/` and an exact-path regression covers the
+resolved directory and written metadata path. The correction does not repair
+or retroactively change the historical batch. Details are in
+`agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`.
 
 ## Narrow retention-path correction
 
@@ -128,18 +133,35 @@ hashes to `7c201710fae0ff3cc3b811c28739393762f1886a5e79bd255cbda8671ac03143`;
 the authorization record and test now pin this recomputed active hash. This
 was corrected before any model call.
 
-Next: commit the closeout/reporting correction and audit record, then obtain
-independent review. The one authorized real batch has already been run; do not
-rerun, resume, overwrite, or combine it with any older batch. Any follow-up
-model experiment requires a new batch ID and separate authorization.
+Next: obtain independent review of the completed retention-path correction
+and its aligned audit records. The one authorized real batch has already been
+run; do not rerun, resume, overwrite, or combine it with any older batch. Any
+follow-up model experiment requires a new batch ID and separate authorization.
 
 ## Constraints
 
 - Do not use `scripts/run_app001_v4_formal_batch.py`.
-- Do not alter production code, prompt, Schema, budget, authorization logic, or
-  old batches.
+- During the authorized batch execution, do not alter production code, prompt,
+  Schema, budget, authorization logic, or old batches. After the retention-path
+  deviation was found, the separate `APP-001-V5-RETENTION-PATH-FIX` work unit
+  changed only the future formal raw-retention path and added its regression;
+  it did not alter the prompt, Schema, budget, authorization logic, or batch.
+- The historical batch's 32 raw files remain at its batch root, not under
+  `raw/`; this is a documented authorization-layout deviation. Do not move,
+  rewrite, resume, or rerun them.
 - Do not print, persist in tracked files, or send the API key value.
 - Do not exceed the fixed retry/physical request caps.
 - Record C1 request-before blocking, failures, 5xx, runtime model identities,
   raw evidence retention, and cost/latency evidence without converting them
   into success claims.
+
+## Current handoff state
+
+- The narrow runner correction and its exact-path test are complete and have
+  passed the recorded Python 3.11.18 checks. The independent review found the
+  implementation/tests acceptable; it requested only documentation alignment.
+- This checkpoint and `docs/PROJECT_PLAN.md` now explicitly distinguish the
+  historical batch-root layout from the corrected future `batch/raw/` layout.
+- Status remains `review`; no merge or push is included in this work unit. The
+  next gate is to commit the documentation alignment and return the package
+  for final review before merge.
