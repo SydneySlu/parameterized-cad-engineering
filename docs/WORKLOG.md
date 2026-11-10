@@ -2009,3 +2009,12 @@ commit=待提交
 - 初始测试发现 ADR-0015 中 `d82e53ad…` 是 v2 schema hash，不能用于 active v5。当前代码的 v5 schema hash 为 `7c201710fae0ff3cc3b811c28739393762f1886a5e79bd255cbda8671ac03143`；已将它作为 v5 锚点并加入离线复算测试。此前失败的单项测试是发现该不一致的有效拒绝，不是模型请求。
 - Python 3.11.18 验证：v5 入口专项 27/27；LLM 全量 838 通过、8 个既有 FUSE skip；Schema 17/17；dry-run 36 组合；`py_compile` 与 `git diff --check` 通过。所有验证均离线，尚未发起真实请求。
 - 下一步：提交受控入口与档案；随后由该入口在线 preflight 核验本机 Ollama 0.40.14 / `qwen3:8b` digest、凭据存在性和唯一 batch 目录。只有 preflight 通过才启动真实 v5 batch；任何检查失败则停止并记录。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION / Codex 中枢 / review / 2026-11-11
+
+- 动作：按用户明确要求推进到真实模型测试；完成唯一 v5 批次的只读审计，并收束执行摘要中的留存/决策统计字段错误。批次 `app001-phase1-v5-20261111-01` 未重跑或修改。
+- 真实结果：36 条逻辑记录，32 条 DeepSeek/Ollama 模型响应，4 条 C1 请求前阻塞（A04/A07 各两家）；48 次账本尝试（DeepSeek chat 16、Ollama chat 16、Ollama `/api/tags` 16），预算内且 32 次 chat 全部 HTTP 200；未见重试、5xx、API 错误。32 个留存 raw 文件均存在且长度/SHA-256 与记录元数据匹配。
+- 效果：32/32 parse 通过；决策 `answer=20 / ask=2 / refuse=10`，与本轮候选策略对九样例的预期路径一致；离线 v5 checker 无 P1/P2 告警。CAD-003 Schema 20/32 通过、12/32 拒绝（A04 缺 bore_d、A05 目录冲突、A07 越界 bore_d、A09 second_screw 规则冲突）；不得把策略决策匹配表述为 Schema 全通过。C2/IR/CAD/geometry/STEP 未运行。
+- 修复：`_print_jsonl_stats()` 改为使用 `raw_response_retention` 元数据、将请求前阻塞标记为 blocked，并通过活动 parser 只提取 decision enum，不输出 raw 正文；新增 3 项测试。Python 3.11.18 下入口专项 30 项通过、LLM 全量 841 项通过且有 8 个既有 FUSE skip、Schema 17 项通过；`py_compile` 与 `git diff --check` 通过。
+- 审查档案：`agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`；任务 checkpoint、PROJECT_STATUS、PROJECT_PLAN 已同步。批次 raw 和账本仍处于 Git 忽略目录，不会提交。
+- 提交：`1f2811f docs: close APP-001 v5 effect evaluation audit [APP-001-V5-FORMAL-EFFECT-EVALUATION]`。状态保持 `review`，待独立收束复核和合入；本批次不得复跑/覆盖，任何后续模型调用需要新 batch_id 与单独授权。
