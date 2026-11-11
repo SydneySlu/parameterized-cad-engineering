@@ -29,11 +29,13 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from llm.a2_authorization import (
+    A2_CONDITION,
     A2_INPUT_IDS,
     A2_INPUTS_SHA256,
     A2_LABELS_SHA256,
     A2_MAX_BATCH_HTTP,
     A2_MAX_LOGICAL_RUNS,
+    A2_MODEL,
     A2_PROFILE_ID,
     A2_PROVIDER,
     A2FormalApproval,
@@ -47,6 +49,7 @@ from llm.a2_authorization import (
 from llm.transport import FakeTransport, TransportError, TransportResponse
 from integration.a2_runner import (
     A2BatchResult,
+    A2RunResult,
     SummaryWriteError,
     _SummaryWriter,
     _atomic_write_json,
@@ -56,6 +59,7 @@ from integration.a2_runner import (
     run_a2_batch,
     run_a2_offline_preflight,
 )
+from llm.prompt_loader import load_frozen_prompt, FROZEN_PROMPT_FILE_SHA256
 
 
 # ---------------------------------------------------------------------------
@@ -901,8 +905,24 @@ class TestA2FormalApproval(unittest.TestCase):
             )
 
     def test_binding_match(self):
+        """A non-test-only approval with matching batch_id must pass binding."""
         auth = authorize_a2_run(batch_id="binding-test-01")
-        app = make_test_approval(batch_id="binding-test-01")
+        # Construct a real (non-test-only) approval for binding test
+        from llm.a2_authorization import A2FormalApproval
+        app = A2FormalApproval(
+            batch_id="binding-test-01",
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="real-owner",
+            approved_at_utc="2026-11-11T12:00:00Z",
+            approval_statement="I approve A2 formal execution of batch binding-test-01",
+        )
         validate_formal_approval_binding(auth, app)
 
     def test_binding_mismatch_rejected(self):
@@ -1072,6 +1092,11 @@ class TestA2SummaryPersistence(unittest.TestCase):
                     "configured_provider": "DeepSeek",
                     "configured_model_name": "deepseek-flash",
                 },
+                raw_retention_meta={
+                    "retained": True,
+                    "body_sha256": "raw_hash_abc",
+                    "body_length": 500,
+                },
             )
             writer.update_run(run_result)
 
@@ -1080,7 +1105,9 @@ class TestA2SummaryPersistence(unittest.TestCase):
             self.assertEqual(data["runs"]["run-01"]["status"], "success")
             self.assertEqual(data["runs"]["run-01"]["llm_status"], "answer")
             self.assertEqual(data["runs"]["run-01"]["pipeline_status"], "success")
-            self.assertEqual(data["runs"]["run-01"]["raw_sha256"], "abc123")
+            # R1-CORRECTION: raw_sha256 comes from raw_retention_meta, not ir_index
+            self.assertEqual(data["runs"]["run-01"]["raw_sha256"], "raw_hash_abc")
+            self.assertTrue(data["runs"]["run-01"]["raw_retained"])
             self.assertEqual(data["runs"]["run-01"]["raw_retention_path"],
                              "work/app001-runs/test-batch/raw/run-01_raw.txt")
 
@@ -1365,6 +1392,310 @@ class TestA2FormalRunSummaryIntegration(unittest.TestCase):
         auth = _make_auth("formal-summary-test-01")
         result = run_a2_batch(authorization=auth, dry_run=True)
         self.assertIsNone(result.summary_path)
+
+
+# ---------------------------------------------------------------------------
+# 18. R1-CORRECTION regression tests
+# ---------------------------------------------------------------------------
+
+class TestA2R1Correction(unittest.TestCase):
+    """R1-CORRECTION: regression tests for the three Codex-identified issues.
+
+    Test categories:
+    1. Test-only approval credential structurally rejected from formal gate.
+    2. finalize() write failure produces explicit error, not silent success.
+    3. Initial summary records full prompt file SHA-256 (not truncated).
+    4. Non-answer runs (ask/refuse) with model response record raw_retention_meta.
+    5. No-response runs record absence of raw evidence.
+    """
+
+    # --- Fix 1: test-only approval structurally rejected ---
+
+    def test_test_only_approval_has_is_test_only_flag(self):
+        """make_test_approval() must produce a credential with is_test_only=True."""
+        app = make_test_approval(batch_id="r1c-test-01")
+        self.assertTrue(app.is_test_only)
+
+    def test_test_only_approval_rejected_by_binding(self):
+        """validate_formal_approval_binding must reject is_test_only=True."""
+        auth = authorize_a2_run(batch_id="r1c-reject-01")
+        app = make_test_approval(batch_id="r1c-reject-01")
+        with self.assertRaises(ApprovalValidationError) as ctx:
+            validate_formal_approval_binding(auth, app)
+        self.assertIn("test-only", str(ctx.exception).lower())
+
+    def test_test_only_approval_rejected_before_any_side_effect(self):
+        """A test-only approval submitted to run_a2_batch(formal) must be rejected
+        before any directory creation, BudgetLedger, Transport, or HTTP."""
+        auth = authorize_a2_run(batch_id="r1c-spy-01")
+        app = make_test_approval(batch_id="r1c-spy-01")
+        with patch("integration.a2_runner._CANONICAL_RUN_ROOT") as mock_root, \
+             patch("llm.budget.BudgetLedger") as mock_ledger, \
+             patch("llm.real_transport.DeepSeekTransport") as mock_transport:
+            with self.assertRaises(ApprovalValidationError):
+                run_a2_batch(
+                    authorization=auth,
+                    dry_run=False,
+                    transport=None,
+                    approval=app,
+                )
+            mock_root.mkdir.assert_not_called()
+            mock_ledger.assert_not_called()
+            mock_transport.assert_not_called()
+
+    def test_real_approval_passes_binding(self):
+        """A non-test-only approval with matching batch_id must pass."""
+        auth = authorize_a2_run(batch_id="r1c-real-01")
+        app = A2FormalApproval(
+            batch_id="r1c-real-01",
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="real-owner",
+            approved_at_utc="2026-11-11T12:00:00Z",
+            approval_statement="I approve A2 formal execution of batch r1c-real-01",
+        )
+        validate_formal_approval_binding(auth, app)
+
+    # --- Fix 2: finalize() failure must be explicit ---
+
+    def test_finalize_error_field_exists(self):
+        """A2BatchResult must have a summary_finalize_error field."""
+        import dataclasses
+        fields = [f.name for f in dataclasses.fields(A2BatchResult)]
+        self.assertIn("summary_finalize_error", fields)
+
+    def test_dry_run_has_no_finalize_error(self):
+        """Dry-run result must have summary_finalize_error=None."""
+        auth = _make_auth("r1c-dryrun-01")
+        result = run_a2_batch(authorization=auth, dry_run=True)
+        self.assertIsNone(result.summary_finalize_error)
+
+    def test_finalize_failure_records_explicit_error(self):
+        """When finalize() fails, summary_finalize_error must be non-None."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            initial = {"batch_status": "running", "runs": {}}
+            writer = _SummaryWriter(batch_dir, initial)
+            writer.write_initial()
+
+            # Patch the finalize-time _atomic_write_json to fail
+            call_count = [0]
+            def failing_write(path, data, bd):
+                call_count[0] += 1
+                raise SummaryWriteError("simulated finalize failure")
+
+            with patch("integration.a2_runner._atomic_write_json", side_effect=failing_write):
+                with self.assertRaises(SummaryWriteError):
+                    writer.finalize(batch_status="complete")
+
+    # --- Fix 3a: initial summary records full prompt file SHA-256 ---
+
+    def test_initial_summary_has_full_prompt_file_sha256(self):
+        """_build_initial_summary must include the full FROZEN_PROMPT_FILE_SHA256."""
+        from llm.prompt_loader import load_frozen_prompt, FROZEN_PROMPT_FILE_SHA256
+        auth = _make_auth("r1c-prompt-hash-01")
+        app = make_test_approval(batch_id="r1c-prompt-hash-01")
+        planned = _plan_combinations(auth)
+        prompt = load_frozen_prompt()
+        summary = _build_initial_summary(auth, app, planned, prompt, "2026-11-11T00:00:00Z")
+
+        # Must have prompt_file_sha256 in artifact_hashes
+        self.assertIn("prompt_file_sha256", summary["artifact_hashes"])
+        # Must be the full 64-char SHA-256, not truncated
+        actual = summary["artifact_hashes"]["prompt_file_sha256"]
+        self.assertEqual(actual, FROZEN_PROMPT_FILE_SHA256)
+        self.assertEqual(len(actual), 64)
+
+    def test_initial_summary_prompt_hash_not_truncated(self):
+        """prompt_file_sha256 must be the complete hash, not a prefix."""
+        from llm.prompt_loader import FROZEN_PROMPT_FILE_SHA256
+        auth = _make_auth("r1c-trunc-01")
+        app = make_test_approval(batch_id="r1c-trunc-01")
+        planned = _plan_combinations(auth)
+        prompt = load_frozen_prompt()
+        summary = _build_initial_summary(auth, app, planned, prompt, "ts")
+        actual = summary["artifact_hashes"]["prompt_file_sha256"]
+        self.assertEqual(len(actual), 64)
+        self.assertNotEqual(actual[:16], actual)  # not just a prefix
+
+    # --- Fix 3b: raw_retention_meta in A2RunResult ---
+
+    def test_raw_retention_meta_field_exists(self):
+        """A2RunResult must have a raw_retention_meta field."""
+        import dataclasses
+        fields = [f.name for f in dataclasses.fields(A2RunResult)]
+        self.assertIn("raw_retention_meta", fields)
+
+    def test_mock_answer_summary_has_raw_retention(self):
+        """Mock answer path must produce a summary with raw_retention_meta."""
+        from integration.a2_runner import A2RunResult, _SummaryWriter
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            initial = {"runs": {"run-01": {"status": "pending"}}}
+            writer = _SummaryWriter(batch_dir, initial)
+            writer.write_initial()
+
+            run_result = A2RunResult(
+                logical_run_id="run-01",
+                input_id="A2-24mm",
+                condition_id="C0",
+                provider="DeepSeek",
+                model="deepseek-flash",
+                llm_status="answer",
+                pipeline_status="success",
+                combined_status="success",
+                errors=[],
+                questions=[],
+                raw_retention_path="work/app001-runs/batch/raw/run-01.txt",
+                pipeline_run_dir="/mock",
+                step_path="/mock/part.step",
+                ir_index={"envelope_sha256": "pipeline_hash"},
+                llm_meta={"attempt_count": 1},
+                raw_retention_meta={
+                    "retained": True,
+                    "body_sha256": "retention_hash_abc",
+                    "body_length": 500,
+                },
+            )
+            writer.update_run(run_result)
+
+            data = json.loads((batch_dir / "batch_summary.json").read_text("utf-8"))
+            entry = data["runs"]["run-01"]
+            # raw_sha256 must come from raw_retention_meta, not ir_index
+            self.assertEqual(entry["raw_sha256"], "retention_hash_abc")
+            self.assertNotEqual(entry["raw_sha256"], "pipeline_hash")
+            self.assertTrue(entry["raw_retained"])
+
+    def test_mock_ask_summary_has_raw_retention(self):
+        """Mock ask path: a run that received a response but didn't enter the
+        pipeline must still record raw_retention_meta in the summary."""
+        from integration.a2_runner import A2RunResult, _SummaryWriter
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            initial = {"runs": {"run-ask": {"status": "pending"}}}
+            writer = _SummaryWriter(batch_dir, initial)
+            writer.write_initial()
+
+            run_result = A2RunResult(
+                logical_run_id="run-ask",
+                input_id="A2-ask-bore",
+                condition_id="C0",
+                provider="DeepSeek",
+                model="deepseek-flash",
+                llm_status="ask",
+                pipeline_status=None,
+                combined_status="ask",
+                errors=[],
+                questions=["bore_d?"],
+                raw_retention_path="work/app001-runs/batch/raw/ask.txt",
+                pipeline_run_dir=None,
+                step_path=None,
+                ir_index=None,
+                llm_meta={"attempt_count": 1},
+                raw_retention_meta={
+                    "retained": True,
+                    "body_sha256": "ask_response_hash",
+                    "body_length": 300,
+                },
+            )
+            writer.update_run(run_result)
+
+            data = json.loads((batch_dir / "batch_summary.json").read_text("utf-8"))
+            entry = data["runs"]["run-ask"]
+            # Non-answer run must still have raw evidence
+            self.assertEqual(entry["raw_sha256"], "ask_response_hash")
+            self.assertTrue(entry["raw_retained"])
+            self.assertEqual(entry["llm_status"], "ask")
+            self.assertIsNone(entry["pipeline_status"])
+
+    def test_no_response_summary_has_no_raw_evidence(self):
+        """A run that received no response must have raw_retained=None and
+        raw_sha256=None in the summary."""
+        from integration.a2_runner import A2RunResult, _SummaryWriter
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            initial = {"runs": {"run-err": {"status": "pending"}}}
+            writer = _SummaryWriter(batch_dir, initial)
+            writer.write_initial()
+
+            run_result = A2RunResult(
+                logical_run_id="run-err",
+                input_id="A2-24mm",
+                condition_id="C0",
+                provider="DeepSeek",
+                model="deepseek-flash",
+                llm_status="error",
+                pipeline_status=None,
+                combined_status="error",
+                errors=[{"code": "NO_RESPONSE", "message": "no response"}],
+                questions=[],
+                raw_retention_path=None,
+                pipeline_run_dir=None,
+                step_path=None,
+                ir_index=None,
+                llm_meta={"attempt_count": 3},
+                raw_retention_meta=None,
+            )
+            writer.update_run(run_result)
+
+            data = json.loads((batch_dir / "batch_summary.json").read_text("utf-8"))
+            entry = data["runs"]["run-err"]
+            self.assertIsNone(entry["raw_sha256"])
+            self.assertIsNone(entry["raw_retained"])
+            self.assertEqual(entry["status"], "error")
+            self.assertIsNone(entry["pipeline_status"])
+
+    # --- Fix 3c: raw body content never in summary ---
+
+    def test_raw_body_content_not_in_summary(self):
+        """The summary must never contain raw response body content."""
+        from integration.a2_runner import A2RunResult, _SummaryWriter
+        secret_raw_body = "THIS_IS_A_RAW_RESPONSE_BODY_SHOULD_NOT_BE_IN_SUMMARY"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            initial = {"runs": {"run-01": {"status": "pending"}}}
+            writer = _SummaryWriter(batch_dir, initial)
+            writer.write_initial()
+
+            run_result = A2RunResult(
+                logical_run_id="run-01",
+                input_id="A2-24mm",
+                condition_id="C0",
+                provider="DeepSeek",
+                model="deepseek-flash",
+                llm_status="answer",
+                pipeline_status="success",
+                combined_status="success",
+                errors=[],
+                questions=[],
+                raw_retention_path="work/app001-runs/batch/raw/run-01.txt",
+                pipeline_run_dir="/mock",
+                step_path="/mock/part.step",
+                ir_index={"envelope_sha256": "abc"},
+                llm_meta={"attempt_count": 1},
+                raw_retention_meta={
+                    "retained": True,
+                    "body_sha256": "hash_of_body",
+                    "body_length": len(secret_raw_body),
+                },
+            )
+            writer.update_run(run_result)
+
+            summary_text = (batch_dir / "batch_summary.json").read_text("utf-8")
+            self.assertNotIn(secret_raw_body, summary_text)
+            # Only the hash and length should be present
+            self.assertIn("hash_of_body", summary_text)
 
 
 if __name__ == "__main__":

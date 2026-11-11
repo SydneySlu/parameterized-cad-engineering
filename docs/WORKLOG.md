@@ -2277,3 +2277,38 @@ commit=待提交
 - 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；未修改冻结 prompt/Schema/IR 语义/旧 runner/历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 提交：分支 `cc/APP-002-INTEGRATION-A2-SCOPE`（WIP commit，见下方 short hash）。
 - 下一步：Codex 中枢在 Python 3.11.18 下独立复核（40 项 A2 + LLM 全量 + Schema 17 + dry-run preflight + inputs SHA-256 核对），通过后向项目负责人提交 scope 草案和授权模板，取得批准后再进行 live preflight。
+
+### APP-002-INTEGRATION-A2-R1-CORRECTION / CC / review / 2026-11-11
+
+- 基线：分支 `cc/APP-002-INTEGRATION-A2-SCOPE`，HEAD `6866707`，父提交 `55547fb`。工作区开始时干净。
+- 任务：修复 Codex 中枢验收发现的三项问题，不扩展 A2 scope。
+- 修复 1（测试批准凭证不能通过正式批准门）：
+  - `A2FormalApproval` 新增 `is_test_only: bool = False` 字段。
+  - `validate_formal_approval_binding()` 在 batch_id 匹配检查前增加 `is_test_only` 结构性拒绝；test-only 凭证在任何目录/账本/transport 创建前被拒绝。
+  - `make_test_approval()` 现在设置 `is_test_only=True`。
+  - 这不是密码学签名或不可伪造身份认证；是结构性 guard。
+  - 回归测试：`test_test_only_approval_rejected_before_any_side_effect` 验证 0 目录创建、0 BudgetLedger、0 Transport、0 HTTP。
+- 修复 2（摘要最终写入失败必须明确失败）：
+  - `A2BatchResult` 新增 `summary_finalize_error: str | None` 字段。
+  - `run_a2_batch()` 不再吞掉 `writer.finalize()` 的 `SummaryWriteError`；错误记录在 `summary_finalize_error` 中返回给调用方。
+  - 账本锁仍在 `finally` 块中释放。
+  - 回归测试：`test_finalize_failure_records_explicit_error` 验证 `SummaryWriteError` 被 raise。
+- 修复 3（摘要记录真实 prompt hash 和 raw retention 证据）：
+  - `_build_initial_summary()` 的 `artifact_hashes` 新增 `prompt_file_sha256`（完整 64 字符 `FROZEN_PROMPT_FILE_SHA256`），不只是版本号或截断 hash。
+  - `A2RunResult` 新增 `raw_retention_meta: dict | None` 字段，从 Adapter `RunRecord.raw_response_retention` 安全传递。
+  - `_SummaryWriter.update_run()` 的 `raw_sha256` 现在来自 `raw_retention_meta["body_sha256"]`，不再从 `ir_index["envelope_sha256"]` 推导。
+  - 非 answer 路径（ask/refuse/blocked/parse error）在正式模式下也填充 `raw_retention_meta` 和 `raw_retention_path`。
+  - 无响应时 `raw_retention_meta=None`，summary 中 `raw_sha256=None`、`raw_retained=None`。
+  - summary 不写入 raw 正文、API key、Authorization header 或 evaluator labels 内容。
+  - 回归测试：`test_mock_answer_summary_has_raw_retention`、`test_mock_ask_summary_has_raw_retention`、`test_no_response_summary_has_no_raw_evidence`、`test_initial_summary_has_full_prompt_file_sha256`、`test_raw_body_content_not_in_summary`。
+- 新增 14 项 R1-CORRECTION 专项测试（`TestA2R1Correction`），总计 81 项 A2 测试。
+- 验证（VM，Python 3.10.12，无 cadquery）：
+  - `py_compile` `a2_authorization.py` / `a2_runner.py` / `test_a2_runner.py`：通过
+  - `python -m unittest tests.integration.test_a2_runner -q`：Ran 81 tests; OK
+  - `python -m unittest discover -s tests/schema -p 'test_*.py' -q`：Ran 17 tests; OK
+  - `git diff --check`：通过
+  - 既有 `test_pipeline.py` 和 `test_schema_to_ir.py` 的 25 failures + 3 errors 为 VM 缺 cadquery/OCP 导致的既有问题（stash 验证确认），本次修改不引入新失败。
+- 未运行（需 Mac 固定环境 Python 3.11.18）：
+  - A2 专项 81 项、Integration 全量（含 cadquery 路径）、Schema 17 项、LLM 全量 941 项、`py_compile` 3 文件、`git diff --check`
+- 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变；未修改冻结 prompt/Schema/IR 语义/旧 runner/历史批次。
+- 下一步：Codex 中枢在 Python 3.11.18 下独立复核（81 项 A2 + LLM 全量 + Schema 17 + py_compile + diff --check）。

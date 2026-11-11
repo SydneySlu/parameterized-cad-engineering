@@ -404,6 +404,7 @@ class A2FormalApproval:
     approved_at_utc: str
     approval_statement: str
     approval_record_ref: str | None = None
+    is_test_only: bool = False
 
     def __post_init__(self) -> None:
         mismatches: list[str] = []
@@ -506,16 +507,22 @@ def validate_formal_approval_binding(
 ) -> None:
     """Validate that an approval credential is bound to the same batch as the authorization.
 
-    Raises :class:`ApprovalValidationError` if the batch_ids do not match.
+    Raises :class:`ApprovalValidationError` if the batch_ids do not match or if
+    the approval is marked as test-only.
 
     This check MUST be performed BEFORE any directory creation, BudgetLedger
     initialization, Transport construction, or network I/O.
 
     Both objects' scope fields are already validated at construction time;
-    this function only checks the batch_id binding.  If the caller passes
-    approval/authorization objects that were constructed with mismatching
-    scope fields, the construction-time validation already caught those
-    mismatches.
+    this function only checks the batch_id binding and the test-only flag.
+    If the caller passes approval/authorization objects that were constructed
+    with mismatching scope fields, the construction-time validation already
+    caught those mismatches.
+
+    A test-only approval (``is_test_only=True``) is structurally rejected
+    from the formal path.  This is NOT a cryptographic identity check; it is
+    a structural guard that prevents test fixtures from being accidentally
+    or deliberately used to authorize a live model run.
     """
     if not isinstance(approval, A2FormalApproval):
         raise ApprovalValidationError(
@@ -525,6 +532,12 @@ def validate_formal_approval_binding(
         raise ApprovalValidationError(
             f"authorization must be an A2IntegrationAuthorization instance, "
             f"got {type(authorization).__name__}"
+        )
+    if getattr(approval, "is_test_only", False):
+        raise ApprovalValidationError(
+            "test-only approval credential cannot be used for a formal A2 run; "
+            "a real owner-approved A2FormalApproval with is_test_only=False "
+            "(the default) is required for live execution"
         )
     if approval.batch_id != authorization.batch_id:
         raise ApprovalValidationError(
@@ -545,8 +558,13 @@ def make_test_approval(
 
     This produces a structurally valid approval credential bound to the given
     batch_id.  It is for MOCK TESTS ONLY and does NOT represent a real owner
-    approval.  The ``approver`` field is set to ``"test-owner"`` to make it
-    obvious that this is not a real approval record.
+    approval.  The credential has ``is_test_only=True`` which is structurally
+    rejected by :func:`validate_formal_approval_binding`, so it cannot be used
+    to authorize a formal A2 run.  The ``approver`` field is set to
+    ``"test-owner"`` as an additional indicator.
+
+    This is NOT a cryptographic identity check; it is a structural guard that
+    prevents test fixtures from being used in the formal execution path.
     """
     if approval_statement is None:
         approval_statement = (
@@ -567,4 +585,5 @@ def make_test_approval(
         approved_at_utc=approved_at_utc,
         approval_statement=approval_statement,
         approval_record_ref=approval_record_ref,
+        is_test_only=True,
     )

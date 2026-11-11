@@ -78,7 +78,7 @@ from llm.contract import (
     PROMPT_VERSION,
     SCHEMA_VERSION,
 )
-from llm.prompt_loader import load_frozen_prompt
+from llm.prompt_loader import load_frozen_prompt, FROZEN_PROMPT_FILE_SHA256
 from llm.transport import FakeTransport, MockTransport, PreparedRequest, TransportResponse
 from integration.pipeline import run_pipeline, PipelineResult
 
@@ -159,6 +159,10 @@ class A2RunResult:
     ir_index: dict[str, Any] | None
     # Redacted LLM metadata (no secrets)
     llm_meta: dict[str, Any] = field(default_factory=dict)
+    # R1-CORRECTION: raw retention metadata from Adapter RunRecord
+    # (retained, path, body_sha256, body_length, truncated, etc.)
+    # This is the authoritative source for raw_sha256 in the summary.
+    raw_retention_meta: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -177,6 +181,7 @@ class A2RunResult:
             "step_path": self.step_path,
             "ir_index": self.ir_index,
             "llm_meta": self.llm_meta,
+            "raw_retention_meta": self.raw_retention_meta,
         }
 
 
@@ -196,6 +201,8 @@ class A2BatchResult:
     budget_plan: dict[str, Any]
     # Path to batch_summary.json (formal runs only; None in dry-run/mock/preflight)
     summary_path: str | None = None
+    # R1-CORRECTION: explicit error message when finalize() fails; None on success
+    summary_finalize_error: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -213,6 +220,7 @@ class A2BatchResult:
             "results": [r.as_dict() for r in self.results],
             "budget_plan": self.budget_plan,
             "summary_path": self.summary_path,
+            "summary_finalize_error": self.summary_finalize_error,
         }
 
 
@@ -467,6 +475,7 @@ def _build_initial_summary(
             "inputs_sha256": A2_INPUTS_SHA256,
             "evaluator_labels_sha256": A2_LABELS_SHA256,
             "prompt_version": PROMPT_VERSION,
+            "prompt_file_sha256": FROZEN_PROMPT_FILE_SHA256,
             "contract_version": CONTRACT_VERSION,
         },
         "approval": approval.as_audit_dict(),
@@ -520,10 +529,20 @@ class _SummaryWriter:
         Raises :class:`SummaryWriteError` if the write fails.  The runner
         loop MUST stop further model requests if this raises.
         """
-        # Build the run evidence record (no raw body content, no secrets)
+        # Build the run evidence record (no raw body content, no secrets).
+        # R1-CORRECTION: raw_sha256 comes from raw_retention_meta["body_sha256"],
+        # which is the SHA-256 of the actual raw response body as recorded by
+        # the Adapter's RetentionPolicy.  This is distinct from
+        # ir_index["envelope_sha256"] (which is recomputed inside run_pipeline()).
         raw_sha256: str | None = None
-        if result.ir_index and isinstance(result.ir_index, dict):
-            raw_sha256 = result.ir_index.get("envelope_sha256")
+        raw_retained: bool | None = None
+        if isinstance(result.raw_retention_meta, dict):
+            raw_sha256 = result.raw_retention_meta.get("body_sha256")
+            raw_retained = result.raw_retention_meta.get("retained")
+        elif result.raw_retention_path is not None:
+            # Fallback for mock mode where retention meta is not populated
+            # but a path exists (should not normally happen)
+            pass
 
         run_entry: dict[str, Any] = {
             "status": result.combined_status,
@@ -536,6 +555,7 @@ class _SummaryWriter:
             "configured_model_name": result.llm_meta.get("configured_model_name"),
             # raw_retention_path is a repo-relative path; raw body is NOT included
             "raw_retention_path": result.raw_retention_path,
+            "raw_retained": raw_retained,
             "raw_sha256": raw_sha256,
             "pipeline_run_dir": result.pipeline_run_dir,
             "ir_index": result.ir_index,
@@ -991,6 +1011,17 @@ def _run_one_logical(
 
     # If not answer+construction_ready, stop before pipeline
     if llm_status != "answer":
+        # R1-CORRECTION: populate raw_retention_meta even for non-answer paths
+        # (ask, refuse, blocked, parse error) so the summary records evidence
+        # for all runs that received a model response.
+        non_answer_retention_meta = None
+        non_answer_retention_path = None
+        if is_formal:
+            rm = record.raw_response_retention or {}
+            if rm:
+                non_answer_retention_meta = dict(rm)
+                if rm.get("retained") and rm.get("path"):
+                    non_answer_retention_path = rm["path"]
         return A2RunResult(
             logical_run_id=plan.logical_run_id,
             input_id=plan.input_id,
@@ -1002,11 +1033,12 @@ def _run_one_logical(
             combined_status=llm_status,
             errors=errors,
             questions=questions,
-            raw_retention_path=None,
+            raw_retention_path=non_answer_retention_path,
             pipeline_run_dir=None,
             step_path=None,
             ir_index=None,
             llm_meta=llm_meta,
+            raw_retention_meta=non_answer_retention_meta,
         )
 
     # ----- answer path: get raw envelope, call pipeline -----
@@ -1362,8 +1394,17 @@ def run_a2_batch(
         if is_formal and writer is not None and not summary_write_failed:
             try:
                 writer.finalize(batch_status="complete")
-            except SummaryWriteError:
-                pass  # Best-effort finalization; don't mask the results
+            except SummaryWriteError as exc:
+                # R1-CORRECTION: finalize failure must be explicit, not swallowed.
+                # The caller must not receive a result that looks like the batch
+                # completed normally.  We record the error in the result so it
+                # is visible, while still returning the per-run results that
+                # were collected before the failure.
+                finalize_error = str(exc)
+            else:
+                finalize_error = None
+        else:
+            finalize_error = None
 
     return A2BatchResult(
         batch_id=authorization.batch_id,
@@ -1376,4 +1417,5 @@ def run_a2_batch(
         results=results,
         budget_plan=budget_plan,
         summary_path=summary_path,
+        summary_finalize_error=finalize_error,
     )
