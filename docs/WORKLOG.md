@@ -2232,3 +2232,15 @@ commit=待提交
 - 工作包提交：`8b76a7a`，9份文档包含ADR-0020、当前计划/状态、final offline证据、CC工作prompt与checkpoint；无生产/测试/脚本修改。
 - 提交前检查通过：git diff/cached --check；冻结v5 prompt与acceptance哈希未变；Markdown链接目标存在；WORKLOG前缀与原历史完全一致（只追加）；review-only占位批次目录不存在。
 - 下一步：CC在实际最新HEAD认领A1并执行工作prompt，中枢独立验收后转A2真实模型整链范围与授权。本次未push、未启动CC后台执行、未发真实模型请求；本条仅补交付commit索引。
+
+
+### APP-002-INTEGRATION-A1-P1-FIX / CC / in_progress / 2026-11-11
+
+- 任务：Codex 中枢复现 pipeline 将 run 目录外 STEP 误报为成功；实施 P1 窄修。
+- 复现问题：`run_pipeline()` 中 Stage 5 使用 `manifest = compilation.manifest or {}` 和 `if manifest_step_hash:` 条件判断，导致缺失 manifest、缺失 `input_ir_sha256`、缺失 STEP sha256 时静默跳过；且未检查 `step_path` canonical containment，外部旧 STEP 路径被接受为成功产物。
+- 修复：替换 `src/integration/pipeline.py` Stage 5 为六条件成功门（manifest 存在、input_ir_sha256/step.sha256 非空且有效、IR hash 匹配、STEP hash 匹配、STEP 路径位于当前 run 的 `cad_output/` 内）。任一条件失败返回 `failed`，`step_path=None`，不访问/复制/删除外部文件。
+- 测试：更新 `_mock_compile_success` 传入 `raw` 计算正确 IR hash；新增 TestPipelineExternalStepRejected、TestPipelineManifestMissing、TestPipelineManifestInputIRHashMissing、TestPipelineManifestStepHashMissing、TestPipelineInputIRHashMismatch、TestPipelineStepHashMismatch、TestPipelineSuccessGateAllConditions 共 10 项 P1-FIX 测试。
+- 验证（VM，Python 3.10，无 cadquery）：81 项集成测试 OK（+10 新增）；17 项 Schema 测试 OK；py_compile 通过；git diff --check 通过。tests/cad_compilation 13 项（需 cadquery）not_run_no_cad_runtime；真实 CLI/STEP 验收须 Mac 固定环境。
+- 未改变：Schema/IR 语义、编译器规则、prompt、预算、授权、历史批次；FORMAL_EVALUATION_ALLOWED=False 不变。
+- 提交：分支 cc/APP-002-INTEGRATION-A1，P1 窄修 commit（见下方 short hash）。
+- 下一步：Codex 中枢在 Mac 固定 CAD 环境执行 `work/benchcad-output/venv/bin/python scripts/run_cad_pipeline.py --request "请按 GN 705 做一个轴环，孔径 24 mm" --synthetic-envelope tests/integration/fixtures/answer-bore24.json --output-root work/integration-runs --json`，确认 status=success、STEP 路径在 cad_output/ 内、两个 manifest hash 匹配，再运行 13 项 CAD 和 81 项集成测试，通过后合入 main。

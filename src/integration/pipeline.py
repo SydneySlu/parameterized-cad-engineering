@@ -323,34 +323,111 @@ def _execute(
         return _fail("failed", stage, errors)
 
     # ------------------------------------------------------------------ #
-    # Stage 5: Verify STEP file integrity
+    # Stage 5: Verify STEP file integrity — fail closed on every condition.
+    #
+    # All six conditions MUST pass to publish step_path:
+    #  1. compilation.ok=True and status=step_readback  (checked in stage 4)
+    #  2. STEP canonical path is inside this run's cad_output/ directory
+    #  3. compilation.manifest, manifest["input_ir_sha256"], and
+    #     manifest["step"]["sha256"] all exist and are non-empty strings
+    #  4. manifest["input_ir_sha256"] matches the IR bytes sent to the compiler
+    #  5. manifest["step"]["sha256"] matches the actual STEP file content hash
+    #  6. STEP file exists and is non-empty
+    #
+    # Any condition that fails → status=failed, step_path=None, ir_index=None.
+    # We never copy, move, or delete external files.
     # ------------------------------------------------------------------ #
+
+    # --- Condition 1: already checked above (ok=True, status=step_readback) ---
+
+    # --- Condition 3a: manifest must be a non-None dict ---
+    manifest = compilation.manifest
+    if not isinstance(manifest, dict):
+        return _fail("failed", "step_readback",
+                     [{"code": "MANIFEST_MISSING",
+                       "message": "compiler returned no manifest (None or non-dict); "
+                                  "cannot verify STEP provenance"}])
+
+    # --- Condition 3b: manifest["input_ir_sha256"] must be a non-empty string ---
+    manifest_ir_hash = manifest.get("input_ir_sha256")
+    if not isinstance(manifest_ir_hash, str) or not manifest_ir_hash:
+        return _fail("failed", "step_readback",
+                     [{"code": "MANIFEST_INPUT_IR_SHA256_MISSING",
+                       "message": "manifest is missing or has empty input_ir_sha256; "
+                                  "cannot verify IR provenance"}])
+
+    # --- Condition 4: manifest["input_ir_sha256"] must match THIS run's IR hash ---
+    if manifest_ir_hash != ir_hash:
+        return _fail("failed", "step_readback",
+                     [{"code": "INPUT_IR_HASH_MISMATCH",
+                       "message": "manifest.input_ir_sha256 does not match the IR "
+                                  "bytes sent to compile_ir in this run",
+                       "manifest_hash": manifest_ir_hash,
+                       "actual_ir_hash": ir_hash}])
+
+    # --- Condition 3c: manifest["step"]["sha256"] must be a non-empty string ---
+    manifest_step = manifest.get("step")
+    if not isinstance(manifest_step, dict):
+        return _fail("failed", "step_readback",
+                     [{"code": "MANIFEST_STEP_MISSING",
+                       "message": "manifest is missing the 'step' sub-dict; "
+                                  "cannot verify STEP hash"}])
+    manifest_step_hash = manifest_step.get("sha256")
+    if not isinstance(manifest_step_hash, str) or not manifest_step_hash:
+        return _fail("failed", "step_readback",
+                     [{"code": "MANIFEST_STEP_SHA256_MISSING",
+                       "message": "manifest.step.sha256 is missing or empty; "
+                                  "cannot verify STEP content"}])
+
+    # --- Condition 2: STEP path must be a non-empty string first ---
     step_path_str = compilation.step_path
     if not step_path_str:
         return _fail("failed", "step_readback",
                      [{"code": "CAD_STEP_PATH_MISSING",
                        "message": "step_path not returned by compiler"}])
 
-    step_path = Path(step_path_str)
-    if not step_path.is_file() or step_path.stat().st_size == 0:
+    # Resolve canonical paths.  Symlinks that escape the run directory are
+    # rejected; we do not follow them to external locations.
+    try:
+        canonical_cad_output = cad_output_dir.resolve()
+    except OSError:
+        canonical_cad_output = cad_output_dir.absolute()
+
+    step_path_unresolved = Path(step_path_str)
+    try:
+        canonical_step_path = step_path_unresolved.resolve()
+    except OSError:
+        canonical_step_path = step_path_unresolved.absolute()
+
+    try:
+        canonical_step_path.relative_to(canonical_cad_output)
+    except ValueError:
+        return _fail("failed", "step_readback",
+                     [{"code": "STEP_PATH_OUTSIDE_RUN_DIR",
+                       "message": "STEP path resolves outside this run's cad_output/ "
+                                  "directory; refusing to publish an external STEP file",
+                       "step_path": str(step_path_str),
+                       "expected_root": str(canonical_cad_output)}])
+
+    # --- Condition 6: file must exist and be non-empty ---
+    if not canonical_step_path.is_file() or canonical_step_path.stat().st_size == 0:
         return _fail("failed", "step_readback",
                      [{"code": "CAD_STEP_FILE_EMPTY",
                        "message": "STEP file missing or empty after compilation"}])
 
-    step_hash = hashlib.sha256(step_path.read_bytes()).hexdigest()
-
-    # Cross-check hash against compiler manifest.
-    manifest = compilation.manifest or {}
-    manifest_step = manifest.get("step", {})
-    manifest_step_hash = manifest_step.get("sha256", "")
-    if manifest_step_hash and manifest_step_hash != step_hash:
+    # --- Condition 5: actual STEP content hash must match manifest ---
+    step_hash = hashlib.sha256(canonical_step_path.read_bytes()).hexdigest()
+    if step_hash != manifest_step_hash:
         return _fail("failed", "step_readback",
                      [{"code": "STEP_HASH_MISMATCH",
-                       "message": "STEP file hash does not match compiler manifest",
-                       "expected": manifest_step_hash,
-                       "actual": step_hash}])
+                       "message": "STEP file content hash does not match manifest.step.sha256",
+                       "manifest_hash": manifest_step_hash,
+                       "actual_hash": step_hash}])
 
-    # Cross-check result IR hash is for THIS run's input.
+    # All six conditions passed.
+    step_path = canonical_step_path
+
+    # Compute result IR hash for the index (informational; not a gate).
     result_ir = compilation.ir
     result_ir_bytes = json.dumps(result_ir, ensure_ascii=False,
                                  separators=(",", ":")).encode("utf-8") if result_ir else b""

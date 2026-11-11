@@ -168,3 +168,91 @@ not_changed=冻结prompt/Schema/IR语义/编译器规则/adapter历史评测; FO
 6. **git diff --check**：无空白错误
 
 7. **任何 IR 验证失败、STEP 未生成或 hash 不匹配**：标记 blocked，记录具体错误代码，不合入
+
+---
+
+## P1 窄修（2026-11-11）
+
+### 复现问题
+
+Codex 中枢复现：编译器返回 `ok=True`、`status=step_readback`、`manifest={}`，`step_path` 指向当前 run 目录外的 STEP 文件，`run_pipeline()` 仍返回 `success`。现有实现也允许 manifest 缺少 `input_ir_sha256` 或 STEP sha256 时继续成功。根因是 Stage 5 使用 `manifest = compilation.manifest or {}` 和 `if manifest_step_hash:` 等条件判断，缺失字段被静默跳过，且未验证 STEP 路径 canonical containment。
+
+### 修复行为
+
+在 `src/integration/pipeline.py` Stage 5 实施 fail-closed 六条件成功门：
+
+1. `compilation.ok=True` 且 `status=step_readback`（Stage 4 已检查）
+2. STEP canonical path 位于当前 run 的 `cad_output/` 目录内；拒绝目录外路径、路径穿越及 symlink 逃逸
+3. `compilation.manifest`、`manifest["input_ir_sha256"]`、`manifest["step"]["sha256"]` 均存在且为非空字符串
+4. `manifest["input_ir_sha256"]` 与本次实际送入 compiler 的 IR bytes SHA-256 一致
+5. `manifest["step"]["sha256"]` 与当前 STEP 文件内容的 SHA-256 一致
+6. STEP 文件存在且非空
+
+任一失败返回 `failed`，`step_path=None`、`ir_index=None`，写入可定位错误码（`MANIFEST_MISSING`、`MANIFEST_INPUT_IR_SHA256_MISSING`、`MANIFEST_STEP_MISSING`、`MANIFEST_STEP_SHA256_MISSING`、`INPUT_IR_HASH_MISMATCH`、`STEP_HASH_MISMATCH`、`STEP_PATH_OUTSIDE_RUN_DIR`、`CAD_STEP_FILE_EMPTY`），不复制/移动/删除外部文件。
+
+### 修改文件
+
+| 文件 | 改动 |
+|---|---|
+| `src/integration/pipeline.py` | Stage 5 全部替换为六条件成功门；manifest 字段 fail-closed 检查；canonical path containment |
+| `tests/integration/test_pipeline.py` | 更新 `_mock_compile_success` 传入 `raw` 计算 IR hash；新增 10 项 P1-FIX 测试 |
+
+### 实际验证命令与结果（VM，Python 3.10，无 cadquery）
+
+```bash
+# py_compile
+python3 -m py_compile src/integration/pipeline.py src/integration/schema_to_ir.py scripts/run_cad_pipeline.py
+# 结果：通过
+
+# 集成测试（含 P1-FIX 新增 10 项）
+PYTHONPATH=src:. python3 -m unittest discover -s tests/integration -p 'test_*.py' -q
+# 结果：Ran 81 tests; OK
+
+# Schema 回归
+PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -p 'test_*.py' -q
+# 结果：Ran 17 tests; OK
+
+# git diff --check
+git diff --check
+# 结果：无空白错误
+```
+
+### P1-FIX 测试覆盖
+
+| 场景 | 预期 | 状态 |
+|---|---|---|
+| 正常 mock：cad_output 下 STEP，两个 manifest hash 正确 | success | ✓ |
+| 外部旧 STEP 路径（ok=True, status=step_readback） | failed, STEP_PATH_OUTSIDE_RUN_DIR, step_path=None | ✓ |
+| 外部 STEP 文件不被删除 | 文件保留 | ✓ |
+| manifest=None | failed, MANIFEST_MISSING | ✓ |
+| manifest={} (空字典) | failed, MANIFEST_INPUT_IR_SHA256_MISSING | ✓ |
+| manifest 缺 input_ir_sha256 | failed, MANIFEST_INPUT_IR_SHA256_MISSING | ✓ |
+| manifest 缺 step 子字典 | failed, MANIFEST_STEP_MISSING | ✓ |
+| manifest.step 缺 sha256 键 | failed, MANIFEST_STEP_SHA256_MISSING | ✓ |
+| input_ir_sha256 不匹配 | failed, INPUT_IR_HASH_MISMATCH | ✓ |
+| step.sha256 不匹配 | failed, STEP_HASH_MISMATCH | ✓ |
+
+### 未运行项
+
+- 真实 cadquery/STEP 路径（需 Mac 固定环境）：not_run_no_cad_runtime
+- `tests/cad_compilation/`（13 项）：not_run_no_cad_runtime
+- `tests/llm/`（842 项）：not_run_no_python311_in_vm
+- bore24 CLI 真实 STEP：not_run_no_cad_runtime
+
+### handoff_self_check (P1-FIX)
+
+```text
+changed=src/integration/pipeline.py(Stage 5 六条件成功门), tests/integration/test_pipeline.py(+10 P1-FIX 测试, mock 更新)
+commands=81项集成测试通过; 17项Schema通过; py_compile通过; git diff --check通过
+confirmed=外部STEP路径拒绝; manifest缺失/空字段fail-closed; hash不匹配fail-closed; 正常mock仍成功; 外部文件不被删除
+unresolved=真实cadquery/STEP路径须Mac环境验收
+not_changed=Schema/IR语义/编译器规则/prompt/预算/授权/历史批次/adapter.py; FORMAL_EVALUATION_ALLOWED=False
+```
+
+### handoff_successor_check (P1-FIX, Codex 中枢须核验)
+
+1. **真实 bore24 CLI**：在 Mac 固定环境运行 CLI，确认 `status=success`，`step_path` 位于 `cad_output/` 内，两个 manifest hash 匹配
+2. **外部 STEP 路径拒绝**：用 mock 验证 `step_path` 指向 run 外的文件时返回 `failed`
+3. **CAD 编译回归**：13 项 `tests/cad_compilation` 全部 OK
+4. **LLM 回归**：842 项通过（8 个既有 skip）
+5. **完整集成测试**：81 项在 Mac 环境也全部 OK

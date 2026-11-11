@@ -25,14 +25,17 @@ def _load_fixture(name: str) -> bytes:
     return (_FIXTURES / name).read_bytes()
 
 
-def _mock_compile_success(output_dir: Path) -> CompilationResult:
-    """Build a real temporary STEP file and return a success CompilationResult."""
+def _mock_compile_success(raw: bytes, output_dir: Path) -> CompilationResult:
+    """Build a real temporary STEP file and return a success CompilationResult.
+
+    Uses the actual ``raw`` IR bytes to compute ``input_ir_sha256`` so that
+    the pipeline's new hash-verification gate is satisfied.
+    """
     step_path = output_dir / "mock.step"
     step_content = b"ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Mock STEP'),'2;1');\nENDSEC;\nEND-ISO-10303-21;\n"
     step_path.write_bytes(step_content)
     step_hash = hashlib.sha256(step_content).hexdigest()
-    ir_bytes = b'{"ir_version":"typed-cad-ir.v0"}'
-    ir_hash = hashlib.sha256(ir_bytes).hexdigest()
+    ir_hash = hashlib.sha256(raw).hexdigest()   # must match the bytes sent in
     return CompilationResult(
         ok=True,
         status="step_readback",
@@ -68,7 +71,7 @@ class TestPipelineBore24Success(unittest.TestCase):
 
     def test_success_status(self):
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("孔径 24 mm", self.envelope, output_root=self.tmpdir)
@@ -81,7 +84,7 @@ class TestPipelineBore24Success(unittest.TestCase):
 
     def test_extraction_source(self):
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
@@ -90,7 +93,7 @@ class TestPipelineBore24Success(unittest.TestCase):
 
     def test_parameters_correct(self):
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
@@ -101,7 +104,7 @@ class TestPipelineBore24Success(unittest.TestCase):
 
     def test_ir_index_hashes(self):
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
@@ -114,7 +117,7 @@ class TestPipelineBore24Success(unittest.TestCase):
 
     def test_run_dir_has_evidence_files(self):
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
@@ -134,7 +137,7 @@ class TestPipelineBore20Success(unittest.TestCase):
         envelope = _load_fixture("answer-bore20.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("孔径 20 mm", envelope, output_root=tmpdir)
@@ -153,7 +156,7 @@ class TestPipelineBore16cm(unittest.TestCase):
         envelope = _load_fixture("answer-bore16cm.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("孔径 1.6 cm", envelope, output_root=tmpdir)
@@ -179,7 +182,7 @@ class TestPipelineBore70SecondScrew(unittest.TestCase):
         envelope = _load_fixture("answer-bore70.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("孔径 70 mm", envelope, output_root=tmpdir)
@@ -196,7 +199,7 @@ class TestPipelineBore80SecondScrew(unittest.TestCase):
         envelope = _load_fixture("answer-bore80.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("孔径 80 mm", envelope, output_root=tmpdir)
@@ -362,7 +365,7 @@ class TestPipelineRunIsolation(unittest.TestCase):
 
         # First run: success.
         def mock_success(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_success):
             r1 = run_pipeline("first", envelope, output_root=tmpdir,
@@ -387,7 +390,7 @@ class TestPipelineRunIsolation(unittest.TestCase):
         envelope = _load_fixture("answer-bore24.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             r1 = run_pipeline("same request", envelope, output_root=tmpdir,
@@ -405,7 +408,7 @@ class TestPipelineRunIsolation(unittest.TestCase):
         envelope = _load_fixture("answer-bore24.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             r1 = run_pipeline("test", envelope, output_root=tmpdir, run_id="dup-id")
@@ -442,7 +445,7 @@ class TestPipelineEvidenceIntegrity(unittest.TestCase):
         envelope = _load_fixture("answer-bore24.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", envelope, output_root=tmpdir)
@@ -457,13 +460,377 @@ class TestPipelineEvidenceIntegrity(unittest.TestCase):
         envelope = _load_fixture("answer-bore24.json")
 
         def mock_compile(raw, *, output_dir=None):
-            return _mock_compile_success(Path(output_dir))
+            return _mock_compile_success(raw, Path(output_dir))
 
         with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
             result = run_pipeline("test", envelope, output_root=tmpdir)
 
         expected_hash = hashlib.sha256(envelope).hexdigest()
         self.assertEqual(result.ir_index["envelope_sha256"], expected_hash)
+
+
+# ---------------------------------------------------------------------------
+# P1-FIX: Fail-closed success gate tests
+# These tests verify the six-condition success gate added in the P1 narrow fix.
+# Every condition that is violated must produce status=failed and no step_path.
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineExternalStepRejected(unittest.TestCase):
+    """STEP path outside the current run's cad_output/ must be rejected.
+
+    Reproduces the bug where the compiler returns ok=True, status=step_readback,
+    and a step_path pointing outside the run directory, and the pipeline
+    previously returned success.
+    """
+
+    def _make_external_step(self, external_dir: str) -> tuple[str, str, str]:
+        """Create a STEP file in an external directory, return (path, hash, ir_hash)."""
+        step_path = Path(external_dir) / "external_old.step"
+        step_content = b"ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('old STEP'),'2;1');\nENDSEC;\nEND-ISO-10303-21;\n"
+        step_path.write_bytes(step_content)
+        step_hash = hashlib.sha256(step_content).hexdigest()
+        ir_bytes = b'{"ir_version":"typed-cad-ir.v0"}'
+        ir_hash = hashlib.sha256(ir_bytes).hexdigest()
+        return str(step_path), step_hash, ir_hash
+
+    def test_external_step_path_rejected(self):
+        """Compiler returning step_path outside run dir must fail, not succeed."""
+        with tempfile.TemporaryDirectory() as external_dir:
+            ext_step_path, step_hash, ir_hash = self._make_external_step(external_dir)
+            envelope = _load_fixture("answer-bore24.json")
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                def mock_compile_external(raw, *, output_dir=None):
+                    # Returns ok=True but step_path points OUTSIDE the run dir.
+                    return CompilationResult(
+                        ok=True,
+                        status="step_readback",
+                        errors=[],
+                        ir={"ir_version": "typed-cad-ir.v0", "status": "accepted"},
+                        manifest={
+                            "input_ir_sha256": hashlib.sha256(raw).hexdigest(),
+                            "step": {"path": ext_step_path, "bytes": 80, "sha256": step_hash},
+                            "native_geometry": {"solid_count": 1},
+                        },
+                        step_path=ext_step_path,
+                    )
+
+                with patch("integration.pipeline.compile_ir",
+                           side_effect=mock_compile_external):
+                    result = run_pipeline("孔径 24 mm", envelope, output_root=tmpdir)
+
+            self.assertEqual(result.status, "failed",
+                             "External STEP path must not be published as success")
+            self.assertIsNone(result.step_path,
+                              "step_path must be None when STEP is outside run dir")
+            self.assertIsNone(result.ir_index,
+                              "ir_index must be None on failure")
+            codes = [e.get("code") for e in result.errors]
+            self.assertIn("STEP_PATH_OUTSIDE_RUN_DIR", codes,
+                          f"Expected STEP_PATH_OUTSIDE_RUN_DIR error, got: {codes}")
+
+    def test_external_step_path_does_not_copy_or_delete(self):
+        """The external STEP file must still exist after the rejection."""
+        with tempfile.TemporaryDirectory() as external_dir:
+            ext_step_path, step_hash, ir_hash = self._make_external_step(external_dir)
+            envelope = _load_fixture("answer-bore24.json")
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                def mock_compile_external(raw, *, output_dir=None):
+                    return CompilationResult(
+                        ok=True,
+                        status="step_readback",
+                        errors=[],
+                        ir={"ir_version": "typed-cad-ir.v0"},
+                        manifest={
+                            "input_ir_sha256": hashlib.sha256(raw).hexdigest(),
+                            "step": {"path": ext_step_path, "bytes": 80,
+                                     "sha256": step_hash},
+                        },
+                        step_path=ext_step_path,
+                    )
+
+                with patch("integration.pipeline.compile_ir",
+                           side_effect=mock_compile_external):
+                    run_pipeline("test", envelope, output_root=tmpdir)
+
+            # External file must be untouched.
+            self.assertTrue(Path(ext_step_path).is_file(),
+                            "External STEP must not be deleted by the pipeline")
+
+
+class TestPipelineManifestMissing(unittest.TestCase):
+    """Compiler returning None manifest must be rejected."""
+
+    def test_no_manifest_fails(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile_no_manifest(raw, *, output_dir=None):
+                # ok=True, step_readback, but manifest=None.
+                step_path = Path(output_dir) / "mock.step"
+                step_content = b"STEP content"
+                step_path.write_bytes(step_content)
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest=None,
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile_no_manifest):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("MANIFEST_MISSING", codes,
+                      f"Expected MANIFEST_MISSING, got: {codes}")
+
+    def test_empty_dict_manifest_fails(self):
+        """manifest={} (no input_ir_sha256 key) must also fail."""
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile_empty_manifest(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_path.write_bytes(b"STEP content")
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={},  # empty — missing both required keys
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile_empty_manifest):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+
+
+class TestPipelineManifestInputIRHashMissing(unittest.TestCase):
+    """manifest missing input_ir_sha256 must fail."""
+
+    def test_missing_input_ir_sha256(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_content = b"STEP content"
+                step_path.write_bytes(step_content)
+                step_hash = hashlib.sha256(step_content).hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={
+                        # input_ir_sha256 intentionally absent
+                        "step": {"path": str(step_path), "bytes": 12,
+                                 "sha256": step_hash},
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("MANIFEST_INPUT_IR_SHA256_MISSING", codes,
+                      f"Expected MANIFEST_INPUT_IR_SHA256_MISSING, got: {codes}")
+
+
+class TestPipelineManifestStepHashMissing(unittest.TestCase):
+    """manifest missing step.sha256 must fail."""
+
+    def test_missing_step_sha256(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_path.write_bytes(b"STEP content")
+                ir_hash = hashlib.sha256(raw).hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={
+                        "input_ir_sha256": ir_hash,
+                        # "step" key absent
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("MANIFEST_STEP_MISSING", codes,
+                      f"Expected MANIFEST_STEP_MISSING, got: {codes}")
+
+    def test_step_dict_missing_sha256_key(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_path.write_bytes(b"STEP content")
+                ir_hash = hashlib.sha256(raw).hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={
+                        "input_ir_sha256": ir_hash,
+                        "step": {"path": str(step_path), "bytes": 12},
+                        # sha256 key absent in step dict
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("MANIFEST_STEP_SHA256_MISSING", codes,
+                      f"Expected MANIFEST_STEP_SHA256_MISSING, got: {codes}")
+
+
+class TestPipelineInputIRHashMismatch(unittest.TestCase):
+    """manifest.input_ir_sha256 must match the IR sent to compile_ir."""
+
+    def test_wrong_input_ir_hash_fails(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_content = b"STEP content"
+                step_path.write_bytes(step_content)
+                step_hash = hashlib.sha256(step_content).hexdigest()
+                # Provide a WRONG input_ir_sha256 (hash of empty bytes).
+                wrong_ir_hash = hashlib.sha256(b"wrong-ir-bytes").hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={
+                        "input_ir_sha256": wrong_ir_hash,  # intentionally wrong
+                        "step": {"path": str(step_path), "bytes": 12,
+                                 "sha256": step_hash},
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("INPUT_IR_HASH_MISMATCH", codes,
+                      f"Expected INPUT_IR_HASH_MISMATCH, got: {codes}")
+
+
+class TestPipelineStepHashMismatch(unittest.TestCase):
+    """manifest.step.sha256 must match actual STEP file content."""
+
+    def test_wrong_step_hash_fails(self):
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                step_path = Path(output_dir) / "mock.step"
+                step_path.write_bytes(b"real STEP content")
+                ir_hash = hashlib.sha256(raw).hexdigest()
+                # Provide a WRONG step hash.
+                wrong_step_hash = hashlib.sha256(b"wrong step bytes").hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0"},
+                    manifest={
+                        "input_ir_sha256": ir_hash,
+                        "step": {"path": str(step_path), "bytes": 17,
+                                 "sha256": wrong_step_hash},  # intentionally wrong
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.step_path)
+        codes = [e.get("code") for e in result.errors]
+        self.assertIn("STEP_HASH_MISMATCH", codes,
+                      f"Expected STEP_HASH_MISMATCH, got: {codes}")
+
+
+class TestPipelineSuccessGateAllConditions(unittest.TestCase):
+    """Verify that the correct mock produces success (gate is not over-rejecting)."""
+
+    def test_well_formed_manifest_succeeds(self):
+        """The correct mock (all six conditions met) must still succeed."""
+        envelope = _load_fixture("answer-bore24.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def mock_compile(raw, *, output_dir=None):
+                # Build a fully correct CompilationResult with matched hashes.
+                step_path = Path(output_dir) / "valid.step"
+                step_content = b"ISO-10303-21;\nHEADER;\nENDSEC;\nEND-ISO-10303-21;\n"
+                step_path.write_bytes(step_content)
+                step_hash = hashlib.sha256(step_content).hexdigest()
+                # input_ir_sha256 must match the ACTUAL IR bytes sent in.
+                ir_hash = hashlib.sha256(raw).hexdigest()
+                return CompilationResult(
+                    ok=True,
+                    status="step_readback",
+                    errors=[],
+                    ir={"ir_version": "typed-cad-ir.v0", "status": "accepted"},
+                    manifest={
+                        "input_ir_sha256": ir_hash,
+                        "step": {"path": str(step_path), "bytes": len(step_content),
+                                 "sha256": step_hash},
+                        "native_geometry": {"solid_count": 1, "is_valid": True},
+                    },
+                    step_path=str(step_path),
+                )
+
+            with patch("integration.pipeline.compile_ir",
+                       side_effect=mock_compile):
+                result = run_pipeline("孔径 24 mm", envelope, output_root=tmpdir)
+
+            self.assertEqual(result.status, "success")
+            self.assertIsNotNone(result.step_path)
+            self.assertIsNotNone(result.ir_index)
+            self.assertEqual(result.ir_index["step_sha256"],
+                             hashlib.sha256(Path(result.step_path).read_bytes()).hexdigest())
 
 
 if __name__ == "__main__":
