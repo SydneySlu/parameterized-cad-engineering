@@ -2205,3 +2205,12 @@ commit=待提交
 - 结果：专项 53 项、授权/预算/runner 回归 120 项（7 skips）、LLM 全量 908 项（8 skips）、Schema 17 项通过；CLI dry-run 生成 12 组合。审查发现两项 P1：直接调用 `HeldoutRunner.run_formal()` 可绕过关闭的 `FORMAL_EVALUATION_ALLOWED` 与 CLI 批次授权检查；offline preflight 将 `36+20` 输出为 `56 ≤ 44` 并硬编码 pass。详见 `agent-work/reviews/APP-001-NEXT-REAL-MODEL-EVALUATION-codex-review.md`。
 - 边界：未运行正式入口、live preflight 或 HTTP；未读取密钥/.env 或历史 raw；未创建正式批次目录；无正式 batch ID/请求授权。dry-run 与 offline-preflight 按离线 CLI 实测运行，但 preflight 结论不可采信，直到预算计算修正。
 - 下一步：对两项 P1 作窄修复并补 API 绕过拒绝和预算不等式测试；完成后由 Codex 中枢独立复审，再做 final offline preflight。
+
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-R2-CODEX-ACCEPTANCE / Codex 中枢 / in_progress / 2026-11-11
+
+- 验收对象：`5b803eb`（基线 `3d42ff2`），开始时 main 干净、ahead 10。R2 的 runner 缺索引拒绝及 CLI 加载异常返回 1 均通过中枢独立复核。
+- 中枢补测：`c00c214` 只修改测试；3 项真实 CLI/loader 回归覆盖 config 缺失、读取失败、manifest 加载失败，断言 exit 1、明确 stderr、空 stdout，且 runner/账本/mkdir/urlopen 零调用。无需 CC 再返工生产代码。
+- Python 3.11.18 实测：专项 86 项 OK；授权/预算/runner 120 项 OK（7 skips）；LLM 全量运行 941 项 OK（8 skips）；Schema 17 项 OK；相关 py_compile/diff-check 通过。dry-run 12 组合；真实冻结索引离线检查 pass，global=44、batch_dir_exists=false；无索引直接 runner 拒绝。精确命令与限制见同任务 codex-review 的 R2 部分。
+- 结论：本次窄修 pass；任务状态恢复 in_progress，下一步 final offline preflight，再拟唯一 batch ID 与授权模板给负责人批准。历史 review 记录保留；尚无正式 batch ID/请求授权，gate=False。
+- 边界：未调用真实模型/网络、未读密钥/.env/历史 raw、未创建正式批次目录；无 push。R2 报告对 candidate_roles/default_top_k 直接校验的描述超出该方法实际范围，审查记录已注明；本次通过针对索引缺失及加载失败修复。

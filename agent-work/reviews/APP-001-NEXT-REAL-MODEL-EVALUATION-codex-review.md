@@ -1,7 +1,12 @@
 # APP-001-NEXT-REAL-MODEL-EVALUATION — Codex 中枢独立审查
 
+- 当前结论（R2）：`pass`，索引缺失/加载失败窄修验收通过；下一步 final offline preflight，尚无正式批次 ID 或模型请求授权。
+- 当前验收对象：实现 `5b803eb`，中枢补测 `c00c214`；Python 3.11.18。
+
+## 初始审查（历史状态，已由后续 R1/R2 关闭）
+
 - 日期：2026-11-11
-- 结论：`review`；held-out runner 暂不能进入 final preflight 或请求授权阶段。
+- 当时结论：`review`；held-out runner 暂不能进入 final preflight 或请求授权阶段。
 - 审查基线：`main`，HEAD `5928b23`，本地 `origin/main` ahead 6；工作区审查前干净。
 - 审查范围：`origin/main..HEAD` 的 runner、CLI、授权 profile、分类账本、测试与任务交接材料。
 
@@ -45,3 +50,26 @@
 - **新增 P1：缺少 RET-002 retrieval index 时 offline-preflight 仍返回 pass。** `HeldoutRunner().offline_preflight("review-no-retrieval-index-only")` 实测返回 `retrieval_index_provided=False`、`retrieval_config_check="skipped: no retrieval_index"`、`offline_preflight_status="pass"`。CLI `_try_load_retrieval_index()` 会吞掉加载异常并返回 `None`，offline-preflight 随后接受缺失 index。正式 runner 的 C1 六项必须依赖该 index，因此这个 pass 不能作为最终 preflight 通过证据。
 - 结论：整体仍为 `review`，不进入 final offline preflight gate，不生成 batch ID/授权模板。需窄修为 offline-preflight 缺失或加载失败时 fail closed，并增加无 index / 配置或 manifest 加载失败拒绝测试；通过后重新做中枢审查。
 - 边界：所有复核均未执行 `--run`、live preflight 或 HTTP；未读密钥、`.env` 或历史 raw，未创建正式批次目录。离线检查传入的 `review-only-not-a-batch-fd99ddb` 仅用于核验，不是正式 batch ID。
+
+## R2 最终复核与补测（`5b803eb`、`c00c214`）
+
+结论：`pass`。R1 的缺索引误报 pass 和 CLI 吞掉加载异常均已关闭。中枢审查发现原提交未固化 CLI 加载失败测试，已直接以仅测试提交 `c00c214` 补齐，无需再返工生产逻辑。
+
+实际验证（macOS，Python 3.11.18）：
+
+| 命令/检查 | 结果 |
+|---|---|
+| `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.llm.test_heldout_runner -q` | 86 项 OK（补测前 83 项 OK） |
+| 同解释器：`-m unittest tests.llm.test_heldout_authorization tests.llm.test_authorization tests.llm.test_budget tests.llm.test_runner -q` | 120 项 OK，7 skips |
+| 同解释器：`-m unittest discover -s tests/llm -q` | 941 项运行，OK，8 skips（补测前 938 项运行） |
+| 同解释器：`-m unittest discover -s tests/schema -q` | 17 项 OK |
+| 同解释器：`-m py_compile src/llm/heldout_runner.py scripts/run_app001_heldout_v5.py tests/llm/test_heldout_runner.py` | 通过；补测后测试文件另行编译通过 |
+| `git diff --check 3d42ff2..5b803eb`；补测工作区 diff-check | 通过 |
+| CLI `--dry-run --json` | exit 0，12 个组合，gate=False |
+| CLI `--offline-preflight --batch-id review-only-valid-index-5b803eb --json` | exit 0，index=True、manifest SHA 匹配、status=pass、global=44、batch_dir_exists=false |
+
+拒绝路径的新增自动测试走真实 CLI 和 loader/config parser：临时路径缺少 config、config read_bytes 抛 PermissionError、实际 from_config 调用的 from_manifest 抛加载异常，均返回 1、stderr 有 PREFLIGHT FAILED、stdout 为空，且 runner/ledger/mkdir/urlopen 均未调用。没有修改真实冻结文件。
+
+审查界限：_verify_retrieval_index() 实际直接检查类型、manifest path/version/hash、policy.validate；CC 报告和注释中额外列出的 candidate_roles/default_top_k 并非该方法直接比较项。实际 CLI 使用冻结配置 loader，C1 装配过滤 retrieval_source；本次验收不作“任意索引对象所有身份字段均已覆盖”的扩大结论。
+
+Skip 为既有环境限制；全量日志中的 ABORT/FAIL 是离线模拟拒绝夹具，整体 exit 0。没有运行真实 HTTP、live preflight 或模型，没有读密钥/.env/历史 raw，也没有建正式批次目录。此轮离线检查不是具体批次的 final preflight 或授权。下一步 final offline preflight，通过后拟唯一 batch ID 和完整授权模板；整体评测任务保持 in_progress，不能标记 done。

@@ -2,16 +2,16 @@
 
 ## Status
 
-`in_progress` — ADR-0019 records the accepted controlled-input protocol,
-12-run matrix, and owner-approved physical-request budget. Frozen inputs and
-labels pass hash and manifest checks. The implementation must enforce chat
-caps of 36 total / 18 per provider / 3 per logical run, plus 20 identity
-requests (2 Ollama batch preflight and up to 18 runtime tags: 6 Ollama runs ×
-3 attempts), for hard physical-HTTP caps of 44 total, 18 DeepSeek, and 26
-Ollama. All category, provider, and global caps apply together; category
-caps do not add to a larger effective total. No batch ID has been assigned
-and no model or preflight request is authorized. Implement and independently
-review the dedicated fail-closed profile and entrypoint before final preflight.
+`in_progress` — R2 implementation `5b803eb` has passed Codex independent
+review under Python 3.11.18. Codex added CLI loader failure regression tests
+in `c00c214`; held-out suite 86 tests OK, full LLM suite 941 run / 8 skipped,
+Schema 17 OK. Missing RET-002 index now rejects preflight; config/manifest
+load failures return CLI exit 1 before runner construction or side effects.
+The next gate is final offline preflight, then a proposed unique batch ID
+and complete owner authorization template. No formal batch ID is assigned,
+no live preflight/model request is authorized, and the global gate is False.
+Scope and simultaneous physical-request caps remain ADR-0019: chat 36
+(18/provider, 3/run), identity 20, total HTTP 44 (DeepSeek 18/Ollama 26).
 
 ## Repository and predecessor facts
 
@@ -452,4 +452,26 @@ handoff_successor_check:
   limits=Python 3.10.12 in sandbox (not 3.11.18); Codex independent review required; no batch_id; no model/network request
   result=review
   blocking_issue=none; pending Codex re-review of retrieval preflight fix
+```
+
+## Codex 中枢 R2 最终验收（2026-11-11）
+
+- 结论：本次索引缺失/加载失败窄修 `pass`；审查实现提交 `5b803eb`，补测提交 `c00c214`。整体评测尚未完成，状态为 `in_progress`。
+- Python 3.11.18：原专项 83 项 OK；中枢补齐 3 条 CLI 加载失败回归后为 86 项 OK；授权/预算/runner 120 项 OK（7 skips）；补测后 LLM 全量运行 941 项 OK（8 skips）；Schema 17 项 OK；相关 py_compile、diff-check 通过。
+- 正常案例：真实冻结索引 CLI 离线检查返回 retrieval_index_provided=true、status=pass、global_total=44、batch_dir_exists=false；dry-run 为 12 组合。
+- 失败案例：直接 runner 无索引抛出 FormalEvaluationBlockedError；3 条新增 CLI 测试走真实 loader，分别在配置缺失、读取失败和 manifest 加载失败时断言 exit=1、明确 stderr、空 stdout，且不调用 runner/BudgetLedger/mkdir/urlopen。临时文件只在系统临时目录，不修改冻结配置或 manifest。
+- 补测不改变生产逻辑。历史 R1 review 阻断已由 R2 关闭。注意：R2 交付文字列举的 candidate_roles/default_top_k 并非 _verify_retrieval_index() 当前直接比对项；该方法直接校验类型、manifest path/version/hash 和 policy.validate。实际 CLI 通过冻结配置 loader 构造索引，C1 装配仍过滤 retrieval_source；本次 pass 针对缺失/加载失败拒绝修复，不扩大为任意索引对象的完整身份保证。
+- 边界：没有真实模型/HTTP 请求、密钥/.env/历史 raw 读取或正式批次目录创建；离线 review-only 标识不是正式 batch ID。final offline preflight 与具体批次授权仍待完成，FORMAL_EVALUATION_ALLOWED=False 未改。
+
+```text
+handoff_successor_check:
+  predecessor=5b803eb (R2), checkpoint above, review history in agent-work/reviews
+  files_format=pass; source/CLI changes restricted to missing-index/loading-failure rejection
+  core_rerun=Python 3.11.18 heldout 86 OK; auth/budget/runner 120 OK (7 skips); LLM 941 run OK (8 skips); Schema 17 OK
+  normal_case=CLI valid frozen RET-002 index passes offline check; 12-run dry-run
+  failure_case=no index raises; CLI config missing/unreadable or manifest load error exits 1 with no runner/ledger/mkdir/HTTP
+  interface=offline-preflight requires a verified RET-002 index; formal global gate unchanged
+  limits=no formal ID or request authorization; small-n restrictions and old batch isolation unchanged
+  result=pass
+  blocking_issue=none for this narrow fix; final offline preflight and owner approval remain next gates
 ```
