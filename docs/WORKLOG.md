@@ -4,6 +4,28 @@
 
 ## 2026-11-11
 
+### APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER-FIX / CC / review
+
+- 动作：窄修 Codex 中枢审查（`88ea2dd`）发现的两项 P1。
+  - **P1A — run_formal() 门禁**：在 `src/llm/heldout_runner.py` 中新增 `HeldoutBatchApproval` 冻结数据类和 `HeldoutBatchApprovalError`。`run_formal()` 现在在任何目录创建、账本写入、密钥读取或网络 I/O 之前，依次检查：(1) `FORMAL_EVALUATION_ALLOWED`（全局 gate，永不被此修复打开）；(2) `isinstance(authorization, HeldoutRunAuthorization)`；(3) `isinstance(batch_approval, HeldoutBatchApproval)`（独立于 profile 构造，不可绕过）；(4) `batch_approval.batch_id == authorization.batch_id`（防止错配）。更新 `scripts/run_app001_heldout_v5.py` 在 `--run` 模式下构造并传入 `HeldoutBatchApproval` 令牌。
+  - **P1B — offline-preflight 预算可行性**：替换 `offline_preflight()` 中硬编码的 `36 + 20 = 56 ≤ 44` / `feasible=True` 为调用 `_compute_budget_feasibility()`。该函数按 ADR-0019 §"实施预算口径补充" 的实际 transport/retry 顺序推导 worst-case HTTP：每个 Ollama run 最多 `max(3 tags failures, 1 tags success + 3 chat) = 4` HTTP；Ollama total = 2 preflight + 6 × 4 = 26 ≤ 26 ✓；global = 18 + 26 = 44 ≤ 44 ✓。`feasible` 和 `offline_preflight_status` 均由校验结果计算，不能硬编码；任何约束超限时 fail-closed 并附具体约束名。
+  - 新增回归测试 `TestRunFormalGateAndApproval`（8 项）和 `TestBudgetFeasibility`（8 项），总测试数从 53 增至 70。P1A 测试用 mock/spies 断言门禁关闭时 mkdir / BudgetLedger / _build_transport 调用次数为 0。P2 测试用 infeasible 配置断言 fail-closed，用正常配置断言 global_total=44，用硬编码检测测试确保 feasible 不能为常量 True。
+- 执行环境：sandbox Python 3.10.12（非项目固定 3.11.18，须 Codex 中枢在 Mac `/opt/homebrew/bin/python3.11` 重验）。
+- 验证结果（全部离线/mock）：
+  - `py_compile` 三个修改文件 → OK
+  - `test_heldout_runner` 70/70 → OK
+  - `test_heldout_authorization + test_authorization + test_budget + test_runner` 120 → OK（skipped=7）
+  - `discover tests/llm` 925 → OK（skipped=8）
+  - `discover tests/schema` 17 → OK
+  - `git diff --check` → clean
+  - CLI `--dry-run --json` → 12 组合、exit 0
+  - CLI `--offline-preflight --batch-id review-only-not-a-batch-20261111 --json` → `offline_preflight_status=pass, feasible=True, global_total=44, ollama_total=26`，无批次目录创建
+- 安全/隔离确认：`FORMAL_EVALUATION_ALLOWED=False` 未改变；evaluator labels 不出现在任何输出；raw 留存路径 `work/app001-runs/<batch_id>/raw/` 不变；run_formal 所有正式请求路径均先经账本预留；构造 `HeldoutRunAuthorization` 本身不触发任何批次创建或请求。
+- 未修改：prompt、解析策略、生产 provider 配置、历史批次、ADR-0019 预算值。
+- 修改文件（仅本任务）：`src/llm/heldout_runner.py`（P1A 门禁 + P1B 预算公式 + 新增 HeldoutBatchApproval）、`scripts/run_app001_heldout_v5.py`（--run 模式传入 approval token）、`tests/llm/test_heldout_runner.py`（+17 项）、`agent-work/llm/APP-001-NEXT-REAL-MODEL-EVALUATION/checkpoint.md`、`docs/PROJECT_STATUS.md`、`docs/PROJECT_PLAN.md`、`docs/WORKLOG.md`。
+- 限制：sandbox Python 3.10.12，非项目固定 3.11.18；独立 Codex 复审待完成；final offline preflight 待完成；无 batch_id 或模型请求授权。
+- 下一步：Codex 中枢在 Mac Python 3.11.18 重跑全量测试，验证 P1A/P1B 修复，确认 spy 断言正确拦截副作用，核实 offline-preflight 输出与 ADR-0019 数字一致，之后进行 final offline preflight 并提交批次授权模板供项目负责人审批。
+
 ### APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER / CC / review
 
 - 动作：实现 ADR-0019 专用离线优先 held-out v5 runner 与受控 CLI 入口。

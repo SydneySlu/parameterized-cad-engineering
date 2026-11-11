@@ -506,6 +506,208 @@ class HeldoutBatchSummary:
 
 
 # ---------------------------------------------------------------------------
+# Explicit batch-approval token (P1 fix)
+# ---------------------------------------------------------------------------
+
+class HeldoutBatchApprovalError(RuntimeError):
+    """Raised when run_formal() is called without an explicit batch approval."""
+
+
+@dataclass(frozen=True)
+class HeldoutBatchApproval:
+    """An explicit, single-use approval token for one specific batch_id.
+
+    This is intentionally separate from :class:`HeldoutRunAuthorization`.
+    Constructing a ``HeldoutRunAuthorization`` validates the budget *profile*
+    and input hashes, but does NOT by itself constitute project-owner approval
+    to run.  ``HeldoutBatchApproval`` is the second, independent gate that
+    ``run_formal()`` checks BEFORE any directory creation, ledger write, key
+    read or network I/O.
+
+    Security notes
+    --------------
+    - This is a software gate, not a cryptographic credential.  Its strength
+      comes from ``FORMAL_EVALUATION_ALLOWED`` remaining ``False`` (the global
+      gate that must be changed via ADR + project-owner action before any real
+      run is possible) together with explicit code review of the call site.
+    - The token is frozen and immutable; it cannot be re-bound to a different
+      batch_id.
+    - ``run_formal()`` cross-checks that the approval's ``batch_id`` matches
+      the authorization's ``batch_id`` before proceeding.
+
+    Usage
+    -----
+    Only create this after both of the following are true:
+      1. ``FORMAL_EVALUATION_ALLOWED`` has been set to ``True`` via a new ADR.
+      2. The project owner has reviewed and approved the full authorization
+         template including the specific ``batch_id``.
+
+    Currently neither condition is met; this token exists so the API has an
+    explicit two-key design before any such approval is possible.
+    """
+
+    batch_id: str
+    approved_by: str  # e.g. "project-owner" — human-readable audit label
+    approval_note: str  # brief note for the audit trail
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.batch_id, str) or not self.batch_id.strip():
+            raise HeldoutBatchApprovalError(
+                "HeldoutBatchApproval requires a non-empty batch_id"
+            )
+        if not isinstance(self.approved_by, str) or not self.approved_by.strip():
+            raise HeldoutBatchApprovalError(
+                "HeldoutBatchApproval requires a non-empty approved_by"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Budget feasibility computation (P2 fix)
+# ---------------------------------------------------------------------------
+
+def _compute_budget_feasibility(
+    *,
+    n_deepseek_runs: int,
+    n_ollama_runs: int,
+    max_chat_per_run: int,
+    max_deepseek_http: int,
+    max_ollama_http: int,
+    max_global_http: int,
+    max_chat_total: int,
+    max_chat_deepseek: int,
+    max_chat_ollama: int,
+    max_identity_total: int,
+    n_ollama_preflight: int,
+    max_runtime_identity_per_run: int,
+) -> dict[str, Any]:
+    """Compute worst-case reachable HTTP counts from actual transport/retry order.
+
+    Ollama transport sequence per logical run attempt (ADR-0019):
+      1. ``GET /api/tags``  (identity, is_model_call=False) — ALWAYS first
+      2. If tags succeeds → ``POST /api/chat``  (chat, is_model_call=True)
+         If tags fails   → retry (back to step 1) or fail the run
+
+    Per-run worst-case HTTP (from ADR-0019 §"实施预算口径补充"):
+      "每个 Ollama run 的物理请求数仍最多 4（最多 3 次 tags attempt，
+       其中成功的 tags 可与该次 attempt 的一次 chat 同时发生，
+       或一次 tags 成功加最多 3 次 chat）"
+
+    Two bounding cases per run:
+      Case A — tags always fail:  max_runtime_identity_per_run HTTP (all tags),
+                                  0 chat HTTP.
+      Case B — tags succeed once, chat retried max: 1 tags + max_chat_per_run chat.
+      max_per_run_http = max(max_runtime_identity_per_run,
+                             1 + max_chat_per_run)
+    For ADR-0019 values (max_runtime_identity_per_run=3, max_chat_per_run=3):
+      max_per_run_http = max(3, 1+3) = 4.
+
+    Ollama provider worst-case:
+      n_ollama_preflight + n_ollama_runs × max_per_run_http
+      = 2 + 6 × 4 = 26.  ✓ matches HELDOUT_PROVIDER_HTTP_CAPS["Ollama"].
+
+    Category worst-cases (not simultaneously achievable):
+      chat_wc    = n_deepseek_runs × max_chat_per_run
+                 + n_ollama_runs × max_chat_per_run  (Case B for all Ollama runs)
+               = 18 + 18 = 36  ≤ max_chat_total (36)  ✓
+      identity_wc = n_ollama_preflight
+                  + n_ollama_runs × max_runtime_identity_per_run  (Case A for all)
+                = 2 + 18 = 20  ≤ max_identity_total (20)  ✓
+      Note: chat_wc and identity_wc cannot both be saturated simultaneously
+      (saturating chat requires at least 6 Ollama identity HTTP; saturating
+      identity requires 0 Ollama chat).  The global cap 44 is the binding
+      constraint that prevents double-counting.
+
+    Returns a dict with per-category worst-case counts, constraint checks,
+    ``feasible`` (bool, computed), and a human-readable ``explanation``.
+    """
+    # Per-run Ollama HTTP: worst case is max of (all tags fail) or (1 tags success + all chat)
+    max_per_run_http = max(max_runtime_identity_per_run, 1 + max_chat_per_run)
+
+    # DeepSeek: pure chat, no identity
+    ds_chat_wc = n_deepseek_runs * max_chat_per_run
+    ds_total_wc = ds_chat_wc
+
+    # Ollama: preflight + runs × max_per_run_http
+    ollama_per_run_wc = max_per_run_http
+    ollama_total_wc = n_ollama_preflight + n_ollama_runs * ollama_per_run_wc
+
+    # Global worst-case
+    global_wc = ds_total_wc + ollama_total_wc
+
+    # Category worst-cases (each is an independent upper bound, not simultaneously achievable)
+    # chat: all runs succeed (Case B for Ollama: 1 tags success + max_chat_per_run chat)
+    ollama_chat_wc = n_ollama_runs * max_chat_per_run
+    chat_wc = ds_chat_wc + ollama_chat_wc
+
+    # identity: all Ollama runs use max tags (Case A: tags always fail),
+    #           plus batch preflight
+    ollama_identity_wc = n_ollama_preflight + n_ollama_runs * max_runtime_identity_per_run
+    identity_wc = ollama_identity_wc  # DeepSeek has no identity requests
+
+    # Constraint checks (all must pass for feasible=True)
+    checks: dict[str, Any] = {}
+    all_ok = True
+
+    def _check(key: str, value: int, cap: int, label: str) -> None:
+        nonlocal all_ok
+        ok = value <= cap
+        checks[key] = {
+            "worst_case": value,
+            "cap": cap,
+            "ok": ok,
+            "expr": f"{label}: {value} ≤ {cap}",
+        }
+        if not ok:
+            all_ok = False
+
+    _check("deepseek_http", ds_total_wc, max_deepseek_http,
+           f"DeepSeek worst-case HTTP ({n_deepseek_runs}×{max_chat_per_run} chat)")
+    _check("ollama_http", ollama_total_wc, max_ollama_http,
+           f"Ollama worst-case HTTP ({n_ollama_preflight} preflight + "
+           f"{n_ollama_runs}×{ollama_per_run_wc} max-per-run)")
+    _check("global_http", global_wc, max_global_http,
+           f"Global worst-case HTTP (DS {ds_total_wc} + Ollama {ollama_total_wc})")
+    _check("chat_total", chat_wc, max_chat_total,
+           f"Chat worst-case ({n_deepseek_runs}×{max_chat_per_run} DS + "
+           f"{n_ollama_runs}×{max_chat_per_run} Ollama)")
+    _check("chat_deepseek", ds_chat_wc, max_chat_deepseek,
+           f"DeepSeek chat worst-case ({n_deepseek_runs}×{max_chat_per_run})")
+    _check("chat_ollama", ollama_chat_wc, max_chat_ollama,
+           f"Ollama chat worst-case ({n_ollama_runs}×{max_chat_per_run})")
+    _check("identity_total", identity_wc, max_identity_total,
+           f"Identity worst-case ({n_ollama_preflight} preflight + "
+           f"{n_ollama_runs}×{max_runtime_identity_per_run} runtime tags)")
+
+    explanation = (
+        f"Ollama transport sequence (ADR-0019): each attempt starts with GET /api/tags "
+        f"(identity, 1 slot); only on success does POST /api/chat follow (chat, 1 slot). "
+        f"Per-run worst case = max({max_runtime_identity_per_run} tags failures, "
+        f"1 tags success + {max_chat_per_run} chat) = {max_per_run_http} HTTP. "
+        f"Ollama total = {n_ollama_preflight} preflight + "
+        f"{n_ollama_runs}×{ollama_per_run_wc} = {ollama_total_wc}. "
+        f"Global total = DS {ds_total_wc} + Ollama {ollama_total_wc} = {global_wc}. "
+        f"Chat (36) and identity (20) category caps cannot be simultaneously saturated "
+        f"under the {max_global_http}-global cap; the global cap is the binding constraint."
+    )
+
+    return {
+        "constraints": checks,
+        "worst_case": {
+            "ds_chat": ds_chat_wc,
+            "ollama_per_run_max": ollama_per_run_wc,
+            "ollama_total": ollama_total_wc,
+            "ollama_chat": ollama_chat_wc,
+            "ollama_identity": ollama_identity_wc,
+            "global_total": global_wc,
+            "chat_total": chat_wc,
+            "identity_total": identity_wc,
+        },
+        "feasible": all_ok,
+        "explanation": explanation,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Raw retention policy
 # ---------------------------------------------------------------------------
 
@@ -532,15 +734,22 @@ class HeldoutRunner:
         runner = HeldoutRunner(retrieval_index=idx)
         summary = runner.offline_preflight(batch_id="app001-heldout-v5-yyyymmdd-01")
 
-    Usage (formal run -- requires HeldoutRunAuthorization from project owner):
+    Usage (formal run -- requires project-owner approval):
+        # Currently blocked: FORMAL_EVALUATION_ALLOWED=False
         auth = authorize_heldout_v5_run(batch_id="app001-heldout-v5-yyyymmdd-01")
+        approval = HeldoutBatchApproval(
+            batch_id="app001-heldout-v5-yyyymmdd-01",
+            approved_by="project-owner",
+            approval_note="ADR-XXXX authorization",
+        )
         runner = HeldoutRunner(retrieval_index=idx)
-        summary = runner.run_formal(auth)
+        summary = runner.run_formal(auth, approval)
 
     This class never reads credentials, never makes network calls in dry-run or
     offline-preflight mode, and never assigns a formal batch_id or creates a
-    formal batch directory until run_formal() is called with a valid
-    HeldoutRunAuthorization.
+    formal batch directory until run_formal() is called with BOTH a valid
+    HeldoutRunAuthorization AND a HeldoutBatchApproval, AND the global
+    FORMAL_EVALUATION_ALLOWED gate is open.
     """
 
     def __init__(
@@ -653,17 +862,46 @@ class HeldoutRunner:
         result["batch_dir_strategy"] = "work/app001-runs/<batch_id>/raw/"
         result["batch_dir_exists"] = batch_dir.exists()
 
-        # 7. Budget feasibility
-        result["budget_feasibility"] = {
-            "chat_total": f"12 × {HELDOUT_MAX_CHAT_ATTEMPTS_PER_RUN} = "
-                          f"{HELDOUT_MAX_CHAT_ATTEMPTS} ≤ {HELDOUT_MAX_CHAT_ATTEMPTS}",
-            "identity_total": f"2 preflight + 6×3 runtime = 20 ≤ {HELDOUT_MAX_IDENTITY_ATTEMPTS}",
-            "http_total": f"{HELDOUT_MAX_CHAT_ATTEMPTS} chat + "
-                          f"{HELDOUT_MAX_IDENTITY_ATTEMPTS} identity = "
-                          f"{HELDOUT_MAX_CHAT_ATTEMPTS + HELDOUT_MAX_IDENTITY_ATTEMPTS} ≤ "
-                          f"{HELDOUT_MAX_BATCH_HTTP}",
-            "feasible": True,
-        }
+        # 7. Budget feasibility — computed from actual transport/retry order
+        from .heldout_authorization import (
+            HELDOUT_PROVIDER_HTTP_CAPS,
+            HELDOUT_CHAT_PROVIDER_CAPS,
+            HELDOUT_MAX_RUNTIME_IDENTITY_PER_RUN,
+        )
+        # 2 Ollama batch preflight requests (/api/version + /api/tags)
+        n_ollama_preflight = 2
+        n_deepseek_runs = sum(
+            1 for c in plan.combinations if c.provider == DEEPSEEK_PROVIDER
+        )
+        n_ollama_runs = sum(
+            1 for c in plan.combinations if c.provider == OLLAMA_PROVIDER
+        )
+        feasibility = _compute_budget_feasibility(
+            n_deepseek_runs=n_deepseek_runs,
+            n_ollama_runs=n_ollama_runs,
+            max_chat_per_run=auth.max_attempts_per_run,
+            max_deepseek_http=HELDOUT_PROVIDER_HTTP_CAPS[DEEPSEEK_PROVIDER],
+            max_ollama_http=HELDOUT_PROVIDER_HTTP_CAPS[OLLAMA_PROVIDER],
+            max_global_http=auth.max_batch_attempts,
+            max_chat_total=auth.max_chat_attempts,
+            max_chat_deepseek=HELDOUT_CHAT_PROVIDER_CAPS[DEEPSEEK_PROVIDER],
+            max_chat_ollama=HELDOUT_CHAT_PROVIDER_CAPS[OLLAMA_PROVIDER],
+            max_identity_total=auth.max_identity_attempts,
+            n_ollama_preflight=n_ollama_preflight,
+            max_runtime_identity_per_run=HELDOUT_MAX_RUNTIME_IDENTITY_PER_RUN,
+        )
+        result["budget_feasibility"] = feasibility
+        if not feasibility["feasible"]:
+            failed_constraints = [
+                v["expr"]
+                for v in feasibility["constraints"].values()
+                if not v["ok"]
+            ]
+            result["offline_preflight_status"] = "fail"
+            raise FormalEvaluationBlockedError(
+                "budget feasibility check failed; constraints violated: "
+                + "; ".join(failed_constraints)
+            )
         result["offline_preflight_status"] = "pass"
 
         return HeldoutBatchSummary(
@@ -688,22 +926,56 @@ class HeldoutRunner:
     def run_formal(
         self,
         authorization: HeldoutRunAuthorization,
+        batch_approval: "HeldoutBatchApproval | None" = None,
     ) -> HeldoutBatchSummary:
         """Execute the formal held-out 12-run evaluation.
 
-        Requires a valid :class:`HeldoutRunAuthorization`.  The authorization
-        must have been approved by the project owner for a specific batch_id.
+        Requires BOTH:
+          1. ``FORMAL_EVALUATION_ALLOWED=True`` (global gate, changed only via ADR).
+          2. A valid :class:`HeldoutRunAuthorization` whose ``batch_id`` matches
+             the ``HeldoutBatchApproval``.
+          3. A valid :class:`HeldoutBatchApproval` issued by the project owner for
+             the specific ``batch_id`` after final offline preflight has passed.
 
-        This method NEVER makes network calls without a valid authorization.
-        Every HTTP request (including Ollama preflight /api/tags and /api/version)
-        reserves a budget slot from the authorization-bound ledger BEFORE the
-        network I/O.
+        These are two independent checks.  Constructing a
+        :class:`HeldoutRunAuthorization` only validates the budget *profile*;
+        it does NOT constitute project-owner approval.  This method checks the
+        global gate AND the approval token BEFORE any directory creation, ledger
+        write, key read, or network I/O.
 
-        Raises :class:`FormalEvaluationBlockedError` if any preflight check fails.
+        Raises :class:`FormalEvaluationBlockedError` if any check fails.
         """
+        # --- Gate 1: Global FORMAL_EVALUATION_ALLOWED (checked first, before
+        #             any other side effects including directory resolution) ---
+        if not FORMAL_EVALUATION_ALLOWED:
+            raise FormalEvaluationBlockedError(
+                "run_formal is blocked: FORMAL_EVALUATION_ALLOWED=False. "
+                "The global evaluation gate must be opened via a new ADR and "
+                "explicit project-owner authorization before any formal run."
+            )
+
+        # --- Gate 2: Authorization type ---
         if not isinstance(authorization, HeldoutRunAuthorization):
             raise FormalEvaluationBlockedError(
                 "run_formal requires a HeldoutRunAuthorization instance"
+            )
+
+        # --- Gate 3: Explicit batch approval (independent of profile) ---
+        if not isinstance(batch_approval, HeldoutBatchApproval):
+            raise FormalEvaluationBlockedError(
+                "run_formal requires an explicit HeldoutBatchApproval token. "
+                "Constructing a HeldoutRunAuthorization alone does not constitute "
+                "project-owner approval to run. Create a HeldoutBatchApproval "
+                "after the project owner has reviewed and approved the full "
+                "authorization template for the specific batch_id."
+            )
+
+        # --- Gate 4: batch_id cross-check (approval must match authorization) ---
+        if batch_approval.batch_id != authorization.batch_id:
+            raise FormalEvaluationBlockedError(
+                f"batch_approval.batch_id {batch_approval.batch_id!r} does not "
+                f"match authorization.batch_id {authorization.batch_id!r}; "
+                "approval and authorization must be for the same batch"
             )
 
         # Retrieval index required for C1 (all 6 C1 runs would be blocked otherwise)

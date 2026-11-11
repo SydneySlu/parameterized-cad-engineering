@@ -176,11 +176,17 @@ def main() -> int:
             )
             return 2
         from llm.heldout_authorization import authorize_heldout_v5_run
+        from llm.heldout_runner import HeldoutBatchApproval
         auth = authorize_heldout_v5_run(batch_id=args.batch_id)
+        approval = HeldoutBatchApproval(
+            batch_id=args.batch_id,
+            approved_by="project-owner",
+            approval_note="CLI --allow-formal-run after final offline preflight",
+        )
         retrieval_index = _load_retrieval_index_or_fail()
         runner = HeldoutRunner(retrieval_index=retrieval_index)
         try:
-            summary = runner.run_formal(auth)
+            summary = runner.run_formal(auth, approval)
         except (FormalEvaluationBlockedError, Exception) as exc:
             print(f"RUN FAILED: {exc}", file=sys.stderr)
             return 1

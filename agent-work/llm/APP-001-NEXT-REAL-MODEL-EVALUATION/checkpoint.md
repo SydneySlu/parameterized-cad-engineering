@@ -275,3 +275,84 @@ handoff_self_check:
   unresolved=sandbox uses Python 3.10.12 not 3.11.18; independent Codex review pending; final offline preflight pending; no batch_id or model request authorization
   next_agent_focus=independent review: re-run full test suite under Python 3.11.18; verify evaluator labels never appear in any output path; confirm dry-run/offline-preflight modes work offline; confirm that run_formal is correctly fail-closed; check raw retention path; then present batch_id authorization template to project owner
 ```
+
+## Runner fix milestone (APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER-FIX, 2026-11-11)
+
+Addresses both P1 issues from Codex review (commit `88ea2dd`).
+
+### P1 — run_formal() gate and batch approval
+
+Added `HeldoutBatchApproval` frozen dataclass and `HeldoutBatchApprovalError`
+to `src/llm/heldout_runner.py`. `run_formal()` now checks in order before any
+side effect:
+
+1. `FORMAL_EVALUATION_ALLOWED` (global gate, fail-closed, never patched here).
+2. `isinstance(authorization, HeldoutRunAuthorization)`.
+3. `isinstance(batch_approval, HeldoutBatchApproval)` — approval is a separate
+   requirement from the profile; constructing a profile does not constitute approval.
+4. `batch_approval.batch_id == authorization.batch_id` — cross-check prevents
+   mismatched approval/authorization pairs.
+
+Updated `scripts/run_app001_heldout_v5.py` to construct and pass a
+`HeldoutBatchApproval` token in `--run` mode.
+
+### P2 — offline-preflight budget feasibility
+
+Replaced hardcoded `36 + 20 = 56 ≤ 44` / `feasible=True` with
+`_compute_budget_feasibility()` that derives worst-case HTTP from the actual
+Ollama transport/retry sequence (ADR-0019 §"实施预算口径补充"):
+
+- Per Ollama run worst-case = `max(max_runtime_identity_per_run,
+  1 + max_chat_per_run)` = `max(3, 4)` = 4 HTTP.
+- Ollama total = 2 preflight + 6 × 4 = 26 ≤ 26 ✓.
+- Global total = 18 (DS) + 26 (Ollama) = 44 ≤ 44 ✓.
+- Chat and identity category caps are independent upper bounds that cannot be
+  simultaneously saturated under the global 44 cap.
+- `feasible` and `offline_preflight_status` are now computed; infeasible scope
+  raises `FormalEvaluationBlockedError` with explicit constraint names.
+
+CLI `--offline-preflight` now returns `feasible=True, global_total=44,
+ollama_total=26` (verified in sandbox).
+
+### New tests
+
+Added `TestRunFormalGateAndApproval` (8 tests) and `TestBudgetFeasibility`
+(8 tests) to `tests/llm/test_heldout_runner.py`. Total grows from 53 to 70.
+
+### Validation (sandbox Python 3.10.12)
+
+```text
+py_compile src/llm/heldout_runner.py scripts/run_app001_heldout_v5.py tests/llm/test_heldout_runner.py
+  -> OK
+
+test_heldout_runner 70/70 -> OK
+
+test_heldout_authorization + test_authorization + test_budget + test_runner
+  -> 120 OK (skipped=7)
+
+discover tests/llm -> 925 OK (skipped=8)
+discover tests/schema -> 17 OK
+
+git diff --check -> clean
+
+CLI --dry-run --json: 12 combinations, feasible data present, exit 0
+CLI --offline-preflight --batch-id review-only-not-a-batch-20261111 --json:
+  offline_preflight_status=pass, feasible=True, global_total=44, ollama_total=26
+  no batch directory created (confirmed)
+```
+
+8 skips are existing FUSE/Ollama environment limitations. No network call,
+credential read, formal batch directory creation, or model request occurred.
+
+```text
+handoff_successor_check:
+  predecessor=Codex review (88ea2dd) marking P1/P2 must-fix
+  files_format=pass; py_compile OK on all changed files
+  core_rerun=test_heldout_runner 70/70; auth/budget/runner regression 120 OK (7 skips)
+  normal_case=offline_preflight pass with global_total=44 (not 56); dry_run 12 combinations
+  failure_case=run_formal blocked by global gate before mkdir/BudgetLedger/transport (spy count 0); approval/authorization batch_id mismatch raises; infeasible budget scope raises
+  interface=HeldoutBatchApproval added; run_formal signature updated (batch_approval param); CLI updated to construct approval token; _compute_budget_feasibility public function
+  limits=Python 3.10.12 in sandbox (not 3.11.18); Codex independent review still required; no batch_id or model request authorization
+  result=review
+  blocking_issue=none; pending Codex re-review of P1/P2 fixes
+```
