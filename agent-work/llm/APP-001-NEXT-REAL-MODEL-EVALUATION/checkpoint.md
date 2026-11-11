@@ -126,6 +126,61 @@ gates should a unique batch ID and complete authorization template be
 presented for approval. Live preflight and chat requests both require that
 approval and must be covered by the same batch budget.
 
+## Budget-ledger implementation milestone (2026-11-11)
+
+Status remains `in_progress`. Added the dedicated `HeldoutRunAuthorization`
+profile and category-aware ledger enforcement for ADR-0019. The profile pins
+the exact 12 logical runs, v5/IO contract, frozen input and evaluator-label
+hashes, 36 chat attempts, 20 identity attempts and 44 physical HTTP attempts.
+Provider caps are 18 DeepSeek and 26 Ollama; chat caps are 18/provider.
+Identity caps are one preflight `/api/version`, one preflight `/api/tags`, and
+18 runtime `/api/tags` total with at most three per Ollama logical run.
+
+The ledger now records category, chat-by-provider, identity-by-bucket and
+identity-by-run counters, reconstructs those counts from attempt records on
+recovery, and rejects reservations that exceed any category/provider/global
+cap. The legacy authorization summary/scope hash remains unchanged; legacy
+non-model attempts retain their previous auxiliary accounting behavior.
+
+Successor checks and validation (Python 3.11.18, macOS arm64):
+
+```text
+PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.llm.test_heldout_authorization -q
+  -> 13 tests, OK (normal exact profile; scope, provider, endpoint, bucket, per-run cap and legacy-ledger recovery checks)
+PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.llm.test_authorization tests.llm.test_budget tests.llm.test_runner -q
+  -> 107 tests, OK, 7 skipped
+PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -q
+  -> 855 tests, OK, 8 skipped
+PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/schema -q
+  -> 17 tests, OK
+py_compile (authorization, budget, heldout_authorization, heldout tests)
+  -> OK
+git diff --check
+  -> clean
+```
+
+The skips are existing environment/FUSE limitations. No network/model request,
+credential or `.env` read, historical raw read, or formal batch directory
+creation occurred. No batch ID or request authorization exists.
+
+```text
+handoff_successor_check:
+  predecessor=ADR-0019 accepted input/budget scope; current checkpoint and a6d97c8 frozen-input milestone
+  files_format=pass; new profile and tests import under Python 3.11.18
+  core_rerun=heldout authorization/budget suite; 13 passed
+  normal_case=authorized held-out logical run reserves chat within provider/run caps; pass
+  failure_case=duplicate preflight endpoint, fourth runtime identity call, wrong endpoint/provider and expanded scope reject; pass
+  interface=profile pins the three neutral query IDs and exact input/label hashes; pass
+  limits=budget layer only; dedicated runner, label isolation at execution, preflight reservation wiring and final offline preflight remain
+  result=in_progress
+  blocking_issue=none
+```
+
+Next: implement the dedicated offline-first runner and prove that every live
+HTTP path obtains a ledger reservation before network I/O. Do not assign a
+batch ID or perform network/model calls before independent review and final
+offline preflight.
+
 ## Handoff self-check
 
 ```text

@@ -202,6 +202,14 @@ class FormalRunAuthorization:
     def condition_is_allowed(self, condition: str) -> bool:
         return condition in self.conditions
 
+    def max_provider_attempts_for(self, provider: str) -> int:
+        """Return the frozen provider cap; specialized profiles may override."""
+        return self.max_provider_attempts
+
+    def max_chat_attempts_for(self, provider: str) -> int:
+        """Return a chat-specific cap; legacy profiles inherit the batch cap."""
+        return self.max_batch_attempts
+
     def scope_summary(self) -> dict[str, Any]:
         """Return a redacted, auditable summary of the authorization scope.
 

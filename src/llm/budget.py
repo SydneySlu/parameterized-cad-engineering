@@ -220,7 +220,32 @@ class BudgetLedger:
                 f"ledger file is corrupted and cannot be parsed: {exc}"
             ) from exc
         self._verify_integrity(data)
+        self._upgrade_tracking_counters(data)
         return data
+
+    def _upgrade_tracking_counters(self, data: dict[str, Any]) -> None:
+        """Populate additive counters for older ledgers from authoritative rows."""
+        attempts = data.get("attempts", [])
+        categories = {"chat": 0, "identity": 0, "auxiliary": 0}
+        chat_provider = {p: 0 for p in sorted(self._auth.providers)}
+        identity_bucket: dict[str, int] = {}
+        identity_run: dict[str, int] = {}
+        for rec in attempts:
+            category = rec.get("request_category", "chat" if rec.get("is_model_call", True) else "auxiliary")
+            categories[category] += 1
+            if category == "chat":
+                provider = rec.get("provider", "")
+                chat_provider[provider] = chat_provider.get(provider, 0) + 1
+            elif category == "identity" and hasattr(self._auth, "identity_bucket"):
+                bucket = self._auth.identity_bucket(rec.get("logical_run_id", ""), rec.get("endpoint", ""))
+                identity_bucket[bucket] = identity_bucket.get(bucket, 0) + 1
+                if bucket.startswith("runtime:"):
+                    run_id = rec.get("logical_run_id", "")
+                    identity_run[run_id] = identity_run.get(run_id, 0) + 1
+        data.setdefault("category_attempts_used", categories)
+        data.setdefault("chat_attempts_by_provider", chat_provider)
+        data.setdefault("identity_attempts_by_bucket", identity_bucket)
+        data.setdefault("identity_attempts_by_run", identity_run)
 
     def _fresh_ledger(self) -> dict[str, Any]:
         return {
@@ -233,6 +258,10 @@ class BudgetLedger:
             "total_attempts_used": 0,
             "provider_attempts_used": {p: 0 for p in sorted(self._auth.providers)},
             "run_attempts_used": {},
+            "category_attempts_used": {"chat": 0, "identity": 0, "auxiliary": 0},
+            "chat_attempts_by_provider": {p: 0 for p in sorted(self._auth.providers)},
+            "identity_attempts_by_bucket": {},
+            "identity_attempts_by_run": {},
             "run_results": {},
             "attempts": [],
         }
@@ -294,6 +323,51 @@ class BudgetLedger:
                     f"run_attempts_used[{rid}] ({stored_run.get(rid)}) "
                     f"!= actual model-call count ({count})"
                 )
+        category_counts = {"chat": 0, "identity": 0, "auxiliary": 0}
+        for rec in attempts:
+            category = rec.get("request_category", "chat" if rec.get("is_model_call", True) else "auxiliary")
+            if category not in category_counts:
+                raise BudgetIntegrityError(f"unknown request category in ledger: {category!r}")
+            category_counts[category] += 1
+        stored_categories = data.get("category_attempts_used", category_counts)
+        if stored_categories != category_counts:
+            raise BudgetIntegrityError("category_attempts_used does not match attempt records")
+        chat_by_provider = {provider: 0 for provider in sorted(self._auth.providers)}
+        identity_by_bucket: dict[str, int] = {}
+        identity_by_run: dict[str, int] = {}
+        for rec in attempts:
+            category = rec.get("request_category", "chat" if rec.get("is_model_call", True) else "auxiliary")
+            provider = rec.get("provider", "")
+            if category == "chat":
+                chat_by_provider[provider] = chat_by_provider.get(provider, 0) + 1
+            elif category == "identity" and hasattr(self._auth, "identity_bucket"):
+                try:
+                    bucket = self._auth.identity_bucket(rec.get("logical_run_id", ""), rec.get("endpoint", ""))
+                except Exception as exc:
+                    raise BudgetIntegrityError(f"identity attempt is outside authorized scope: {exc}") from exc
+                identity_by_bucket[bucket] = identity_by_bucket.get(bucket, 0) + 1
+                if bucket.startswith("runtime:"):
+                    rid = rec.get("logical_run_id", "")
+                    identity_by_run[rid] = identity_by_run.get(rid, 0) + 1
+        if data.get("chat_attempts_by_provider", chat_by_provider) != chat_by_provider:
+            raise BudgetIntegrityError("chat_attempts_by_provider does not match attempt records")
+        if data.get("identity_attempts_by_bucket", identity_by_bucket) != identity_by_bucket:
+            raise BudgetIntegrityError("identity_attempts_by_bucket does not match attempt records")
+        if data.get("identity_attempts_by_run", identity_by_run) != identity_by_run:
+            raise BudgetIntegrityError("identity_attempts_by_run does not match attempt records")
+        for provider, count in chat_by_provider.items():
+            if count > self._auth.max_chat_attempts_for(provider):
+                raise BudgetIntegrityError(f"{provider} chat attempts exceed authorized cap")
+        if hasattr(self._auth, "identity_bucket_caps"):
+            for bucket, count in identity_by_bucket.items():
+                cap = self._auth.identity_bucket_caps.get(bucket)
+                if cap is None or count > cap:
+                    raise BudgetIntegrityError(f"identity bucket {bucket!r} exceeds authorized cap")
+            for logical_run_id, count in identity_by_run.items():
+                if count > self._auth.max_runtime_identity_per_run:
+                    raise BudgetIntegrityError(
+                        f"runtime identity attempts for {logical_run_id!r} exceed authorized cap"
+                    )
 
     def _write_ledger_atomic(self, data: dict[str, Any]) -> None:
         """Write the ledger atomically (temp file + os.replace)."""
@@ -311,6 +385,7 @@ class BudgetLedger:
     def reserve_attempt(
         self, *, logical_run_id: str, provider: str,
         is_model_call: bool = True, endpoint: str = "",
+        request_category: str | None = None,
     ) -> AttemptReservation:
         """Atomically reserve one attempt before a network call.
 
@@ -346,8 +421,47 @@ class BudgetLedger:
             raise BudgetExhausted(
                 f"provider {provider!r} not in authorized scope"
             )
+        if request_category is None:
+            if is_model_call:
+                request_category = "chat"
+            elif (hasattr(self._auth, "max_identity_attempts")
+                  and provider == "Ollama" and endpoint in {"/api/tags", "/api/version"}):
+                request_category = "identity"
+            else:
+                request_category = "auxiliary"
+        if request_category not in {"chat", "identity", "auxiliary"}:
+            raise BudgetExhausted(f"request category {request_category!r} is not allowed")
+        if request_category == "chat" and not is_model_call:
+            raise BudgetExhausted("chat category requires is_model_call=True")
+        if request_category != "chat" and is_model_call:
+            raise BudgetExhausted("non-chat category cannot be a model call")
+        if request_category == "identity":
+            if not hasattr(self._auth, "max_identity_attempts"):
+                raise BudgetExhausted("identity category is not authorized by this profile")
+            if provider != "Ollama" or endpoint not in {"/api/tags", "/api/version"}:
+                raise BudgetExhausted("identity request endpoint/provider is outside scope")
+            from .heldout_authorization import HELDOUT_BATCH_PREFLIGHT_ID
+            if endpoint == "/api/version" and logical_run_id != HELDOUT_BATCH_PREFLIGHT_ID:
+                raise BudgetExhausted("/api/version is allowed only for batch preflight")
+            try:
+                identity_bucket = self._auth.identity_bucket(logical_run_id, endpoint)
+            except Exception as exc:
+                raise BudgetExhausted(str(exc)) from exc
+        if request_category == "chat" and hasattr(self._auth, "allows_logical_run"):
+            if not self._auth.allows_logical_run(logical_run_id, provider):
+                raise BudgetExhausted("chat request is not bound to an authorized logical run")
+            expected_endpoint = "/api/chat" if provider == "Ollama" else "/chat/completions"
+            if endpoint != expected_endpoint:
+                raise BudgetExhausted(
+                    f"chat endpoint {endpoint!r} does not match provider {provider!r}"
+                )
+        if request_category == "auxiliary" and hasattr(self._auth, "max_identity_attempts"):
+            raise BudgetExhausted("auxiliary HTTP requests are outside this held-out profile")
         with self._thread_lock:
             data = self._read_ledger()
+            # Upgrade older ledger shapes from their authoritative attempt rows.
+            # This is required for restart compatibility without resetting usage.
+            self._upgrade_tracking_counters(data)
 
             if is_model_call:
                 run_count = data["run_attempts_used"].get(logical_run_id, 0)
@@ -363,10 +477,11 @@ class BudgetLedger:
                     )
 
             prov_count = data["provider_attempts_used"].get(provider, 0)
-            if prov_count >= self._auth.max_provider_attempts:
+            provider_cap = self._auth.max_provider_attempts_for(provider)
+            if prov_count >= provider_cap:
                 raise BudgetExhausted(
                     f"provider {provider} already used {prov_count} attempts "
-                    f"(max {self._auth.max_provider_attempts})"
+                    f"(max {provider_cap})"
                 )
             total = data["total_attempts_used"]
             if total >= self._auth.max_batch_attempts:
@@ -374,6 +489,44 @@ class BudgetLedger:
                     f"batch already used {total} attempts "
                     f"(max {self._auth.max_batch_attempts})"
                 )
+            category_count = data.get("category_attempts_used", {}).get(request_category, 0)
+            category_cap = {
+                "chat": getattr(self._auth, "max_chat_attempts", self._auth.max_batch_attempts),
+                "identity": getattr(self._auth, "max_identity_attempts", 0),
+                "auxiliary": self._auth.max_batch_attempts,
+            }[request_category]
+            if category_count >= category_cap:
+                raise BudgetExhausted(
+                    f"{request_category} category already used {category_count} attempts "
+                    f"(max {category_cap})"
+                )
+            if request_category == "chat":
+                chat_provider_count = data["chat_attempts_by_provider"].get(provider, 0)
+                chat_provider_cap = self._auth.max_chat_attempts_for(provider)
+                if chat_provider_count >= chat_provider_cap:
+                    raise BudgetExhausted(
+                        f"{provider} chat attempts already used {chat_provider_count} "
+                        f"(max {chat_provider_cap})"
+                    )
+            if request_category == "identity":
+                bucket_count = data["identity_attempts_by_bucket"].get(identity_bucket, 0)
+                bucket_cap = getattr(self._auth, "identity_bucket_caps", None)
+                if bucket_cap is None:
+                    from .heldout_authorization import HELDOUT_IDENTITY_BUCKET_CAPS
+                    bucket_cap = HELDOUT_IDENTITY_BUCKET_CAPS
+                cap = bucket_cap[identity_bucket]
+                if bucket_count >= cap:
+                    raise BudgetExhausted(
+                        f"identity bucket {identity_bucket} already used {bucket_count} (max {cap})"
+                    )
+                if identity_bucket.startswith("runtime:"):
+                    run_identity_count = data["identity_attempts_by_run"].get(logical_run_id, 0)
+                    per_run_identity_cap = getattr(self._auth, "max_runtime_identity_per_run", 3)
+                    if run_identity_count >= per_run_identity_cap:
+                        raise BudgetExhausted(
+                            f"runtime identity attempts for {logical_run_id} already used "
+                            f"{run_identity_count} (max {per_run_identity_cap})"
+                        )
 
             # Compute attempt_number:
             # - Model calls: 1-based within the logical run
@@ -396,12 +549,20 @@ class BudgetLedger:
                 "attempt_number": attempt_number,
                 "endpoint": endpoint,
                 "is_model_call": is_model_call,
+                "request_category": request_category,
                 "reserved_at_utc": _utc_now_iso(),
                 "outcome": None,
             }
             data["attempts"].append(record)
             data["total_attempts_used"] = total + 1
             data["provider_attempts_used"][provider] = prov_count + 1
+            data["category_attempts_used"][request_category] = category_count + 1
+            if request_category == "chat":
+                data["chat_attempts_by_provider"][provider] = data["chat_attempts_by_provider"].get(provider, 0) + 1
+            elif request_category == "identity":
+                data["identity_attempts_by_bucket"][identity_bucket] = data["identity_attempts_by_bucket"].get(identity_bucket, 0) + 1
+                if identity_bucket.startswith("runtime:"):
+                    data["identity_attempts_by_run"][logical_run_id] = data["identity_attempts_by_run"].get(logical_run_id, 0) + 1
             if is_model_call:
                 run_count = data["run_attempts_used"].get(logical_run_id, 0)
                 data["run_attempts_used"][logical_run_id] = run_count + 1
@@ -411,7 +572,7 @@ class BudgetLedger:
                 provider=provider,
                 attempt_number=attempt_number,
                 remaining_batch=self._auth.max_batch_attempts - (total + 1),
-                remaining_provider=self._auth.max_provider_attempts - (prov_count + 1),
+                remaining_provider=provider_cap - (prov_count + 1),
             )
 
     def record_outcome(
@@ -527,7 +688,7 @@ class BudgetLedger:
     def remaining_provider(self, provider: str) -> int:
         data = self._read_ledger()
         used = data["provider_attempts_used"].get(provider, 0)
-        return self._auth.max_provider_attempts - used
+        return self._auth.max_provider_attempts_for(provider) - used
 
     def run_attempts_used(self, logical_run_id: str) -> int:
         data = self._read_ledger()
@@ -549,6 +710,16 @@ class BudgetLedger:
             ),
             "provider_attempts_used": dict(data["provider_attempts_used"]),
             "max_provider_attempts": self._auth.max_provider_attempts,
+            "max_provider_attempts_by_provider": {
+                provider: self._auth.max_provider_attempts_for(provider)
+                for provider in sorted(self._auth.providers)
+            },
+            "category_attempts_used": dict(data.get("category_attempts_used", {})),
+            "chat_attempts_by_provider": dict(data.get("chat_attempts_by_provider", {})),
+            "identity_attempts_by_bucket": dict(data.get("identity_attempts_by_bucket", {})),
+            "identity_attempts_by_run": dict(data.get("identity_attempts_by_run", {})),
+            "max_chat_attempts": getattr(self._auth, "max_chat_attempts", None),
+            "max_identity_attempts": getattr(self._auth, "max_identity_attempts", None),
             "run_attempts_used": dict(data["run_attempts_used"]),
             "run_results": dict(data["run_results"]),
             "max_attempts_per_run": self._auth.max_attempts_per_run,

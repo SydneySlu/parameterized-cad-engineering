@@ -2121,3 +2121,11 @@ commit=待提交
 - 变更：修正 ADR-0019、checkpoint、PROJECT_STATUS、PROJECT_PLAN；不重写先前日志。前一条预算数字为计算复核前的暂定值，以本修正为准。
 - 边界：仍未分配 batch_id、未授权任何请求、未做网络或模型调用、未访问密钥/.env。旧 ADR-0014 scope 不变。
 - 下一步：以修正预算实现独立 fail-closed profile、物理请求分类账本和受控入口，并加入 category/provider/global 上限及 tags 重试路径测试；通过本机 3.11.18 回归、独立审查和 final offline preflight 后再生成 batch ID 与完整授权模板供用户批准。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-LEDGER-MILESTONE / Codex 中枢 / in_progress / 2026-11-11
+
+- 动作：实现 ADR-0019 专用 held-out 授权 profile，并在共享预算账本中加入物理 HTTP 分类、provider chat cap、identity endpoint bucket 与 per-run identity cap。
+- 结果：12-run scope 绑定冻结 v5/IO 版本、3 个 query ID、inputs/labels 哈希；chat 上限 36（18/provider、3/run），identity 20（preflight `/api/version` 1、preflight `/api/tags` 1、runtime `/api/tags` 18/3 per Ollama run），物理总量 44（DeepSeek 18、Ollama 26）。账本恢复时从 attempt records 重算 category/provider/bucket/run 计数并校验；ADR-0014 授权 summary/hash 未改变。
+- 验证：Python 3.11.18 专项 held-out 测试 13 项通过；授权/预算/runner 107 项通过、7 个既有 skip；LLM 全量 855 项通过、8 个既有环境/FUSE skip；Schema 17 项通过；相关 `py_compile` 和 `git diff --check` 通过。专项覆盖有效预留、旧账本计数恢复及 scope/provider/endpoint/bucket/per-run 上限拒绝路径。
+- 边界：未访问网络或模型、未读取密钥/`.env`、未读取历史 raw、未创建正式批次目录、未分配 batch ID、无请求授权；现有 ADR-0014 scope 与旧批次不变。
+- 下一步：实现独立 held-out runner，证明输入/标签隔离和所有 preflight/runtime HTTP 在触网前获得该账本预留；之后做独立审查与离线 final preflight，再向负责人提交具体 batch ID 和授权模板。
