@@ -31,7 +31,7 @@ Relationship to existing authorization classes
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from .authorization import AuthorizationScopeError, FormalRunAuthorization
 from .contract import (
@@ -321,4 +321,250 @@ def authorize_a2_run(*, batch_id: str) -> A2IntegrationAuthorization:
         inputs_sha256=A2_INPUTS_SHA256,
         evaluator_labels_sha256=A2_LABELS_SHA256,
         enable_cad_pipeline=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Owner approval credential for formal execution (R1)
+# ---------------------------------------------------------------------------
+
+# Sentinel for the approval-statement prefix; this is NOT a cryptographic
+# signature.  It is a human-readable record that the project owner explicitly
+# approved a specific batch for execution.
+_APPROVAL_STATEMENT_PREFIX: Final[str] = "I approve A2 formal execution of batch"
+
+
+class ApprovalValidationError(ValueError):
+    """Raised when an A2 formal approval credential is invalid or scope-mismatched."""
+
+
+@dataclass(frozen=True)
+class A2FormalApproval:
+    """Explicit, fail-closed owner approval credential for one A2 batch.
+
+    Formal execution requires BOTH:
+    - :class:`A2IntegrationAuthorization` (fixed scope check), AND
+    - this :class:`A2FormalApproval` (owner approval for the same batch_id).
+
+    The approval binds to the exact same scope fields as the authorization:
+    profile_id, inputs_sha256, evaluator_labels_sha256, provider, model,
+    condition, max_batch_http, and enable_cad_pipeline.  The ``batch_id`` must
+    match the authorization's ``batch_id`` exactly.
+
+    Fields
+    ------
+    batch_id:
+        Must match ``authorization.batch_id``.
+    profile_id:
+        Must equal ``A2_PROFILE_ID``.
+    inputs_sha256:
+        Must equal ``A2_INPUTS_SHA256``.
+    evaluator_labels_sha256:
+        Must equal ``A2_LABELS_SHA256``.
+    provider:
+        Must equal ``A2_PROVIDER``.
+    model:
+        Must equal ``A2_MODEL``.
+    condition:
+        Must equal ``A2_CONDITION``.
+    max_batch_http:
+        Must equal ``A2_MAX_BATCH_HTTP``.
+    enable_cad_pipeline:
+        Must be True.
+    approver:
+        Non-empty name or ID of the project owner who approved the batch.
+    approved_at_utc:
+        Non-empty ISO-8601 UTC timestamp of the approval.
+    approval_statement:
+        Non-empty human-readable approval text.  This is NOT a cryptographic
+        signature; it is a verifiable audit record that the owner explicitly
+        approved a specific batch.
+    approval_record_ref:
+        Optional reference to an external approval record (e.g., a document
+        path, ticket ID, or meeting minutes reference).  May be None.
+
+    Security
+    --------
+    - Construction validates all scope fields against frozen A2 constants.
+    - Any mismatch raises :class:`ApprovalValidationError` at construction time.
+    - This object does NOT perform cryptographic signature verification.
+    - No secrets (API keys, Authorization headers) are stored on this object.
+    """
+
+    batch_id: str
+    profile_id: str
+    inputs_sha256: str
+    evaluator_labels_sha256: str
+    provider: str
+    model: str
+    condition: str
+    max_batch_http: int
+    enable_cad_pipeline: bool
+    approver: str
+    approved_at_utc: str
+    approval_statement: str
+    approval_record_ref: str | None = None
+
+    def __post_init__(self) -> None:
+        mismatches: list[str] = []
+
+        # --- Scope fields must match frozen A2 constants ---
+        if self.profile_id != A2_PROFILE_ID:
+            mismatches.append(
+                f"profile_id mismatch: expected {A2_PROFILE_ID!r}, "
+                f"got {self.profile_id!r}"
+            )
+        if self.inputs_sha256 != A2_INPUTS_SHA256:
+            mismatches.append(
+                f"inputs_sha256 mismatch: expected {A2_INPUTS_SHA256!r}, "
+                f"got {self.inputs_sha256!r}"
+            )
+        if self.evaluator_labels_sha256 != A2_LABELS_SHA256:
+            mismatches.append(
+                f"evaluator_labels_sha256 mismatch: expected {A2_LABELS_SHA256!r}, "
+                f"got {self.evaluator_labels_sha256!r}"
+            )
+        if self.provider != A2_PROVIDER:
+            mismatches.append(
+                f"provider mismatch: expected {A2_PROVIDER!r}, got {self.provider!r}"
+            )
+        if self.model != A2_MODEL:
+            mismatches.append(
+                f"model mismatch: expected {A2_MODEL!r}, got {self.model!r}"
+            )
+        if self.condition != A2_CONDITION:
+            mismatches.append(
+                f"condition mismatch: expected {A2_CONDITION!r}, got {self.condition!r}"
+            )
+        if self.max_batch_http != A2_MAX_BATCH_HTTP:
+            mismatches.append(
+                f"max_batch_http mismatch: expected {A2_MAX_BATCH_HTTP}, "
+                f"got {self.max_batch_http}"
+            )
+        if self.enable_cad_pipeline is not True:
+            mismatches.append("enable_cad_pipeline must be True")
+
+        # --- Required identity fields must be non-empty strings ---
+        if not isinstance(self.batch_id, str) or not self.batch_id.strip():
+            mismatches.append("batch_id must be a non-empty string")
+        if not isinstance(self.approver, str) or not self.approver.strip():
+            mismatches.append("approver must be a non-empty string")
+        if not isinstance(self.approved_at_utc, str) or not self.approved_at_utc.strip():
+            mismatches.append("approved_at_utc must be a non-empty string")
+        if not isinstance(self.approval_statement, str) or not self.approval_statement.strip():
+            mismatches.append("approval_statement must be a non-empty string")
+
+        if mismatches:
+            raise ApprovalValidationError(
+                "A2 formal approval scope validation failed: "
+                + "; ".join(mismatches)
+            )
+
+    # ------------------------------------------------------------------
+    # Binding check against an authorization
+    # ------------------------------------------------------------------
+
+    def matches_authorization(
+        self, authorization: A2IntegrationAuthorization
+    ) -> bool:
+        """Return True iff this approval's batch_id matches the authorization's batch_id.
+
+        Scope-field consistency is already enforced by both ``__post_init__``
+        methods; this method only checks the batch_id binding.
+        """
+        return self.batch_id == authorization.batch_id
+
+    # ------------------------------------------------------------------
+    # Audit summary (no secrets)
+    # ------------------------------------------------------------------
+
+    def as_audit_dict(self) -> dict[str, Any]:
+        """Return a redacted audit record of this approval (no secrets).
+
+        Used by the batch summary to record that the batch was approved.
+        """
+        return {
+            "approver": self.approver,
+            "approved_at_utc": self.approved_at_utc,
+            "approval_statement": self.approval_statement,
+            "approval_record_ref": self.approval_record_ref,
+            "batch_id": self.batch_id,
+            "profile_id": self.profile_id,
+            "inputs_sha256": self.inputs_sha256,
+            "evaluator_labels_sha256": self.evaluator_labels_sha256,
+            "provider": self.provider,
+            "model": self.model,
+            "condition": self.condition,
+            "max_batch_http": self.max_batch_http,
+            "enable_cad_pipeline": self.enable_cad_pipeline,
+        }
+
+
+def validate_formal_approval_binding(
+    authorization: A2IntegrationAuthorization,
+    approval: A2FormalApproval,
+) -> None:
+    """Validate that an approval credential is bound to the same batch as the authorization.
+
+    Raises :class:`ApprovalValidationError` if the batch_ids do not match.
+
+    This check MUST be performed BEFORE any directory creation, BudgetLedger
+    initialization, Transport construction, or network I/O.
+
+    Both objects' scope fields are already validated at construction time;
+    this function only checks the batch_id binding.  If the caller passes
+    approval/authorization objects that were constructed with mismatching
+    scope fields, the construction-time validation already caught those
+    mismatches.
+    """
+    if not isinstance(approval, A2FormalApproval):
+        raise ApprovalValidationError(
+            f"approval must be an A2FormalApproval instance, got {type(approval).__name__}"
+        )
+    if not isinstance(authorization, A2IntegrationAuthorization):
+        raise ApprovalValidationError(
+            f"authorization must be an A2IntegrationAuthorization instance, "
+            f"got {type(authorization).__name__}"
+        )
+    if approval.batch_id != authorization.batch_id:
+        raise ApprovalValidationError(
+            f"approval batch_id {approval.batch_id!r} does not match "
+            f"authorization batch_id {authorization.batch_id!r}"
+        )
+
+
+def make_test_approval(
+    *,
+    batch_id: str,
+    approver: str = "test-owner",
+    approved_at_utc: str = "2026-11-11T00:00:00Z",
+    approval_statement: str | None = None,
+    approval_record_ref: str | None = None,
+) -> A2FormalApproval:
+    """Construct a test-only A2FormalApproval for unit tests.
+
+    This produces a structurally valid approval credential bound to the given
+    batch_id.  It is for MOCK TESTS ONLY and does NOT represent a real owner
+    approval.  The ``approver`` field is set to ``"test-owner"`` to make it
+    obvious that this is not a real approval record.
+    """
+    if approval_statement is None:
+        approval_statement = (
+            f"{_APPROVAL_STATEMENT_PREFIX} {batch_id} "
+            f"for A2 integration smoke test (TEST ONLY, not a real approval)"
+        )
+    return A2FormalApproval(
+        batch_id=batch_id,
+        profile_id=A2_PROFILE_ID,
+        inputs_sha256=A2_INPUTS_SHA256,
+        evaluator_labels_sha256=A2_LABELS_SHA256,
+        provider=A2_PROVIDER,
+        model=A2_MODEL,
+        condition=A2_CONDITION,
+        max_batch_http=A2_MAX_BATCH_HTTP,
+        enable_cad_pipeline=True,
+        approver=approver,
+        approved_at_utc=approved_at_utc,
+        approval_statement=approval_statement,
+        approval_record_ref=approval_record_ref,
     )

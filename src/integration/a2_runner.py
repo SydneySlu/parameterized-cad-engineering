@@ -45,6 +45,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re as _re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -55,13 +57,17 @@ from llm.a2_authorization import (
     A2_CONDITION,
     A2_INPUT_IDS,
     A2_INPUTS_SHA256,
+    A2_LABELS_SHA256,
     A2_MAX_BATCH_HTTP,
     A2_MAX_CHAT_ATTEMPTS_PER_RUN,
     A2_MAX_LOGICAL_RUNS,
     A2_MODEL,
     A2_PROFILE_ID,
     A2_PROVIDER,
+    A2FormalApproval,
     A2IntegrationAuthorization,
+    ApprovalValidationError,
+    validate_formal_approval_binding,
 )
 from llm.adapter import Adapter, AdapterInput, RetentionPolicy
 from llm.contract import (
@@ -86,6 +92,21 @@ _CANONICAL_RUN_ROOT = _REPO_ROOT / "work" / "app001-runs"
 _MODEL_INPUTS_REL = (
     "agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/model-inputs.json"
 )
+
+_SAFE_RE = _re.compile(r"[^a-zA-Z0-9._-]")
+_SUMMARY_SCHEMA_VERSION = "a2-batch-summary.v1"
+
+
+class SummaryWriteError(RuntimeError):
+    """Raised when the batch summary cannot be written atomically.
+
+    The A2 formal run loop treats this as fail-closed: if the summary cannot
+    be updated after a run, no further model requests are attempted.
+    """
+
+
+def _safe_filename_component(value: str) -> str:
+    return _SAFE_RE.sub("_", value)
 
 
 def _utc_now_iso() -> str:
@@ -166,13 +187,15 @@ class A2BatchResult:
     batch_id: str | None   # None in dry-run / preflight modes
     profile_id: str
     timestamp_utc: str
-    mode: str              # "dry_run" / "offline_preflight" / "formal"
+    mode: str              # "dry_run" / "offline_preflight" / "formal" / "mock"
     preflight_ok: bool
     preflight_errors: list[str]
     planned_runs: list[A2LogicalRunPlan]
     results: list[A2RunResult]
     # Budget summary
     budget_plan: dict[str, Any]
+    # Path to batch_summary.json (formal runs only; None in dry-run/mock/preflight)
+    summary_path: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -189,6 +212,7 @@ class A2BatchResult:
             ],
             "results": [r.as_dict() for r in self.results],
             "budget_plan": self.budget_plan,
+            "summary_path": self.summary_path,
         }
 
 
@@ -350,6 +374,191 @@ def run_a2_offline_preflight(
         "errors": errors,
         "details": details,
     }
+
+
+# ---------------------------------------------------------------------------
+# Batch summary writer (R1 — formal run evidence persistence)
+# ---------------------------------------------------------------------------
+
+
+def _atomic_write_json(path: Path, data: dict[str, Any], batch_dir: Path) -> None:
+    """Write ``data`` as JSON to ``path`` via a temp file + atomic os.replace.
+
+    Path containment:  resolves both ``path`` and ``batch_dir`` and verifies
+    that ``path`` stays inside ``batch_dir``.  Rejects path traversal and
+    symlinks that escape the batch directory.
+
+    Raises :class:`SummaryWriteError` on any failure.
+    """
+    try:
+        canonical_batch = batch_dir.resolve()
+    except OSError:
+        canonical_batch = batch_dir.absolute()
+
+    try:
+        canonical_target = path.resolve()
+    except OSError:
+        canonical_target = path.absolute()
+
+    try:
+        canonical_target.relative_to(canonical_batch)
+    except ValueError:
+        raise SummaryWriteError(
+            f"summary target {path} resolves outside batch_dir {batch_dir}; "
+            "refusing to write evidence outside the canonical batch directory"
+        )
+
+    tmp_path = path.with_suffix(".json.tmp")
+    try:
+        canonical_tmp = tmp_path.resolve()
+    except OSError:
+        canonical_tmp = tmp_path.absolute()
+    try:
+        canonical_tmp.relative_to(canonical_batch)
+    except ValueError:
+        raise SummaryWriteError(
+            f"tmp path {tmp_path} resolves outside batch_dir {batch_dir}"
+        )
+
+    text = json.dumps(data, ensure_ascii=False, indent=2, default=str)
+    try:
+        tmp_path.write_text(text, encoding="utf-8")
+        os.replace(str(tmp_path), str(path))
+    except OSError as exc:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise SummaryWriteError(
+            f"failed to write summary to {path}: {exc}"
+        ) from exc
+
+
+def _build_initial_summary(
+    authorization: A2IntegrationAuthorization,
+    approval: A2FormalApproval,
+    planned: list[A2LogicalRunPlan],
+    prompt: Any,
+    started_utc: str,
+) -> dict[str, Any]:
+    """Build the initial batch_summary.json content (before any HTTP requests).
+
+    Does NOT include raw response bodies, API keys, Authorization headers,
+    or evaluator labels.
+    """
+    return {
+        "schema_version": _SUMMARY_SCHEMA_VERSION,
+        "batch_id": authorization.batch_id,
+        "profile_id": A2_PROFILE_ID,
+        "batch_started_utc": started_utc,
+        "batch_status": "running",
+        "scope": {
+            "protocol_versions": sorted(authorization.protocol_versions),
+            "sample_set": authorization.sample_set,
+            "condition": A2_CONDITION,
+            "provider": A2_PROVIDER,
+            "model": A2_MODEL,
+            "max_batch_http": A2_MAX_BATCH_HTTP,
+            "max_logical_runs": A2_MAX_LOGICAL_RUNS,
+            "max_attempts_per_run": A2_MAX_CHAT_ATTEMPTS_PER_RUN,
+            "enable_cad_pipeline": authorization.enable_cad_pipeline,
+        },
+        "artifact_hashes": {
+            "inputs_sha256": A2_INPUTS_SHA256,
+            "evaluator_labels_sha256": A2_LABELS_SHA256,
+            "prompt_version": PROMPT_VERSION,
+            "contract_version": CONTRACT_VERSION,
+        },
+        "approval": approval.as_audit_dict(),
+        "planned_runs": [p.logical_run_id for p in planned],
+        "runs": {
+            p.logical_run_id: {"status": "pending"}
+            for p in planned
+        },
+    }
+
+
+class _SummaryWriter:
+    """Atomic batch summary writer for formal A2 runs.
+
+    Usage::
+
+        writer = _SummaryWriter(batch_dir, initial_data)
+        writer.write_initial()         # fail-closed; call before BudgetLedger
+        for run in runs:
+            result = execute_run(run)
+            writer.update_run(result)  # fail-closed; blocks further runs on failure
+
+    The summary is written to ``batch_dir/batch_summary.json`` via a temp-file
+    + ``os.replace`` for atomicity.  All writes are path-safe: the target path
+    is verified to stay inside ``batch_dir``.
+
+    Raises :class:`SummaryWriteError` on any write failure.
+    Does NOT store or write raw response bodies, API keys, or evaluator labels.
+    """
+
+    def __init__(self, batch_dir: Path, initial_data: dict[str, Any]) -> None:
+        self._batch_dir = batch_dir
+        self._summary_path = batch_dir / "batch_summary.json"
+        self._data: dict[str, Any] = dict(initial_data)
+
+    @property
+    def summary_path(self) -> Path:
+        return self._summary_path
+
+    def write_initial(self) -> None:
+        """Write the initial summary before any model requests.
+
+        Raises :class:`SummaryWriteError` if the write fails.  The caller
+        MUST NOT proceed with model requests if this raises.
+        """
+        _atomic_write_json(self._summary_path, self._data, self._batch_dir)
+
+    def update_run(self, result: "A2RunResult") -> None:
+        """Atomically update the summary with one run result.
+
+        Raises :class:`SummaryWriteError` if the write fails.  The runner
+        loop MUST stop further model requests if this raises.
+        """
+        # Build the run evidence record (no raw body content, no secrets)
+        raw_sha256: str | None = None
+        if result.ir_index and isinstance(result.ir_index, dict):
+            raw_sha256 = result.ir_index.get("envelope_sha256")
+
+        run_entry: dict[str, Any] = {
+            "status": result.combined_status,
+            "llm_status": result.llm_status,
+            "pipeline_status": result.pipeline_status,
+            "attempt_count": result.llm_meta.get("attempt_count"),
+            "prompt_version": result.llm_meta.get("prompt_version"),
+            "contract_version": result.llm_meta.get("contract_version"),
+            "configured_provider": result.llm_meta.get("configured_provider"),
+            "configured_model_name": result.llm_meta.get("configured_model_name"),
+            # raw_retention_path is a repo-relative path; raw body is NOT included
+            "raw_retention_path": result.raw_retention_path,
+            "raw_sha256": raw_sha256,
+            "pipeline_run_dir": result.pipeline_run_dir,
+            "ir_index": result.ir_index,
+            "step_path": result.step_path,
+            "errors": result.errors,
+            "questions": result.questions,
+        }
+
+        # Merge into the in-memory data
+        runs = self._data.setdefault("runs", {})
+        runs[result.logical_run_id] = run_entry
+
+        # Write atomically
+        _atomic_write_json(self._summary_path, self._data, self._batch_dir)
+
+    def finalize(self, batch_status: str = "complete") -> None:
+        """Update batch_status and write the final summary.
+
+        Raises :class:`SummaryWriteError` if the write fails.
+        """
+        self._data["batch_status"] = batch_status
+        self._data["batch_finished_utc"] = _utc_now_iso()
+        _atomic_write_json(self._summary_path, self._data, self._batch_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -918,6 +1127,7 @@ def run_a2_batch(
     dry_run: bool = True,
     transport=None,
     output_root: Path | None = None,
+    approval: "A2FormalApproval | None" = None,
 ) -> A2BatchResult:
     """Run the A2 integration batch.
 
@@ -929,19 +1139,23 @@ def run_a2_batch(
     dry_run:
         If True (default): return the plan and preflight result only; no
         network calls, no Adapter runs, no pipeline calls.  Safe to call
-        at any time.
+        at any time.  Does NOT require an ``approval`` credential.
     transport:
         Injectable transport for testing.  Must be a
         :class:`~llm.transport.FakeTransport` instance when the formal gate
         is closed (which it always is; ``FORMAL_EVALUATION_ALLOWED=False``).
         For formal live runs (not yet authorised), pass None and set
-        ``dry_run=False`` to have the runner build a
-        ``BudgetAwareTransport+DeepSeekTransport``; this requires the gate to
-        be open OR a valid ``A2IntegrationAuthorization`` (the Adapter checks
-        this per-call).
+        ``dry_run=False``.  Mock mode (non-None transport) does NOT require
+        an ``approval`` credential.
     output_root:
         Override the pipeline-runs output root.  Defaults to
         ``work/app001-runs/{batch_id}/pipeline-runs/``.
+    approval:
+        Required for formal live runs (``dry_run=False`` and ``transport is None``).
+        Must be an :class:`A2FormalApproval` instance whose ``batch_id``
+        matches ``authorization.batch_id``.  Validated BEFORE any directory
+        creation, BudgetLedger initialization, Transport construction, or
+        network I/O.  Not required for dry-run or mock modes.
     """
     ts = _utc_now_iso()
     planned = _plan_combinations(authorization)
@@ -970,15 +1184,27 @@ def run_a2_batch(
             budget_plan=budget_plan,
         )
 
-    # --- formal/mock run: execute ---
-    # Preflight must pass before any run
+    is_formal = transport is None
+
+    # --- Approval gate: required for formal runs; must happen before any infra ---
+    if is_formal:
+        if approval is None:
+            raise ApprovalValidationError(
+                "formal A2 run requires an A2FormalApproval credential; "
+                "received None.  Obtain owner approval and pass it as "
+                "approval=<A2FormalApproval> before executing a live run."
+            )
+        # Raises ApprovalValidationError if batch_id mismatch or invalid type
+        validate_formal_approval_binding(authorization, approval)
+
+    # --- Offline preflight must pass before any infra creation ---
     pf = run_a2_offline_preflight(authorization)
     if not pf["ok"]:
         return A2BatchResult(
             batch_id=authorization.batch_id,
             profile_id=A2_PROFILE_ID,
             timestamp_utc=ts,
-            mode="formal" if transport is None else "mock",
+            mode="formal" if is_formal else "mock",
             preflight_ok=False,
             preflight_errors=pf["errors"],
             planned_runs=planned,
@@ -993,46 +1219,66 @@ def run_a2_batch(
     # Load frozen prompt
     prompt = load_frozen_prompt()
 
-    # Determine if this is a formal live run or offline mock
-    is_formal = transport is None
-
-    # Resolve output root for pipeline runs
-    import re as _re
-    _SAFE_RE = _re.compile(r"[^a-zA-Z0-9._-]")
-    safe_batch_id = _SAFE_RE.sub("_", authorization.batch_id)
+    # Resolve safe batch ID and output root
+    safe_batch_id = _safe_filename_component(authorization.batch_id)
     if output_root is None:
         pipeline_output_root = _CANONICAL_RUN_ROOT / safe_batch_id / "pipeline-runs"
     else:
         pipeline_output_root = Path(output_root)
 
-    # Build transport and batch infrastructure for formal runs
+    # --- Build formal batch infrastructure (after approval validated) ---
     if is_formal:
-        # Build budget ledger + BudgetAwareTransport + DeepSeekTransport
         from llm.budget import BudgetAwareTransport, BudgetLedger
         from llm.real_transport import DeepSeekTransport
 
         batch_dir = _CANONICAL_RUN_ROOT / safe_batch_id
+        # Create batch directory (fail if already exists)
+        try:
+            batch_dir.mkdir(parents=False, exist_ok=False)
+        except FileExistsError:
+            raise SummaryWriteError(
+                f"batch directory already exists: {batch_dir}; "
+                "each batch must use a unique batch_id"
+            )
+
+        # Write initial batch summary BEFORE BudgetLedger / Transport
+        initial_data = _build_initial_summary(
+            authorization, approval, planned, prompt, ts
+        )
+        writer = _SummaryWriter(batch_dir, initial_data)
+        try:
+            writer.write_initial()
+        except SummaryWriteError:
+            # Clean up the directory if summary write fails
+            try:
+                batch_dir.rmdir()
+            except OSError:
+                pass
+            raise
+
+        # Now safe to create BudgetLedger and Transport
         ledger = BudgetLedger(batch_dir, authorization)
         ledger.acquire_lock()
-        raw_dir = batch_dir / "raw"
         raw_retention_policy = RetentionPolicy(
             retain_raw=True,
             base_dir=f"work/app001-runs/{safe_batch_id}/raw",
         )
+        summary_path: str | None = str(writer.summary_path)
     else:
         ledger = None
-        raw_dir = None
         raw_retention_policy = RetentionPolicy.default()
+        writer = None
+        summary_path = None
 
     results: list[A2RunResult] = []
     mode = "formal" if is_formal else "mock"
+    summary_write_failed = False
 
     try:
         for plan in planned:
             natural_language = input_map[plan.input_id]
 
             if is_formal:
-                # Build per-run budget-aware transport
                 from llm.budget import BudgetAwareTransport
                 from llm.real_transport import DeepSeekTransport
 
@@ -1091,13 +1337,33 @@ def run_a2_batch(
                         authorization=authorization,
                         pipeline_output_root=pipeline_output_root,
                     )
+
             results.append(result)
+
+            # Persist run evidence atomically (formal runs only)
+            if is_formal and writer is not None:
+                try:
+                    writer.update_run(result)
+                except SummaryWriteError as exc:
+                    summary_write_failed = True
+                    # Mark the run with the write error and stop further runs
+                    result.errors = list(result.errors) + [
+                        {"code": "SUMMARY_WRITE_FAILED", "message": str(exc)}
+                    ]
+                    break
+
     finally:
         if ledger is not None:
             try:
                 ledger.release_lock()
             except Exception:  # noqa: BLE001
                 pass
+        # Finalize summary
+        if is_formal and writer is not None and not summary_write_failed:
+            try:
+                writer.finalize(batch_status="complete")
+            except SummaryWriteError:
+                pass  # Best-effort finalization; don't mask the results
 
     return A2BatchResult(
         batch_id=authorization.batch_id,
@@ -1109,4 +1375,5 @@ def run_a2_batch(
         planned_runs=planned,
         results=results,
         budget_plan=budget_plan,
+        summary_path=summary_path,
     )
