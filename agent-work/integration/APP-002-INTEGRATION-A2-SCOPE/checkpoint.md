@@ -270,8 +270,32 @@ git diff --check
 
 1. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m py_compile src/integration/a2_runner.py tests/integration/test_a2_runner.py`
 2. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.integration.test_a2_runner -q` — 预期 87 tests OK
-3. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/integration -p 'test_*.py' -q` — 预期 81+6=87 A2 通过（pipeline/schema_to_ir 有既有 cadquery 失败，不引入新失败）
+3. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/integration -p 'test_*.py' -q` — 预期 81+87=168 项全部通过（A1 原有集成 81 项，A2 专项 87 项；固定 CadQuery 环境运行）
 4. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/schema -p 'test_*.py' -q` — 预期 17 OK
 5. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -p 'test_*.py' -q` — 预期 941 OK（8 既有 skip）
 6. `git diff --check`
 7. 核对：answer 路径 3 分支携带 `raw_retention_meta`；finalize 失败时 `summary_finalize_error` 非空；锁释放；`is_test_only` 拒绝逻辑未修改；`FORMAL_EVALUATION_ALLOWED=False` 未改
+
+
+## Codex 中枢独立复核（2026-11-12）
+
+### 结果：pass（窄修）；待合并后标记 done
+
+- 提交 `e037cb2` 的代码差异与 R1-CORRECTION-2 记录一致；工作区干净，未发起模型或网络请求。
+- Python 3.11.18 验证：A2 专项 `87/87` 通过；固定 CadQuery 环境 Integration 全量 `168/168` 通过；Schema `17/17` 通过；LLM `941` 通过、`8` 个既有 FUSE skip；相关 `py_compile` 和 `git diff --check` 通过。
+- 定向复核通过：正式 answer 成功、raw 读取失败、pipeline 异常分支均保留 `raw_retention_meta`；finalize 失败端到端测试确认 `summary_finalize_error` 可见、3 条结果保留且账本锁释放；dry-run 保持无副作用。
+- 结论：R1-CORRECTION-2 的实现和测试满足当前窄修验收；该分支尚未合并 `main`，合并后再将 A2 scope 状态更新为 `done` 或进入下一项正式授权流程。
+
+### handoff_successor_check
+
+```text
+predecessor=APP-002-INTEGRATION-A2-R1-CORRECTION-2, checkpoint.md, e037cb2
+files_format=PASS；代码、专项测试、checkpoint 与 WORKLOG 均存在且工作区干净
+core_rerun=PASS；Python 3.11.18 下 A2 87/87、Integration 168/168、Schema 17/17、LLM 941 + 8 skip
+normal_case=PASS；dry_run preflight_ok=True，3 个 logical runs 计划生成
+failure_case=PASS；finalize 失败端到端测试返回 summary_finalize_error，释放账本锁且不调用 pipeline
+interface=PASS；raw_retention_meta 由 formal adapter record 传递，summary 使用 body_sha256
+limits=PASS；未运行真实模型/网络，FORMAL_EVALUATION_ALLOWED=False，仍需独立 live scope/approval
+result=pass
+blocking_issue=无代码阻断；分支尚未合并 main
+```

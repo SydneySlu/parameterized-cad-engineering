@@ -2348,3 +2348,14 @@ commit=待提交
   - confirmed=answer 路径 3 分支均携带 raw_retention_meta; raw_sha256 来自 retention meta 非 ir_index; 无响应时 meta 为 None; finalize 失败时 summary_finalize_error 非空且锁释放; 分母 3 条 run 完整; mock 结果不代表真实模型效果
   - unresolved=Python 3.11.18 下全量验证(LLM 941项, integration cadquery路径, 87项A2专项); test_pipeline/test_schema_to_ir 既有 VM cadquery 缺失失败
   - next_agent_focus=Codex 中枢在 Python 3.11.18 下: 1) 87项A2测试; 2) LLM全量; 3) Schema 17项; 4) py_compile; 5) git diff --check; 6) 确认 answer 路径 raw_retention_meta 传递、finalize 端到端错误可见、锁释放均通过
+
+
+### APP-002-INTEGRATION-A2-R1-CORRECTION-2 / Codex 中枢独立复核 / pass / 2026-11-12
+
+- 基线：分支 `cc/APP-002-INTEGRATION-A2-SCOPE`，提交 `e037cb2`，工作区干净。
+- 动作：核对 R1-CORRECTION-2 差异和 checkpoint；在 Python 3.11.18 下重跑窄修及上下游回归；抽查正常、失败和 dry-run 路径。
+- 验证：A2 专项 `87/87` 通过；固定 CadQuery 环境 Integration 全量 `168/168` 通过；Schema `17/17` 通过；LLM `941` 通过、`8` 个既有 FUSE skip；相关 `py_compile`、`git diff --check` 通过。
+- 确认：正式 answer 的成功、raw 读取失败、pipeline 异常分支均保留 `raw_retention_meta`；summary 的 `raw_sha256` 来自 retention `body_sha256`；finalize 失败可见于 `summary_finalize_error`，3 条结果保留且账本锁释放；dry-run 保持无副作用。
+- 文档收束：修正 checkpoint 中过时的 Integration 预期数字 `81+6=87`，明确实际总数为 `81+87=168`，并追加独立复核 handoff 记录。
+- 边界：未调用真实模型、未访问网络或密钥、未创建正式批次；`FORMAL_EVALUATION_ALLOWED=False`、A2 scope、预算、输入/labels hash 未改变。
+- 下一步：将分支合并到 `main`；合并后再把 A2 scope 标记为 `done`，然后按负责人批准的独立 batch scope 决定是否进入 live preflight。
