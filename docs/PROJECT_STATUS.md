@@ -65,11 +65,12 @@
 | APP-001-V5-ACTIVATION | v5 生产版本化激活 | Codex + Codex 中枢 | done | `2c70225` 已合入并推送至 `main`；中枢审查通过，Python 3.11.18 激活/兼容专项 72 项通过。运行时默认 v5，v2/v3/v4 保留显式历史审计；formal evaluation gate 仍为 `False`。 |
 | APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | done | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配，但实际位于批次根目录，偏离授权指定的 `raw/` 子目录。runner 已窄修为后续正式运行写入 `batch/raw/`；历史批次未移动/重跑。分支已合入并推送，Codex 在 `main=95d1dcb` 上复验：LLM 842 通过/8 个既有 FUSE skip，Schema 17 通过，runner+v5 入口 101 通过/1 个既有 skip；详见审查记录。后续真实运行需新入口基线、新 batch ID 和单独授权。 |
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
-| APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | planned | 已完成资产核验、任务拆分与可执行 prompt；待 CC 认领实现；目标是合成 v5 envelope→真实本地 STEP，未授权真实模型整链 |
+| APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
+| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口准备 | Codex 中枢 + CC | in_progress | 先冻结真实输入、预算、batch、授权模板和入口；复用 DeepSeek `deepseek-flash`，尚未发 live 请求，`FORMAL_EVALUATION_ALLOWED` 仍为 `False` |
 
 ## 当前缺口与限制
 
-- 主要工程缺口是语言层到后端的正式连接：现有 adapter 仅到 Schema，IR 明确标为 `blocked_no_approved_ir_mapping`。CC 首任务补严格构造门、正式参数→IR adapter 与运行隔离统一入口；不打开旧评测 runner 的 CAD 权限。
+- A1 的语言层到后端连接已完成并合入 `main`；当前缺口是受控真实模型→CAD 整链入口及其独立 scope/授权。旧评测 runner 不自动获得 CAD 权限，A2 必须使用新的受控入口。
 - 已有后端并非零进度。本轮固定 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境下 CAD 13 项、Schema/IR 22 项通过，包含真实本地构造、STEP 导出与回读；这不是自然语言真实模型整链证据。
 - v5 已有固定九案例真实双模型证据，当前没有真实模型→STEP 的整链验收。新模型整链需新受控 scope、输入、预算、batch ID 与项目负责人授权；旧 Schema-only 和 held-out scope 不自动扩展。
 - 15 行覆盖当前冻结单族全部合法目录配置，不是语言训练样本；九案例的条件/模型运行次数不是独立用户需求数。语言覆盖、运行稳定性、跨族扩展分别规划。
@@ -78,15 +79,16 @@
 
 ## 当前工作单元边界
 
-- `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
+- `APP-002-INTEGRATION-A1`：已完成；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
+- `APP-002-INTEGRATION-A2-SCOPE`：当前进行中；只准备真实模型整链的受控入口与授权材料。没有新的 batch ID、没有 live 请求授权，不读取密钥或历史 raw，不改变 v5 prompt/Schema/IR/预算常量。
 - ask/refuse、missing_fields、unsupported、解析/Schema/IR 失败不调用 CAD；构造/导出/回读失败不能报告成功或发布其他运行旧文件。用户显式值、目录派生值与规则派生值分别保存。
 - 本工作包不发模型/网络请求，不读密钥、.env 或历史 raw 正文；不修改冻结 prompt、Schema/IR 语义、预算/授权或旧批次，`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 错误几何、关键参数丢失、错误放行、假成功属于交付阻断；措辞、额外语言覆盖与新实验进入 backlog，不自动阻断主闭环。
 
 ## 下一步
 
-1. CC 按 [A1 工作 prompt](coordination/prompts/APP-002-INTEGRATION-A1-cc.md) 完成合成提取→真实 STEP 的统一离线入口；Schema→IR→CAD 高风险交接执行 double check。
-2. 中枢在固定 CAD 环境独立验收 A1：合法、单位、70/80 mm 边界、缺参、冲突、CAD/导出失败及运行隔离，查看参数、IR、验证与 STEP 对应关系。状态在实现前为 planned，不提前称已接通。
-3. A1 通过后准备 A2 真实模型整链接线与明确范围，提交新的输入、预算、batch ID 和授权模板，再运行 DeepSeek 真实整链并完成里程碑 B。
+1. A1 已完成：固定环境独立验收和合并后回归均通过，证据保存在 A1 checkpoint。
+2. 中枢与 CC 完成 A2 scope/preflight：冻结输入、预算、batch ID、授权模板、raw/证据路径和失败门；在授权前不得发 live 请求。
+3. A2 scope 通过独立复核并获项目负责人批准后，才执行 DeepSeek 真实整链，并进入里程碑 B 六类验收。
 4. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
 5. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

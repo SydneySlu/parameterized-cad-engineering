@@ -10,15 +10,15 @@
 
 | 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
 |---|---|---|
-| A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | planned；需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
-| A：接入真实提取 | A2：中枢定义新 scope，CC 接受控模型路径 | planned；复用已审查 DeepSeek `deepseek-flash` 配置，新的输入/预算/batch/授权后才发请求；不扩大旧评测权限 |
+| A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
+| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | in_progress；先完成真实模型整链的输入、预算、batch、授权和入口设计及离线 preflight；复用已审查 DeepSeek `deepseek-flash` 配置，所有 live 请求仍需单独授权，不扩大旧评测权限 |
 | B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | planned；合法、单位、第二螺钉边界、缺参、冲突、构造/导出失败六类；本地夹具验证后，再取得真实模型整链证据 |
 | C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
 
-- 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。本轮 CAD 13 项、Schema/IR 22 项复验通过；实际缺正式语言→后端连接层，不重做后端。
+- 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
 - v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
-- 首任务详见 [CC prompt](coordination/prompts/APP-002-INTEGRATION-A1-cc.md)；证据与接口见 [基线 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
+- A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 准备任务见 [CC prompt](coordination/prompts/APP-002-INTEGRATION-A2-scope-cc.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
 ## 阶段 0：仓库和协作基础
@@ -45,7 +45,7 @@
 
 ## 阶段 2：Typed CAD IR 和确定性主线
 
-- [x] 单族 IR v0.2.0 规范、语义验证与后端接入已存在（IR-001 R3 修复已验收）；正式语言参数→IR adapter 属 A1 缺口，不重做 IR
+- [x] 单族 IR v0.2.0 规范、语义验证与后端接入已存在（IR-001 R3 修复已验收）；正式语言参数→IR adapter 已由 A1 提供，不重做 IR
 - [x] 首族 IR 已定义固定节点、引用、错误码及 canonical 检查；跨族扩展 deferred（IR-002）
 - [x] 建立白名单 CadQuery/OCP 编译器（CAD-005；canonical 输入绑定经中枢复核，固定环境测试通过）
 - [x] 建立实体有效性、STEP 回读和零件族规则验证器（CAD-006；冻结容差策略实现并通过固定环境标准/边界/失败路径测试）
@@ -65,7 +65,7 @@
 - [x] 按 ADR-0014 运行 APP-001 第一阶段诊断批次（`app001-phase1-20261107-01`、`app001-phase1-20261107-02`；每批 36 条逻辑运行、物理 HTTP 未超过 108；IR/CAD/geometry/STEP 禁用）；第二批次的 envelope 缺失已定位并由 `APP-001-PHASE1-ENVELOPE-FIX` 修复、合入 `main`，旧批次仍仅作诊断证据；修复后正式批次待重新授权，详见 [`agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md)
 - [x] 按接受的 ADR-0016 将生产 prompt/解析契约切换到 `app001-extraction.v3`；Python 3.11.18 离线验证通过；真实模型效果评测仍需新的唯一批次授权
 - [x] 按接受的 ADR-0017 将生产 prompt/解析契约切换到 `app001-extraction.v4`；合入提交 `c18fd35` 已完成 Python 3.11.18 离线复核；真实模型效果评测仍需新的唯一批次授权
-- [ ] 优先实现最小集成连接层与严格构造门（APP-002-INTEGRATION-A1）；自动字段修复循环后置，不阻塞首次成功闭环
+- [x] 实现最小集成连接层与严格构造门（APP-002-INTEGRATION-A1，`d6faf70`）；自动字段修复循环后置，不阻塞首次成功闭环
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）
 

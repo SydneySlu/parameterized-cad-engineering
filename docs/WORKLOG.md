@@ -2244,3 +2244,17 @@ commit=待提交
 - 未改变：Schema/IR 语义、编译器规则、prompt、预算、授权、历史批次；FORMAL_EVALUATION_ALLOWED=False 不变。
 - 提交：分支 cc/APP-002-INTEGRATION-A1，P1 窄修 commit（见下方 short hash）。
 - 下一步：Codex 中枢在 Mac 固定 CAD 环境执行 `work/benchcad-output/venv/bin/python scripts/run_cad_pipeline.py --request "请按 GN 705 做一个轴环，孔径 24 mm" --synthetic-envelope tests/integration/fixtures/answer-bore24.json --output-root work/integration-runs --json`，确认 status=success、STEP 路径在 cad_output/ 内、两个 manifest hash 匹配，再运行 13 项 CAD 和 81 项集成测试，通过后合入 main。
+### APP-002-INTEGRATION-A1-CLOSEOUT / Codex 中枢 / done / 2026-11-11
+
+- 事实收束：A1 分支 `cc/APP-002-INTEGRATION-A1` 的 `d6faf70` 已合入并推送 `main`；本地 `main`、`origin/main` 与 A1 远端 ref 一致。
+- 验证：合并后集成测试 81 项、Schema 测试 17 项通过；此前固定 CAD 环境 CAD 回归 13 项、bore24 STEP 成功/回读、ask 阻断、外部 STEP/symlink 逃逸拒绝和独立复核均通过。
+- 结论：A1 最小后端集成完成；合成 envelope 证据不称为真实模型理解。P1 fail-closed 成功门已生效。
+- 边界：未调用模型/网络，未读取密钥/.env，未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- 下一步：进入 `APP-002-INTEGRATION-A2-SCOPE`，先冻结真实模型整链 scope、预算、batch、授权和受控入口。
+
+### APP-002-INTEGRATION-A2-SCOPE / Codex 中枢 / in_progress / 2026-11-11
+
+- 动作：建立 A2 受控真实模型整链准备工作单元和 CC prompt；复用 A1，不重新设计 Schema/IR/CAD 后端。
+- 草案：优先 DeepSeek `deepseek-flash`，候选 3 条代表性需求（24 mm 合法、80 mm 第二螺钉边界、缺 bore_d 追问）；仅为待批准 scope，不构成请求授权。
+- 下一步：CC 先实现离线 preflight/mock 入口并核对 adapter→pipeline 接口；中枢独立复核后，向项目负责人提交精确预算、唯一 batch_id 和授权模板。
+- 边界：本阶段不发 live 请求、不读 `.env`/API key、不创建正式 batch、不修改冻结 v5/Schema/IR 或旧批次。
