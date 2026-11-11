@@ -2156,3 +2156,10 @@ commit=待提交
 - 验证：Python 3.11.18 专项 held-out 测试 13 项通过；授权/预算/runner 107 项通过、7 个既有 skip；LLM 全量 855 项通过、8 个既有环境/FUSE skip；Schema 17 项通过；相关 `py_compile` 和 `git diff --check` 通过。专项覆盖有效预留、旧账本计数恢复及 scope/provider/endpoint/bucket/per-run 上限拒绝路径。
 - 边界：未访问网络或模型、未读取密钥/`.env`、未读取历史 raw、未创建正式批次目录、未分配 batch ID、无请求授权；现有 ADR-0014 scope 与旧批次不变。
 - 下一步：实现独立 held-out runner，证明输入/标签隔离和所有 preflight/runtime HTTP 在触网前获得该账本预留；之后做独立审查与离线 final preflight，再向负责人提交具体 batch ID 和授权模板。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER-REVIEW / Codex 中枢 / review / 2026-11-11
+
+- 动作：在 `main=5928b23` 上独立审查 CC 实现的 held-out v5 runner、CLI、profile、账本接线和交接材料，并在 Python 3.11.18 下重跑离线验证。
+- 结果：专项 53 项、授权/预算/runner 回归 120 项（7 skips）、LLM 全量 908 项（8 skips）、Schema 17 项通过；CLI dry-run 生成 12 组合。审查发现两项 P1：直接调用 `HeldoutRunner.run_formal()` 可绕过关闭的 `FORMAL_EVALUATION_ALLOWED` 与 CLI 批次授权检查；offline preflight 将 `36+20` 输出为 `56 ≤ 44` 并硬编码 pass。详见 `agent-work/reviews/APP-001-NEXT-REAL-MODEL-EVALUATION-codex-review.md`。
+- 边界：未运行正式入口、live preflight 或 HTTP；未读取密钥/.env 或历史 raw；未创建正式批次目录；无正式 batch ID/请求授权。dry-run 与 offline-preflight 按离线 CLI 实测运行，但 preflight 结论不可采信，直到预算计算修正。
+- 下一步：对两项 P1 作窄修复并补 API 绕过拒绝和预算不等式测试；完成后由 Codex 中枢独立复审，再做 final offline preflight。
