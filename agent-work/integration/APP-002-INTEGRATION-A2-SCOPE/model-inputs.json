@@ -1,0 +1,22 @@
+{
+  "profile_id": "app002-integration-a2.v1",
+  "created": "2026-11-11",
+  "note": "Frozen natural-language model inputs for A2 real-model integration smoke test. Evaluator expectations are in evaluator-labels.json (not in this file). This file must NOT contain expected decisions, expected parameters, or any evaluator-only fields.",
+  "inputs": [
+    {
+      "input_id": "A2-24mm",
+      "condition": "C0",
+      "natural_language": "请按 GN 705 做一个轴环，轴孔直径 24 mm。"
+    },
+    {
+      "input_id": "A2-80mm",
+      "condition": "C0",
+      "natural_language": "请按 GN 705 做一个轴环，轴孔直径 80 mm。"
+    },
+    {
+      "input_id": "A2-ask-bore",
+      "condition": "C0",
+      "natural_language": "请按 GN 705 做一个轴环。"
+    }
+  ]
+}

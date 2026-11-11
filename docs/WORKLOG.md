@@ -2252,9 +2252,28 @@ commit=待提交
 - 边界：未调用模型/网络，未读取密钥/.env，未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
 - 下一步：进入 `APP-002-INTEGRATION-A2-SCOPE`，先冻结真实模型整链 scope、预算、batch、授权和受控入口。
 
-### APP-002-INTEGRATION-A2-SCOPE / Codex 中枢 / in_progress / 2026-11-11
+### APP-002-INTEGRATION-A2-SCOPE / CC / in_progress / 2026-11-11
 
-- 动作：建立 A2 受控真实模型整链准备工作单元和 CC prompt；复用 A1，不重新设计 Schema/IR/CAD 后端。
-- 草案：优先 DeepSeek `deepseek-flash`，候选 3 条代表性需求（24 mm 合法、80 mm 第二螺钉边界、缺 bore_d 追问）；仅为待批准 scope，不构成请求授权。
-- 下一步：CC 先实现离线 preflight/mock 入口并核对 adapter→pipeline 接口；中枢独立复核后，向项目负责人提交精确预算、唯一 batch_id 和授权模板。
-- 边界：本阶段不发 live 请求、不读 `.env`/API key、不创建正式 batch、不修改冻结 v5/Schema/IR 或旧批次。
+- 动作：CC 执行 A2 scope 准备：接口核对、授权 profile 实现、冻结输入/标签、受控入口和 40 项离线测试。
+- 新建文件：
+  - `src/llm/a2_authorization.py`：`A2IntegrationAuthorization`（继承 `FormalRunAuthorization`，覆盖 `__post_init__` 完整检查；profile_id/input_ids/inputs_sha256/enable_cad_pipeline 任一不符冻结常量立即 raise `AuthorizationScopeError`）；`authorize_a2_run(*, batch_id)` 工厂；profile_id=`app002-integration-a2.v1`；scope：DeepSeek `deepseek-flash` only，C0 only，3 inputs × 3 attempts = 9次 HTTP 上限，`enable_cad_pipeline=True`。
+  - `src/integration/a2_runner.py`：`run_a2_offline_preflight()`（inputs SHA-256、budget、batch dir、prompt 检查）；`run_a2_batch(dry_run=True/False, transport=...)`；`_run_one_logical_mock()`（使用 FakeTransport 直接调用 build_deepseek_request→send_with_retry→parse→gate→schema→run_pipeline，绕过 Adapter 的 exact-type FakeTransport 检查）；`_run_one_logical()`（正式路径，使用 BudgetAwareTransport+Adapter）；`CapturingTransport` 已移除。
+  - `tests/integration/test_a2_runner.py`：40 项离线测试，涵盖授权验证（10项）、preflight（4项）、dry-run（5项）、gate（2项）、mock 成功/ask/refuse/blocked/失败（9项）、隔离/版本/hash/budget（10项）。
+  - `agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/model-inputs.json`：3 条冻结自然语言输入（无 evaluator-only 字段）；SHA-256 `d290dc61599237fced58dabf491b1daedeb6dab6fffb8be6b6f068f24ad35f9b`。
+  - `agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/evaluator-labels.json`：评测预期（仅供人工评估，不进入 runner/prompt/adapter）；SHA-256 `67fe1e68ed27fbaef420846ac2f7eb92abb402b49134a058f676a4bdb965d6e7`。
+  - `agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`：scope 草案，含输入清单、预算、目录结构、错误码、退出码和进入 live preflight 的前置条件。
+- 接口核对结论：
+  - A2 不重复实现后端，只添加"LLM 调用 → pipeline 调用"连接层。
+  - `Adapter.run()` 的正式路径（`BudgetAwareTransport`）不需要修改；`A2IntegrationAuthorization` 继承 `FormalRunAuthorization`，可直接通过 Adapter gate 的 `isinstance` 检查。
+  - mock 路径绕过 Adapter `type(transport) is FakeTransport` 的 exact-type 检查，直接调用 `send_with_retry → parse → gate → schema → run_pipeline()`，不修改 adapter.py。
+  - raw 留存使用 `work/app001-runs/{batch_id}/raw/`（在 `BudgetLedger` canonical root 内）；pipeline 输出 `work/app001-runs/{batch_id}/pipeline-runs/`（`run_pipeline()` 无路径限制）。
+  - `BudgetLedger` canonical root `work/app001-runs/` 不需修改；A2 batch_id `app002-a2-smoke-YYYYMMDD-NN` 自然落入。
+- 验证（VM，Python 3.10，无 cadquery）：
+  - `py_compile` `a2_authorization.py` / `a2_runner.py`：通过
+  - `python -m unittest tests.integration.test_a2_runner -v`：Ran 40 tests; OK
+  - `python -m unittest discover -s tests/schema -p 'test_*.py' -q`：Ran 17 tests; OK
+  - `git diff --check`：通过（所有新文件均为 untracked）
+- 注：`tests/integration/test_pipeline.py` 和 `test_schema_to_ir.py` 在 VM（Python 3.10 / 无 cadquery）下有既有失败，原因是 VM 缺 cadquery/OCP，与新文件无关（已记录于 A1 checkpoint 为 `not_run_no_cad_runtime`）。
+- 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；未修改冻结 prompt/Schema/IR 语义/旧 runner/历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 提交：分支 `cc/APP-002-INTEGRATION-A2-SCOPE`（WIP commit，见下方 short hash）。
+- 下一步：Codex 中枢在 Python 3.11.18 下独立复核（40 项 A2 + LLM 全量 + Schema 17 + dry-run preflight + inputs SHA-256 核对），通过后向项目负责人提交 scope 草案和授权模板，取得批准后再进行 live preflight。

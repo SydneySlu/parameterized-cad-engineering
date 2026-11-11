@@ -80,7 +80,7 @@
 ## 当前工作单元边界
 
 - `APP-002-INTEGRATION-A1`：已完成；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
-- `APP-002-INTEGRATION-A2-SCOPE`：当前进行中；只准备真实模型整链的受控入口与授权材料。没有新的 batch ID、没有 live 请求授权，不读取密钥或历史 raw，不改变 v5 prompt/Schema/IR/预算常量。
+- `APP-002-INTEGRATION-A2-SCOPE`：当前进行中；CC 已完成 scope 准备：冻结输入（`model-inputs.json`，SHA-256 锚定）、A2 授权 profile（`a2_authorization.py`，DeepSeek only / C0 / 9次 HTTP 上限 / `enable_cad_pipeline=True`）、受控入口（`a2_runner.py`，offline preflight + mock 路径）和 40 项离线测试（VM Python 3.10 通过）。scope 草案见 `agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`。待 Codex 中枢独立复核和项目负责人批准 scope/batch_id/授权模板后，才可进入 live preflight。
 - ask/refuse、missing_fields、unsupported、解析/Schema/IR 失败不调用 CAD；构造/导出/回读失败不能报告成功或发布其他运行旧文件。用户显式值、目录派生值与规则派生值分别保存。
 - 本工作包不发模型/网络请求，不读密钥、.env 或历史 raw 正文；不修改冻结 prompt、Schema/IR 语义、预算/授权或旧批次，`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 错误几何、关键参数丢失、错误放行、假成功属于交付阻断；措辞、额外语言覆盖与新实验进入 backlog，不自动阻断主闭环。
@@ -88,7 +88,9 @@
 ## 下一步
 
 1. A1 已完成：固定环境独立验收和合并后回归均通过，证据保存在 A1 checkpoint。
-2. 中枢与 CC 完成 A2 scope/preflight：冻结输入、预算、batch ID、授权模板、raw/证据路径和失败门；在授权前不得发 live 请求。
-3. A2 scope 通过独立复核并获项目负责人批准后，才执行 DeepSeek 真实整链，并进入里程碑 B 六类验收。
-4. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
-5. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
+2. **A2 scope 准备完成（CC）**：`a2_authorization.py`、`a2_runner.py`、40 项离线测试（VM 通过）、scope 草案和冻结 inputs 已提交分支 `cc/APP-002-INTEGRATION-A2-SCOPE`。
+3. **待 Codex 中枢独立复核**：复核 `a2_authorization.py`（scope 常量和 fail-closed 检查）、`a2_runner.py`（preflight 逻辑、gate 行为、mock 路径）和测试覆盖；在 Python 3.11.18 下重跑 40 项 A2 测试和 LLM 全量。
+4. **待项目负责人批准**：scope 草案（`scope-draft.md`）、3 条代表性输入、预算（DeepSeek only，9次 HTTP，C0 only）、batch_id 命名格式、完整授权模板。
+5. 以上全部通过后，执行 live preflight 并授权 DeepSeek 真实整链，再进入里程碑 B 六类验收。
+6. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
+7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

@@ -1,0 +1,31 @@
+{
+  "profile_id": "app002-integration-a2.v1",
+  "created": "2026-11-11",
+  "note": "Evaluator expectations for A2 inputs. NOT passed to the model, NOT included in prompts or run records. For human review and post-hoc evaluation only.",
+  "labels": [
+    {
+      "input_id": "A2-24mm",
+      "expected_decision": "answer",
+      "expected_schema_pass": true,
+      "expected_missing_fields": [],
+      "expected_pipeline_status": "success",
+      "note": "Standard legal bore; bore_d=24 is in catalog. second_screw=0 (rule_derived: bore_d<=70). No second screw hole in STEP."
+    },
+    {
+      "input_id": "A2-80mm",
+      "expected_decision": "answer",
+      "expected_schema_pass": true,
+      "expected_missing_fields": [],
+      "expected_pipeline_status": "success",
+      "note": "Second screw boundary; bore_d=80 is in catalog. second_screw=1 (rule_derived: bore_d>70). Second screw hole present in STEP."
+    },
+    {
+      "input_id": "A2-ask-bore",
+      "expected_decision": "ask",
+      "expected_schema_pass": false,
+      "expected_missing_fields": ["bore_d"],
+      "expected_pipeline_status": null,
+      "note": "bore_d not provided. Model should output decision=ask with missing_fields=[bore_d]. Pipeline must NOT be called."
+    }
+  ]
+}
