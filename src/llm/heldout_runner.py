@@ -811,12 +811,15 @@ class HeldoutRunner:
         Verifies (without any network I/O):
         - Input and label artifact SHA-256 pins
         - Profile scope (v5 protocol, 12-run matrix, budget)
-        - Retrieval config and manifest identity (if retrieval_index given)
+        - **Retrieval index present and frozen RET-002 identity verified**
+          (C1 depends on RET-002; a missing or unverifiable index is a
+          hard failure, not a skip)
         - Batch directory does not already exist
         - Budget feasibility (12 × 3 chat ≤ 36, etc.)
 
-        Raises :class:`FormalEvaluationBlockedError` or other errors on failure.
-        Does NOT assign a batch_id or create any directory.
+        Raises :class:`FormalEvaluationBlockedError` on any failure,
+        including a missing or invalid retrieval index.  Does NOT assign
+        a batch_id or create any directory.
         """
         result: dict[str, Any] = {}
 
@@ -839,12 +842,25 @@ class HeldoutRunner:
         result["planned_runs"] = plan.count
         result["plan_sha256"] = plan.plan_sha256
 
-        # 4. Retrieval config check
-        result["retrieval_index_provided"] = self._retrieval_index is not None
-        if self._retrieval_index is not None:
-            result["retrieval_config_check"] = self._verify_retrieval_index()
-        else:
-            result["retrieval_config_check"] = "skipped: no retrieval_index"
+        # 4. Retrieval index — REQUIRED, not optional
+        #    ADR-0019's 12-run matrix includes 6 C1 runs that depend on the
+        #    frozen RET-002 index.  A missing, unloadable, or identity-mismatched
+        #    index is a hard failure; the preflight must not report pass.
+        if self._retrieval_index is None:
+            result["retrieval_index_provided"] = False
+            result["retrieval_config_check"] = "FAIL: no retrieval_index provided"
+            result["offline_preflight_status"] = "fail"
+            raise FormalEvaluationBlockedError(
+                "offline_preflight requires a valid RET-002 retrieval index "
+                "for C1 condition assembly; no retrieval_index was provided. "
+                "The 12-run matrix includes 6 C1 runs that depend on the frozen "
+                "RET-002 index; a missing index cannot be skipped."
+            )
+        result["retrieval_index_provided"] = True
+        # _verify_retrieval_index() raises FormalEvaluationBlockedError on
+        # any identity mismatch (type, manifest path, manifest version,
+        # manifest SHA-256, policy validation, candidate roles, default top_k)
+        result["retrieval_config_check"] = self._verify_retrieval_index()
 
         # 5. Prompt version check
         prompt_artifact = load_frozen_prompt()

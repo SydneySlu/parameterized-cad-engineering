@@ -363,3 +363,93 @@ handoff_successor_check:
 - 新发现阻断：直接运行 `HeldoutRunner().offline_preflight("review-only-no-index-direct-fd99ddb")` 返回 `retrieval_index_provided=False`、`retrieval_config_check="skipped: no retrieval_index"`，但 `offline_preflight_status="pass"`。CLI `_try_load_retrieval_index()` 又会把配置/manifest 加载异常折叠为 `None`；offline-preflight 因而可能在没有验证 C1 所需 RET-002 索引时误报通过。
 - `handoff_successor_check`: `predecessor=fd99ddb R1 runner-fix; core_rerun=Python 3.11.18 suites above; normal_case=CLI offline-preflight with RET-002 index returns pass and budget global=44; failure_case=HeldoutRunner without retrieval_index still returns pass (reproduced); interface=offline preflight must validate the frozen RET-002 index/manifest before pass; limits=no network/model, no credentials, no batch directory; result=review; blocking_issue=missing or failed retrieval index must fail closed with regression tests before final preflight.
 - Next gate: CC makes the narrow fail-closed correction and adds tests for absent index and configuration/manifest load failure; then Codex independently reviews. No final offline preflight, batch ID, authorization template, live preflight, or model request until that passes.
+
+## Retrieval preflight fail-closed fix (APP-001-NEXT-REAL-MODEL-EVALUATION-RETRIEVAL-PREFLIGHT-FAIL-CLOSED, 2026-11-11)
+
+Addresses the new P1 blocker from Codex R1 review (commit `3d42ff2`).
+
+### Fix summary
+
+**`src/llm/heldout_runner.py` — `offline_preflight()` step 4**
+
+Replaced the optional `if self._retrieval_index is not None / else "skipped"` block
+with a hard requirement. If `self._retrieval_index is None`, `offline_preflight()` now
+records `retrieval_index_provided=False`, sets `retrieval_config_check="FAIL: ..."`,
+sets `offline_preflight_status="fail"`, and immediately raises
+`FormalEvaluationBlockedError` before any further checks.  When a retrieval index
+is provided, `_verify_retrieval_index()` runs as before; any identity mismatch
+(type, manifest path, manifest version, manifest SHA-256, policy, candidate roles,
+top_k) also raises and blocks.
+
+**`scripts/run_app001_heldout_v5.py` — offline-preflight mode**
+
+Replaced `_try_load_retrieval_index()` (swallows all exceptions, returns None) with
+`_load_retrieval_index_or_fail()` for the `--offline-preflight` path.  Config or
+manifest load failures now surface as `PREFLIGHT FAILED: cannot load RET-002
+retrieval index: <error>` on stderr with exit 1, not as a silent None that
+propagates to a false pass.
+
+### New tests (13 added, `TestRetrievalPreflightFailClosed`)
+
+- `test_valid_frozen_index_passes_offline_preflight` — normal path
+- `test_missing_index_fails_offline_preflight` — hard failure
+- `test_missing_index_does_not_return_pass` — explicit no-pass assertion
+- `test_wrong_type_index_fails_offline_preflight` — wrong type
+- `test_manifest_path_mismatch_fails` — wrong manifest path
+- `test_manifest_sha256_mismatch_fails` — wrong hash
+- `test_manifest_version_mismatch_fails` — wrong format version
+- `test_policy_validation_failure_fails` — policy.validate() raises
+- `test_rejection_does_not_create_batch_directory` — no side effects
+- `test_rejection_does_not_instantiate_budget_ledger` — no side effects
+- `test_dry_run_does_not_require_retrieval_index` — dry_run still offline
+- `test_dry_run_does_not_read_evaluator_labels` — labels still isolated
+- `test_dry_run_makes_no_network_calls` — no transport instantiation
+
+Updated 6 previously-passing tests in `TestScopeSummaryAndLedgerAudit`,
+`TestBudgetFeasibility`, and `TestEntrypoint` that called `offline_preflight()`
+without a retrieval index; they now pass `_build_valid_mock_retrieval_index()`.
+
+Also added module-level `_build_valid_mock_retrieval_index()` fixture (using real
+frozen RET-002 config manifest_sha256, path, format version, policy, candidate roles,
+and default_top_k) to avoid duplicating setup logic across test classes.
+
+### Validation (Python 3.10.12; must re-run on 3.11.18)
+
+```text
+py_compile src/llm/heldout_runner.py scripts/run_app001_heldout_v5.py tests/llm/test_heldout_runner.py
+  -> OK
+
+test_heldout_runner 83/83 -> OK
+  (70 existing + 13 new TestRetrievalPreflightFailClosed)
+
+test_heldout_authorization + test_authorization + test_budget + test_runner
+  -> 120 OK (skipped=7)
+
+discover tests/llm -> 938 OK (skipped=8)
+discover tests/schema -> 17 OK
+
+git diff --check -> clean
+
+CLI --dry-run --json: 12 combinations, exit 0
+CLI --offline-preflight --batch-id review-only-not-a-batch-20261111 --json:
+  retrieval_index_provided=true, retrieval_config_check=<manifest_sha256>,
+  offline_preflight_status=pass, budget_feasibility.feasible=true,
+  global_total=44, ollama_total=26; no batch dir created
+```
+
+8 skips are existing FUSE/Ollama environment limitations. No network call,
+credential read, formal batch directory creation, or model request occurred.
+No formal batch_id exists.
+
+```text
+handoff_successor_check:
+  predecessor=3d42ff2 (Codex R1 review blocking: missing index returns pass)
+  files_format=pass; py_compile OK on all changed files
+  core_rerun=test_heldout_runner 83/83; regression 120 OK (7 skips)
+  normal_case=offline_preflight with valid mock index returns status=pass and retrieval_index_provided=true
+  failure_case=offline_preflight without index raises FormalEvaluationBlockedError before BudgetLedger/mkdir; manifest_sha256 mismatch and policy validation failure also raise
+  interface=_build_valid_mock_retrieval_index() uses real frozen RET-002 config; no fake data
+  limits=Python 3.10.12 in sandbox (not 3.11.18); Codex independent review required; no batch_id; no model/network request
+  result=review
+  blocking_issue=none; pending Codex re-review of retrieval preflight fix
+```

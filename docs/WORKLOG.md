@@ -4,6 +4,18 @@
 
 ## 2026-11-11
 
+### APP-001-NEXT-REAL-MODEL-EVALUATION-RETRIEVAL-PREFLIGHT-FAIL-CLOSED / CC / review
+
+- 动作：窄修 Codex 中枢 R1 复核（`3d42ff2`）发现的误绿问题：`HeldoutRunner().offline_preflight()` 在无 RET-002 retrieval index 时仍返回 `retrieval_index_provided=False, retrieval_config_check="skipped: no retrieval_index", offline_preflight_status="pass"`；CLI `_try_load_retrieval_index()` 吞掉所有加载异常并返回 `None`，使索引错误无声通过。
+  - `src/llm/heldout_runner.py`：将 `offline_preflight()` 步骤 4 从可选检查改为硬性要求。`self._retrieval_index is None` 时立即设 `retrieval_config_check="FAIL: ..."` / `offline_preflight_status="fail"`，并 raise `FormalEvaluationBlockedError`。
+  - `scripts/run_app001_heldout_v5.py`：`--offline-preflight` 路径从 `_try_load_retrieval_index()`（吞异常，返回 None）改为 `_load_retrieval_index_or_fail()`（失败即 `PREFLIGHT FAILED: cannot load RET-002 retrieval index: <error>` stderr + exit 1）。
+  - `tests/llm/test_heldout_runner.py`：新增 `TestRetrievalPreflightFailClosed`（13 项测试）；修复 6 项旧测试（改传 `_build_valid_mock_retrieval_index()`）；新增模块级 `_build_valid_mock_retrieval_index()` fixture。
+- 执行环境：sandbox Python 3.10.12（非项目固定 3.11.18，须 Codex 中枢在 Mac `/opt/homebrew/bin/python3.11` 重验）。
+- 验证：`py_compile` → OK；heldout 83/83 OK；regression 120/120 OK（7 skips）；LLM 全量 938 OK（8 skips）；Schema 17 OK；`git diff --check` clean；CLI `--dry-run` 12 组合、exit 0；CLI `--offline-preflight` → `retrieval_index_provided=true, feasible=true, global=44`，无批次目录创建。
+- 安全：`FORMAL_EVALUATION_ALLOWED=False` 未改变；evaluator labels 不出现；raw 留存路径不变；缺失索引在 BudgetLedger/mkdir 前拒绝。未修改 ADR-0019 预算值、旧批次、prompt 或生产配置。
+- 限制：sandbox Python 3.10.12，非 3.11.18；Codex 独立复审待完成；final offline preflight 待完成；无 batch_id 或模型请求授权。
+- 下一步：Codex 中枢在 Python 3.11.18 重跑全量测试，核实缺失索引现在 fail closed，确认正常路径 `retrieval_index_provided=true`，之后进行 final offline preflight 并提交批次授权模板。
+
 ### APP-001-NEXT-REAL-MODEL-EVALUATION-R1-CODEX-REVIEW / Codex / review
 
 - 动作：按三层交接协议，在 `main=fd99ddb` 对 held-out runner R1 修复做 Python 3.11.18 中枢独立验收，并检查 ADR-0019、任务 checkpoint、状态和计划。

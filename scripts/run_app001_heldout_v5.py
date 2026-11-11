@@ -134,8 +134,17 @@ def main() -> int:
         if not args.batch_id:
             print("ERROR: --offline-preflight requires --batch-id", file=sys.stderr)
             return 2
-        # Optionally load RET-002 retrieval index for C1 config check
-        retrieval_index = _try_load_retrieval_index()
+        # RET-002 retrieval index is REQUIRED for offline-preflight:
+        # ADR-0019's 12-run matrix includes 6 C1 runs that depend on the frozen
+        # RET-002 index.  A missing or unloadable index must fail closed.
+        try:
+            retrieval_index = _load_retrieval_index_or_fail()
+        except Exception as exc:
+            print(
+                f"PREFLIGHT FAILED: cannot load RET-002 retrieval index: {exc}",
+                file=sys.stderr,
+            )
+            return 1
         runner = HeldoutRunner(retrieval_index=retrieval_index)
         try:
             summary = runner.offline_preflight(args.batch_id)

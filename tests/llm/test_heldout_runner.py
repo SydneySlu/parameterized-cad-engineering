@@ -103,6 +103,38 @@ _EVALUATOR_LABELS_PATH = (
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _build_valid_mock_retrieval_index():
+    """Build a minimal mock RetrievalIndex that passes _verify_retrieval_index().
+
+    Uses the real frozen RET-002 config for identity attributes so the
+    verification checks (type, manifest_path, manifest_version, manifest_sha256,
+    policy, candidate_roles, default_top_k) all pass.  The actual retrieval
+    content is not relevant for these offline tests.
+    """
+    from retrieval.config import (
+        MANIFEST_REL_PATH,
+        MANIFEST_FORMAT_VERSION,
+        DEFAULT_CONFIG_REL_PATH,
+        REPO_ROOT,
+        RetrievalConfig,
+    )
+    from retrieval.distance import DistancePolicy
+    from retrieval import RetrievalIndex
+    real_config = RetrievalConfig.from_path(
+        REPO_ROOT / DEFAULT_CONFIG_REL_PATH, repo_root=REPO_ROOT
+    )
+    ranges_dict = {name: (lo, hi) for name, lo, hi in real_config.ranges}
+    real_policy = DistancePolicy(ranges=ranges_dict)
+    idx = MagicMock(spec=RetrievalIndex)
+    idx.manifest_sha256 = real_config.manifest_sha256
+    idx.manifest_path = REPO_ROOT / MANIFEST_REL_PATH
+    idx.manifest_version = MANIFEST_FORMAT_VERSION
+    idx.policy = real_policy
+    idx.candidate_roles = tuple(real_config.candidate_roles)
+    idx.default_top_k = real_config.default_top_k
+    return idx
+
+
 def _fake_success_response(body: str | None = None) -> TransportResponse:
     if body is None:
         body = json.dumps(
@@ -915,7 +947,7 @@ class TestScopeSummaryAndLedgerAudit(unittest.TestCase):
     def test_offline_preflight_checks_all_hash_pins(self):
         """Offline preflight verifies inputs, labels, and RET-001 manifest hashes."""
         batch_id = f"test-preflight-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         result = summary.offline_preflight_result
         self.assertIsNotNone(result)
@@ -941,7 +973,7 @@ class TestEntrypoint(unittest.TestCase):
 
     def test_offline_preflight_mode_validates_hashes(self):
         batch_id = f"test-entrypoint-preflight-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         self.assertEqual(summary.mode, "offline_preflight")
         self.assertEqual(summary.planned_runs, 12)
@@ -952,7 +984,9 @@ class TestEntrypoint(unittest.TestCase):
         batch_dir.mkdir(parents=True, exist_ok=True)
         (batch_dir / "runs.jsonl").write_text("existing\n", encoding="utf-8")
         try:
-            runner = HeldoutRunner()
+            # Must also provide a retrieval index; the existing batch dir is detected
+            # after the retrieval check, but the rejection still creates no extra dirs.
+            runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
             with self.assertRaises(FormalEvaluationBlockedError):
                 runner.offline_preflight(batch_id)
         finally:
@@ -1090,7 +1124,7 @@ class TestBudgetFeasibility(unittest.TestCase):
     def test_offline_preflight_feasibility_is_computed_not_hardcoded(self):
         """The feasibility value must come from constraint evaluation, not True."""
         batch_id = f"test-feasibility-computed-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         result = summary.offline_preflight_result
         self.assertIsNotNone(result)
@@ -1106,7 +1140,7 @@ class TestBudgetFeasibility(unittest.TestCase):
     def test_offline_preflight_global_http_is_44_not_56(self):
         """Worst-case global HTTP must be ≤ 44, never 56."""
         batch_id = f"test-http-44-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         feasibility = summary.offline_preflight_result["budget_feasibility"]
         wc = feasibility["worst_case"]
@@ -1118,7 +1152,7 @@ class TestBudgetFeasibility(unittest.TestCase):
     def test_offline_preflight_all_constraints_pass(self):
         """All individual budget constraints must pass for the real ADR-0019 scope."""
         batch_id = f"test-all-constraints-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         feasibility = summary.offline_preflight_result["budget_feasibility"]
         for name, constraint in feasibility["constraints"].items():
@@ -1210,7 +1244,7 @@ class TestBudgetFeasibility(unittest.TestCase):
     def test_offline_preflight_status_is_pass_for_valid_budget(self):
         """offline_preflight_status must be 'pass' (not hardcoded) when all checks ok."""
         batch_id = f"test-status-pass-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         summary = runner.offline_preflight(batch_id)
         result = summary.offline_preflight_result
         # Must be 'pass' as a computed result
@@ -1234,7 +1268,7 @@ class TestBudgetFeasibility(unittest.TestCase):
             "explanation": "test",
         }
         batch_id = f"test-infeasible-{uuid.uuid4().hex[:8]}"
-        runner = HeldoutRunner()
+        runner = HeldoutRunner(retrieval_index=_build_valid_mock_retrieval_index())
         with patch("llm.heldout_runner._compute_budget_feasibility", return_value=infeasible):
             with self.assertRaises(FormalEvaluationBlockedError) as ctx:
                 runner.offline_preflight(batch_id)
@@ -1251,6 +1285,232 @@ class TestBudgetFeasibility(unittest.TestCase):
             max_runtime_identity_per_run=3,
         )
         self.assertIn("tags", result["explanation"].lower())
+
+
+# ---------------------------------------------------------------------------
+# Retrieval preflight fail-closed tests (new P1 fix)
+# ---------------------------------------------------------------------------
+
+class TestRetrievalPreflightFailClosed(unittest.TestCase):
+    """Offline-preflight must fail closed when the RET-002 index is absent,
+    unloadable, or its frozen identity cannot be verified.
+
+    None of the rejection paths may create a batch directory, instantiate a
+    BudgetLedger, or trigger any HTTP/model request.
+    """
+
+    def _make_valid_mock_index(self):
+        """Return a minimal mock that passes _verify_retrieval_index().
+
+        Only attributes inspected by _verify_retrieval_index are set;
+        the actual retrieval content is irrelevant here.
+        Uses the real frozen config to obtain the real policy instance.
+        """
+        from retrieval.config import (
+            MANIFEST_REL_PATH,
+            MANIFEST_FORMAT_VERSION,
+            DEFAULT_CONFIG_REL_PATH,
+            REPO_ROOT,
+            RetrievalConfig,
+        )
+        from retrieval.distance import DistancePolicy
+        # Load the real frozen config to get the real manifest_sha256 and ranges
+        real_config = RetrievalConfig.from_path(
+            REPO_ROOT / DEFAULT_CONFIG_REL_PATH, repo_root=REPO_ROOT
+        )
+        # Build a real DistancePolicy from frozen config ranges
+        ranges_dict = {name: (lo, hi) for name, lo, hi in real_config.ranges}
+        real_policy = DistancePolicy(ranges=ranges_dict)
+        from retrieval import RetrievalIndex
+        idx = MagicMock(spec=RetrievalIndex)
+        idx.manifest_sha256 = real_config.manifest_sha256
+        idx.manifest_path = REPO_ROOT / MANIFEST_REL_PATH
+        idx.manifest_version = MANIFEST_FORMAT_VERSION
+        idx.policy = real_policy
+        idx.candidate_roles = tuple(real_config.candidate_roles)
+        idx.default_top_k = real_config.default_top_k
+        return idx
+
+    # ------------------------------------------------------------------
+    # Case 1: valid frozen index → preflight passes
+    # ------------------------------------------------------------------
+
+    def test_valid_frozen_index_passes_offline_preflight(self):
+        """offline_preflight returns status=pass when a valid frozen index is provided."""
+        batch_id = f"test-valid-idx-{uuid.uuid4().hex[:8]}"
+        idx = self._make_valid_mock_index()
+        runner = HeldoutRunner(retrieval_index=idx)
+        summary = runner.offline_preflight(batch_id)
+        result = summary.offline_preflight_result
+        self.assertIsNotNone(result)
+        self.assertEqual(result["offline_preflight_status"], "pass")
+        self.assertTrue(result["retrieval_index_provided"])
+        self.assertNotEqual(result["retrieval_config_check"], "skipped: no retrieval_index")
+        self.assertNotIn("FAIL", str(result.get("retrieval_config_check", "")))
+
+    # ------------------------------------------------------------------
+    # Case 2: missing index → fail closed
+    # ------------------------------------------------------------------
+
+    def test_missing_index_fails_offline_preflight(self):
+        """offline_preflight raises when no retrieval_index is provided."""
+        batch_id = f"test-missing-idx-{uuid.uuid4().hex[:8]}"
+        runner = HeldoutRunner()  # no retrieval_index
+        with patch("llm.heldout_runner.BudgetLedger") as mock_ledger, \
+             patch("pathlib.Path.mkdir") as mock_mkdir:
+            with self.assertRaises(FormalEvaluationBlockedError) as ctx:
+                runner.offline_preflight(batch_id)
+            self.assertIn("retrieval_index", str(ctx.exception).lower())
+            mock_ledger.assert_not_called()
+            mock_mkdir.assert_not_called()
+
+    def test_missing_index_does_not_return_pass(self):
+        """offline_preflight must not return status=pass with no retrieval index."""
+        batch_id = f"test-missing-no-pass-{uuid.uuid4().hex[:8]}"
+        runner = HeldoutRunner()
+        try:
+            summary = runner.offline_preflight(batch_id)
+            # If it somehow doesn't raise, the status must not be 'pass'
+            result = summary.offline_preflight_result or {}
+            self.assertNotEqual(
+                result.get("offline_preflight_status"), "pass",
+                "offline_preflight must not return pass when retrieval_index is missing"
+            )
+            self.assertNotEqual(
+                result.get("retrieval_config_check"), "skipped: no retrieval_index",
+                "skipping retrieval check must not be an acceptable outcome"
+            )
+        except FormalEvaluationBlockedError:
+            pass  # expected path
+
+    # ------------------------------------------------------------------
+    # Case 3: index not a RetrievalIndex → fail closed
+    # ------------------------------------------------------------------
+
+    def test_wrong_type_index_fails_offline_preflight(self):
+        """offline_preflight raises when retrieval_index is not a RetrievalIndex."""
+        batch_id = f"test-wrong-type-{uuid.uuid4().hex[:8]}"
+        runner = HeldoutRunner(retrieval_index="not-an-index")
+        with patch("llm.heldout_runner.BudgetLedger") as mock_ledger:
+            with self.assertRaises(FormalEvaluationBlockedError):
+                runner.offline_preflight(batch_id)
+            mock_ledger.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # Case 4: manifest path mismatch → fail closed
+    # ------------------------------------------------------------------
+
+    def test_manifest_path_mismatch_fails(self):
+        """offline_preflight raises when manifest_path does not match frozen RET-002."""
+        batch_id = f"test-manifest-path-{uuid.uuid4().hex[:8]}"
+        idx = self._make_valid_mock_index()
+        # Override manifest_path to point somewhere wrong
+        idx.manifest_path = Path("/tmp/wrong-manifest.jsonl")
+        runner = HeldoutRunner(retrieval_index=idx)
+        with self.assertRaises(FormalEvaluationBlockedError) as ctx:
+            runner.offline_preflight(batch_id)
+        self.assertIn("manifest_path", str(ctx.exception).lower())
+
+    # ------------------------------------------------------------------
+    # Case 5: manifest_sha256 mismatch → fail closed
+    # ------------------------------------------------------------------
+
+    def test_manifest_sha256_mismatch_fails(self):
+        """offline_preflight raises when manifest_sha256 does not match frozen config."""
+        batch_id = f"test-sha256-mismatch-{uuid.uuid4().hex[:8]}"
+        idx = self._make_valid_mock_index()
+        idx.manifest_sha256 = "a" * 64  # wrong hash
+        runner = HeldoutRunner(retrieval_index=idx)
+        with self.assertRaises(FormalEvaluationBlockedError) as ctx:
+            runner.offline_preflight(batch_id)
+        self.assertIn("manifest_sha256", str(ctx.exception).lower())
+
+    # ------------------------------------------------------------------
+    # Case 6: manifest_version mismatch → fail closed
+    # ------------------------------------------------------------------
+
+    def test_manifest_version_mismatch_fails(self):
+        """offline_preflight raises when manifest_version is wrong."""
+        batch_id = f"test-version-mismatch-{uuid.uuid4().hex[:8]}"
+        idx = self._make_valid_mock_index()
+        idx.manifest_version = "wrong-version"
+        runner = HeldoutRunner(retrieval_index=idx)
+        with self.assertRaises(FormalEvaluationBlockedError) as ctx:
+            runner.offline_preflight(batch_id)
+        self.assertIn("manifest_version", str(ctx.exception).lower())
+
+    # ------------------------------------------------------------------
+    # Case 7: policy validation failure → fail closed
+    # ------------------------------------------------------------------
+
+    def test_policy_validation_failure_fails(self):
+        """offline_preflight raises when policy.validate() raises."""
+        batch_id = f"test-policy-fail-{uuid.uuid4().hex[:8]}"
+        idx = self._make_valid_mock_index()
+        # Replace the real policy with a mock that raises on validate()
+        from retrieval.distance import DistancePolicy
+        broken_policy = MagicMock(spec=DistancePolicy)
+        broken_policy.validate.side_effect = ValueError("policy mismatch")
+        idx.policy = broken_policy
+        runner = HeldoutRunner(retrieval_index=idx)
+        with self.assertRaises(FormalEvaluationBlockedError) as ctx:
+            runner.offline_preflight(batch_id)
+        self.assertIn("policy", str(ctx.exception).lower())
+
+    # ------------------------------------------------------------------
+    # Shared: rejection paths create no batch directory, no ledger, no HTTP
+    # ------------------------------------------------------------------
+
+    def test_rejection_does_not_create_batch_directory(self):
+        """When offline_preflight fails, no batch directory is created."""
+        batch_id = f"test-no-dir-{uuid.uuid4().hex[:8]}"
+        runner = HeldoutRunner()
+        batch_dir = _RUN_CANONICAL_ROOT / batch_id
+        try:
+            with self.assertRaises(FormalEvaluationBlockedError):
+                runner.offline_preflight(batch_id)
+            self.assertFalse(
+                batch_dir.exists(),
+                f"batch directory {batch_dir} must not be created on preflight failure"
+            )
+        finally:
+            shutil.rmtree(batch_dir, ignore_errors=True)
+
+    def test_rejection_does_not_instantiate_budget_ledger(self):
+        """When offline_preflight fails, BudgetLedger is never instantiated."""
+        batch_id = f"test-no-ledger-{uuid.uuid4().hex[:8]}"
+        runner = HeldoutRunner()
+        with patch("llm.heldout_runner.BudgetLedger") as mock_ledger:
+            with self.assertRaises(FormalEvaluationBlockedError):
+                runner.offline_preflight(batch_id)
+            mock_ledger.assert_not_called()
+
+    # ------------------------------------------------------------------
+    # dry_run still offline and label-free regardless of index presence
+    # ------------------------------------------------------------------
+
+    def test_dry_run_does_not_require_retrieval_index(self):
+        """dry_run() must work without a retrieval_index (pure combination plan)."""
+        runner = HeldoutRunner()  # no index
+        summary = runner.dry_run()
+        self.assertEqual(summary.mode, "dry_run")
+        self.assertEqual(summary.planned_runs, 12)
+
+    def test_dry_run_does_not_read_evaluator_labels(self):
+        """dry_run() must not expose evaluator-only label values."""
+        runner = HeldoutRunner()
+        summary = runner.dry_run()
+        plan_str = json.dumps(summary.dry_run_plan, ensure_ascii=False)
+        for val in ("heldout-bore-012", "expected_schema_parameters",
+                    "expected_explicit_claims", "catalog-bore-012"):
+            self.assertNotIn(val, plan_str)
+
+    def test_dry_run_makes_no_network_calls(self):
+        """dry_run() never calls any real transport or HTTP function."""
+        runner = HeldoutRunner()
+        with patch("llm.heldout_runner.HeldoutRunner._build_transport") as mock_transport:
+            runner.dry_run()
+            mock_transport.assert_not_called()
 
 
 if __name__ == "__main__":
