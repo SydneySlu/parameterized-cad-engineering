@@ -1,6 +1,6 @@
 # APP-002-INTEGRATION-A2-SCOPE checkpoint
 
-## Status: in_progress（CC 实现完成，待 Codex 中枢独立复核）
+## Status: done（scope 准备、独立复核和合入完成；live 执行待单独授权）
 
 日期：2026-11-11。负责人：CC（实现阶段）。
 

@@ -11,7 +11,7 @@
 | 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
 |---|---|---|
 | A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
-| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | in_progress；先完成真实模型整链的输入、预算、batch、授权和入口设计及离线 preflight；复用已审查 DeepSeek `deepseek-flash` 配置，所有 live 请求仍需单独授权，不扩大旧评测权限 |
+| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | done；`9b9395c` 已合入 `main`，scope、输入/labels hash、预算、正式批准门、summary/raw 证据链和离线/mock 验证均经 Python 3.11.18 复核；live 请求仍需具体 batch 授权，不扩大旧评测权限 |
 | B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | planned；合法、单位、第二螺钉边界、缺参、冲突、构造/导出失败六类；本地夹具验证后，再取得真实模型整链证据 |
 | C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
 

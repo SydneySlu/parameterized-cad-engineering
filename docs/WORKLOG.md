@@ -2359,3 +2359,12 @@ commit=待提交
 - 文档收束：修正 checkpoint 中过时的 Integration 预期数字 `81+6=87`，明确实际总数为 `81+87=168`，并追加独立复核 handoff 记录。
 - 边界：未调用真实模型、未访问网络或密钥、未创建正式批次；`FORMAL_EVALUATION_ALLOWED=False`、A2 scope、预算、输入/labels hash 未改变。
 - 下一步：将分支合并到 `main`；合并后再把 A2 scope 标记为 `done`，然后按负责人批准的独立 batch scope 决定是否进入 live preflight。
+
+
+### APP-002-INTEGRATION-A2-SCOPE / 合入收束 / Codex 中枢 / done / 2026-11-12
+
+- 动作：确认用户已将 `cc/APP-002-INTEGRATION-A2-SCOPE` 以 fast-forward 方式合入并推送 `main`。
+- 结果：`main`、`origin/main` 与该分支均指向 `9b9395c`，工作区干净。
+- 收束：PROJECT_STATUS、PROJECT_PLAN 和 A2 checkpoint 已同步为 scope 准备完成；记录 Python 3.11.18 独立复核结果（A2 87/87、Integration 168/168、Schema 17/17、LLM 941 + 8 skip）。
+- 边界：尚未发起 live preflight 或真实模型请求；`FORMAL_EVALUATION_ALLOWED=False`、A2 scope、预算、输入/labels hash 和历史批次保持不变。
+- 下一步：项目负责人批准具体 batch_id、3 条输入、DeepSeek/C0/9 次 HTTP scope 和完整授权声明后，执行 live preflight；通过后才可发起真实请求并进入里程碑 B。
