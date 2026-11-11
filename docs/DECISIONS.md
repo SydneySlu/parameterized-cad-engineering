@@ -513,3 +513,37 @@ v4 唯一正式效果批次 `app001-phase1-v4-20261109-01` 的独立审查发现
 ### 实施状态
 
 项目负责人已接受策略方向。v5 激活实现作为独立工作单元进行，尚待 Codex 中枢审查并合入 `main`。不授权模型调用或正式批次；模型效果评测须使用新的唯一 `batch_id`、另行明确授权并通过 Codex final preflight。候选、激活 prompt、验收集和 v4 回滚哈希记录于版本化 manifest。
+
+## ADR-0019：APP-001 held-out v5 检索对照的输入与授权 scope
+
+- 日期：2026-11-11
+- 状态：accepted（方案、预算口径与实现边界；不授权模型请求）
+- 决策人：项目负责人 + Codex
+- 关联任务：APP-001-NEXT-REAL-MODEL-EVALUATION；RET-003
+
+### 决策
+
+1. 本轮仅评估 RET-003 的三个 held-out 查询（`catalog-bore-012/035/080`），比较同一模型可见自然语言输入下 C0 与 C1 的 APP-001 v5 输出及确定性 CAD-003 Schema 结果；逐例描述，保留 `provisional_small_n` 限制。
+2. 模型输入使用固定模板“请按 GN 705 做一个轴环，轴孔 bore_d=<值> mm。”只显式提供该 held-out 查询的 `bore_d`。本轮输入是受控合成评测刺激，不宣称为历史真实用户原话。模型可见 query ID 使用不含数值的 `APP001-HO-01/02/03`。输入文件与 evaluator-only 标签分离：`model-inputs.json` SHA-256 `c00ef6dce6b227368b3bfb63a91bbf7362316f64796834a045c5fea536dc83a6`；`evaluator-labels.json` SHA-256 `bfe94d89d2809634b9e52cb73c9f4733fee30a7b7130a65ef9e13c33545cc35a`。标签含 held-out 样本映射、显式主张和完整 CAD-003 预期参数；标签不得进入 prompt、检索 query、请求日志或模型可见对象。
+3. 唯一计划 scope 为 3 查询 × C0/C1 × DeepSeek `deepseek-flash` / Ollama `qwen3:8b` = 12 逻辑运行；每运行最多 3 次尝试，全批最多 36 次、每 provider 最多 18 次。C1 只允许冻结 RET-002 `retrieval_source` 候选。C2/C2O、IR/CAD/geometry/STEP 禁用。旧批次只读且不混合。
+4. 不修改 ADR-0014 所定义的现有 9-case/36-run 授权。新增 scope 必须使用单独、显式、fail-closed 的授权 profile/factory 和受控入口；授权必须绑定新 batch ID、输入/labels hash、v5 prompt/契约版本和上述精确预算。未匹配时在任何模型请求前拒绝。`FORMAL_EVALUATION_ALLOWED` 保持 `False`。
+5. 本 ADR 接受实验协议与实现边界，不等于批准真实请求。实现、Python 3.11.18 验证、独立审查和 Codex final preflight 全部通过后，仍须由项目负责人审阅新 batch ID 与完整授权模板并单独批准，随后才可运行。
+
+### 原因
+
+RET-003 held-out 清单只提供结构化真值引用，并未提供冻结自然语言请求；将真值直接改写成 query 会让输入生成过程不透明。显式、固定、可审计的模板使本轮仅测试已声明 bore selector 的抽取以及 retrieval-context 的影响，同时通过中性 ID 和物理分离标签降低评测者真值泄漏。现有 `FormalRunAuthorization` 和组合生成器固定于 acceptance-set-v0/36-run scope，不能安全复用或绕过；新增独立 profile 保持旧授权语义不变。
+
+### 限制
+
+本轮只有三个受控合成输入，且输入只包含 bore_d。结论仅描述这三例在固定 provider/model、prompt 和检索配置下的输出差异，不代表自然用户语言分布、统计泛化、跨族能力或广泛模型质量；更不表示 CAD 构造、几何、STEP 或用户效用通过。完整 held-out 参数只供 evaluator 评分使用。
+
+### 实施预算口径补充（2026-11-11）
+
+项目负责人接受以下按物理 HTTP 请求审计、按请求用途分别设硬上限的预算。授权计数不得排除 Ollama 身份请求：
+
+- chat 请求：最多 36 次，全局；DeepSeek 最多 18 次、Ollama 最多 18 次；每个逻辑运行最多 3 次 chat 尝试（保留现有重试策略）。
+- 身份请求：最多 20 次，全局，全部归属 Ollama；其中批次 preflight 的 `/api/version` 与 `/api/tags` 各最多 1 次，运行时 `/api/tags` 最多 18 次（6 个 Ollama logical run × 最多 3 次 transport attempt；跨所有运行累计）。失败的身份请求和对身份端点的重试也计入额度；不能通过重试或换 logical_run_id 重置上限。
+- 因此所有物理 HTTP 请求总上限为 44；DeepSeek provider 总上限为 18，Ollama provider 总上限为 26。任何 category、provider 或全局上限先耗尽时均须 fail closed。
+- 每一物理请求都必须先取得授权绑定的持久账本 reservation，再执行网络 I/O；账本记录 endpoint、provider、请求类别、logical_run_id（preflight 使用固定 batch-level ID）和结果。Preflight 请求属于获批批次预算，但只有用户批准该 batch 的完整授权模板后才可发送。
+
+该预算精确覆盖本 ADR 的 12-run 矩阵与既有每运行最多 3 次 transport attempt。Ollama 运行时身份检查在首个 chat 前执行；若 tags 失败，现有 retry loop 会在后续 attempt 再试 tags，因此 identity category cap 需允许最多 18 次 runtime tags。每个 Ollama run 的物理请求数仍最多 4（最多 3 次 tags attempt，其中成功的 tags 可与该次 attempt 的一次 chat 同时发生，或一次 tags 成功加最多 3 次 chat）；所以 6 个 Ollama run 最多 24 次，另加两次 batch preflight 为 26。全局最多 44 次（DeepSeek 最多 18 + Ollama 最多 26）。identity 20 与 chat 36 是分类上限，provider 和全局上限共同约束，不能把分类上限简单相加当作可用总额。该设计不增加逻辑运行、chat 次数或重试次数。实现必须使用独立、fail-closed 的 v5 held-out 授权 profile/入口，保持 ADR-0014 的 9-case/36-run 授权逻辑不变。实现和离线审查通过前不分配正式 `batch_id`；用户批准具体 batch 授权前不发送任何网络请求。

@@ -2080,3 +2080,44 @@ commit=待提交
 - 修改：更新评测提案状态/前置门，新增任务 checkpoint，并同步 PROJECT_STATUS、PROJECT_PLAN。明确当前 `blocked`、无 batch_id、无模型调用授权及解除条件。
 - 验证：`/opt/homebrew/bin/python3.11 --version` → 3.11.18；只读投影/组合正常与拒绝检查如上；`git diff --check` 通过。无网络/模型请求、无密钥或 `.env` 读取、无批次目录创建。
 - 下一步：项目负责人决定 held-out 自然语言输入的合法来源/构造流程，以及是否接受记录新的精确 12-run 授权接口决策。解决后再冻结输入与 evaluator labels、独立检查泄漏并实现入口；全部审查和 final preflight 通过后才生成并呈批 batch_id 与正式授权模板。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION / Codex 中枢 / in_progress / 2026-11-11
+
+- 决策：项目负责人同意固定模板为三条 held-out 查询构造只含显式 `bore_d` 的受控合成模型输入，并同意为精确 12-run scope 记录单独授权决策。ADR-0019 已追加，明确该决策不授权模型请求，旧 ADR-0014 scope 不变。
+- 冻结输入：`agent-work/llm/APP-001-NEXT-REAL-MODEL-EVALUATION/model-inputs.json` SHA-256 `c00ef6dce6b227368b3bfb63a91bbf7362316f64796834a045c5fea536dc83a6`；不含 held-out truth，仅有中性 query ID 和固定模板输入。
+- 冻结标签：`evaluator-labels.json` SHA-256 `bfe94d89d2809634b9e52cb73c9f4733fee30a7b7130a65ef9e13c33545cc35a`；含 RET-003 query/sample 映射、用户显式主张和 Schema 期望，仅供 evaluator，不得进入模型请求。
+- 下一步：实现单独的精确 12-run fail-closed 授权 profile 与受控入口；离线测试需验证 hashes、输入/标签隔离、预算/组合边界、preflight 前零请求、raw 写入 batch/raw。未分配 batch ID，不授权请求。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-FROZEN-INPUT-CHECK / Codex 中枢 / in_progress / 2026-11-11
+
+- 动作：按 ADR-0019 后续门对冻结模型输入、evaluator labels、RET-001 manifest 来源及状态文档做续任定向复核。
+- 结果：Python 3.11.18 解析两份 JSON；inputs SHA-256 `c00ef6dce6b227368b3bfb63a91bbf7362316f64796834a045c5fea536dc83a6`、labels SHA-256 `bfe94d89d2809634b9e52cb73c9f4733fee30a7b7130a65ef9e13c33545cc35a`、来源 manifest SHA-256 `b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297` 均与 ADR/labels 一致；三条标签参数均逐条匹配 manifest，显式 bore_d 与 NLI 一致，query ID 一一对应且不重复。模型输入不含 sample_id 或预期 Schema 参数。
+- 交接状态：修正 checkpoint 的过时 `blocked` 状态，PROJECT_STATUS/PROJECT_PLAN 同步 ADR-0019 已解决输入/授权设计门；尚未实现专用 profile/入口。旧 9-case/36-run 授权保持冻结。
+- 边界：未读 `.env`/密钥，未发模型或网络请求，未创建批次目录，未读取历史 raw；无 batch_id、无请求授权。
+- 验证：`/opt/homebrew/bin/python3.11 -m json.tool` 两份 JSON 均通过；上述 hash/manifest/正常样例/映射检查通过；`git diff --check` 通过。
+- 下一步：实现独立 profile/入口与离线拒绝/正常路径覆盖；通过 Python 3.11.18 和独立复核后，再生成唯一 batch_id 与完整授权模板交项目负责人批准。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-BUDGET-PREFLIGHT / Codex 中枢 / blocked / 2026-11-11
+
+- 发现：矩阵的 12 个逻辑运行包含 6 个 Ollama run。每 run 最多 3 次 chat 时，Ollama chat 上限为 18；当前 `BudgetAwareTransport` 还会在每个 Ollama run 首次 chat 前通过账本记入 1 次 `/api/tags`，因此 Ollama provider 最多需 24 次账本额度，超过 ADR-0019 的 18/provider；全矩阵 chat 36 + tags 6 = 42，超过 36 总上限。
+- 另有入口批次前 runtime identity 检查：`/api/version` 和 `/api/tags` 也是物理 HTTP 请求，但 ADR-0019 未定义这两次是否包含在“最多 36 次”内、如何绑定授权/账本。不得把请求移出账本或隐藏计数来规避。
+- 处置：撤回本轮未完成的授权 profile/入口/测试草稿；不改变 `src/llm` 既有执行逻辑。更新 ADR-0019 实施补充、checkpoint、PROJECT_STATUS、PROJECT_PLAN，状态设为 blocked。
+- 已验证：Python 3.11.18 下输入/标签/manifest 哈希与 held-out 映射一致；9 项离线草稿测试通过；既有授权/预算/runner相关 177 项通过（8 个 FUSE skip），LLM 全量 850 项通过（8 个 FUSE skip），Schema 17 项通过；`py_compile` 和 `git diff --check` 通过。mock 的 `[ABORT]/[FAIL]` 输出是既有入口拒绝用例。
+- 边界：无 batch_id、无真实模型请求授权；未读密钥/.env，未访问网络，未建批次目录，旧批次和 9-case ADR-0014 scope 不变。
+- 下一步：项目负责人明确预算授权针对 chat attempts 还是 all physical HTTP requests；若所有物理请求都计数，需决定是否提高 total/provider caps，或采用可审计且不削弱身份校验的身份检查方案，并明确 preflight 物理请求的授权记录方式。取得决策后再修订 ADR-0019、实现入口并重新验收。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-BUDGET-DECISION / Codex 中枢 / in_progress / 2026-11-11
+
+- 决策：项目负责人同意由 Codex 设计适合该固定 12-run 矩阵的预算。该 checkpoint 初稿先记下身份最多 8（preflight 2 + runtime tags 6）；后续对 retry 调用关系复核后修正为 20，详见 `APP-001-NEXT-REAL-MODEL-EVALUATION-BUDGET-REVIEW-CORRECTION`。本段为历史阶段记录，不作为最终预算口径。
+- 依据：需同时计入 12-run 矩阵的 chat 与 Ollama 身份核验，且保留每次 send 最多 3 次现有重试。
+- 文档：同步 ADR-0019、任务 checkpoint、PROJECT_PLAN、PROJECT_STATUS；先前 blocked 记录保留为历史，现状态恢复为 `in_progress`。
+- 边界：未分配 batch_id；未授权真实请求；未发网络/模型请求；未读取 `.env` 或密钥；ADR-0014 既有 scope 不变。
+- 下一步：实现独立精确 12-run profile/入口和分项物理请求 ledger，覆盖正常/拒绝/上限边界、preflight 授权绑定与请求前预留；Python 3.11.18 回归、独立审查和离线 final preflight 通过后，再生成 batch_id 和完整授权模板请负责人批准。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-BUDGET-REVIEW-CORRECTION / Codex 中枢 / in_progress / 2026-11-11
+
+- 修正：复核 `BudgetAwareTransport.send()` 与 `send_with_retry()` 的调用关系后，发现 Ollama runtime `/api/tags` 失败会在后续 retry attempt 再发一次 tags；identity category cap 因此从先前草记的 8 修正为 20（batch preflight 两次 + runtime tags 最多 18 次）。此前 8 次只覆盖 tags 成功的正常路径，不足以表达授权硬上限。
+- 预算：chat category 36（DeepSeek 18、Ollama 18；每 logical run 最多 3）；identity category 20；global physical HTTP 44；DeepSeek provider 18；Ollama provider 26。每项是同时生效的硬上限。每 Ollama run 的 runtime sequence 最多 3 次 transport attempt；tags 失败会占用 attempt 且可能减少 chat，所有实际 HTTP 均先预留账本额度。
+- 变更：修正 ADR-0019、checkpoint、PROJECT_STATUS、PROJECT_PLAN；不重写先前日志。前一条预算数字为计算复核前的暂定值，以本修正为准。
+- 边界：仍未分配 batch_id、未授权任何请求、未做网络或模型调用、未访问密钥/.env。旧 ADR-0014 scope 不变。
+- 下一步：以修正预算实现独立 fail-closed profile、物理请求分类账本和受控入口，并加入 category/provider/global 上限及 tags 重试路径测试；通过本机 3.11.18 回归、独立审查和 final offline preflight 后再生成 batch ID 与完整授权模板供用户批准。

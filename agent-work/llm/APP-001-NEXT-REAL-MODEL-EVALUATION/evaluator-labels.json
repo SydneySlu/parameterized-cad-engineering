@@ -1,0 +1,31 @@
+{
+  "artifact_version": "APP-001-NEXT-REAL-MODEL-EVALUATION.labels.v1",
+  "source_manifest": {
+    "path": "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl",
+    "sha256": "b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297"
+  },
+  "split_status": "provisional_small_n",
+  "cases": [
+    {
+      "query_id": "APP001-HO-01",
+      "ret003_query_id": "heldout-bore-012",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-012",
+      "expected_explicit_claims": {"bore_d": 12},
+      "expected_schema_parameters": {"bore_d": 12, "outer_d": 22, "width": 12, "screw_d": 6, "screw_len": 8, "second_screw": 0}
+    },
+    {
+      "query_id": "APP001-HO-02",
+      "ret003_query_id": "heldout-bore-035",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-035",
+      "expected_explicit_claims": {"bore_d": 35},
+      "expected_schema_parameters": {"bore_d": 35, "outer_d": 56, "width": 16, "screw_d": 8, "screw_len": 12, "second_screw": 0}
+    },
+    {
+      "query_id": "APP001-HO-03",
+      "ret003_query_id": "heldout-bore-080",
+      "sample_id": "set_screw_shaft_collar/catalog-bore-080",
+      "expected_explicit_claims": {"bore_d": 80},
+      "expected_schema_parameters": {"bore_d": 80, "outer_d": 110, "width": 22, "screw_d": 12, "screw_len": 20, "second_screw": 1}
+    }
+  ]
+}

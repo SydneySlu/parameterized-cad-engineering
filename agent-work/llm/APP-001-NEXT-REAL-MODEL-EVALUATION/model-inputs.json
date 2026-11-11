@@ -1,0 +1,21 @@
+{
+  "artifact_version": "APP-001-NEXT-REAL-MODEL-EVALUATION.inputs.v1",
+  "family_id": "set_screw_shaft_collar",
+  "prompt_version": "app001-extraction.v5",
+  "construction_protocol": "controlled-template-explicit-bore-selector-v1",
+  "split_status": "provisional_small_n",
+  "cases": [
+    {
+      "query_id": "APP001-HO-01",
+      "natural_language_input": "请按 GN 705 做一个轴环，轴孔 bore_d=12 mm。"
+    },
+    {
+      "query_id": "APP001-HO-02",
+      "natural_language_input": "请按 GN 705 做一个轴环，轴孔 bore_d=35 mm。"
+    },
+    {
+      "query_id": "APP001-HO-03",
+      "natural_language_input": "请按 GN 705 做一个轴环，轴孔 bore_d=80 mm。"
+    }
+  ]
+}

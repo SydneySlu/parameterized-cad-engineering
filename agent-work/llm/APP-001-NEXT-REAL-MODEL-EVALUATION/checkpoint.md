@@ -2,18 +2,25 @@
 
 ## Status
 
-`blocked` — the project owner approved the proposed experimental question and
-scope in principle, and asked Codex to validate the offline design before
-assigning a batch ID. Validation found unresolved input-provenance and
-authorization-interface blockers. No batch ID has been assigned and no model
-request is authorized.
+`in_progress` — ADR-0019 records the accepted controlled-input protocol,
+12-run matrix, and owner-approved physical-request budget. Frozen inputs and
+labels pass hash and manifest checks. The implementation must enforce chat
+caps of 36 total / 18 per provider / 3 per logical run, plus 20 identity
+requests (2 Ollama batch preflight and up to 18 runtime tags: 6 Ollama runs ×
+3 attempts), for hard physical-HTTP caps of 44 total, 18 DeepSeek, and 26
+Ollama. All category, provider, and global caps apply together; category
+caps do not add to a larger effective total. No batch ID has been assigned
+and no model or preflight request is authorized. Implement and independently
+review the dedicated fail-closed profile and entrypoint before final preflight.
 
 ## Repository and predecessor facts
 
 - Repository: `/Users/syd/Desktop/参数化 cad 工程辅助设计`.
-- Branch: `main`; HEAD `2054565b15ba232d151664bfa832b77be10d5a14`.
-- `origin/main`: `95d1dcb8e1ba693769b19b1262228c51ba4f8f7d`; local main is ahead
-  by two documentation commits. Worktree was clean before this checkpoint.
+- Branch: `main`; baseline commit at task start `1f31871`.
+- `origin/main` was behind the local main history at task start; current
+  repository state and any later commits must be rechecked before execution.
+- Worktree has task changes in ADR-0019, status/plan/log, and the two frozen
+  JSON artifacts; these are not yet committed in the task-start snapshot.
 - Proposal: `agent-work/inbox/APP-001-NEXT-REAL-MODEL-EVALUATION-PROPOSAL.md`.
 - Predecessor v5 batch `app001-phase1-v5-20261111-01` is immutable and read-only.
   Its historical raw path deviation remains documented; never move, rewrite,
@@ -24,7 +31,9 @@ request is authorized.
 - Question: compare v5 outputs and deterministic CAD-003 acceptance with/without
   RET-002 retrieval for the three RET-003 held-out cases, case by case.
 - Matrix: 3 cases × C0/C1 × DeepSeek `deepseek-flash` / Ollama `qwen3:8b` = 12
-  logical runs; maximum 3 attempts/run, 36 total, 18/provider.
+  logical runs; chat maximum 3/run, 36 total, 18/provider. Physical HTTP
+  maximum 44 total, 18 DeepSeek and 26 Ollama; identities have a separate
+  maximum of 20 total (2 batch preflight + up to 18 runtime `/api/tags`).
 - C1 uses only RET-002 `retrieval_source` candidates. Exclude C2/C2O and all
   IR/CAD/geometry/STEP execution. `provisional_small_n` requires per-case
   reporting and forbids broad generalization claims.
@@ -58,7 +67,7 @@ correct production API is `project_acceptance_set`. The corrected command above
 used the actual API, pinned the acceptance-set SHA-256, and checked normal and
 rejection paths. This was an inspection-command correction, not a code defect.
 
-## Blocking issues
+## Resolved design gates
 
 1. **Natural-language input provenance:** RET-003's held-out records reference
    manifest parameters as evaluator truth; they do not freeze natural-language
@@ -73,33 +82,57 @@ rejection paths. This was an inspection-command correction, not a code defect.
    cases, C0/C1, 2 providers, 36 logical runs and 108/54 attempt caps. The
    normal plan returns 36; a 3-case projection fails closed. Do not bypass the
    factory, relax it globally, or reuse `scripts/run_app001_v5_formal_batch.py`.
-   A new exact 12-run authorization path and new entrypoint need a recorded
-   decision before implementation, with 12/36/18 caps and hash-bound query
-   inputs.
+   ADR-0019 now records a separate exact 12-run path with 12/36/18 caps and
+   hash-bound inputs. The existing factory and entrypoint remain unchanged.
+
+## Frozen-input successor check (2026-11-11)
+
+Environment: Python 3.11.18 (macOS arm64). Read-only; no model/network request,
+secret or `.env` access, or batch directory creation.
+
+```text
+SHA-256 model-inputs.json -> c00ef6dce6b227368b3bfb63a91bbf7362316f64796834a045c5fea536dc83a6
+SHA-256 evaluator-labels.json -> bfe94d89d2809634b9e52cb73c9f4733fee30a7b7130a65ef9e13c33545cc35a
+SHA-256 RET-001 manifest -> b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297
+```
+
+All three hashes match ADR-0019 and the labels' source manifest. The three
+model-visible IDs map one-to-one to three labels; each explicit bore value
+matches the NLI; each full expected parameter object matches its manifest row.
+The model-input artifact contains no sample IDs or expected schema parameters.
+
+```text
+handoff_successor_check:
+  predecessor=APP-001-NEXT-REAL-MODEL-EVALUATION offline preflight; checkpoint at 1f31871 plus ADR-0019/input artifacts
+  files_format=pass; both JSON files parse; exact hashes and 3-case shape verified
+  core_rerun=Python 3.11.18 read-only artifact/manifest/hash check; pass
+  normal_case=APP001-HO-02 / bore_d=35 matches heldout-bore-035 manifest row; pass
+  failure_case=existing FormalRunAuthorization rejects 3-case projection with expected-9-case guard; pass (prior checkpoint evidence)
+  interface=labels are evaluator-only and separate; model input only has neutral ID and NLI; pass
+  limits=provisional_small_n; synthetic inputs; no inference beyond 3 cases; no model authorization
+  result=in_progress
+  blocking_issue=none; owner-approved caps are recorded in ADR-0019; implementation/review/preflight remain
+```
 
 ## Required next gate
 
-Ask the project owner to resolve/approve:
-
-- whether to author three new natural-language queries under a documented
-  protocol that keeps manifest truth evaluator-only, or revise the experiment
-  to an already frozen model-visible dataset with an honest held-out mapping;
-- the exact-scope new authorization mechanism and its 12-run / 36 total / 18
-  per-provider limits.
-
-After that: freeze inputs and labels separately with hashes; run an independent
-leakage review; record the necessary ADR/decision; implement a dedicated
-fail-closed 12-run entrypoint and offline tests; run Python 3.11.18 regressions;
-complete independent review and final preflight. Only then generate a new unique
-batch ID and present the complete authorization template for explicit approval.
+The project owner accepted strict all-physical-HTTP accounting with separate
+chat and identity subcaps. Implement and test the dedicated profile and
+entrypoint without changing ADR-0014 or production v5 protocol. Every HTTP
+request, including failed preflight/identity calls and retries, must have an
+authorization-bound ledger reservation before network I/O. Run Python 3.11.18
+regressions, independent review, and offline final preflight. Only after those
+gates should a unique batch ID and complete authorization template be
+presented for approval. Live preflight and chat requests both require that
+approval and must be covered by the same batch budget.
 
 ## Handoff self-check
 
 ```text
 handoff_self_check:
-  changed=proposal status/gates; this checkpoint; PROJECT_STATUS; PROJECT_PLAN; WORKLOG
-  commands=Python 3.11.18 pinned acceptance projection and combination normal/failure checks above
-  confirmed=approved question/scope in principle; missing held-out NLI; existing scope rejects 3 cases; no model request
-  unresolved=input provenance protocol and exact-scope authorization decision
-  next_agent_focus=prevent truth-derived prompt leakage and keep existing Phase 1 authorization frozen
+  changed=ADR-0019 budget decision; checkpoint; PROJECT_STATUS; PROJECT_PLAN; WORKLOG; frozen input/label artifacts retained
+  commands=Python 3.11.18 input/label/manifest hash and mapping check; git diff --check; request-budget call-path inspection
+  confirmed=frozen artifacts match ADR hashes and RET-001 rows; approved budget is chat 36, identity 20, HTTP 44 total, DeepSeek 18, Ollama 26; old 9-case authorization unchanged; no request sent
+  unresolved=dedicated authorization/profile/entrypoint, category-aware persistent ledger and test/review gates remain unimplemented
+  next_agent_focus=implement and independently verify authorization-bound reservation for preflight and all runtime HTTP; do not assign batch_id or call network before final authorization
 ```
