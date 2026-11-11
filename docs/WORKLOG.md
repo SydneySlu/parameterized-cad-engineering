@@ -2312,3 +2312,39 @@ commit=待提交
   - A2 专项 81 项、Integration 全量（含 cadquery 路径）、Schema 17 项、LLM 全量 941 项、`py_compile` 3 文件、`git diff --check`
 - 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变；未修改冻结 prompt/Schema/IR 语义/旧 runner/历史批次。
 - 下一步：Codex 中枢在 Python 3.11.18 下独立复核（81 项 A2 + LLM 全量 + Schema 17 + py_compile + diff --check）。
+
+### APP-002-INTEGRATION-A2-R1-CORRECTION-2 / CC / review / 2026-11-11
+
+- 基线：分支 `cc/APP-002-INTEGRATION-A2-SCOPE`，HEAD `230609c`，工作区开始时干净。
+- 任务：补全正式 answer 路径的 raw retention 传递；补齐 finalize 失败端到端测试。
+- 修复 1（answer 路径 raw retention 传递）：
+  - `_run_one_logical()` 的 answer 路径在取得 `adapter_result.record` 后，统一从 `record.raw_response_retention` 复制 `answer_retention_meta`。
+  - 三个 answer 分支（pipeline 成功返回、raw 文件不可用、pipeline 异常）全部传入 `raw_retention_meta=answer_retention_meta`。
+  - `raw_retention_path` 只使用 retention metadata 中确认的 repo-relative retained path。
+  - `raw_sha256` 只由 `raw_retention_meta["body_sha256"]` 提供，不从 `ir_index["envelope_sha256"]` 推导。
+  - 无模型响应时 `raw_retention_meta=None`，不伪造 hash。
+  - mock/dry-run 行为不变。
+- 修复 2（finalize 失败端到端测试）：
+  - 新增 `test_finalize_failure_in_formal_path_via_writer_patch`：patch `_SummaryWriter.finalize` 使其 raise `SummaryWriteError`，patch `BudgetLedger`、`BudgetAwareTransport`、`DeepSeekTransport`、`_run_one_logical` 使用 mock 替身，验证：
+    - `summary_finalize_error` 非空且包含 "finalize"；
+    - 3 条 run 结果仍返回（分母完整）；
+    - `ledger.release_lock` 被调用（锁释放）；
+    - `run_pipeline` 未被调用（所有 run 为 ask）；
+    - `summary_path` 非空（即使 finalize 失败）。
+  - 不发网络、不读密钥、不调用真实 DeepSeek。
+- 新增 6 项 R1-CORRECTION-2 专项测试（`TestA2R1Correction2`），总计 87 项 A2 测试。
+- 验证（VM，Python 3.10.12，无 cadquery）：
+  - `py_compile` `a2_runner.py` / `test_a2_runner.py`：通过
+  - `python -m unittest tests.integration.test_a2_runner -q`：Ran 87 tests; OK
+  - `python -m unittest discover -s tests/schema -p 'test_*.py' -q`：Ran 17 tests; OK
+  - `git diff --check`：通过
+  - 既有 `test_pipeline.py` 和 `test_schema_to_ir.py` 的 failures 为 VM 缺 cadquery/OCP 的既有问题，本次修改不引入新失败。
+- 未运行（需 Mac 固定环境 Python 3.11.18）：
+  - A2 专项 87 项、Integration 全量（含 cadquery 路径）、Schema 17 项、LLM 全量 941 项、`py_compile` 3 文件、`git diff --check`
+- 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变；未修改冻结 prompt/Schema/IR 语义/旧 runner/历史批次/inputs hash/labels hash/budget/scope/is_test_only 逻辑。
+- handoff_self_check:
+  - changed=src/integration/a2_runner.py(answer_retention_meta 传入 3 个 answer 分支), tests/integration/test_a2_runner.py(+6 R1-CORRECTION-2 测试, 87 项总计), docs/WORKLOG.md(追加), agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md(追加)
+  - commands=py_compile(2文件)通过; 87项 test_a2_runner 通过; 17项 Schema 通过; git diff --check 通过; Python 3.10.12
+  - confirmed=answer 路径 3 分支均携带 raw_retention_meta; raw_sha256 来自 retention meta 非 ir_index; 无响应时 meta 为 None; finalize 失败时 summary_finalize_error 非空且锁释放; 分母 3 条 run 完整; mock 结果不代表真实模型效果
+  - unresolved=Python 3.11.18 下全量验证(LLM 941项, integration cadquery路径, 87项A2专项); test_pipeline/test_schema_to_ir 既有 VM cadquery 缺失失败
+  - next_agent_focus=Codex 中枢在 Python 3.11.18 下: 1) 87项A2测试; 2) LLM全量; 3) Schema 17项; 4) py_compile; 5) git diff --check; 6) 确认 answer 路径 raw_retention_meta 传递、finalize 端到端错误可见、锁释放均通过

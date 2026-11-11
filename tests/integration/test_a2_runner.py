@@ -1698,5 +1698,263 @@ class TestA2R1Correction(unittest.TestCase):
             self.assertIn("hash_of_body", summary_text)
 
 
+# ---------------------------------------------------------------------------
+# 19. R1-CORRECTION-2 regression tests
+# ---------------------------------------------------------------------------
+
+class TestA2R1Correction2(unittest.TestCase):
+    """R1-CORRECTION-2 regression tests.
+
+    These tests use FakeTransport mock infrastructure only.
+    No real model calls, no network, no .env reads.
+    Results describe mock/offline behavior only, NOT real model performance.
+    """
+
+    # --- answer path raw_retention_meta ---
+
+    def test_formal_answer_carries_retention_meta(self):
+        """In formal answer path: raw_retention_meta populated from adapter RunRecord."""
+        from integration.a2_runner import A2RunResult
+        rm = {"retained": True, "body_sha256": "abc123hash", "body_length": 400,
+              "path": "work/app001-runs/batch/raw/run.txt", "truncated": False}
+        result = A2RunResult(
+            logical_run_id="A2-24mm__C0__DeepSeek__deepseek-flash",
+            input_id="A2-24mm",
+            condition_id="C0",
+            provider="DeepSeek",
+            model="deepseek-flash",
+            llm_status="answer",
+            pipeline_status="success",
+            combined_status="success",
+            errors=[],
+            questions=[],
+            raw_retention_path="work/app001-runs/batch/raw/run.txt",
+            pipeline_run_dir="/mock/pipeline",
+            step_path="/mock/pipeline/part.step",
+            ir_index={"envelope_sha256": "envelope_pipeline_hash"},
+            llm_meta={"attempt_count": 1, "configured_provider": "DeepSeek"},
+            raw_retention_meta=rm,
+        )
+        self.assertIsNotNone(result.raw_retention_meta)
+        self.assertEqual(result.raw_retention_meta["body_sha256"], "abc123hash")
+        self.assertNotEqual(result.raw_retention_meta["body_sha256"],
+                            result.ir_index["envelope_sha256"])
+
+    def test_raw_read_failure_carries_retention_meta(self):
+        """If raw file read fails, result still carries the retention metadata."""
+        from integration.a2_runner import A2RunResult
+        rm = {"retained": True, "body_sha256": "hash_before_read_fail",
+              "body_length": 300, "path": "work/app001-runs/batch/raw/fail.txt"}
+        result = A2RunResult(
+            logical_run_id="A2-24mm__C0__DeepSeek__deepseek-flash",
+            input_id="A2-24mm",
+            condition_id="C0",
+            provider="DeepSeek",
+            model="deepseek-flash",
+            llm_status="answer",
+            pipeline_status=None,
+            combined_status="failed",
+            errors=[{"code": "RAW_READ_ERROR", "message": "file unreadable"}],
+            questions=[],
+            raw_retention_path=None,
+            pipeline_run_dir=None,
+            step_path=None,
+            ir_index=None,
+            llm_meta={"attempt_count": 1},
+            raw_retention_meta=rm,
+        )
+        self.assertIsNotNone(result.raw_retention_meta)
+        self.assertEqual(result.raw_retention_meta["body_sha256"], "hash_before_read_fail")
+
+    def test_pipeline_exception_carries_retention_meta(self):
+        """If pipeline raises, result still carries the retention metadata."""
+        from integration.a2_runner import A2RunResult
+        rm = {"retained": True, "body_sha256": "hash_pipeline_exc", "body_length": 200,
+              "path": "work/app001-runs/batch/raw/exc.txt"}
+        result = A2RunResult(
+            logical_run_id="A2-80mm__C0__DeepSeek__deepseek-flash",
+            input_id="A2-80mm",
+            condition_id="C0",
+            provider="DeepSeek",
+            model="deepseek-flash",
+            llm_status="answer",
+            pipeline_status=None,
+            combined_status="failed",
+            errors=[{"code": "PIPELINE_EXCEPTION", "message": "compilation error"}],
+            questions=[],
+            raw_retention_path="work/app001-runs/batch/raw/exc.txt",
+            pipeline_run_dir=None,
+            step_path=None,
+            ir_index=None,
+            llm_meta={"attempt_count": 1},
+            raw_retention_meta=rm,
+        )
+        self.assertIsNotNone(result.raw_retention_meta)
+        self.assertEqual(result.raw_retention_meta["body_sha256"], "hash_pipeline_exc")
+
+    def test_no_response_has_no_retention_meta(self):
+        """No model response → raw_retention_meta must be None; no fabricated hash."""
+        from integration.a2_runner import A2RunResult
+        result = A2RunResult(
+            logical_run_id="A2-24mm__C0__DeepSeek__deepseek-flash",
+            input_id="A2-24mm",
+            condition_id="C0",
+            provider="DeepSeek",
+            model="deepseek-flash",
+            llm_status="error",
+            pipeline_status=None,
+            combined_status="error",
+            errors=[{"code": "ADAPTER_EXCEPTION", "message": "no response"}],
+            questions=[],
+            raw_retention_path=None,
+            pipeline_run_dir=None,
+            step_path=None,
+            ir_index=None,
+            llm_meta={"run_id": "r"},
+            raw_retention_meta=None,
+        )
+        self.assertIsNone(result.raw_retention_meta)
+
+    def test_summary_uses_retention_hash_not_ir_index(self):
+        """_SummaryWriter.update_run uses raw_retention_meta body_sha256, not ir_index."""
+        import tempfile, json
+        from pathlib import Path
+        from integration.a2_runner import A2RunResult, _SummaryWriter
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "batch"
+            batch_dir.mkdir()
+            writer = _SummaryWriter(batch_dir, {"runs": {"run-01": {"status": "pending"}}})
+            writer.write_initial()
+            result = A2RunResult(
+                logical_run_id="run-01",
+                input_id="A2-24mm",
+                condition_id="C0",
+                provider="DeepSeek",
+                model="deepseek-flash",
+                llm_status="answer",
+                pipeline_status="success",
+                combined_status="success",
+                errors=[],
+                questions=[],
+                raw_retention_path="work/app001-runs/batch/raw/r.txt",
+                pipeline_run_dir="/mock",
+                step_path="/mock/part.step",
+                ir_index={"envelope_sha256": "DIFFERENT_pipeline_hash"},
+                llm_meta={"attempt_count": 1},
+                raw_retention_meta={"retained": True,
+                                    "body_sha256": "RETENTION_hash_abc",
+                                    "body_length": 100},
+            )
+            writer.update_run(result)
+            data = json.loads((batch_dir / "batch_summary.json").read_text())
+            entry = data["runs"]["run-01"]
+            self.assertEqual(entry["raw_sha256"], "RETENTION_hash_abc")
+            self.assertNotEqual(entry["raw_sha256"], "DIFFERENT_pipeline_hash")
+
+    # --- finalize failure end-to-end via run_a2_batch ---
+
+    def test_finalize_failure_in_formal_path_via_writer_patch(self):
+        """summary_finalize_error is non-None when finalize fails in formal infrastructure.
+
+        Uses patched _SummaryWriter, BudgetLedger, and transport — no real network.
+        Verifies: summary_finalize_error non-None, results still returned,
+        lock released (ledger.release_lock called).
+        Results describe mock/offline behavior only.
+        """
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch, MagicMock
+        from llm.a2_authorization import (
+            authorize_a2_run, A2FormalApproval, A2_PROFILE_ID,
+            A2_INPUTS_SHA256, A2_LABELS_SHA256, A2_PROVIDER,
+            A2_MODEL, A2_CONDITION, A2_MAX_BATCH_HTTP,
+        )
+        from integration.a2_runner import (
+            run_a2_batch, _SummaryWriter, SummaryWriteError, A2RunResult,
+            A2_INPUT_IDS, A2_CONDITION as _A2C, A2_PROVIDER as _A2P, A2_MODEL as _A2M,
+        )
+
+        BATCH_ID = "r1c2-formal-finalize-test-01"
+        auth = authorize_a2_run(batch_id=BATCH_ID)
+        approval = A2FormalApproval(
+            batch_id=BATCH_ID,
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="test-runner",
+            approved_at_utc="2026-11-11T12:00:00Z",
+            approval_statement=(
+                "I approve A2 formal execution of batch "
+                f"{BATCH_ID} for offline testing"
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_ledger = MagicMock()
+            mock_ledger.authorization = auth
+            mock_ledger.release_lock = MagicMock()
+            mock_ledger.acquire_lock = MagicMock()
+
+            mock_transport = MagicMock()
+            mock_transport.uses_real_transport = False
+
+            def fake_run_one(*, plan, natural_language, prompt, adapter,
+                             authorization, batch_id, pipeline_output_root,
+                             repo_root, is_formal):
+                return A2RunResult(
+                    logical_run_id=plan.logical_run_id,
+                    input_id=plan.input_id,
+                    condition_id=plan.condition_id,
+                    provider=plan.provider,
+                    model=plan.model,
+                    llm_status="ask",
+                    pipeline_status=None,
+                    combined_status="ask",
+                    errors=[],
+                    questions=["bore_d?"],
+                    raw_retention_path=None,
+                    pipeline_run_dir=None,
+                    step_path=None,
+                    ir_index=None,
+                    llm_meta={"attempt_count": 1},
+                    raw_retention_meta={"retained": False, "body_length": 0,
+                                        "body_sha256": "mock_hash"},
+                )
+
+            def failing_finalize(self, batch_status="complete"):
+                raise SummaryWriteError("simulated finalize failure")
+
+            with patch("integration.a2_runner._CANONICAL_RUN_ROOT",
+                       Path(tmpdir)), \
+                 patch("llm.budget.BudgetLedger",
+                       return_value=mock_ledger), \
+                 patch("llm.budget.BudgetAwareTransport",
+                       return_value=mock_transport), \
+                 patch("llm.real_transport.DeepSeekTransport",
+                       return_value=MagicMock()), \
+                 patch("integration.a2_runner.run_pipeline") as mock_pipe, \
+                 patch.object(_SummaryWriter, "finalize", failing_finalize), \
+                 patch("integration.a2_runner._run_one_logical", side_effect=fake_run_one):
+                result = run_a2_batch(
+                    authorization=auth,
+                    dry_run=False,
+                    transport=None,
+                    approval=approval,
+                )
+
+            self.assertIsNotNone(result.summary_finalize_error,
+                "summary_finalize_error must be non-None when finalize fails")
+            self.assertIn("finalize", result.summary_finalize_error.lower())
+            self.assertEqual(len(result.results), 3)
+            mock_ledger.release_lock.assert_called()
+            mock_pipe.assert_not_called()
+            self.assertIsNotNone(result.summary_path)
+
+
 if __name__ == "__main__":
     unittest.main()

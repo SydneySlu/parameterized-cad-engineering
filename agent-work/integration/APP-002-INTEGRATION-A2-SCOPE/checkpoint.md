@@ -203,3 +203,75 @@ not_changed=pipeline.py, schema_to_ir.py, adapter.py, contract.py, 旧 runner, �
 7. **git diff --check**：无空白错误
 
 8. **任何测试失败或 hash 不匹配**：标记 blocked，记录具体错误代码，不合入 main，不发 live 请求。
+
+---
+
+## R1-CORRECTION-2（2026-11-11，CC）
+
+### 状态：review（待 Codex 中枢独立复核）
+
+### 基线
+
+- 父提交：`230609c`（R1-CORRECTION）
+- 工作区开始时干净
+
+### 修复内容
+
+#### 1. 补全正式 answer 路径的 raw retention 传递
+
+`_run_one_logical()` 的 answer 路径在取得 `adapter_result.record` 后，统一从 `record.raw_response_retention` 复制 `answer_retention_meta`。三个 answer 分支（pipeline 成功、raw 不可用/读取失败、pipeline 异常）全部传入 `raw_retention_meta=answer_retention_meta`。
+
+关键约束：
+- `raw_retention_path` 只使用 retention metadata 中确认的 repo-relative retained path
+- `raw_sha256` 只由 `raw_retention_meta["body_sha256"]` 提供，不从 `ir_index["envelope_sha256"]` 推导
+- 无模型响应时 `raw_retention_meta=None`，不伪造 hash
+- mock/dry-run 行为不变
+
+#### 2. finalize 失败端到端测试（`TestA2R1Correction2`）
+
+`test_finalize_failure_in_formal_path_via_writer_patch`：
+- patch `_SummaryWriter.finalize` → `SummaryWriteError`
+- patch `BudgetLedger`、`BudgetAwareTransport`、`DeepSeekTransport`、`_run_one_logical` 使用 mock 替身
+- 验证：`summary_finalize_error` 非空；3 条结果完整；`release_lock` 调用；`run_pipeline` 未调用
+- 不发网络、不读密钥、不调用真实 DeepSeek
+
+### 新增文件/改动
+
+| 文件 | 改动 |
+|---|---|
+| `src/integration/a2_runner.py` | answer 路径 3 分支补 `raw_retention_meta=answer_retention_meta` |
+| `tests/integration/test_a2_runner.py` | +6 项 `TestA2R1Correction2`（87 项总计） |
+
+### 验证（VM，Python 3.10.12，无 cadquery）
+
+```bash
+PYTHONPATH=src:. python3 -m py_compile src/integration/a2_runner.py tests/integration/test_a2_runner.py
+# 通过
+
+PYTHONPATH=src:. python3 -m unittest tests.integration.test_a2_runner -q
+# Ran 87 tests; OK
+
+PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -p 'test_*.py' -q
+# Ran 17 tests; OK
+
+git diff --check
+# 通过
+```
+
+注：结果均为 mock/offline 行为，不代表真实模型效果。
+
+### 未运行项
+
+- Python 3.11.18 下 A2 专项 87 项、LLM 全量、Schema 17 项、Integration 全量、py_compile、git diff --check（需 Mac 固定环境）
+
+### handoff_successor_check（Codex 中枢须核验）
+
+在 Mac 固定环境（Python 3.11.18）：
+
+1. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m py_compile src/integration/a2_runner.py tests/integration/test_a2_runner.py`
+2. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.integration.test_a2_runner -q` — 预期 87 tests OK
+3. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/integration -p 'test_*.py' -q` — 预期 81+6=87 A2 通过（pipeline/schema_to_ir 有既有 cadquery 失败，不引入新失败）
+4. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/schema -p 'test_*.py' -q` — 预期 17 OK
+5. `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -p 'test_*.py' -q` — 预期 941 OK（8 既有 skip）
+6. `git diff --check`
+7. 核对：answer 路径 3 分支携带 `raw_retention_meta`；finalize 失败时 `summary_finalize_error` 非空；锁释放；`is_test_only` 拒绝逻辑未修改；`FORMAL_EVALUATION_ALLOWED=False` 未改

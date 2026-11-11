@@ -1047,6 +1047,13 @@ def _run_one_logical(
     raw_envelope_bytes: bytes | None = None
     raw_retention_path: str | None = None
 
+    # R1-CORRECTION-2: capture retention meta once for all answer-path returns
+    answer_retention_meta: dict[str, Any] | None = None
+    if is_formal:
+        rm = record.raw_response_retention or {}
+        if rm:
+            answer_retention_meta = dict(rm)
+
     if is_formal:
         # Read from retained file
         retention_meta = record.raw_response_retention or {}
@@ -1095,6 +1102,7 @@ def _run_one_logical(
             step_path=None,
             ir_index=None,
             llm_meta=llm_meta,
+            raw_retention_meta=answer_retention_meta,
         )
 
     # Call run_pipeline()
@@ -1124,6 +1132,7 @@ def _run_one_logical(
             step_path=None,
             ir_index=None,
             llm_meta=llm_meta,
+            raw_retention_meta=answer_retention_meta,
         )
 
     pipeline_status = pipeline_result.status
@@ -1145,6 +1154,7 @@ def _run_one_logical(
         step_path=pipeline_result.step_path,
         ir_index=pipeline_result.ir_index,
         llm_meta=llm_meta,
+        raw_retention_meta=answer_retention_meta,
     )
 
 
