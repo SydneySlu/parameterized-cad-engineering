@@ -2,6 +2,33 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+## 2026-11-11
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER / CC / review
+
+- 动作：实现 ADR-0019 专用离线优先 held-out v5 runner 与受控 CLI 入口。
+  1. 新建 `src/llm/heldout_runner.py`：`HeldoutRunner`（`dry_run()` / `offline_preflight()` / `run_formal()`）；`generate_heldout_combinations()`（独立 12 运行矩阵，不复用 `generate_combinations()`）；`load_heldout_inputs()`（SHA-256 核验、仅提取 `query_id` + `natural_language_input`，不读标签）；`_HeldoutProjectedCase` 适配器；`_assemble_c0` / `_assemble_held_c1` 包装；`_heldout_raw_retention_policy()`（原始响应写入 `batch/raw/`）；`_ensure_heldout_ir_cad_not_run()`。
+  2. 新建 `scripts/run_app001_heldout_v5.py`：`--dry-run` / `--offline-preflight` / `--run` 三模式 CLI 入口；正式模式在 `FORMAL_EVALUATION_ALLOWED=False` 时 fail-closed；正式执行需 `--allow-formal-run` 且必须完成 offline preflight。
+  3. 新建 `tests/llm/test_heldout_runner.py`：53 项离线/mock 测试，覆盖全部 7 类需求（12 组合固定性、标签隔离、C0/C1 正常装配、拒绝案例、mock HTTP 预算强制、运行记录路径、scope 摘要/账本审计及遗留回归）。
+  4. 更新 `agent-work/llm/APP-001-NEXT-REAL-MODEL-EVALUATION/checkpoint.md`，追加 runner 里程碑及 handoff_self_check。
+  5. 更新 `docs/PROJECT_STATUS.md`、`docs/PROJECT_PLAN.md`。
+- 执行环境：sandbox Python 3.10.12（非项目固定 3.11.18，须 Codex 中枢在 Mac `/opt/homebrew/bin/python3.11` 重验）。
+- 验证结果（全部离线/mock，无网络请求、无凭据读取、无批次目录创建）：
+  - `py_compile` 三个新文件 → OK
+  - `test_heldout_runner` 53/53 → OK
+  - `test_heldout_authorization + test_authorization + test_budget + test_runner` 120 → OK（skipped=7）
+  - `discover tests/llm` 908 → OK（skipped=8）
+  - `discover tests/schema` 17 → OK
+  - `git diff --check` → clean
+- 冻结哈希确认（已重算）：
+  - `model-inputs.json` SHA-256：`c00ef6dce6b227368b3bfb63a91bbf7362316f64796834a045c5fea536dc83a6` ✓
+  - `evaluator-labels.json` SHA-256：`bfe94d89d2809634b9e52cb73c9f4733fee30a7b7130a65ef9e13c33545cc35a` ✓
+  - RET-001 manifest SHA-256：`b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297` ✓
+- 安全/隔离确认：evaluator labels 未出现在组合生成、输入装配、Adapter、Transport、Prompt、运行日志或 dry-run 输出中；`FORMAL_EVALUATION_ALLOWED=False` 未改变；旧授权/账本行为回归通过；未分配正式 batch_id；无模型/网络请求。
+- 限制：sandbox Python 3.10.12 非项目固定基线；独立 Codex 中枢审查待完成；final offline preflight 待完成；无 batch_id 或模型请求授权。
+- 修改文件（仅本任务）：`src/llm/heldout_runner.py`（新）、`scripts/run_app001_heldout_v5.py`（新）、`tests/llm/test_heldout_runner.py`（新）、`agent-work/llm/APP-001-NEXT-REAL-MODEL-EVALUATION/checkpoint.md`、`docs/PROJECT_STATUS.md`、`docs/PROJECT_PLAN.md`、`docs/WORKLOG.md`。
+- 下一步：Codex 中枢在 Mac Python 3.11.18 独立重跑全量测试，核对 evaluator labels 隔离和 mock HTTP 预算强制，确认 dry-run 和 offline-preflight 离线可运行，并检查 raw 留存路径；通过后进行 final offline preflight 并向项目负责人提交完整授权模板审批。
+
 ## 2026-11-08
 
 ### APP-001-V4-ACTIVATION-CLOSEOUT-FIX-CODEX-REVIEW / Codex / review
