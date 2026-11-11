@@ -1,6 +1,15 @@
 # 轻量版首期 Agent 分工与依赖计划
 
-状态：初步计划，尚未生成各 Agent 初始化 prompt，也尚未正式认领任务。
+状态：以下保留初期分工参考；**当前优先级与执行工作包以本节、ADR-0020 和 PROJECT_PLAN 为准**，不再以模型/检索对照作为 CAD 集成前置门。
+
+## 当前执行安排（2026-11-11）
+
+- 中枢已核实v5与单族Schema/IR/CAD/STEP基座，完成held-out final offline preflight，并形成资产/接口证据；不重做已有后端。
+- **CC（Schema/CAD集成角色）**承担`APP-002-INTEGRATION-A1`：严格构造门、正式参数→IR adapter、隔离统一离线入口、真实本地STEP与可追溯记录。工作prompt：`docs/coordination/prompts/APP-002-INTEGRATION-A1-cc.md`，状态planned/待认领，不代表已发给其他聊天自动执行。
+- **当前Codex中枢**执行Schema→IR→编译器高风险交接double check及独立验收。CC实现不替代中枢审查。
+- A1后按新scope/输入/预算/batch/授权进入DeepSeek真实模型整链与里程碑B，再做需求/参数/状态/文件/重生成的最小演示C；固定模型配置不擅自变化。
+- 12-run检索对照真实执行deferred，恢复须明确假设、重验基线及单独授权。语言覆盖、运行稳定性、跨族扩展分开列后续，不扩大样本数宣称。
+- 下方早期多族选择、统一三条件对比和“尚未认领”是规划历史，不构成当前阻塞。DSH暂无本次代码任务；不另开无必要研究线。
 
 ## 总体原则
 

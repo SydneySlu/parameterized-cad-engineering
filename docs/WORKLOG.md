@@ -2214,3 +2214,15 @@ commit=待提交
 - Python 3.11.18 实测：专项 86 项 OK；授权/预算/runner 120 项 OK（7 skips）；LLM 全量运行 941 项 OK（8 skips）；Schema 17 项 OK；相关 py_compile/diff-check 通过。dry-run 12 组合；真实冻结索引离线检查 pass，global=44、batch_dir_exists=false；无索引直接 runner 拒绝。精确命令与限制见同任务 codex-review 的 R2 部分。
 - 结论：本次窄修 pass；任务状态恢复 in_progress，下一步 final offline preflight，再拟唯一 batch ID 与授权模板给负责人批准。历史 review 记录保留；尚无正式 batch ID/请求授权，gate=False。
 - 边界：未调用真实模型/网络、未读密钥/.env/历史 raw、未创建正式批次目录；无 push。R2 报告对 candidate_roles/default_top_k 直接校验的描述超出该方法实际范围，审查记录已注明；本次通过针对索引缺失及加载失败修复。
+
+
+### APP-002-INTEGRATION-A1-PREP / Codex 中枢 / planned / 2026-11-11
+
+- 项目负责人明确调整优先级：先单族自然语言→v5→Schema→Typed CAD IR→CadQuery→几何验证→STEP最小闭环，再做演示；v5保留冻结锚点，一般优化不启动v6。新增accepted ADR-0020，同步当前状态/计划/分工；12-run检索对照真实执行改deferred，不再列CAD集成前置门。该研究恢复须重验当前基线并独立授权，ADR-0019预算和scope不变。
+- 启动事实：共享Git根目录正确，main=993a5b1，工作区干净，领先缓存origin/main12个提交；未fetch/push/merge。读取最新项目事实、交接与记忆协议、Schema/IR/CAD checkpoint/源码及最终修复审查，未覆盖其他工作。
+- Final offline preflight实际运行：Python3.11.18，review-only-final-offline-993a5b1，exit0/status=pass、12组合、冻结索引校验、预算feasible/global44/Ollama26、batch_dir_exists=false。仅离线占位ID，无正式batch分配或模型/live preflight授权。
+- 资产复验：固定CAD环境Python3.11.18/CadQuery2.3.0/OCP7.9.3.0，CAD13项（真实本地构造/STEP导出回读与故障注入）、Schema/IR22项通过；v5激活/策略/prompt161项通过；7个合成接口探针涵盖合法、cm换算、70/80第二螺钉边界、缺参、冲突、unsupported，全部符合预期。不是模型→STEP整链证据；未重复完整15行几何构造或此前941项LLM全量。
+- 真实缺口：现有adapter在Schema之后主动阻断IR；缺正式参数→IR映射、完整missing_fields构造门与隔离统一入口。记录user/catalog/rule来源和原单位；最终成功必须本次STEP回读/几何通过，失败不能串旧文件。已出A1可执行CC工作prompt和checkpoint，任务planned/待CC认领，未声称已实现。
+- 证据：agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md；工作包：docs/coordination/prompts/APP-002-INTEGRATION-A1-cc.md。15行是单族目录配置而非语言样本；语言覆盖、稳定性、跨族分别后置验证。错误几何/关键参数丢失/错误放行/假成功阻断，其余一般优化列backlog。
+- 边界：本轮无生产代码变更，无模型/HTTP请求，无密钥/.env/历史raw正文读取，无正式批次创建。历史批次及raw路径偏离保留只读；真实模型CAD整链需独立输入/预算/batch/授权，旧Schema-only授权不扩展。
+- 下一步：把A1工作prompt交负责Schema/CAD的CC实现，中枢独立double check验收；通过后立即准备A2真实模型整链接线与授权，再做里程碑B/C。当前未完成真实自然语言整链，导师展示仍为目标。提交短哈希将在后续交付索引记录。

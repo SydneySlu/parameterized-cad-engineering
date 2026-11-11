@@ -2,16 +2,20 @@
 
 ## Status
 
-`in_progress` — R2 implementation `5b803eb` has passed Codex independent
-review under Python 3.11.18. Codex added CLI loader failure regression tests
-in `c00c214`; held-out suite 86 tests OK, full LLM suite 941 run / 8 skipped,
-Schema 17 OK. Missing RET-002 index now rejects preflight; config/manifest
-load failures return CLI exit 1 before runner construction or side effects.
-The next gate is final offline preflight, then a proposed unique batch ID
-and complete owner authorization template. No formal batch ID is assigned,
-no live preflight/model request is authorized, and the global gate is False.
-Scope and simultaneous physical-request caps remain ADR-0019: chat 36
-(18/provider, 3/run), identity 20, total HTTP 44 (DeepSeek 18/Ollama 26).
+`deferred` — final offline preflight passed on `993a5b1` under Python
+3.11.18 (12 combinations, valid frozen RET-002 index, feasible global HTTP 44 /
+Ollama 26, no batch directory). ADR-0020 changes execution priority to the
+single-family natural-language-to-STEP integration. The 12-run retrieval
+comparison remains independent research and does not block CAD integration.
+R2 implementation `5b803eb` and CLI regression `c00c214` remain accepted.
+
+No formal batch ID is assigned, no live preflight/model request is authorized,
+and the global gate is False. Existing ADR-0019 scope/caps are unchanged.
+Resume only after the main loop is delivered or an explicit research need is
+prioritized; recheck the then-current code/entry baseline and obtain separate
+owner approval of the specific batch before requests. Do not treat this offline
+pass as permission for future modified code. Earlier sections below are
+historical milestone records, not the current next gate.
 
 ## Repository and predecessor facts
 
@@ -475,3 +479,10 @@ handoff_successor_check:
   result=pass
   blocking_issue=none for this narrow fix; final offline preflight and owner approval remain next gates
 ```
+
+## Final offline preflight / priority update（2026-11-11）
+
+- Actual command: `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 scripts/run_app001_heldout_v5.py --offline-preflight --batch-id review-only-final-offline-993a5b1 --json`.
+- Python3.11.18, exit0; status=pass, retrieval_index_provided=true, batch_dir_exists=false, feasible=true/global44/Ollama26; expected frozen inputs/labels/manifest/plan hashes match. This review-only identifier is not a formal batch assignment. No directory or HTTP/model request was created.
+- Evidence and exact hashes: `agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md`.
+- Decision ADR-0020: real execution deferred; next engineering work is CC `APP-002-INTEGRATION-A1`, followed by separately authorized true-model CAD integration. The two scopes must not be mixed or automatically extend each other's authorization.

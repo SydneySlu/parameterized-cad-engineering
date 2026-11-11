@@ -4,6 +4,23 @@
 
 轻量版首期的 Agent 分工、边界、依赖和阶段性交付见 [`docs/coordination/agent-work-allocation.md`](coordination/agent-work-allocation.md)。各阶段 Prompt 和交接记录按任务保存在 `docs/coordination/prompts/` 及其历史归档目录中。
 
+## 当前主线与里程碑（ADR-0020，2026-11-11）
+
+首要目标是自然语言→v5→Schema→Typed CAD IR→CadQuery→几何验证→STEP，再做最小产品包装。v5 是当前集成基线，不因一般优化启动 v6。下列历史模块计划用于资产追溯，执行优先级以本节为准。
+
+| 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
+|---|---|---|
+| A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | planned；需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
+| A：接入真实提取 | A2：中枢定义新 scope，CC 接受控模型路径 | planned；复用已审查 DeepSeek `deepseek-flash` 配置，新的输入/预算/batch/授权后才发请求；不扩大旧评测权限 |
+| B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | planned；合法、单位、第二螺钉边界、缺参、冲突、构造/导出失败六类；本地夹具验证后，再取得真实模型整链证据 |
+| C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
+
+- 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。本轮 CAD 13 项、Schema/IR 22 项复验通过；实际缺正式语言→后端连接层，不重做后端。
+- 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
+- v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
+- 首任务详见 [CC prompt](coordination/prompts/APP-002-INTEGRATION-A1-cc.md)；证据与接口见 [基线 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
+- 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
+
 ## 阶段 0：仓库和协作基础
 
 - [x] 建立 Git 仓库、忽略规则和协作约定（INFRA-001）
@@ -18,20 +35,21 @@
 ## 阶段 1：问题冻结和零件族选择
 
 - [x] 初评 BenchCAD 2.0、CADBench、Seek-CAD 的数据适配性与许可边界（DATA-001；结论见 [`database/cad-dataset-suitability-2026-10.md`](../database/cad-dataset-suitability-2026-10.md)）
-- [ ] 建立 BenchCAD 多族数据优先试点：锁定具体 commit，检查许可/状态/环境，先用两个结构不同的社区族跑通 smoke test，再决定是否扩展到更多族（DATA-002；建议见 [`database/benchcad-dataset-first-plan-2026-10.md`](../database/benchcad-dataset-first-plan-2026-10.md)）
+- [ ] 【deferred，非首期前置】建立 BenchCAD 多族数据优先试点：锁定具体 commit，检查许可/状态/环境，先用两个结构不同的社区族跑通 smoke test，再决定是否扩展到更多族（DATA-002；建议见 [`database/benchcad-dataset-first-plan-2026-10.md`](../database/benchcad-dataset-first-plan-2026-10.md)）
 - [x] 完成第一个单族来源、环境与最小 smoke test 纵向切片（DATA-003；审计与 R2 许可证/快照补充已完成）
 - [x] 项目负责人确认数据优先路线和首期族数量（CAD-001；首期为 `set_screw_shaft_collar`）
 - [x] 冻结首期 BenchCAD 社区族集合、支持任务和不支持项（CAD-002；决策见 ADR-0007）
-- [ ] 定义跨族 manifest/adapter 与参数 Schema 映射、单位、来源和缺失字段（CAD-003）
+- [x] 单族 CAD-003 Schema 已实现字段、单位、来源与缺失/冲突规则，17 项固定环境回归通过；早期任务 checkpoint 仍 review，单族实现可复用
+- [ ] 【deferred】跨族 manifest/adapter 与 Schema 扩展；不把跨族设计作为单族闭环前置
 - [ ] 按族、目录行和 near-duplicate group 建固定评测切分，避免实例泄漏（CAD-004）
 
 ## 阶段 2：Typed CAD IR 和确定性主线
 
-- [ ] 设计 IR v0：特征节点、参数、单位、依赖、约束和来源（IR-001）
-- [ ] 设计特征 ID、引用和错误码（IR-002）
+- [x] 单族 IR v0.2.0 规范、语义验证与后端接入已存在（IR-001 R3 修复已验收）；正式语言参数→IR adapter 属 A1 缺口，不重做 IR
+- [x] 首族 IR 已定义固定节点、引用、错误码及 canonical 检查；跨族扩展 deferred（IR-002）
 - [x] 建立白名单 CadQuery/OCP 编译器（CAD-005；canonical 输入绑定经中枢复核，固定环境测试通过）
 - [x] 建立实体有效性、STEP 回读和零件族规则验证器（CAD-006；冻结容差策略实现并通过固定环境标准/边界/失败路径测试）
-- [ ] 建立输入、IR、构造、验证、输出的版本化运行日志（IR-003）
+- [ ] 建立语言输入、Schema、IR、验证、STEP 的统一运行关联（IR-003，纳入 A1，复用已有 CAD manifest）
 
 ## 阶段 3：小样本检索
 
@@ -47,11 +65,11 @@
 - [x] 按 ADR-0014 运行 APP-001 第一阶段诊断批次（`app001-phase1-20261107-01`、`app001-phase1-20261107-02`；每批 36 条逻辑运行、物理 HTTP 未超过 108；IR/CAD/geometry/STEP 禁用）；第二批次的 envelope 缺失已定位并由 `APP-001-PHASE1-ENVELOPE-FIX` 修复、合入 `main`，旧批次仍仅作诊断证据；修复后正式批次待重新授权，详见 [`agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md`](../agent-work/reviews/APP-001-phase1-20261107-02-codex-review.md)
 - [x] 按接受的 ADR-0016 将生产 prompt/解析契约切换到 `app001-extraction.v3`；Python 3.11.18 离线验证通过；真实模型效果评测仍需新的唯一批次授权
 - [x] 按接受的 ADR-0017 将生产 prompt/解析契约切换到 `app001-extraction.v4`；合入提交 `c18fd35` 已完成 Python 3.11.18 离线复核；真实模型效果评测仍需新的唯一批次授权
-- [ ] 实现有限验证和字段修复循环（APP-002）
+- [ ] 优先实现最小集成连接层与严格构造门（APP-002-INTEGRATION-A1）；自动字段修复循环后置，不阻塞首次成功闭环
 - [ ] 建立 API、演示界面、部署说明和失败案例库（APP-003）
 - [ ] 完成技术验收与交付记录（APP-004）
 
-## APP-001 v5 后续门
+## APP-001 v5 收束与独立研究
 
 - [x] v5 离线 prompt 候选与策略映射（APP-001-V5-PROMPT-CANDIDATE；独立审查通过并随激活链合入 `main`）
 - [x] 项目负责人接受 ADR-0018 策略方向（2026-11-11）
@@ -60,4 +78,14 @@
   - 唯一批次 `app001-phase1-v5-20261111-01`：36 条逻辑记录、32 个真实模型响应、4 个 C1 请求前阻塞、48 次账本尝试；32 个 raw 文件实际位于批次根目录（`work/app001-runs/<batch_id>/`），不在授权指定的 `raw/` 子目录；长度/SHA-256 与留存元数据一致。历史文件未移动、改写或重跑。
   - 结果：32/32 响应解析通过；CAD-003 Schema 20/32 通过；决策 answer=20、ask=2、refuse=10；C2/IR/CAD/geometry/STEP 未运行。结果与限制见 `agent-work/reviews/APP-001-V5-FORMAL-EFFECT-EVALUATION-codex-review.md`。
   - 收束期间修复入口摘要字段错配并增加测试；后续 runner raw 留存路径也窄修为未来正式运行精确写入 `batch/raw/`，新增真实文件路径断言。历史批次仍保持上述根目录布局，未重跑。合入后在 Python 3.11.18 下复验：LLM 842 项通过（8 项既有 FUSE skip）、Schema 17 项通过、runner 与 v5 入口 101 项通过（1 项既有 skip）；后续真实运行需新入口基线、新 batch ID 和单独授权。
-- [ ] 后续 v5 真实模型评测（APP-001-NEXT-REAL-MODEL-EVALUATION；R2 修复 `5b803eb` 经 Python 3.11.18 中枢验收通过；`c00c214` 补齐 CLI 配置/manifest 加载失败自动回归。专项 86 项 OK、授权/预算/runner 120 项 OK（7 skips）、LLM 全量运行 941 项 OK（8 skips）、Schema 17 项 OK。索引缺失/加载失败 fail closed，有效索引离线检查 pass、预算 global=44，dry-run 12 组合。下一步 final offline preflight，通过后拟唯一 batch ID 和完整授权模板供负责人批准；当前无正式 batch ID/请求授权）
+- [x] final offline preflight：在 `993a5b1` 使用 Python 3.11.18 运行，12 组合、RET-002 索引校验、预算可行性 global=44/Ollama=26、批次目录不存在均通过；仅离线占位 ID，无正式 batch ID 或请求授权。
+- [ ] 【deferred】APP-001-NEXT-REAL-MODEL-EVALUATION：12-run held-out 检索收益对照，独立研究，不再是 CAD 集成门。R2 与 CLI 补测已验收，代码保留；恢复须有明确假设、重验当前入口基线并由负责人批准具体 batch。ADR-0019 原 scope/预算不变。
+
+## 验证分层与后续清单
+
+- 首期单族确定性覆盖：复用 15 行目录、Schema/IR/CAD 回归，A1 只补连接层及隔离/失败语义，避免重复堆测试。
+- 语言覆盖：主闭环后按真实用语与失败假设增加输入；不将条件/模型重复次数当独立需求，不以无限 prompt 对照代替集成。
+- 稳定性：单独规划重复生成、并发、长时运行、输出隔离和失败恢复；当前固定环境回归不证明生产规模稳定。
+- 跨族扩展：独立数据/许可证、Schema、IR 和几何契约验证，首期 deferred。
+- 交付阻断：错误几何、关键参数丢失、错误放行、假成功；非关键措辞、额外语言、新对照设想及小幅指标波动留 backlog。冻结接口/策略变更仍须版本化与 ADR。
+- 保留固定环境、单族、来源许可、螺纹近似及非制造认证限制。所有新真实模型整链请求须新 scope/输入/预算/batch/授权；历史批次只读。
