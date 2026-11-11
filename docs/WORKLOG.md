@@ -2226,3 +2226,9 @@ commit=待提交
 - 证据：agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md；工作包：docs/coordination/prompts/APP-002-INTEGRATION-A1-cc.md。15行是单族目录配置而非语言样本；语言覆盖、稳定性、跨族分别后置验证。错误几何/关键参数丢失/错误放行/假成功阻断，其余一般优化列backlog。
 - 边界：本轮无生产代码变更，无模型/HTTP请求，无密钥/.env/历史raw正文读取，无正式批次创建。历史批次及raw路径偏离保留只读；真实模型CAD整链需独立输入/预算/batch/授权，旧Schema-only授权不扩展。
 - 下一步：把A1工作prompt交负责Schema/CAD的CC实现，中枢独立double check验收；通过后立即准备A2真实模型整链接线与授权，再做里程碑B/C。当前未完成真实自然语言整链，导师展示仍为目标。提交短哈希将在后续交付索引记录。
+
+### APP-002-INTEGRATION-A1-PREP-DELIVERY / Codex 中枢 / planned / 2026-11-11
+
+- 工作包提交：`8b76a7a`，9份文档包含ADR-0020、当前计划/状态、final offline证据、CC工作prompt与checkpoint；无生产/测试/脚本修改。
+- 提交前检查通过：git diff/cached --check；冻结v5 prompt与acceptance哈希未变；Markdown链接目标存在；WORKLOG前缀与原历史完全一致（只追加）；review-only占位批次目录不存在。
+- 下一步：CC在实际最新HEAD认领A1并执行工作prompt，中枢独立验收后转A2真实模型整链范围与授权。本次未push、未启动CC后台执行、未发真实模型请求；本条仅补交付commit索引。
