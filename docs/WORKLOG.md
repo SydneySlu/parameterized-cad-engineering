@@ -2062,3 +2062,11 @@ commit=待提交
 - 状态同步：APP-001-V5-FORMAL-EFFECT-EVALUATION 标记 `done`；PROJECT_PLAN、PROJECT_STATUS、checkpoint 与审查报告记录合入和复验结果。
 - 边界：未读取 raw 正文、密钥或 `.env`，未调用模型；历史批次 raw 文件仍保留在批次根目录，未移动/改写/重跑。未来真实运行仍需新受审查的入口基线、新 batch ID 和单独授权；本次不构成此类授权。
 - 下一步：本工作单元已完成；若继续测模型效果，先提出独立版本化实验方案与授权范围。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION / Codex 中枢 / planned / 2026-11-11
+
+- 动作：依据已合入 v5 真实评测结果和 RET-003 协议，提出下一轮真实模型实验问题及前置门；当前仅形成方案草案。
+- 依据：v5 的九样例 C0/C1 × 两 provider 已运行；RET-003 明确只有三个 `heldout_evaluation` 查询，`provisional_small_n`，且公平 C2 尚未定义。完整目录 `C2O` 含 held-out 真值，只能作 oracle，不能纳入公平比较。旧 v5 入口会因 runner 生产基线变化而 fail-closed，不得复用。
+- 建议：评估冻结 RET-002 `retrieval_source` 上下文对 active v5 输出和 CAD-003 Schema 接受的逐例影响；三条 held-out 查询、C0/C1、DeepSeek/Ollama，共 12 个逻辑运行，最多 36 次请求。保持 C2/C2O 和 IR/CAD/geometry/STEP 禁用，结果逐例报告，不作统计泛化结论。
+- 草案：`agent-work/inbox/APP-001-NEXT-REAL-MODEL-EVALUATION-PROPOSAL.md`。该文件不是 ADR、批次授权或模型请求许可；未分配 batch_id，未生成测试集，未实现入口，未调用模型或读取密钥。
+- 下一步：项目负责人审阅实验问题与三条 held-out 输入集选择；确认后再冻结输入/标签并独立检查泄漏，随后实现并审查新的受控入口。新唯一 batch_id 与单独授权在实现、验证和 final preflight 全通过后另行呈批。
