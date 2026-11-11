@@ -1,0 +1,470 @@
+"""Integration tests for the unified offline pipeline (APP-002-INTEGRATION-A1).
+
+Run with:
+    PYTHONPATH=src:. python3 -m unittest tests.integration.test_pipeline -v
+
+CAD calls are mocked with unittest.mock so all tests run with Python 3.10
+(no cadquery required).  The tests verify gate logic, run isolation, and
+failure semantics.
+"""
+
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+from integration.pipeline import run_pipeline, PipelineResult
+from cad_compilation.compiler import CompilationResult
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _load_fixture(name: str) -> bytes:
+    return (_FIXTURES / name).read_bytes()
+
+
+def _mock_compile_success(output_dir: Path) -> CompilationResult:
+    """Build a real temporary STEP file and return a success CompilationResult."""
+    step_path = output_dir / "mock.step"
+    step_content = b"ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Mock STEP'),'2;1');\nENDSEC;\nEND-ISO-10303-21;\n"
+    step_path.write_bytes(step_content)
+    step_hash = hashlib.sha256(step_content).hexdigest()
+    ir_bytes = b'{"ir_version":"typed-cad-ir.v0"}'
+    ir_hash = hashlib.sha256(ir_bytes).hexdigest()
+    return CompilationResult(
+        ok=True,
+        status="step_readback",
+        errors=[],
+        ir={"ir_version": "typed-cad-ir.v0", "status": "accepted"},
+        manifest={
+            "input_ir_sha256": ir_hash,
+            "step": {"path": str(step_path), "bytes": len(step_content), "sha256": step_hash},
+            "native_geometry": {"solid_count": 1, "is_valid": True},
+        },
+        step_path=str(step_path),
+    )
+
+
+def _mock_compile_fail(output_dir: Path) -> CompilationResult:
+    return CompilationResult(
+        ok=False,
+        status="build",
+        errors=[{"code": "CAD_BUILD_NODE_ERROR", "stage": "build",
+                 "message": "mocked build failure", "fields": ["runtime"]}],
+        ir=None,
+        manifest=None,
+        step_path=None,
+    )
+
+
+class TestPipelineBore24Success(unittest.TestCase):
+    """bore_d=24 with mocked CAD → success."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.envelope = _load_fixture("answer-bore24.json")
+
+    def test_success_status(self):
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("孔径 24 mm", self.envelope, output_root=self.tmpdir)
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.stage, "step_readback")
+        self.assertIsNotNone(result.step_path)
+        self.assertTrue(Path(result.step_path).is_file())
+        self.assertGreater(Path(result.step_path).stat().st_size, 0)
+
+    def test_extraction_source(self):
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
+
+        self.assertEqual(result.extraction_source, "synthetic_fixture")
+
+    def test_parameters_correct(self):
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
+
+        self.assertEqual(result.parameters["bore_d"], 24)
+        self.assertEqual(result.parameters["outer_d"], 40)
+        self.assertEqual(result.parameters["second_screw"], 0)
+
+    def test_ir_index_hashes(self):
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
+
+        idx = result.ir_index
+        self.assertIsNotNone(idx)
+        self.assertIn("input_ir_sha256", idx)
+        self.assertIn("step_sha256", idx)
+        self.assertIn("envelope_sha256", idx)
+
+    def test_run_dir_has_evidence_files(self):
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", self.envelope, output_root=self.tmpdir)
+
+        run_dir = Path(result.run_dir)
+        for f in ("input.json", "envelope.json", "input_ir.json",
+                  "schema_result.json", "compilation_result.json",
+                  "index.json", "summary.json"):
+            self.assertTrue((run_dir / f).is_file(), f"Missing: {f}")
+
+
+class TestPipelineBore20Success(unittest.TestCase):
+    """bore_d=20 with mocked CAD → success."""
+
+    def test_success(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore20.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("孔径 20 mm", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.parameters["bore_d"], 20)
+        self.assertEqual(result.parameters["outer_d"], 32)
+        self.assertEqual(result.parameters["second_screw"], 0)
+
+
+class TestPipelineBore16cm(unittest.TestCase):
+    """bore_d={value:1.6,unit:cm} → 16 mm in IR."""
+
+    def test_unit_conversion(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore16cm.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("孔径 1.6 cm", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.parameters["bore_d"], 16)
+
+        # Verify the IR preserves original input.
+        ir_doc = json.loads(
+            (Path(result.run_dir) / "input_ir.json").read_text()
+        )
+        params = {p["parameter_id"]: p for p in ir_doc["parameters"]}
+        self.assertEqual(params["bore_d"]["value"], 16)
+        self.assertEqual(params["bore_d"]["input"]["value"], 1.6)
+        self.assertEqual(params["bore_d"]["input"]["unit"], "cm")
+
+
+class TestPipelineBore70SecondScrew(unittest.TestCase):
+    """bore_d=70 → second_screw=0 (threshold is >70, not >=70)."""
+
+    def test_second_screw_zero(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore70.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("孔径 70 mm", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.parameters["second_screw"], 0)
+
+
+class TestPipelineBore80SecondScrew(unittest.TestCase):
+    """bore_d=80 → second_screw=1."""
+
+    def test_second_screw_one(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore80.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("孔径 80 mm", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.parameters["second_screw"], 1)
+
+
+class TestPipelineAsk(unittest.TestCase):
+    """ask decision → status=ask, questions returned, no STEP."""
+
+    def test_ask_status(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("ask-missing-bore.json")
+
+        result = run_pipeline("孔径?", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "ask")
+        self.assertTrue(len(result.questions) > 0)
+        self.assertIsNone(result.step_path)
+        self.assertIsNone(result.ir_index)
+
+    def test_compiler_not_called(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("ask-missing-bore.json")
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+            mock_cad.assert_not_called()
+
+        self.assertEqual(result.status, "ask")
+
+
+class TestPipelineRefuse(unittest.TestCase):
+    """refuse decision → status=refuse, no STEP."""
+
+    def test_refuse_status(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("refuse-decision.json")
+
+        result = run_pipeline("孔径 24 mm", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "refuse")
+        self.assertIsNone(result.step_path)
+
+    def test_compiler_not_called(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("refuse-decision.json")
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+            mock_cad.assert_not_called()
+
+        self.assertEqual(result.status, "refuse")
+
+
+class TestPipelineMissingFields(unittest.TestCase):
+    """answer with non-empty missing_fields → blocked, no STEP.
+
+    This is the reverse test: Schema may pass (bore_d=24 is valid) but the
+    construction gate blocks because missing_fields is non-empty.
+    """
+
+    def test_blocked_status(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-missing-fields.json")
+
+        result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "blocked")
+        self.assertIsNone(result.step_path)
+        self.assertIsNone(result.ir_index)
+
+    def test_gate_error_code(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-missing-fields.json")
+
+        result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertTrue(len(result.errors) > 0)
+        self.assertEqual(result.errors[0]["code"], "GATE_MISSING_FIELDS")
+
+    def test_compiler_not_called(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-missing-fields.json")
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+            mock_cad.assert_not_called()
+
+        self.assertEqual(result.status, "blocked")
+
+
+class TestPipelineUnsupportedRequests(unittest.TestCase):
+    """answer with non-empty unsupported_requests → blocked."""
+
+    def test_blocked_status(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("refuse-unsupported.json")
+
+        result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "blocked")
+        self.assertIsNone(result.step_path)
+
+    def test_gate_error_code(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("refuse-unsupported.json")
+
+        result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.errors[0]["code"], "GATE_UNSUPPORTED_REQUESTS")
+
+    def test_compiler_not_called(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("refuse-unsupported.json")
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+            mock_cad.assert_not_called()
+
+        self.assertEqual(result.status, "blocked")
+
+
+class TestPipelineCADFailure(unittest.TestCase):
+    """Mocked CAD build failure → status=failed, no STEP."""
+
+    def test_failed_status(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_fail(Path(output_dir) if output_dir else Path(tmpdir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.stage, "build")
+        self.assertIsNone(result.step_path)
+        self.assertIsNone(result.ir_index)
+
+    def test_failed_has_error(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_fail(Path(output_dir) if output_dir else Path(tmpdir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        self.assertTrue(len(result.errors) > 0)
+        self.assertEqual(result.errors[0]["code"], "CAD_BUILD_NODE_ERROR")
+
+
+class TestPipelineRunIsolation(unittest.TestCase):
+    """Two runs must not interfere; a failed run must not return a previous STEP."""
+
+    def test_success_then_fail_no_step_leak(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        # First run: success.
+        def mock_success(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_success):
+            r1 = run_pipeline("first", envelope, output_root=tmpdir,
+                              run_id="run-success-001")
+
+        self.assertEqual(r1.status, "success")
+        self.assertIsNotNone(r1.step_path)
+
+        # Second run: failure.
+        def mock_fail(raw, *, output_dir=None):
+            return _mock_compile_fail(Path(output_dir) if output_dir else Path(tmpdir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_fail):
+            r2 = run_pipeline("second", envelope, output_root=tmpdir,
+                              run_id="run-fail-002")
+
+        self.assertEqual(r2.status, "failed")
+        self.assertIsNone(r2.step_path, "Failed run must not publish any STEP")
+
+    def test_same_request_different_runs_no_overwrite(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            r1 = run_pipeline("same request", envelope, output_root=tmpdir,
+                              run_id="dup-001")
+            r2 = run_pipeline("same request", envelope, output_root=tmpdir,
+                              run_id="dup-002")
+
+        self.assertEqual(r1.status, "success")
+        self.assertEqual(r2.status, "success")
+        self.assertNotEqual(r1.run_id, r2.run_id)
+        self.assertNotEqual(r1.run_dir, r2.run_dir)
+
+    def test_duplicate_run_id_rejected(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            r1 = run_pipeline("test", envelope, output_root=tmpdir, run_id="dup-id")
+            with self.assertRaises(ValueError):
+                run_pipeline("test", envelope, output_root=tmpdir, run_id="dup-id")
+
+    def test_invalid_run_id_path_separator(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        with self.assertRaises(ValueError):
+            run_pipeline("test", envelope, output_root=tmpdir, run_id="../escape")
+
+    def test_invalid_run_id_slash(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        with self.assertRaises(ValueError):
+            run_pipeline("test", envelope, output_root=tmpdir, run_id="a/b")
+
+    def test_invalid_run_id_empty(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        with self.assertRaises(ValueError):
+            run_pipeline("test", envelope, output_root=tmpdir, run_id="")
+
+
+class TestPipelineEvidenceIntegrity(unittest.TestCase):
+    """Verify evidence files and hash consistency on success."""
+
+    def test_step_hash_matches_manifest(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        idx = result.ir_index
+        step_path = Path(result.step_path)
+        actual_step_hash = hashlib.sha256(step_path.read_bytes()).hexdigest()
+        self.assertEqual(idx["step_sha256"], actual_step_hash)
+
+    def test_envelope_hash_matches_input(self):
+        tmpdir = tempfile.mkdtemp()
+        envelope = _load_fixture("answer-bore24.json")
+
+        def mock_compile(raw, *, output_dir=None):
+            return _mock_compile_success(Path(output_dir))
+
+        with patch("integration.pipeline.compile_ir", side_effect=mock_compile):
+            result = run_pipeline("test", envelope, output_root=tmpdir)
+
+        expected_hash = hashlib.sha256(envelope).hexdigest()
+        self.assertEqual(result.ir_index["envelope_sha256"], expected_hash)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,13 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "answer",
+  "extracted_parameters": {
+    "bore_d": 24
+  },
+  "unsupported_requests": [],
+  "evidence": [],
+  "missing_fields": ["outer_d"],
+  "questions": [],
+  "confidence": null
+}

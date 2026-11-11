@@ -1,0 +1,22 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "answer",
+  "extracted_parameters": {
+    "bore_d": {
+      "value": 1.6,
+      "unit": "cm"
+    }
+  },
+  "unsupported_requests": [],
+  "evidence": [
+    {
+      "field": "bore_d",
+      "quote": "孔径 1.6 cm",
+      "source": "user_input"
+    }
+  ],
+  "missing_fields": [],
+  "questions": [],
+  "confidence": null
+}
