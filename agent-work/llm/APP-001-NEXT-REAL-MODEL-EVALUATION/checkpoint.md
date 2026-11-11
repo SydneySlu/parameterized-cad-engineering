@@ -356,3 +356,10 @@ handoff_successor_check:
   result=review
   blocking_issue=none; pending Codex re-review of P1/P2 fixes
 ```
+
+## Codex 中枢 R1 复核（2026-11-11, commit `fd99ddb`）
+
+- `run_formal()` gate/approval 和预算可行性修复均通过独立检查；Python 3.11.18 下 70 项 held-out 专项、120 项授权/预算/runner 回归（7 skips）、925 项 LLM 全量（8 skips）、17 项 Schema 全量通过。CLI dry-run 为 12 组合；带本地 RET-002 index 的离线 preflight 为 pass、预算上界 global=44/Ollama=26，未创建批次目录。
+- 新发现阻断：直接运行 `HeldoutRunner().offline_preflight("review-only-no-index-direct-fd99ddb")` 返回 `retrieval_index_provided=False`、`retrieval_config_check="skipped: no retrieval_index"`，但 `offline_preflight_status="pass"`。CLI `_try_load_retrieval_index()` 又会把配置/manifest 加载异常折叠为 `None`；offline-preflight 因而可能在没有验证 C1 所需 RET-002 索引时误报通过。
+- `handoff_successor_check`: `predecessor=fd99ddb R1 runner-fix; core_rerun=Python 3.11.18 suites above; normal_case=CLI offline-preflight with RET-002 index returns pass and budget global=44; failure_case=HeldoutRunner without retrieval_index still returns pass (reproduced); interface=offline preflight must validate the frozen RET-002 index/manifest before pass; limits=no network/model, no credentials, no batch directory; result=review; blocking_issue=missing or failed retrieval index must fail closed with regression tests before final preflight.
+- Next gate: CC makes the narrow fail-closed correction and adds tests for absent index and configuration/manifest load failure; then Codex independently reviews. No final offline preflight, batch ID, authorization template, live preflight, or model request until that passes.

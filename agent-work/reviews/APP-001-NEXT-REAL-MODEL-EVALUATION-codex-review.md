@@ -36,3 +36,12 @@
 本次没有运行 `--run`、live preflight 或任何 HTTP 请求；没有访问密钥、`.env`、旧批次 raw；CLI offline-preflight 只读取冻结输入/标签/manifest 做 hash/配置校验，没有创建批次目录。未分配正式 batch ID，也没有模型请求授权。
 
 下一步由实现者窄修 P1 项并更新 checkpoint、WORKLOG、PROJECT_STATUS/PROJECT_PLAN；之后 Codex 中枢按本报告复跑 API 直接拒绝、预算边界、dry-run、offline-preflight 与回归。通过后才能进行 final offline preflight，再提交唯一 batch ID 和完整授权模板供项目负责人决定。此审查不授权任何请求。
+
+## R1 跟进复核（commit `fd99ddb`）
+
+- 跟进日期：2026-11-11
+- R1 对上述两项修复通过定向复核：`run_formal()` 在全局 gate、profile 类型、单独 approval token 和 batch ID 一致性检查通过前拒绝；当前 `FORMAL_EVALUATION_ALLOWED=False` 未改变。approval token 明确标记为软件操作门，不声称是不可伪造凭据。预算函数按 Ollama tags→chat 重试顺序计算：每 run 最多 `max(3 tags failures, 1 tags success + 3 chat)=4`；Ollama 26、DeepSeek 18、全局 44，分类 cap 分别为 chat 36、identity 20。
+- R1 验证复跑（Python 3.11.18）：held-out 专项 70 项通过；授权/预算/runner 回归 120 项通过、7 项 skip；LLM 全量 925 项通过、8 项 skip；Schema 17 项通过；`py_compile` 与 `git diff --check HEAD^ HEAD` 通过。dry-run 产生 12 个组合，offline-preflight 在真实本地 retrieval index 下返回 44/44 且未创建 batch 目录。
+- **新增 P1：缺少 RET-002 retrieval index 时 offline-preflight 仍返回 pass。** `HeldoutRunner().offline_preflight("review-no-retrieval-index-only")` 实测返回 `retrieval_index_provided=False`、`retrieval_config_check="skipped: no retrieval_index"`、`offline_preflight_status="pass"`。CLI `_try_load_retrieval_index()` 会吞掉加载异常并返回 `None`，offline-preflight 随后接受缺失 index。正式 runner 的 C1 六项必须依赖该 index，因此这个 pass 不能作为最终 preflight 通过证据。
+- 结论：整体仍为 `review`，不进入 final offline preflight gate，不生成 batch ID/授权模板。需窄修为 offline-preflight 缺失或加载失败时 fail closed，并增加无 index / 配置或 manifest 加载失败拒绝测试；通过后重新做中枢审查。
+- 边界：所有复核均未执行 `--run`、live preflight 或 HTTP；未读密钥、`.env` 或历史 raw，未创建正式批次目录。离线检查传入的 `review-only-not-a-batch-fd99ddb` 仅用于核验，不是正式 batch ID。

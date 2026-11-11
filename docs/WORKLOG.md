@@ -4,6 +4,14 @@
 
 ## 2026-11-11
 
+### APP-001-NEXT-REAL-MODEL-EVALUATION-R1-CODEX-REVIEW / Codex / review
+
+- 动作：按三层交接协议，在 `main=fd99ddb` 对 held-out runner R1 修复做 Python 3.11.18 中枢独立验收，并检查 ADR-0019、任务 checkpoint、状态和计划。
+- 结果：`run_formal()` 全局 gate、profile 类型、独立 approval token、batch ID 匹配门禁通过代码复核；`FORMAL_EVALUATION_ALLOWED=False` 未改变。预算可行性公式与 ADR-0019 transport/retry 次序一致（DeepSeek 18、Ollama 26、global 44）。运行 held-out 专项 70 项通过、授权/预算/runner 回归 120 项通过（7 skips）、LLM 全量 925 项通过（8 skips）、Schema 17 项通过；`py_compile`、`git diff --check fd99ddb^ fd99ddb` 通过；dry-run 为 12 组合。
+- 新发现阻断：`HeldoutRunner().offline_preflight("review-only-no-index-direct-fd99ddb")` 实测无 index 时返回 `retrieval_index_provided=False`、`retrieval_config_check="skipped: no retrieval_index"`，但 `offline_preflight_status="pass"`。CLI 的 `_try_load_retrieval_index()` 捕获加载异常并返回 `None`，会使 offline-preflight 在 RET-002 index/manifest 未验证时仍可能误报 pass。带本地 RET-002 index 的 CLI offline-preflight 单独返回 pass、global=44/Ollama=26；两条检查均未建批次目录。
+- 验证与边界：Python 3.11.18；无网络/模型请求、无密钥或 `.env` 读取、无历史 raw 读取、无正式批次目录。`review-only-*` 字符串仅为离线核验参数，不是正式 batch ID。
+- 下一步：任务保持 `review`。CC 窄修为缺失或加载失败的 RET-002 index 必须 fail closed，并覆盖缺失 index 与配置/manifest 加载失败路径；之后 Codex 中枢独立复核。该缺口关闭前不做 final offline preflight，不生成正式 batch ID/授权模板，不执行 live preflight 或模型请求。
+
 ### APP-001-NEXT-REAL-MODEL-EVALUATION-RUNNER-FIX / CC / review
 
 - 动作：窄修 Codex 中枢审查（`88ea2dd`）发现的两项 P1。
