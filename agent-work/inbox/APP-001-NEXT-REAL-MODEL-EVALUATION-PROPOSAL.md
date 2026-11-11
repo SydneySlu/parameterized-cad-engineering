@@ -1,7 +1,9 @@
 # APP-001 next real-model evaluation proposal
 
-Status: proposal for project-owner review; this is not an ADR, batch authorization,
-or permission to issue model requests.
+Status: experiment question/scope approved in principle by the project owner;
+pre-execution design is blocked on input provenance and a new exact-scope
+authorization path. This is not a batch authorization or permission to issue
+model requests.
 
 ## Evidence and open gate
 
@@ -56,23 +58,58 @@ the previous v5 batch as a separate historical result.
 
 ## Required gates before any model request
 
-1. Project owner reviews this question, input construction, and the small-n
-   limitation. If accepted, freeze an evaluator-only three-case input/label
-   artifact and its hashes; Codex independently checks leakage boundaries.
-2. Implement a new controlled entrypoint against the current reviewed main
+1. Resolve the input source: RET-003 provides structured manifest references,
+   not frozen natural-language requests. The existing nine-case acceptance set
+   contains no matching held-out query IDs; its bore_d=80 case is an explicit
+   rule-conflict case and cannot stand in for a clean held-out request. Do not
+   derive or invent natural-language inputs from held-out truth without an
+   explicitly reviewed input-construction protocol. Freeze model-visible
+   inputs separately from evaluator-only labels and truth, then independently
+   check leakage.
+2. Define a new, fail-closed authorization/combination scope for exactly the
+   three held-out IDs × C0/C1 × the two fixed providers (12 logical runs), with
+   3 attempts per run, 36 total, 18/provider, and C2/IR/CAD/geometry/STEP
+   disabled. Existing `FormalRunAuthorization` and `generate_combinations()`
+   are frozen to the nine-case acceptance set and 36 logical runs; they reject
+   a three-case projection. Do not bypass them or reuse the old v5 entrypoint.
+   Record any required policy change in `docs/DECISIONS.md` before
+   implementation.
+3. Implement a new controlled entrypoint against the current reviewed main
    baseline. Do not retrofit the old v5 entrypoint. Add offline tests for the
    exact 12 combinations, scope/hash rejection, model identity, clean batch
    directory, corrected raw path, budget caps, and no request before preflight.
-3. Run the prescribed Python 3.11.18 regression and handoff checks; complete
+4. Run the prescribed Python 3.11.18 regression and handoff checks; complete
    independent review and Codex final preflight.
-4. Only then present the concrete new batch ID and authorization record for
+5. Only then present the concrete new batch ID and authorization record for
    project-owner approval. A prior batch approval does not carry over.
-5. Run the real providers only after that separate explicit approval and a
+6. Run the real providers only after that separate explicit approval and a
    successful online preflight. Keep the batch immutable and report results
    with the stated per-case limitations.
 
+## Codex offline validation (2026-11-11)
+
+- Result: `blocked`; no batch ID assigned. The approved experimental question
+  is retained, but the execution design is not yet sufficiently specified to
+  freeze or authorize.
+- Python 3.11.18 read-only checks confirmed the acceptance-set hash and
+  projection. Its nine model-visible natural-language inputs are existing
+  acceptance cases, not the three RET-003 held-out query IDs. The `bore_d=80`
+  acceptance case includes an explicit `second_screw=0` rule conflict, so it
+  is not an equivalent clean held-out request.
+- Existing authorization/combination path normal case: the frozen projection
+  generates 36 combinations. Failure case: a 3-case projection is rejected
+  with `expected 9 acceptance cases, got 3`. Authorization caps and sample set
+  are hard-coded for the 36-run acceptance-set-v0 experiment.
+- No code or runtime configuration changed; no model/network request, key or
+  `.env` access, batch directory creation, or formal-run attempt occurred.
+- See `agent-work/llm/APP-001-NEXT-REAL-MODEL-EVALUATION/checkpoint.md` for
+  commands, evidence, and required owner decision.
+
 ## Decision requested
 
-Approve or revise the proposed question and scope before implementation. In
-particular, confirm whether the three RET-003 held-out cases are the intended
-next test set. No batch ID is assigned here and no model run is authorized.
+The project owner has approved the experiment question/scope in principle and
+asked Codex to validate offline before assigning a batch ID. The validation
+found the two blockers above. Resolve the natural-language input provenance
+and approve the required exact 12-run authorization design before the
+entrypoint is implemented. No batch ID is assigned here and no model run is
+authorized.

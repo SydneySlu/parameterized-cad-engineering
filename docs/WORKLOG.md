@@ -2070,3 +2070,13 @@ commit=待提交
 - 建议：评估冻结 RET-002 `retrieval_source` 上下文对 active v5 输出和 CAD-003 Schema 接受的逐例影响；三条 held-out 查询、C0/C1、DeepSeek/Ollama，共 12 个逻辑运行，最多 36 次请求。保持 C2/C2O 和 IR/CAD/geometry/STEP 禁用，结果逐例报告，不作统计泛化结论。
 - 草案：`agent-work/inbox/APP-001-NEXT-REAL-MODEL-EVALUATION-PROPOSAL.md`。该文件不是 ADR、批次授权或模型请求许可；未分配 batch_id，未生成测试集，未实现入口，未调用模型或读取密钥。
 - 下一步：项目负责人审阅实验问题与三条 held-out 输入集选择；确认后再冻结输入/标签并独立检查泄漏，随后实现并审查新的受控入口。新唯一 batch_id 与单独授权在实现、验证和 final preflight 全通过后另行呈批。
+
+### APP-001-NEXT-REAL-MODEL-EVALUATION-OFFLINE-PREFLIGHT / Codex 中枢 / blocked / 2026-11-11
+
+- 动作：依据项目负责人“先验证、验证后分配 batch_id、再提交授权”的指令，对已原则批准的 RET-003 held-out × C0/C1 × 两 provider 方案做离线设计核验。该原则批准不授权真实模型调用。
+- 仓库：项目根 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；`main` HEAD `2054565b15ba232d151664bfa832b77be10d5a14`，`origin/main=95d1dcb8e1ba693769b19b1262228c51ba4f8f7d`，本地 ahead 2 文档提交。工作区开始时干净。
+- 输入核验：Python 3.11.18 下读取 acceptance-set-v0 并按冻结 SHA `ed59e2b6ba7a20fa1870fab90aad1f2bb74d9547cedefcf6b2dd52f83923cbdf` 投影；9 条模型可见自然语言输入的 case_id 均不是 RET-003 的三个 held-out query_id。bore_d=80 的已有验收输入显式包含 `second_screw=0`，是规则冲突样例，不能替代无偏 held-out 请求。RET-003 query-set 仅引用 manifest 的结构化参数，不含已冻结自然语言输入。
+- 授权接口核验：正常路径对 9-case 投影生成 36 个组合；失败路径对 3-case projection 返回 `expected 9 acceptance cases, got 3`。`FormalRunAuthorization` 固定 acceptance-set-v0、36 runs、108 总尝试、54/provider；不能直接支撑拟议的 12 runs、36 总尝试、18/provider。不得绕过或放宽现有工厂。
+- 修改：更新评测提案状态/前置门，新增任务 checkpoint，并同步 PROJECT_STATUS、PROJECT_PLAN。明确当前 `blocked`、无 batch_id、无模型调用授权及解除条件。
+- 验证：`/opt/homebrew/bin/python3.11 --version` → 3.11.18；只读投影/组合正常与拒绝检查如上；`git diff --check` 通过。无网络/模型请求、无密钥或 `.env` 读取、无批次目录创建。
+- 下一步：项目负责人决定 held-out 自然语言输入的合法来源/构造流程，以及是否接受记录新的精确 12-run 授权接口决策。解决后再冻结输入与 evaluator labels、独立检查泄漏并实现入口；全部审查和 final preflight 通过后才生成并呈批 batch_id 与正式授权模板。
