@@ -66,7 +66,7 @@
 | APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | done | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配，但实际位于批次根目录，偏离授权指定的 `raw/` 子目录。runner 已窄修为后续正式运行写入 `batch/raw/`；历史批次未移动/重跑。分支已合入并推送，Codex 在 `main=95d1dcb` 上复验：LLM 842 通过/8 个既有 FUSE skip，Schema 17 通过，runner+v5 入口 101 通过/1 个既有 skip；详见审查记录。后续真实运行需新入口基线、新 batch ID 和单独授权。 |
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
-| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口准备 | Codex 中枢 + CC | done | `9b9395c` 已合入并推送 `main`；A2 scope、冻结输入/labels hash、DeepSeek/C0/9 次 HTTP 预算、受控入口、正式批准门和 summary/raw 证据链均经 Python 3.11.18 独立复核；尚未发 live 请求，`FORMAL_EVALUATION_ALLOWED` 仍为 `False`。下一步须由负责人批准具体 batch_id 和授权后再做 live preflight |
+| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口准备 | Codex 中枢 + CC | blocked | scope 已合入 `main`；负责人批准 batch `app002-a2-smoke-20261112-01` 后，入口在首个 HTTP 前因 `BudgetAwareTransport(real_transport=...)` 参数错误失败；实际请求数为 0。失败现场保留，须窄修并独立复核后才能重试同一 batch |
 
 ## 当前缺口与限制
 
@@ -80,7 +80,7 @@
 ## 当前工作单元边界
 
 - `APP-002-INTEGRATION-A1`：已完成；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
-- `APP-002-INTEGRATION-A2-SCOPE`：scope 准备已完成并合入 `main`（`9b9395c`）；冻结输入、授权 profile、受控入口、正式批准门、summary/raw 证据链和 mock/offline 测试均已复核。scope 草案见 `agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`。live preflight 仍须项目负责人批准具体 batch_id、scope 和完整授权模板。
+- `APP-002-INTEGRATION-A2-SCOPE`：scope 已合入 `main`（`9b9395c`），但首次获批 batch 的正式入口在首个 HTTP 前因 `BudgetAwareTransport` 参数名错误阻塞；失败现场只读保留。窄修和独立复核完成前不得重试，不改变 scope 或预算。
 - ask/refuse、missing_fields、unsupported、解析/Schema/IR 失败不调用 CAD；构造/导出/回读失败不能报告成功或发布其他运行旧文件。用户显式值、目录派生值与规则派生值分别保存。
 - 本工作包不发模型/网络请求，不读密钥、.env 或历史 raw 正文；不修改冻结 prompt、Schema/IR 语义、预算/授权或旧批次，`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 错误几何、关键参数丢失、错误放行、假成功属于交付阻断；措辞、额外语言覆盖与新实验进入 backlog，不自动阻断主闭环。
@@ -89,8 +89,8 @@
 
 1. A1 已完成：固定环境独立验收和合并后回归均通过，证据保存在 A1 checkpoint。
 2. **A2 scope 准备已完成并合入 `main`**：`9b9395c` 包含冻结输入、授权 profile、受控入口、正式批准门、summary/raw 证据链及文档收束。
-3. **Codex 中枢独立复核已通过**：Python 3.11.18 下 A2 87/87、Integration 168/168、Schema 17/17、LLM 941 通过（8 个既有 FUSE skip），相关 `py_compile` 和 `git diff --check` 通过。
-4. **待项目负责人批准 live scope**：确认 3 条代表性输入、DeepSeek only / C0 / 9 次 HTTP 预算、具体 batch_id、批准人和完整授权声明。
-5. 批准后先执行 live preflight；只有 preflight 通过才可发起真实 DeepSeek 请求，并据此进入里程碑 B 六类整链验收。
+3. **首次获批 live attempt 已阻塞**：batch `app002-a2-smoke-20261112-01` 在首个 HTTP 前因 `BudgetAwareTransport` 参数错误失败，实际请求数为 0；失败现场保留且不得重跑。
+4. **当前解除条件**：CC 窄修实际构造调用并补零请求回归；Codex 中枢在 Python 3.11.18 下重跑 A2/Integration/Schema/LLM、`py_compile` 和 `git diff --check`。
+5. 修复和复核通过后，重新核对同一 batch 的现场、授权和 preflight 状态，再决定是否继续已批准的 live scope；不得扩大输入、provider、condition 或预算。
 6. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

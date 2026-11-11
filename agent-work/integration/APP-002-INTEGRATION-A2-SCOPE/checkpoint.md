@@ -299,3 +299,25 @@ limits=PASS；未运行真实模型/网络，FORMAL_EVALUATION_ALLOWED=False，�
 result=pass
 blocking_issue=无代码阻断；分支尚未合并 main
 ```
+
+## Live preflight attempt blocked by runner constructor mismatch (2026-11-12)
+
+### Scope and authorization
+
+- Project负责人已明确批准 batch `app002-a2-smoke-20261112-01` 的 live preflight 及 3 条 DeepSeek/C0 整链输入：`A2-24mm`、`A2-80mm`、`A2-ask-bore`。
+- 预算和边界未扩大：DeepSeek `deepseek-flash`、C0、最多 3 logical runs、最多 9 次 HTTP，允许 CAD pipeline。
+
+### 实际结果
+
+- 固定环境：Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0；inputs SHA-256、offline preflight 和 dry-run 均在执行前通过。
+- 正式入口在首个 HTTP 请求之前失败，异常为：
+  `TypeError: BudgetAwareTransport.__init__() got an unexpected keyword argument 'real_transport'`。
+- 根因：`src/integration/a2_runner.py` 以 `real_transport=...` 调用 `BudgetAwareTransport`；实际 `src/llm/budget.py` 构造器签名要求首个位置参数为 `inner`。
+- 实际 HTTP 请求数为 0；未读取 DeepSeek 响应，未生成 raw，未生成 `budget_ledger.json`，锁已释放。
+- 入口已创建并保留失败现场目录 `work/app001-runs/app002-a2-smoke-20261112-01/`。其中 `batch_summary.json` 仍有 3 条 `pending`，入口异常造成的 `batch_status=complete` 不得作为成功证据。
+
+### 处置与边界
+
+- 当前 A2 状态改为 `blocked`；不得删除、移动、覆盖或重跑该失败现场，不得换 batch ID，不得再次发请求。
+- 交给 CC 做窄修：改用 `BudgetAwareTransport(inner, ledger=..., ...)` 的实际接口，并增加固定环境构造回归与零 HTTP 断言；不得修改 scope、预算、授权、prompt、Schema/IR/CAD、历史批次或 `FORMAL_EVALUATION_ALLOWED`。
+- 窄修后必须由 Codex 中枢独立重跑 A2、Integration、Schema、LLM 回归及 `py_compile`/`git diff --check`；只有通过后才能重新进行同一 batch 的 preflight/运行授权复核。

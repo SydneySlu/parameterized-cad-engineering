@@ -2368,3 +2368,12 @@ commit=待提交
 - 收束：PROJECT_STATUS、PROJECT_PLAN 和 A2 checkpoint 已同步为 scope 准备完成；记录 Python 3.11.18 独立复核结果（A2 87/87、Integration 168/168、Schema 17/17、LLM 941 + 8 skip）。
 - 边界：尚未发起 live preflight 或真实模型请求；`FORMAL_EVALUATION_ALLOWED=False`、A2 scope、预算、输入/labels hash 和历史批次保持不变。
 - 下一步：项目负责人批准具体 batch_id、3 条输入、DeepSeek/C0/9 次 HTTP scope 和完整授权声明后，执行 live preflight；通过后才可发起真实请求并进入里程碑 B。
+
+### APP-002-INTEGRATION-A2-LIVE-ATTEMPT / Codex 中枢 / blocked / 2026-11-12
+
+- 授权范围：负责人批准 batch `app002-a2-smoke-20261112-01`，DeepSeek `deepseek-flash`、C0、`A2-24mm`/`A2-80mm`/`A2-ask-bore`，最多 3 logical runs / 9 次 HTTP，允许 CAD pipeline。
+- 预检：固定 Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0；inputs hash、offline preflight 和 dry-run 通过。
+- 结果：正式入口在首个 HTTP 请求前失败，`BudgetAwareTransport.__init__()` 不接受 `real_transport`，实际签名要求位置参数 `inner`。请求数为 0，未读取模型响应、未写 raw 或账本，锁已释放。
+- 现场：保留并只读记录 `work/app001-runs/app002-a2-smoke-20261112-01/`；其 `batch_summary.json` 的 `batch_status=complete` 是入口异常留下的错误状态，3 条 run 仍为 `pending`，不得作为成功证据。不得删除、移动、覆盖或重跑该目录。
+- 处置：A2 标记 `blocked`。CC 仅做窄修，将调用改为 `BudgetAwareTransport(inner, ...)`，补固定环境构造回归和零 HTTP 断言；不改变 scope、预算、授权、冻结 prompt/Schema/IR/CAD、历史批次或 `FORMAL_EVALUATION_ALLOWED`。
+- 下一步：窄修后由 Codex 中枢独立复核全套回归和入口；在复核通过且同一 batch 的现场/授权状态重新核对前，不再次发起请求。
