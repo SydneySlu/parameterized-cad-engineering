@@ -2,7 +2,8 @@
 
 ## Status
 
-`review` — the authorized v5 real-model batch has completed. The raw/run
+`done` — the authorized v5 real-model batch has completed and its reviewed
+implementation and closeout have been merged to `main`. The raw/run
 evidence is preserved in the git-ignored batch directory. The summary reporter
 had a field-path bug; its reporting code and regression tests are now corrected.
 The batch itself was not rerun or modified.
@@ -164,13 +165,17 @@ requires a new batch ID and separate authorization.
   implementation/tests acceptable; it requested only documentation alignment.
 - This checkpoint and `docs/PROJECT_PLAN.md` now explicitly distinguish the
   historical batch-root layout from the corrected future `batch/raw/` layout.
-- Status remains `review`; no merge or push is included in this work unit. The
-  documentation alignment is committed as `8da34d9`. The independent reviewer
+- At the pre-merge checkpoint, status remained `review`; the documentation alignment was committed as `8da34d9`. The independent reviewer
   has since found stale next-step/status wording in this checkpoint and the
   earlier review record. This follow-up corrects those current-state references
   while preserving the initial finding as historical evidence. The next gate
   passed independent review and Codex final acceptance on the current branch.
-  Python 3.11.18 verification: LLM 842 passed / 8 existing FUSE skips, Schema
-  17 passed, relevant `py_compile` passed, and full branch `git diff --check`
-  passed. Next: project owner pushes and merges this branch; then Codex verifies
-  main and performs post-merge targeted checks before status can become `done`.
+  The branch was merged by PR #1; `main` and `origin/main` now point to merge
+  commit `95d1dcb8e1ba693769b19b1262228c51ba4f8f7d`, which contains accepted
+  closeout commit `c574e6b2414edc2354758d67272cae4f537458df`. Post-merge checks
+  on Python 3.11.18 passed: LLM 842 / 8 existing FUSE skips, Schema 17,
+  runner+v5 entrypoint 101 / 1 existing skip, relevant `py_compile`, and
+  `git show --check`. Local `main` is synchronized and clean. Historical raw
+  files remain untouched at the batch root; future runs use `batch/raw/` and
+  still require a new reviewed entrypoint baseline, unique batch ID, and
+  separate authorization.

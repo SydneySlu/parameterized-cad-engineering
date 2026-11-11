@@ -108,7 +108,10 @@ recommendation as historical review context. The documentation-only follow-up
 passed independent review. Codex's final branch acceptance also passed on
 `3a55cc1`; Python 3.11.18 checks recorded for this acceptance were LLM 842
 passed with 8 existing FUSE skips, Schema 17 passed, relevant `py_compile`
-passed, and full-branch `git diff --check` passed. The branch is ready for
-project-owner push/merge. Task status remains `review` until merge and
-post-merge verification; no additional model run is authorized by this
-addendum.
+passed, and full-branch `git diff --check` passed. The branch was then merged
+to `main` by PR #1. Post-merge verification on Python 3.11.18 at
+`95d1dcb8e1ba693769b19b1262228c51ba4f8f7d` passed: LLM 842 with 8 existing
+FUSE skips, Schema 17, runner plus v5 entrypoint 101 with 1 existing skip,
+relevant `py_compile`, and `git show --check`. Local `main` is synchronized
+with `origin/main` and clean. Task status is `done`. The historical batch was
+not changed or rerun, and this closeout authorizes no additional model run.

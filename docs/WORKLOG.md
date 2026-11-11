@@ -2053,3 +2053,12 @@ commit=待提交
 - 验证（Mac Python 3.11.18）：`PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -q` → 842 passed、8 个既有 FUSE skip；Schema 全量 17/17；runner、v5 batch script 和相关测试 `py_compile` 通过；`git diff --check main...HEAD` 与目标提交 `git show --check` 通过。
 - 审查：独立复核结论 pass；Codex 中枢确认历史 32 个 raw 位于批次根目录的偏离被如实保留，未来路径修正不追溯改变旧批次。C2/IR/CAD/geometry/STEP 未运行；没有读取 raw 正文、密钥或发起模型请求。
 - 结论：分支可供项目负责人 push/合入；状态继续为 `review`，待 main 合入和合入后核验才可标 `done`。不授权新批次或额外模型调用。
+
+### APP-001-V5-FORMAL-EFFECT-EVALUATION-MERGE-VERIFY / Codex 中枢 / done / 2026-11-11
+
+- 动作：核验项目负责人已合入的 v5 真实模型评测收束分支，并在合入后的 `main` 上复跑关键检查。
+- Git：`origin/main` 的 PR #1 merge commit 为 `95d1dcb8e1ba693769b19b1262228c51ba4f8f7d`，包含验收提交 `c574e6b2414edc2354758d67272cae4f537458df`；本地 `main` 已 `pull --ff-only` 并与 `origin/main` 同步，工作区在复验前干净。
+- 验证（Python 3.11.18）：`tests/llm` 全量 842 通过、8 个既有 FUSE skip；`tests/schema` 17 通过；`tests.llm.test_runner tests.llm.test_run_script_v5_batch` 101 通过、1 个既有 skip；相关 `py_compile` 通过；`git show --check 95d1dcb` 通过。离线入口测试打印的 `[ABORT]`/`[FAIL]` 为模拟拒绝路径，测试退出码为 0。
+- 状态同步：APP-001-V5-FORMAL-EFFECT-EVALUATION 标记 `done`；PROJECT_PLAN、PROJECT_STATUS、checkpoint 与审查报告记录合入和复验结果。
+- 边界：未读取 raw 正文、密钥或 `.env`，未调用模型；历史批次 raw 文件仍保留在批次根目录，未移动/改写/重跑。未来真实运行仍需新受审查的入口基线、新 batch ID 和单独授权；本次不构成此类授权。
+- 下一步：本工作单元已完成；若继续测模型效果，先提出独立版本化实验方案与授权范围。
