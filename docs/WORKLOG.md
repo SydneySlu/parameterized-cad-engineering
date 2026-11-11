@@ -2377,3 +2377,34 @@ commit=待提交
 - 现场：保留并只读记录 `work/app001-runs/app002-a2-smoke-20261112-01/`；其 `batch_summary.json` 的 `batch_status=complete` 是入口异常留下的错误状态，3 条 run 仍为 `pending`，不得作为成功证据。不得删除、移动、覆盖或重跑该目录。
 - 处置：A2 标记 `blocked`。CC 仅做窄修，将调用改为 `BudgetAwareTransport(inner, ...)`，补固定环境构造回归和零 HTTP 断言；不改变 scope、预算、授权、冻结 prompt/Schema/IR/CAD、历史批次或 `FORMAL_EVALUATION_ALLOWED`。
 - 下一步：窄修后由 Codex 中枢独立复核全套回归和入口；在复核通过且同一 batch 的现场/授权状态重新核对前，不再次发起请求。
+
+### APP-002-INTEGRATION-A2-LIVE-FIX / CC / review / 2026-11-11
+
+- 基线：分支 `main`，HEAD `6fdbb86`。工作区开始时干净。
+- 任务：修复 A2 正式入口在首个 HTTP 请求前的构造错误，不扩大正式执行范围。
+- 修复 1（BudgetAwareTransport 构造器签名）：
+  - `src/integration/a2_runner.py` 中 `BudgetAwareTransport(real_transport=..., ...)` 改为 `BudgetAwareTransport(DeepSeekTransport(...), ...)`（位置参数 `inner`）。
+  - 补全缺失的 `logical_run_id=plan.logical_run_id`（必填 keyword-only 参数）。
+- 修复 2（setup 异常 fail-closed）：
+  - `BudgetLedger()` 或 `ledger.acquire_lock()` 在 `write_initial()` 之后失败时，`batch_summary.json` 会留在 `batch_status="running"` 状态。
+  - 增加 try/except 包裹，失败时以 `batch_status="aborted"` finalize，然后 re-raise。
+  - 不伪造成功；不把 aborted 当作 complete。
+- 新增 5 项 R1-LIVE-FIX 回归测试（`TestA2LiveFix`），总计 92 项 A2 测试：
+  - 构造器签名验证（`inner` 位置参数，`logical_run_id` 必填）
+  - 源码级验证不使用 `real_transport=`
+  - setup 失败时 `batch_status="aborted"`
+  - setup 失败时 0 次 `urlopen` 调用
+- 验证（VM，Python 3.10.12，无 cadquery）：
+  - `py_compile` `a2_runner.py` / `test_a2_runner.py`：通过
+  - `unittest tests.integration.test_a2_runner`：Ran 92 tests; OK
+  - `unittest discover -s tests/schema`：Ran 17 tests; OK
+  - `git diff --check`：通过
+- 未运行（需 Mac 固定环境 Python 3.11.18）：
+  - A2 专项 92 项、Integration 全量、Schema 17 项、LLM 全量、py_compile 3 文件、git diff --check
+- 边界：未发模型/网络请求；未读取密钥/.env；未创建正式 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变；冻结 inputs/prompt/Schema/provider/model/condition/预算/batch scope 未修改；旧批次和历史证据未移动/覆盖/重跑。
+- handoff_self_check:
+  changed=src/integration/a2_runner.py(BudgetAwareTransport位置参数inner+logical_run_id+setup fail-closed),tests/integration/test_a2_runner.py(+5 R1-LIVE-FIX测试,92项总计),docs/WORKLOG.md(追加)
+  commands=py_compile(2文件)通过;92项test_a2_runner通过;17项Schema通过;git diff --check通过(Python 3.10.12)
+  confirmed=BudgetAwareTransport构造器使用位置参数inner;logical_run_id已传入;setup失败finalize为aborted非complete/running;setup失败0次urlopen;real_transport=不在源码中
+  unresolved=Python 3.11.18下全量验证(92项A2+LLM全量+Integration全量+Schema17+py_compile+diff --check);cadquery路径(test_pipeline/test_schema_to_ir既有失败VM缺cadquery)
+  next_agent_focus=Codex中枢在Python 3.11.18下:1)92项A2测试;2)LLM全量;3)Integration全量(含cadquery);4)Schema17;5)py_compile3文件;6)git diff --check;7)确认BudgetAwareTransport构造器签名匹配、setup失败aborted语义、zero HTTP断言

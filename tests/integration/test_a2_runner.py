@@ -1956,5 +1956,171 @@ class TestA2R1Correction2(unittest.TestCase):
             self.assertIsNotNone(result.summary_path)
 
 
+# ---------------------------------------------------------------------------
+# 20. R1-LIVE-FIX regression tests
+# ---------------------------------------------------------------------------
+
+class TestA2LiveFix(unittest.TestCase):
+    """R1-LIVE-FIX regression tests.
+
+    Tests verify:
+    1. BudgetAwareTransport is constructed with positional inner arg (not real_transport=).
+    2. BudgetAwareTransport is constructed with logical_run_id= (required kwarg).
+    3. Setup failure (BudgetLedger/acquire_lock) finalizes summary as 'aborted', not 'complete'.
+    4. Zero HTTP calls on setup failure.
+
+    All tests use mock/patch infrastructure only — no real model calls, no network,
+    no .env reads.  Results describe mock/offline behavior only, NOT real model performance.
+    """
+
+    def test_budget_aware_transport_constructor_signature(self):
+        """Verify BudgetAwareTransport accepts (inner, *, ledger=, ...) — not real_transport=."""
+        import inspect
+        from llm.budget import BudgetAwareTransport
+        sig = inspect.signature(BudgetAwareTransport.__init__)
+        params = sig.parameters
+        # inner is the first positional param (after self)
+        self.assertIn("inner", params)
+        self.assertNotIn("real_transport", params,
+            "BudgetAwareTransport must NOT have real_transport param; use inner")
+        # logical_run_id is required keyword-only
+        self.assertIn("logical_run_id", params)
+        self.assertTrue(params["logical_run_id"].default is inspect.Parameter.empty,
+            "logical_run_id must be required")
+
+    def test_a2_runner_uses_positional_inner(self):
+        """Verify a2_runner.py does not use real_transport= keyword."""
+        import inspect
+        import integration.a2_runner as mod
+        source = inspect.getsource(mod)
+        # Must NOT contain real_transport= in BudgetAwareTransport call
+        self.assertNotIn("real_transport=DeepSeekTransport", source,
+            "a2_runner must use positional inner, not real_transport=")
+        # Must contain logical_run_id= in the BudgetAwareTransport call
+        self.assertIn("logical_run_id=plan.logical_run_id", source,
+            "a2_runner must pass logical_run_id= to BudgetAwareTransport")
+
+    def test_setup_failure_finalizes_as_aborted(self):
+        """If BudgetLedger or acquire_lock fails after write_initial, the
+        batch_summary.json must be finalized as 'aborted', not left as 'running'.
+
+        Uses patched BudgetLedger to simulate failure; no real network.
+        """
+        import tempfile, json
+        from pathlib import Path
+        from unittest.mock import patch, MagicMock
+        from llm.a2_authorization import (
+            authorize_a2_run, A2FormalApproval, A2_PROFILE_ID,
+            A2_INPUTS_SHA256, A2_LABELS_SHA256, A2_PROVIDER, A2_MODEL,
+            A2_CONDITION, A2_MAX_BATCH_HTTP,
+        )
+        from integration.a2_runner import (
+            run_a2_batch, _SummaryWriter, SummaryWriteError, _CANONICAL_RUN_ROOT
+        )
+        from llm.budget import BudgetIntegrityError
+
+        BATCH_ID = "live-fix-aborted-test-01"
+        auth = authorize_a2_run(batch_id=BATCH_ID)
+        approval = A2FormalApproval(
+            batch_id=BATCH_ID,
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="test-runner",
+            approved_at_utc="2026-11-11T12:00:00Z",
+            approval_statement=f"I approve A2 formal execution of batch {BATCH_ID}",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("integration.a2_runner._CANONICAL_RUN_ROOT", Path(tmpdir)), \
+                 patch("llm.budget.BudgetLedger",
+                       side_effect=BudgetIntegrityError("simulated ledger failure")):
+                with self.assertRaises(BudgetIntegrityError):
+                    run_a2_batch(
+                        authorization=auth,
+                        dry_run=False,
+                        transport=None,
+                        approval=approval,
+                    )
+
+            # Verify batch_summary.json was finalized as 'aborted'
+            batch_dir = Path(tmpdir) / BATCH_ID
+            summary_path = batch_dir / "batch_summary.json"
+            self.assertTrue(summary_path.exists(),
+                "batch_summary.json must exist even when setup fails")
+            data = json.loads(summary_path.read_text())
+            self.assertEqual(data["batch_status"], "aborted",
+                "batch_status must be 'aborted' on setup failure, not 'running' or 'complete'")
+
+    def test_setup_failure_zero_http(self):
+        """Setup failure (BudgetLedger raises) must not call urlopen or any transport send."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch, MagicMock
+        from llm.a2_authorization import (
+            authorize_a2_run, A2FormalApproval, A2_PROFILE_ID,
+            A2_INPUTS_SHA256, A2_LABELS_SHA256, A2_PROVIDER, A2_MODEL,
+            A2_CONDITION, A2_MAX_BATCH_HTTP,
+        )
+        from integration.a2_runner import run_a2_batch, _CANONICAL_RUN_ROOT
+        from llm.budget import BudgetIntegrityError
+
+        BATCH_ID = "live-fix-zero-http-01"
+        auth = authorize_a2_run(batch_id=BATCH_ID)
+        approval = A2FormalApproval(
+            batch_id=BATCH_ID,
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="test-runner",
+            approved_at_utc="2026-11-11T12:00:00Z",
+            approval_statement=f"I approve A2 formal execution of batch {BATCH_ID}",
+        )
+
+        mock_urlopen = MagicMock()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("integration.a2_runner._CANONICAL_RUN_ROOT", Path(tmpdir)), \
+                 patch("llm.budget.BudgetLedger",
+                       side_effect=BudgetIntegrityError("simulated")), \
+                 patch("urllib.request.urlopen", mock_urlopen):
+                with self.assertRaises(BudgetIntegrityError):
+                    run_a2_batch(
+                        authorization=auth,
+                        dry_run=False,
+                        transport=None,
+                        approval=approval,
+                    )
+
+        mock_urlopen.assert_not_called()
+
+    def test_transport_constructed_with_inner_positional(self):
+        """Verify BudgetAwareTransport is called with inner as first positional arg.
+
+        Inspects the source code of run_a2_batch to ensure the call pattern matches
+        the actual constructor signature.
+        """
+        import inspect
+        from integration.a2_runner import run_a2_batch
+        source = inspect.getsource(run_a2_batch)
+        # The BudgetAwareTransport call must use positional inner (DeepSeekTransport(...))
+        # not keyword real_transport=
+        self.assertNotIn("real_transport=", source,
+            "real_transport= must not appear in run_a2_batch source")
+        # Must contain DeepSeekTransport as the first argument (positional inner)
+        self.assertIn("BudgetAwareTransport(\n                    DeepSeekTransport(authorization=authorization),",
+            source,
+            "BudgetAwareTransport must be called with DeepSeekTransport as positional inner")
+
+
 if __name__ == "__main__":
     unittest.main()

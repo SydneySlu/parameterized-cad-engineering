@@ -1298,9 +1298,22 @@ def run_a2_batch(
                 pass
             raise
 
-        # Now safe to create BudgetLedger and Transport
-        ledger = BudgetLedger(batch_dir, authorization)
-        ledger.acquire_lock()
+        # Now safe to create BudgetLedger and Transport.
+        # R1-LIVE-FIX: If BudgetLedger or acquire_lock fails after write_initial,
+        # the batch_summary.json is left with batch_status="running".
+        # Wrap in try/except to finalize as "aborted" and re-raise.
+        ledger = None
+        try:
+            ledger = BudgetLedger(batch_dir, authorization)
+            ledger.acquire_lock()
+        except Exception:
+            # Attempt to mark the summary as aborted before re-raising
+            try:
+                writer.finalize(batch_status="aborted")
+            except Exception:  # noqa: BLE001
+                pass
+            raise
+
         raw_retention_policy = RetentionPolicy(
             retain_raw=True,
             base_dir=f"work/app001-runs/{safe_batch_id}/raw",
@@ -1325,9 +1338,10 @@ def run_a2_batch(
                 from llm.real_transport import DeepSeekTransport
 
                 run_transport = BudgetAwareTransport(
-                    real_transport=DeepSeekTransport(authorization=authorization),
+                    DeepSeekTransport(authorization=authorization),
                     ledger=ledger,
                     authorization=authorization,
+                    logical_run_id=plan.logical_run_id,
                     provider=plan.provider,
                     model=plan.model,
                     adapter_run_id=plan.logical_run_id,
