@@ -23,10 +23,14 @@ Test categories (per task spec):
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import importlib.util
+import io
 import json
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 import uuid
@@ -1511,6 +1515,61 @@ class TestRetrievalPreflightFailClosed(unittest.TestCase):
         with patch("llm.heldout_runner.HeldoutRunner._build_transport") as mock_transport:
             runner.dry_run()
             mock_transport.assert_not_called()
+
+
+class TestRetrievalPreflightCLI(unittest.TestCase):
+    """Exercise the real CLI loader and its fail-closed error boundary."""
+
+    def _assert_cli_rejects_before_side_effects(self):
+        script = _REPO_ROOT / "scripts" / "run_app001_heldout_v5.py"
+        spec = importlib.util.spec_from_file_location("heldout_cli_test", script)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        batch_id = f"test-cli-load-fail-{uuid.uuid4().hex}"
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with patch.object(sys, "argv", [str(script), "--offline-preflight",
+                                      "--batch-id", batch_id, "--json"]), \
+             patch("llm.heldout_runner.HeldoutRunner") as runner, \
+             patch("llm.heldout_runner.BudgetLedger") as ledger, \
+             patch("pathlib.Path.mkdir") as mkdir, \
+             patch("urllib.request.urlopen") as urlopen, \
+             contextlib.redirect_stdout(stdout), \
+             contextlib.redirect_stderr(stderr):
+            self.assertEqual(cli.main(), 1)
+            runner.assert_not_called()
+            ledger.assert_not_called()
+            mkdir.assert_not_called()
+            urlopen.assert_not_called()
+        self.assertIn("PREFLIGHT FAILED: cannot load RET-002 retrieval index:",
+                      stderr.getvalue())
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertFalse((_RUN_CANONICAL_ROOT / batch_id).exists())
+        return stderr.getvalue()
+
+    def test_missing_config_fails_cli_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_config = Path(tmp) / "missing-config.json"
+            with patch("retrieval.config.DEFAULT_CONFIG_REL_PATH", missing_config):
+                message = self._assert_cli_rejects_before_side_effects()
+            self.assertIn("retrieval config file does not exist", message)
+
+    def test_unreadable_config_fails_cli_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.json"
+            config.write_text("{}", encoding="utf-8")
+            with patch("retrieval.config.DEFAULT_CONFIG_REL_PATH", config), \
+                 patch("pathlib.Path.read_bytes",
+                       side_effect=PermissionError("synthetic config read denied")):
+                message = self._assert_cli_rejects_before_side_effects()
+            self.assertIn("synthetic config read denied", message)
+
+    def test_manifest_load_failure_fails_cli_preflight(self):
+        # Keep the real CLI loader and config parser; fail at the manifest load.
+        with patch("retrieval.RetrievalIndex.from_manifest",
+                   side_effect=ValueError("synthetic manifest SHA-256 mismatch")) as load:
+            message = self._assert_cli_rejects_before_side_effects()
+            load.assert_called_once()
+        self.assertIn("synthetic manifest SHA-256 mismatch", message)
 
 
 if __name__ == "__main__":
