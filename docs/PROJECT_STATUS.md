@@ -67,7 +67,7 @@
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
 | APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | done | runtime guard 已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 已独立复核：3 次 HTTP/9 上限，24 mm 与 80 mm 各生成并回读 STEP，ask 正确停止构造，summary=`complete`、raw 3/3 留存。里程碑 B 六类定向验收完成；批次只读保留。是否增加 live 样本待负责人基于明确假设另行决定 |
-| APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | review | `4419e27` 在固定 CAD venv 下通过 Demo 55、Integration 81、Schema 17、CAD 13；真实 localhost 烟测验证 24 mm/80 mm STEP、24.9 阻断、下载完整性/符号链接防护及 run 隔离。最终独立复核通过，待负责人合入 main；详见 `agent-work/reviews/APP-003-C1-codex-review.md`。有一项 P3 下载按钮文案瑕疵 |
+| APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | review | `4419e27` 在固定 CAD venv 下通过 Demo 55、Integration 81、Schema 17、CAD 13；真实 localhost 烟测验证 24 mm/80 mm STEP、24.9 阻断、下载完整性/符号链接防护及 run 隔离。独立复核通过；P3 下载按钮文案已在 `b59b551` 窄修，Demo 56 项复验通过。待负责人 push/合入 main；详见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 
 ## 当前缺口与限制
 

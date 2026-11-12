@@ -2586,3 +2586,12 @@ commit=待提交
 - 结论：在 ADR-0022 的手动参数本地演示范围内 `pass`；C1 状态改为 `review`，合入 `main` 后才可标记 done。非阻断 P3：下载按钮文案多一个右括号。
 - 证据：`agent-work/reviews/APP-003-C1-codex-review.md`；checkpoint 追加 `handoff_successor_check`。
 - 下一步：负责人按既有 fast-forward 流程合入 `main`；后续产品级 live extraction 需独立 scope/预算/gate。
+
+### APP-003-C1-DOWNLOAD-LABEL-FIX / Codex 中枢 / review / 2026-11-12
+
+- 动作：修正最终复核发现的 P3 下载按钮多余括号/英文单位文案。
+- 修改：`src/demo/server.py` 显示 `下载 STEP（N 字节）`；`tests/demo/test_demo_handler.py` 新增 HTML 输出回归，覆盖新文案并排除旧格式。
+- 验证：固定 CAD venv Python 3.11.18 下 Demo 56/56；`py_compile`、`git diff --check` 通过。Demo 测试仍有 4 条既有 ResourceWarning，不影响结果。
+- 边界：只涉及展示文案和测试；下载、安全、HTTP、CAD、模型授权及历史批次均未变。
+- commit：`b59b551 fix: correct STEP download byte label [APP-003-C1]`；工作区干净。
+- 下一步：负责人可 push 并按已审查结果合入 `main`；合入后再同步 `done` 状态。

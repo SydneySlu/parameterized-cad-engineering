@@ -237,7 +237,15 @@ core_rerun=Demo 55/55; Integration 81/81; Schema 17/17; CAD 13/13; py_compile an
 normal_case=loopback browser bore_d=24 generated downloadable STEP; hash/readback and UI evidence matched
 failure_case=24.9 rejected before CAD; missing bore 400; non-catalog 25 no STEP; symlink and tamper downloads 403
 interface=manual bore_d input → existing deterministic pipeline → run-isolated evidence and STEP; output includes provenance, IR, validation and hash
-limits=single family, fixed env, thread approximation, no LLM/language-understanding claim; P3 extra parenthesis in download label
+limits=single family, fixed env, thread approximation, no LLM/language-understanding claim
 result=pass
 blocking_issue=none
 ```
+
+## P3 下载按钮文案窄修（2026-11-12）
+
+- 修改：`src/demo/server.py` 将含多余括号的 `下载 STEP (N) bytes)` 改为 `下载 STEP（N 字节）`；新增 HTML 输出断言，确认新文案存在且旧格式不存在。
+- 边界：只改 UI 文案和对应回归测试，不改变下载链接、run_id、STEP 字节、HTTP 行为或安全校验。
+- 验证：固定 CAD venv Python 3.11.18 下 Demo 56/56；`py_compile` 和 `git diff --check` 通过。测试仍有 4 条既有 `ResourceWarning`。
+- 提交：`b59b551 fix: correct STEP download byte label [APP-003-C1]`。
+- 状态：review；核心 C1 独立复核仍通过，窄修后工作区干净；待负责人 push/合入。
