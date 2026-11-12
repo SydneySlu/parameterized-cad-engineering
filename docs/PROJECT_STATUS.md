@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-12
+更新时间：2026-11-13
 
 ## 当前结论
 
@@ -68,6 +68,7 @@
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
 | APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | done | runtime guard 已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 已独立复核：3 次 HTTP/9 上限，24 mm 与 80 mm 各生成并回读 STEP，ask 正确停止构造，summary=`complete`、raw 3/3 留存。里程碑 B 六类定向验收完成；批次只读保留。是否增加 live 样本待负责人基于明确假设另行决定 |
 | APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | done | 已合入并推送至 `main=07a98d1`。固定 CAD venv 下 Demo 56、Integration 81、Schema 17、CAD 13 通过；真实 localhost 烟测验证 24/80 mm STEP、24.9 阻断、下载完整性/符号链接防护及 run 隔离。仅手动参数演示，不调用 LLM；详见 `agent-work/reviews/APP-003-C1-codex-review.md` |
+| APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品闭环离线接入 | 已有 C1 CC 对话框 / Codex 中枢独立验收 | planned | ADR-0023；先接 synthetic v5 envelope、状态机、用户确认/补充、证据记录和失败隔离；不调用真实模型、不创建 batch。Prompt：`docs/coordination/prompts/APP-003-C2-nl-product-flow-cc.md` |
 
 ## 当前缺口与限制
 
@@ -75,7 +76,7 @@
 - 已有后端并非零进度。本轮固定 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境下 CAD 13 项、Schema/IR 22 项通过，包含真实本地构造、STEP 导出与回读；这不是自然语言真实模型整链证据。
 - v5 已有固定九案例真实双模型证据；A2 `...-04` 覆盖 24 mm 合法值、80 mm 第二螺钉边界及缺参 ask。里程碑 B 已补齐单位换算、显式目录冲突和 CAD/STEP 导出失败的本地定向链路验收。证据仍不证明广泛语言覆盖、长期稳定性或制造适用性。是否扩大 live 样本尚未决定；后续真实模型运行仍需新 scope、输入、预算、batch ID 与负责人授权，旧 Schema-only 和 held-out scope 不自动扩展。
 - 15 行覆盖当前冻结单族全部合法目录配置，不是语言训练样本；九案例的条件/模型运行次数不是独立用户需求数。语言覆盖、运行稳定性、跨族扩展分别规划。
-- 里程碑 C 的当前工作单元是 `APP-003-C1`。由于 A2 授权仅限固定三条输入且已消耗，演示首切片使用明确标记的手动参数流程，不将需求文本冒充模型解析结果；产品级 live extraction 暂不启用。
+- C1 已在手动参数范围内完成。当前工作单元是 `APP-003-C2-NL-PRODUCT-FLOW`：使用明确标记的 synthetic v5 envelope 验证自然语言产品状态、确认/补充和证据链；不将夹具冒充真实模型理解。A2 授权已消耗，产品级 live extraction 暂不启用。
 - 历史 v3/v4 决策缺陷保留为版本证据，不冒充当前 v5 阻塞。v5 历史 32 个 raw 位于批次根目录的授权路径偏离仍如实保留；不移动、不改写、不重跑、不混合统计。
 - 固定环境以外的可移植性、许可/发布范围、螺纹环形近似限制仍保留；几何/STEP 通过不构成制造认证。
 
@@ -94,5 +95,5 @@
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. 里程碑 C 的 `APP-003-C1` 已完成中枢独立验收并合入、推送至 `main=07a98d1`。演示仍是用户手动确认参数，不构成模型语言理解证据。产品级 live extraction 若要推进，须另定 scope、预算和 gate；仍须标明单族、固定环境及螺纹近似限制。
+6. 里程碑 C 的 `APP-003-C1` 已完成并合入、推送至 `main=07a98d1`。下一工作单元 `APP-003-C2-NL-PRODUCT-FLOW` 由已有 C1 CC 对话框实现离线 synthetic envelope 产品流程；完成独立复核后，再准备新的产品 live extraction scope。仍须标明单族、固定环境及螺纹近似限制。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

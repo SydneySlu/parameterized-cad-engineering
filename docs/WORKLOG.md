@@ -2609,3 +2609,11 @@ commit=待提交
 - 当前核验：本地 `main`、`origin/main`、远端 `main` 均为 `bb0a0dab16e88221c0f01b99804cfee6058e14c1`；工作区干净。此前合入后 Demo 56、Integration 179、Schema 17、CAD compilation 13 均通过，本轮没有代码变化，未重复运行测试。
 - 收束：APP-003-C1 仍为 `done`；修正仅涉及 checkpoint 和追加式 WORKLOG，不改变代码、范围、验证结论或后续授权边界。
 - 下一步：按 PROJECT_PLAN 评估导师演示及最小产品包装需求；自由文本模型调用仍需独立 scope、预算与 gate。
+### APP-003-C2-NL-PRODUCT-FLOW / Codex / planned / 2026-11-13
+
+- 动作：核对当前 `main=7f5555e`、C1 合入状态、A2 `...-04` 只读证据及现有状态/计划/决策/交接协议。
+- 决策：按项目负责人确认的节奏新增 ADR-0023，先做自然语言产品状态机与用户确认流程的离线 synthetic v5 envelope 接入；C1 手动参数演示保持稳定，A2/held-out 不扩权。
+- 边界：产品状态与 `run_pipeline` 内部 status 分层；确认前只做解析/投影/Schema 预检，不调用 IR/CadQuery；确认/修改创建新隔离 run；失败不发布旧 STEP。无模型、无网络、无 `.env`、无 batch、`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 交付：新增 `docs/coordination/prompts/APP-003-C2-nl-product-flow-cc.md`，指定由已有 C1 CC 对话框实现；同步 PROJECT_PLAN、PROJECT_STATUS、TASKS 和 ADR-0023。
+- commit：`80580ff`（文档与实现工作单元定义；尚未 push）。
+- 下一步：已有 C1 CC 对话框认领并实现离线 fixtures/状态机，提交 review commit；Codex 中枢随后在固定 CAD venv 做独立复核，再决定是否准备新的产品 live smoke scope。

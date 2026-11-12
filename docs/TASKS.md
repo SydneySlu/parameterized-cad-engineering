@@ -31,6 +31,7 @@
 | APP-001 | LLM 结构化抽取与 Prompt 对照（Phase 1） | Codex + 用户 | planned | APP-001-RUNNER-R2 复核通过 | 用户已授权 9 样例×C0/C1×双模型，共 36 逻辑运行、最多 108 次请求；IR/CAD/geometry/STEP 禁用。待 runner 安全复核通过后启动 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
 | APP-003-C1 | 最小本地 Web 演示：参数确认→隔离 CAD/STEP 生成→证据查看/下载/重生成 | CC 实现 / Codex 中枢独立验收 | done | APP-002 A1/A2、里程碑 B、ADR-0022 | 已合入并推送至 `main=07a98d1`；固定 CAD venv 测试、真实 localhost HTTP/STEP、安全、失败阻断和 run 隔离复核通过。独立审查记录见 `agent-work/reviews/APP-003-C1-codex-review.md` |
+| APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品流程：offline v5 envelope→确认/补充→Schema/IR/CAD/STEP→证据与隔离 | 已有 C1 CC 对话框 / Codex 中枢独立验收 | planned | APP-003-C1、ADR-0023 | 覆盖合法、缺参、冲突、unsupported、ask/refuse、Schema/IR/CAD 失败和用户修改新 run；固定 CAD venv 离线验证；真实模型/live scope 后置 |
 
 ## 认领格式
 

@@ -619,3 +619,74 @@ CC 负责 A1 连接层实现，中枢负责接口核对与独立验收。Schema�
 - 修改参数再生成产生新的隔离 run；先成功后失败时，失败 run 不得暴露前一 run 的 STEP。
 - 请求文本、用户显式参数、目录/规则派生参数、IR、验证结果和 STEP 均可追溯到对应 run。
 - 自动化测试通过固定 CAD venv 执行；整个实现与验收不发起模型或外网请求。
+
+## ADR-0023：APP-003-C2 自然语言产品闭环与离线确认流程
+
+- 日期：2026-11-13
+- 状态：accepted（产品流程设计与离线实现边界；不授权真实模型请求）
+- 决策人：项目负责人 + Codex 中枢
+- 关联：ADR-0020、ADR-0021、ADR-0022；APP-003-C2
+
+### 目的与范围
+
+C1 已证明“手动参数→确定性 CAD→STEP”的本地演示。C2 将产品入口推进到“自然语言需求→v5 抽取/决策→用户确认或补充→Schema→Typed CAD IR→CadQuery→几何验证/STEP→下载”，但首个实现只使用明确标记的离线 v5 envelope 夹具。夹具用于验证状态机、确认边界、证据关联和失败保护，不构成模型理解证据。C1 的手动参数入口保持可用并继续作为独立演示。
+
+本 ADR 不修改 v5 prompt、`app001-io.v1`、Schema、IR、编译器、现有 C1 API 语义或 A2 历史批次；不读取 `.env`/API key，不发起模型或外网请求，不创建 batch，也不打开 `FORMAL_EVALUATION_ALLOWED`。真实产品模型入口须另立 scope、预算、独立 product gate、preflight、batch ID 和负责人批准。
+
+### 产品状态机
+
+产品状态与 `run_pipeline` 的 `success/ask/refuse/blocked/failed/error` 保持分层。内部状态不改名、不回填历史记录，产品响应同时保留内部 `pipeline_status` 和 `pipeline_stage`。
+
+```text
+request_received → extraction_pending
+extraction_pending → needs_confirmation | blocked | failed
+needs_confirmation → constructing | blocked
+constructing → succeeded | failed
+```
+
+- `needs_confirmation`：`decision=ask`、缺少关键参数、可由用户补充的 `questions`，或需要用户确认/修改的合法候选。
+- `blocked`：`refuse`、`unsupported_requests`、不可修复的目录/规则冲突、解析/契约失败、确认拒绝或确认版本过期。此状态不调用 CAD。
+- `failed`：Schema/IR/CadQuery/STEP/回读或运行基础设施故障。此状态不发布 STEP，也不复用其他 run 的产物。
+- `succeeded`：仅当本 run 的 Schema、IR、编译、几何验证、STEP 导出和回读全部通过。
+
+确认前可以做 envelope 解析、投影、Schema/规则预检，用于展示参数来源、缺参和冲突；确认前绝不调用 IR 编译器或 CAD。确认或用户修改后必须从原始 envelope 重新构造最终输入并完整重跑校验。
+
+### 最小记录契约
+
+每个产品 run 必须有新的 UUID `run_id`、独立目录和可选 `parent_run_id`。用户修改或重新确认创建新的 run，不覆盖旧记录；`confirmation_revision` 从 0 开始递增。记录至少包含：
+
+```text
+run_id, parent_run_id, confirmation_revision, created_at
+request_text, extraction_source, envelope_fixture_label
+raw_envelope (或 repo-relative path + sha256), decision
+extracted_parameters
+user_explicit_parameters
+catalog_derived_parameters
+rule_derived_parameters
+missing_fields, unsupported_requests, questions, conflicts
+confirmation: {required, confirmed, actor, confirmed_at, patch, revision}
+pipeline_status, pipeline_stage
+schema_result, ir_document, validation_summary
+step: {repo_relative_path, sha256, bytes} | null
+errors
+```
+
+`extracted_parameters` 保留 v5 原始主张；不得把用户修改直接写回原始 envelope。用户修改字段在最终参数中标记为 `user_explicit`，仍须通过既有 Schema/目录规则；修改目录派生值造成冲突时返回 `blocked`，不能静默覆盖派生规则。目录派生值和规则派生值只读展示。摘要只保存相对路径和 hash，不保存 API key、Authorization header 或 evaluator-only 标签；raw 正文遵守既有 retention policy。
+
+### 最小接口语义
+
+实现可以沿用标准库 localhost server，但必须提供等价的三个操作，且不破坏 C1 现有 `/api/generate` 与下载语义：
+
+1. `create_product_run(request_text, fixture_id)`：创建 `request_received/extraction_pending` run，离线读取已登记的 synthetic fixture，返回 `run_id`、产品状态、decision、参数来源、questions/conflicts 和 `confirmation_revision`。
+2. `confirm_product_run(run_id, confirmation_revision, confirmed, patch)`：只接受当前 revision；`confirmed=false` 或 patch 校验失败返回 `blocked`/`needs_confirmation`，不调用 CAD。合法确认或修改创建 child run，进入 `constructing` 后调用现有确定性 pipeline。
+3. `get_product_run(run_id)` / `download_product_step(run_id)`：只返回该 run 的状态与证据；下载必须复用 C1 的 UUID、注册表、canonical containment、symlink 拒绝和 SHA-256 校验。
+
+HTTP JSON 字段应与上述记录契约同名或提供明确映射。服务端持有所有 transport/fixture 访问权；浏览器只提交需求和确认 patch，绝不接触 key 或 provider 凭证。
+
+### 离线验收边界
+
+CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、目录/规则冲突、unsupported、`decision=ask`、`decision=refuse`、Schema/IR 失败、CadQuery/STEP 导出失败，以及用户修改后新 run 隔离。每个阻断/失败案例都要断言 CAD 编译器未调用、没有 STEP 发布、没有返回旧 run 文件；合法确认必须在固定 CAD venv 生成真实 STEP。离线测试不读取 `.env`、不发网络、不调用 LLM。
+
+### 后续 live 接入条件
+
+离线 C2 与独立复核通过后，才准备新的产品 live smoke scope（建议正常、缺参、冲突/非法各一条）。该 scope 不继承 A2 的批准或预算，必须绑定新的输入/prompt/contract hash、预算、product gate、batch ID 和负责人授权；`FORMAL_EVALUATION_ALLOWED=False` 继续保持。
