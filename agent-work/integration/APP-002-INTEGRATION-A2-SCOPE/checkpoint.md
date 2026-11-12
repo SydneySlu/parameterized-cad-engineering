@@ -452,3 +452,12 @@ Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未
 - 固定环境验证：Python 3.11.18（`work/benchcad-output/venv/bin/python`）；目标缺依赖测试 1/1、A2 专项 98/98、Integration 全量 179/179；`py_compile`、`git diff --check origin/main..HEAD` 通过。
 - 结论：runtime guard 的代码与回归验证完成；没有因此产生真实模型→STEP 成功证据。旧 batch `...-01` 至 `...-03` 均保持只读。
 - 下一步：使用从未使用的候选 ID `app002-a2-smoke-20261112-04` 执行固定 CAD venv 离线 preflight；若通过，再向负责人申请该 ID 的 live preflight 和三条 DeepSeek/C0 整链执行授权。
+
+## APP-002-A2-LIVE-EXECUTION-04 / Codex 中枢 / review / 2026-11-12 — offline preflight
+
+- 候选 batch：`app002-a2-smoke-20261112-04`；旧 `...-01` 至 `...-03` 只读保留，本次只检查新 ID。
+- 命令：`PYTHONPATH=src:. work/benchcad-output/venv/bin/python` 调用 `authorize_a2_run(batch_id=...)` 与 `run_a2_offline_preflight(..., require_cad_runtime=True)`。
+- 结果：preflight `ok=true`、无错误；固定 CAD runtime 检查通过；冻结 inputs SHA-256 与 prompt 检查通过；预算 `3 runs × 3 attempts = 9`，授权上限 9，可行；batch 目录执行前不存在，执行后仍不存在。
+- 另以固定解释器单独核实 `_check_cad_runtime()` 返回 `ok=true`，错误数为 0；未输出依赖版本详情。
+- 边界：未读取 `.env`、密钥、raw 正文或 evaluator labels；未初始化 transport、创建 batch 目录或发出 HTTP/模型请求。离线 preflight 不等于 live 授权。
+- 下一步：请负责人对该精确 batch ID 批准 live preflight + 三条 DeepSeek `deepseek-flash` / C0 整链输入（`A2-24mm`、`A2-80mm`、`A2-ask-bore`），最多 9 次 HTTP，允许 CAD pipeline。批准前不得运行 live。

@@ -66,7 +66,7 @@
 | APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | done | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配，但实际位于批次根目录，偏离授权指定的 `raw/` 子目录。runner 已窄修为后续正式运行写入 `batch/raw/`；历史批次未移动/重跑。分支已合入并推送，Codex 在 `main=95d1dcb` 上复验：LLM 842 通过/8 个既有 FUSE skip，Schema 17 通过，runner+v5 入口 101 通过/1 个既有 skip；详见审查记录。后续真实运行需新入口基线、新 batch ID 和单独授权。 |
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
-| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | review | runtime preflight guard 与缺依赖零副作用回归已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 复验 A2 98 项、Integration 179 项通过。`...-03` 的两条 answer 因原调用环境缺 `jsonschema` 未生成 STEP，一条 ask 正确停止；历史批次只读保留。当前以新候选 batch `app002-a2-smoke-20261112-04` 执行离线 preflight；真实模型整链仍须负责人单独批准新 batch 后运行 |
+| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | review | runtime preflight guard 与缺依赖零副作用回归已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 复验 A2 98 项、Integration 179 项通过。新候选 `app002-a2-smoke-20261112-04` 离线 preflight 通过（runtime、输入 hash、prompt、9 HTTP 预算均通过，目录未创建）。`...-03` 两条 answer 未生成 STEP，历史批次只读保留；live 执行需负责人对 `...-04` 单独授权 |
 
 ## 当前缺口与限制
 
@@ -80,7 +80,7 @@
 ## 当前工作单元边界
 
 - `APP-002-INTEGRATION-A1`：已完成；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
-- `APP-002-INTEGRATION-A2-SCOPE`：ADR-0021 的 A2 专用 gate 生效，全局 `FORMAL_EVALUATION_ALLOWED=False` 保持不变。Adapter run ID 绑定、all-error summary 状态、CAD runtime preflight 和缺依赖零调用断言均已合入 `main=0b02a26` 并在固定 venv 复验通过。`...-01` 至 `...-03` 均只读保留；`...-03` 未生成 STEP。候选 `...-04` 仅进行离线 preflight，不能视为 live 授权。
+- `APP-002-INTEGRATION-A2-SCOPE`：ADR-0021 的 A2 专用 gate 生效，全局 `FORMAL_EVALUATION_ALLOWED=False` 保持不变。Adapter run ID 绑定、all-error summary 状态、CAD runtime preflight 和缺依赖零调用断言均已合入 `main=0b02a26` 并在固定 venv 复验通过。新候选 `...-04` 离线 preflight 通过但未创建目录；`...-01` 至 `...-03` 均只读保留。下一步需负责人对 `...-04` 的 live 执行单独授权。
 - ask/refuse、missing_fields、unsupported、解析/Schema/IR 失败不调用 CAD；构造/导出/回读失败不能报告成功或发布其他运行旧文件。用户显式值、目录派生值与规则派生值分别保存。
 - 本工作包不发模型/网络请求，不读密钥、.env 或历史 raw 正文；不修改冻结 prompt、Schema/IR 语义、预算、A2 输入/模型/condition scope 或旧批次，`FORMAL_EVALUATION_ALLOWED=False` 不变。ADR-0021 仅确认既有 A2 专用授权机制可用于后续独立批准的 batch。
 - 错误几何、关键参数丢失、错误放行、假成功属于交付阻断；措辞、额外语言覆盖与新实验进入 backlog，不自动阻断主闭环。
@@ -91,6 +91,6 @@
 2. **A2 scope 准备已完成并合入 `main`**：`9b9395c` 包含冻结输入、授权 profile、受控入口、正式批准门、summary/raw 证据链及文档收束。
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
-5. runtime guard 和缺依赖零副作用断言已合入 `main=0b02a26`；固定 CAD venv 下 A2 98 项、Integration 179 项通过。新的候选 `app002-a2-smoke-20261112-04` 正在执行离线 preflight；通过后向负责人申请该新 ID 的 live 执行授权。正式运行必须使用固定 CAD venv，不得重用 `...-01` 至 `...-03`。
+5. runtime guard 和缺依赖零副作用断言已合入 `main=0b02a26`；固定 CAD venv 下 A2 98 项、Integration 179 项通过。候选 `app002-a2-smoke-20261112-04` 的离线 preflight 已通过：runtime、冻结输入 hash、prompt、9 HTTP 预算均通过，batch 目录不存在且未创建。下一步向负责人申请该新 ID 的 live 执行授权。正式运行必须使用固定 CAD venv，不得重用 `...-01` 至 `...-03`。
 6. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

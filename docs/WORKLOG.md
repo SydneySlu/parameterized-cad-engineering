@@ -2484,3 +2484,12 @@ commit=待提交
 - 验证：CAD venv Python 3.11.18 下缺依赖目标测试 1/1、A2 专项 98/98、Integration 全量 179/179；相关 `py_compile` 和 `git diff --check origin/main..HEAD` 通过。
 - 结论：正式 preflight 的 runtime guard 及零调用测试已复核并合入；A2 真实模型→STEP 尚无成功证据，`...-01` 至 `...-03` 只读保留。
 - 下一步：离线检查新候选 batch `app002-a2-smoke-20261112-04`；若 preflight 通过，再由负责人对该新 ID 单独批准 live 执行。
+
+### APP-002-A2-LIVE-EXECUTION-04-PREFLIGHT / Codex 中枢 / review / 2026-11-12
+
+- 动作：完成 A2 runtime guard 文档收束后，选择新候选 batch `app002-a2-smoke-20261112-04` 并执行离线 preflight。
+- 文档收束提交：`84dd6b9`（状态/计划/checkpoint/WORKLOG 同步 runtime guard 合入与固定环境复验事实）。
+- 环境与命令：固定 CAD venv Python 3.11.18；`authorize_a2_run(batch_id=...)` + `run_a2_offline_preflight(..., require_cad_runtime=True)`；单独调用 `_check_cad_runtime()` 只输出通过状态和错误数。
+- 结果：preflight 通过；runtime、冻结输入 hash、prompt、预算均通过；3 runs × 3 attempts = 9，与上限 9 一致；batch 目录执行前后均不存在。
+- 边界：未读取凭据、`.env`、raw 正文或 labels；未创建批次目录、初始化 transport、发 HTTP 或请求模型。旧 `...-01` 至 `...-03` 只读不动。
+- 下一步：为候选 `...-04` 请求负责人单独批准 live preflight 与 3 条 DeepSeek/C0 整链运行，最多 9 HTTP；未获批前不发送请求。
