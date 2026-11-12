@@ -2493,3 +2493,12 @@ commit=待提交
 - 结果：preflight 通过；runtime、冻结输入 hash、prompt、预算均通过；3 runs × 3 attempts = 9，与上限 9 一致；batch 目录执行前后均不存在。
 - 边界：未读取凭据、`.env`、raw 正文或 labels；未创建批次目录、初始化 transport、发 HTTP 或请求模型。旧 `...-01` 至 `...-03` 只读不动。
 - 下一步：为候选 `...-04` 请求负责人单独批准 live preflight 与 3 条 DeepSeek/C0 整链运行，最多 9 HTTP；未获批前不发送请求。
+
+### APP-002-A2-LIVE-EXECUTION-04 / Codex 中枢 / review / 2026-11-12
+
+- 授权：项目负责人批准新唯一批次 `app002-a2-smoke-20261112-04`，限定 DeepSeek `deepseek-flash`、C0、`A2-24mm`/`A2-80mm`/`A2-ask-bore`、最多 9 次 HTTP，允许 CAD pipeline 并留存摘要、raw、pipeline 与 STEP 证据。
+- 环境与执行：使用 `work/benchcad-output/venv/bin/python`（Python 3.11.18）；formal runtime preflight 通过。三条输入各一次 HTTP，账本 3/9，未重试；summary=`complete`。
+- 结果：`A2-24mm` 为 answer，Schema/IR/CAD/STEP 导出及回读成功，参数 `bore_d=24 mm`、`second_screw=0`；STEP 148,393 bytes，SHA-256 `50c1c0626326eb828c8c0d0934d1913f0607300505cd96739ef3ad185f2184d6`。`A2-80mm` 为 answer，Schema/IR/CAD/STEP 导出及回读成功，参数 `bore_d=80 mm`、`second_screw=1`，第二螺钉几何分支启用；STEP 364,404 bytes，SHA-256 `8f48075fc9cb651af165f3092d1375bb59613440c2587efbc4ee5e9400f4e9d9`。两者均记录为有效单实体，并通过 CAD-006 几何验证与 STEP 回读比较；实际 STEP/IR hash 与 index/manifest 一致。`A2-ask-bore` 为 ask，未创建 pipeline 或 STEP。
+- 只读复核：3 个 raw 路径均指向本批次 `raw/` 且文件非空，摘要留有各自 body SHA-256；未打开 raw 正文或 evaluator labels。`...-04` 已消耗，及 `...-01` 至 `...-03` 一样保持只读，不重跑、不覆盖、不混合。
+- 文档同步：更新 PROJECT_PLAN / PROJECT_STATUS，追加本 checkpoint 与 WORKLOG。A2 状态仍为 `review`；本批次完成三个范围内案例，不代表完整六类 Milestone B 验收、广泛语言覆盖或制造认证。剩余：单位换算、显式冲突、CAD 构造/导出失败的整链验收，并独立复核此次证据。
+- 不变量：`FORMAL_EVALUATION_ALLOWED=False` 不变；ADR-0021 A2 专用 gate、模型/输入/条件/预算边界不变；未 push/merge。

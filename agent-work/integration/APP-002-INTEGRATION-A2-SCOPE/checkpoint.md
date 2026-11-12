@@ -461,3 +461,41 @@ Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未
 - 另以固定解释器单独核实 `_check_cad_runtime()` 返回 `ok=true`，错误数为 0；未输出依赖版本详情。
 - 边界：未读取 `.env`、密钥、raw 正文或 evaluator labels；未初始化 transport、创建 batch 目录或发出 HTTP/模型请求。离线 preflight 不等于 live 授权。
 - 下一步：请负责人对该精确 batch ID 批准 live preflight + 三条 DeepSeek `deepseek-flash` / C0 整链输入（`A2-24mm`、`A2-80mm`、`A2-ask-bore`），最多 9 次 HTTP，允许 CAD pipeline。批准前不得运行 live。
+
+## APP-002-A2-LIVE-EXECUTION-04 — live preflight and real-chain result (2026-11-12)
+
+### Current status
+
+`review` — the specifically authorized batch completed successfully for its three-input scope. This is first real DeepSeek-to-STEP evidence for A2, not completion of all Milestone B acceptance cases or a broad language-quality claim.
+
+### Authorization and run scope
+
+- Project owner explicitly approved `app002-a2-smoke-20261112-04`: DeepSeek `deepseek-flash`, C0, frozen inputs `A2-24mm`, `A2-80mm`, `A2-ask-bore`, maximum 9 HTTP requests, CAD pipeline enabled, and retention of batch summary, raw responses, pipeline and STEP evidence.
+- Fixed runtime: `work/benchcad-output/venv/bin/python` (Python 3.11.18; the CAD runtime preflight passed).
+- The candidate had passed offline preflight before this approval. The approved live path then completed; no old batch was reused.
+
+### Persisted result and independent metadata checks
+
+- Batch summary: `work/app001-runs/app002-a2-smoke-20261112-04/batch_summary.json`; `batch_status=complete`, with all 3 planned runs present.
+- Budget ledger: `budget_ledger.json`; 3 attempts used / 9 maximum, all for DeepSeek chat. No retry was needed.
+- Raw retention: 3 non-empty files under this batch's `raw/`; each summary retention path resolves to a file and its recorded SHA-256 is present. Raw response bodies were not read during this closeout; evaluator labels were not opened.
+- `A2-24mm`: model decision `answer`; Schema validation passed; normalized `bore_d=24 mm`, catalog-derived values retained, rule-derived `second_screw=0`; pipeline `success`; native geometry valid with one solid; STEP export and readback succeeded. STEP 148,393 bytes, SHA-256 `50c1c0626326eb828c8c0d0934d1913f0607300505cd96739ef3ad185f2184d6`. Actual STEP hash matches the pipeline index and compiler manifest; actual IR bytes match the indexed input IR hash.
+- `A2-80mm`: model decision `answer`; Schema validation passed; normalized `bore_d=80 mm`, catalog-derived values retained, rule-derived `second_screw=1`; pipeline `success`; native geometry valid with one solid and the second-hole branch enabled; STEP export and readback succeeded. STEP 364,404 bytes, SHA-256 `8f48075fc9cb651af165f3092d1375bb59613440c2587efbc4ee5e9400f4e9d9`. Actual STEP hash matches the pipeline index and compiler manifest; actual IR bytes match the indexed input IR hash.
+- `A2-ask-bore`: model decision `ask`; no pipeline run directory or STEP path was returned, so construction stopped as required.
+- The two generated shapes passed the recorded CAD-006 geometry validation and STEP readback comparisons. This does not certify manufacturability.
+
+### Boundaries and next work
+
+- Batch `...-04` is now consumed and must remain read-only: do not rerun, overwrite, or mix its artifacts with another batch. The same applies to `...-01` through `...-03`.
+- The completed scope covers a valid 24 mm value, the 80 mm second-screw boundary, and missing-bore ask. Milestone B still needs unit conversion, explicit directory/rule conflict, and CAD construction/export failure acceptance. Prefer offline synthetic fixtures and existing tests; a new live request requires a fresh scope and owner approval.
+- `FORMAL_EVALUATION_ALLOWED=False` remains unchanged; A2 authorization remains governed by ADR-0021. Scope remains one family and these three frozen inputs. No raw body or evaluator-label content was used to recompute model decisions.
+
+### handoff_self_check / successor focus
+
+```text
+changed=readonly review of app002-a2-smoke-20261112-04 artifacts; docs/PROJECT_STATUS.md, docs/PROJECT_PLAN.md, this checkpoint, docs/WORKLOG.md
+commands=Python 3.11.18 metadata/hash verifier: batch complete, ledger 3/9, three raw file paths resolve; both STEP files nonempty and content hashes match index/manifest; both actual IR hashes match index; ask has no pipeline/STEP; git diff --check pending at closeout
+confirmed=24 mm answer→valid one-solid geometry→STEP readback; 80 mm answer→second_screw=1 and second-hole branch→valid one-solid geometry→STEP readback; missing bore→ask/no CAD; recorded batch scope and approval match; no raw body/labels read
+unresolved=Milestone B unit conversion, explicit conflict, and CAD failure acceptance; independent review of closeout evidence; broader language coverage/stability
+next_agent_focus=verify doc diff and commit; keep batch -04 read-only; add only missing Milestone B offline tests or prepare the next user-approved work unit
+```
