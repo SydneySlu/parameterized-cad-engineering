@@ -2476,3 +2476,11 @@ commit=待提交
   confirmed=BudgetAwareTransport构造0次;DeepSeekTransport构造0次;urlopen调用0次;BudgetLedger未构造;批次目录不存在;_check_cad_runtime被调用
   unresolved=Python 3.11.18固定环境全量验证(98项A2+179项Integration+py_compile+diff --check)
   next_agent_focus=Codex中枢在work/benchcad-output/venv/bin/python(Python 3.11.18)下:1)98项A2;2)Integration全量179;3)py_compile;4)git diff --check;5)确认目标测试的6项零调用断言全部通过
+
+### APP-002-A2-GATE-STATUS-FIX-CLOSEOUT / Codex 中枢 / review / 2026-11-12
+
+- 动作：同步 A2 runtime preflight guard 的独立复核、合入与固定环境复验事实，清理 PROJECT_STATUS / PROJECT_PLAN 中“待独立复核”的过时表述，并追加 checkpoint。
+- 合入事实：`0b02a26` 在 `main` 与 `origin/main`；其父提交为 `351781f`，工作区干净。
+- 验证：CAD venv Python 3.11.18 下缺依赖目标测试 1/1、A2 专项 98/98、Integration 全量 179/179；相关 `py_compile` 和 `git diff --check origin/main..HEAD` 通过。
+- 结论：正式 preflight 的 runtime guard 及零调用测试已复核并合入；A2 真实模型→STEP 尚无成功证据，`...-01` 至 `...-03` 只读保留。
+- 下一步：离线检查新候选 batch `app002-a2-smoke-20261112-04`；若 preflight 通过，再由负责人对该新 ID 单独批准 live 执行。

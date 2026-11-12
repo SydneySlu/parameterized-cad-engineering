@@ -444,3 +444,11 @@ Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未
 - 边界：仅预检依赖，不安装/升级 Python 包，不修改冻结模型 scope、预算、授权或 `FORMAL_EVALUATION_ALLOWED=False`；未发网络/模型请求；历史与 `...-03` 批次保持只读。
 - handoff_successor_check：`predecessor=APP-002-INTEGRATION-A2-LIVE-EXECUTION-03, commit=192c58c`; `files_format=新增 runtime capability preflight，并保持 dry-run/mock 行为`; `core_rerun=CAD venv A2 suite 98/98 + positive/negative formal preflight`; `normal_case=固定 CAD venv 通过并识别预期依赖版本`; `failure_case=系统 Python 缺 jsonschema/cadquery 时拒绝，正式入口 mock regression 断言零副作用`; `interface=A2 frozen 3-input / DeepSeek C0 / 9 HTTP scope unchanged`; `limits=no live request; batch -03 immutable; new batch requires separate owner approval`; `result=review`。
 - 下一步：Codex 中枢独立复核该 guard 并合入后，live 运行统一通过 CAD venv 启动；新 batch ID 和 live 执行仍须项目负责人另行批准。
+
+## APP-002-A2-GATE-STATUS-FIX 独立复核与合入收束 / Codex 中枢 / review / 2026-11-12
+
+- 合入事实：`0b02a26` 已位于 `main` 与 `origin/main`，父提交 `351781f`；工作区干净。
+- 独立复核：扩展后的缺依赖测试断言 runtime gate 被调用，且无 `BudgetAwareTransport`、`DeepSeekTransport`、`BudgetLedger` 构造、无 `urllib.request.urlopen` 调用、无批次目录创建。
+- 固定环境验证：Python 3.11.18（`work/benchcad-output/venv/bin/python`）；目标缺依赖测试 1/1、A2 专项 98/98、Integration 全量 179/179；`py_compile`、`git diff --check origin/main..HEAD` 通过。
+- 结论：runtime guard 的代码与回归验证完成；没有因此产生真实模型→STEP 成功证据。旧 batch `...-01` 至 `...-03` 均保持只读。
+- 下一步：使用从未使用的候选 ID `app002-a2-smoke-20261112-04` 执行固定 CAD venv 离线 preflight；若通过，再向负责人申请该 ID 的 live preflight 和三条 DeepSeek/C0 整链执行授权。

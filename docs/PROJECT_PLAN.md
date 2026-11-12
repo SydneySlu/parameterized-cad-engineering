@@ -11,13 +11,13 @@
 | 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
 |---|---|---|
 | A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
-| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | review；`...-03` 两条 answer 因调用环境缺少 `jsonschema` 在 IR Schema 校验失败，无 STEP；ask 正确停止，批次只读保留。A2 正式 preflight 已窄修为请求前检查 Draft 2020-12/jsonschema、CadQuery、OCP；固定 CAD venv 通过，系统 Python 失败。独立复核后统一用固定 venv；新 batch 仍需单独 live 批准 |
+| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：Codex 中枢推进受控 live 整链 | review；runtime guard 与缺依赖零调用回归已合入 `main=0b02a26`，固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。候选 `app002-a2-smoke-20261112-04` 正在执行离线 preflight；通过后须为该新 ID 单独批准 live 执行。`...-03` 两条 answer 未生成 STEP，旧批次只读保留 |
 | B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | planned；合法、单位、第二螺钉边界、缺参、冲突、构造/导出失败六类；本地夹具验证后，再取得真实模型整链证据 |
 | C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
-- v5 fixed-set 真实双模型评测已完成。A2 `...-03` 已实际发出 3 次 DeepSeek 请求：两条 answer 在系统 Python 缺少 `jsonschema` 时未通过 IR Schema 阶段，一条 ask 正确停止；没有真实模型→STEP 成功证据。batch `...-03` 只读保留，不得重跑。固定 CAD venv 的依赖已核实，后续若再执行须使用新 ID、该 venv，并另行取得负责人 live 批准；ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
+- v5 fixed-set 真实双模型评测已完成。A2 `...-03` 已发出 3 次 DeepSeek 请求：两条 answer 在系统 Python 缺少 `jsonschema` 时未通过 IR Schema 阶段，一条 ask 正确停止；没有真实模型→STEP 成功证据，批次只读保留。runtime guard 现已合入并在固定 CAD venv 下复验；候选 `...-04` 进行离线 preflight，通过后仍需负责人对该新 ID 单独批准 live 执行。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
