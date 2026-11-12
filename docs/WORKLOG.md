@@ -2433,3 +2433,12 @@ commit=待提交
 - 修正：查明 Adapter 拒绝原因是 `BudgetAwareTransport.adapter_run_id` 与随机 Adapter `run_id` 不匹配；formal A2 路径改用冻结 logical run ID。Summary 对 all-error=`failed`、mixed errors=`partial`、中途停止=`aborted`、完整非错误终态=`complete`。
 - 验证：Python 3.11.18 下 A2 96 项、Integration 176 项、Schema 17 项通过；LLM 941 项通过/8 项既有 skip；py_compile 与 diff-check 通过。合法绑定到达 prompt 验证，错误 run ID 仍 fail closed；无模型/网络/密钥读取。
 - 下一步：完成中枢差异复核；若通过，合入后重跑离线 preflight，并另行取得新唯一 batch 的明确 live 执行批准。`...-01`、`...-02` 失败现场只读保留。
+### APP-002-INTEGRATION-A2-LIVE-EXECUTION-03 / Codex 中枢 / review / 2026-11-12
+
+- 授权：项目负责人明确批准 batch `app002-a2-smoke-20261112-03` 的 live preflight 与三条 DeepSeek `deepseek-flash` / C0 整链请求（`A2-24mm`、`A2-80mm`、`A2-ask-bore`），最多 9 次 HTTP，允许 CAD pipeline。
+- 执行前核验：分支 `codex/APP-002-A2-GATE-STATUS-FIX`、HEAD `1dc61bc`、工作区干净；Python 3.11.18 离线 preflight 通过，inputs hash、v5 prompt、9 次预算可行，batch 目录不存在。
+- 结果：三条均发出 1 次 HTTP，账本为 3/9。`A2-24mm` 和 `A2-80mm` 的模型决策均为 answer，但 CAD pipeline 在 IR Schema 校验阶段因 `CAD_SCHEMA_VALIDATOR_UNAVAILABLE` 失败，没有 STEP；`A2-ask-bore` 为 ask，正确停止构造。摘要 `batch_status=partial`，与逐条结果相符。
+- 根因：本次用 `/opt/homebrew/bin/python3.11` 启动 A2 runner，该解释器没有 `jsonschema`；固定 CAD venv 则为 Python 3.11.18、jsonschema 4.26.0、支持 Draft 2020-12、CadQuery 2.3.0、OCP 7.9.3.0。后续 A2 整链必须由 CAD venv 启动。
+- 安全与批次边界：凭据仅在 Python 进程内从 `.env` 读取，未显示或另行持久化；未读取 evaluator labels 或 raw 正文。`...-03` 已使用，目录只读保留，不补跑、不覆盖、不更新 summary。模型输出原始文本未查看。
+- 另有一个仅影响本次结果显示的脚本错误：run 完成后访问了不存在的 `A2BatchResult.summary_status`，外层以 AttributeError 退出；持久化 summary 与账本仍为实际状态事实源。
+- 下一步：独立复核并合入 `1dc61bc`；之后以固定 CAD venv、新唯一 batch ID 做离线 preflight，并向负责人另行申请 live 执行授权。全局 `FORMAL_EVALUATION_ALLOWED=False` 与 ADR-0021 专用 gate 不变。

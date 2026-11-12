@@ -402,3 +402,35 @@ Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未
 - A2 固定输入、DeepSeek `deepseek-flash`、C0、3 logical runs、9 HTTP cap 和 CAD pipeline scope 未变；预算预留逻辑未改；`FORMAL_EVALUATION_ALLOWED=False` 未变。
 - handoff_self_check：`changed=ADR-0021, A2 formal run ID binding, summary status semantics, four focused regression tests, PROJECT_PLAN/PROJECT_STATUS/checkpoint/WORKLOG; commands=A2 96, integration 176, schema 17, LLM 941+8 existing skips, py_compile, diff-check all pass; confirmed=valid A2 binding accepted before prompt validation, mismatched ID rejected, all-error summary failed, global gate remains false; unresolved=independent review/merge and new batch approval; next_agent_focus=review ADR scope, Adapter positive/negative gate test, batch status aggregation, and no change to old batch artifacts or global gate`。
 - 下一步：中枢完成独立差异复核并合入后，重新执行新的离线 preflight；再向项目负责人申请一个未使用的新 batch ID 的 live preflight + 三条 DeepSeek/C0 整链执行批准。
+
+## APP-002-INTEGRATION-A2-LIVE-EXECUTION-03 / Codex 中枢 / review / 2026-11-12
+
+### 授权与执行范围
+
+- 负责人明确批准 batch `app002-a2-smoke-20261112-03` 的 live preflight 和三条 DeepSeek `deepseek-flash` / C0 整链输入：`A2-24mm`、`A2-80mm`、`A2-ask-bore`；每批最多 9 次 HTTP，允许 A2 CAD pipeline。
+- 执行前核实当前分支 `codex/APP-002-A2-GATE-STATUS-FIX`、HEAD `1dc61bc`、工作区干净；当前代码修复尚未合入 `main`。
+- Python 3.11.18 离线 preflight 通过：冻结 inputs hash 匹配、v5 prompt 可加载、预算 9/9 可行，batch 目录不存在。
+- 凭据只在一个 Python 进程内从 `.env` 提取到 `DEEPSEEK_API_KEY`；未打印、未写入其他文件。未读取 evaluator labels 或 raw 正文。
+
+### 真实执行结果
+
+- batch 目录：`work/app001-runs/app002-a2-smoke-20261112-03/`。该批次现已使用，必须只读保留，不得复用、覆盖或重跑。
+- 三条输入均实际发出 1 次 HTTP；账本合计 3/9 次，三条 attempt 均返回成功的 HTTP transport 状态。
+- `A2-24mm`、`A2-80mm`：LLM 状态为 `answer`，但 CAD pipeline 在 IR Schema 校验处失败，错误码均为 `CAD_SCHEMA_VALIDATOR_UNAVAILABLE`；没有 STEP。
+- `A2-ask-bore`：LLM 状态为 `ask`，按构造门正确停止，没有调用 CAD。
+- `batch_summary.json` 最终 `batch_status=partial`，与两条 pipeline 失败、一条 ask 的结果一致；raw 留存位于该批次 `raw/`，summary 仅保存路径和 SHA-256。
+- 没有读取或输出 raw 正文、密钥值；没有检查 evaluator labels。
+
+### 根因与处置
+
+- 入口由 `/opt/homebrew/bin/python3.11` 运行。该解释器没有安装 `jsonschema`，A2 在线执行仍能发请求，但 A1 pipeline 的 IR Draft 2020-12 验证因此 fail closed。
+- 已确认项目固定 CAD 运行时 `work/benchcad-output/venv/bin/python` 同为 Python 3.11.18，具备 `jsonschema 4.26.0`、Draft 2020-12、CadQuery 2.3.0 和 OCP 7.9.3.0。后续执行必须使用该解释器启动整个 A2 runner。
+- 结果展示脚本在读取返回对象时错误访问不存在的 `summary_status` 属性，造成外层进程在三条 run 已完成及 summary 写入之后以 AttributeError 退出；这不影响持久化批次事实。应以 `batch_summary.json` 和 `budget_ledger.json` 为批次状态事实源。
+- 不在当前 batch 上补跑 CAD 或更新其 summary，以免重写已经完成的批次记录。若要重新取得真实模型→STEP 证据，须改用固定 CAD venv、分配新唯一 batch ID，并由负责人单独批准新批次。
+
+### 验证及 handoff
+
+- 固定环境检查：系统 Python `/opt/homebrew/bin/python3.11` 缺少 `jsonschema`；CAD venv 为 Python 3.11.18 / `jsonschema 4.26.0` / Draft202012Validator / CadQuery 2.3.0 / OCP 7.9.3.0。
+- 批次只读统计：3 次预算 attempt，最大 9；结果 2 条 answer→pipeline failed、1 条 ask；summary=`partial`；无 STEP。
+- 结论：本次成功验证了真实模型调用、answer/ask 分流和批次留证，但未完成整链 STEP 验收。A2 维持 `review`，不得将本次表述为整链通过。
+- 下一步：代码差异复核/合并到 main 后，使用 CAD venv 重跑新 ID 的离线 preflight；向负责人说明 `-03` 作废并只读保留，再申请新的 live 批次授权。全局 `FORMAL_EVALUATION_ALLOWED=False`、ADR-0021 专用 A2 gate、冻结 scope 和预算不变。

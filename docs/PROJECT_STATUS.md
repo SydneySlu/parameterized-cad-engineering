@@ -66,11 +66,11 @@
 | APP-001-V5-FORMAL-EFFECT-EVALUATION | v5 真实模型效果评测 | Codex + 项目负责人 | done | 唯一批次 `app001-phase1-v5-20261111-01` 已真实运行：32/36 模型响应、4 条 C1 请求前阻塞、48 次账本尝试；32/32 解析通过、20/32 Schema 通过。32 个 raw 文件存在且哈希匹配，但实际位于批次根目录，偏离授权指定的 `raw/` 子目录。runner 已窄修为后续正式运行写入 `batch/raw/`；历史批次未移动/重跑。分支已合入并推送，Codex 在 `main=95d1dcb` 上复验：LLM 842 通过/8 个既有 FUSE skip，Schema 17 通过，runner+v5 入口 101 通过/1 个既有 skip；详见审查记录。后续真实运行需新入口基线、新 batch ID 和单独授权。 |
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
-| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口准备 | Codex 中枢 | review | ADR-0021 已接受 A2 独立授权门：不改全局 `FORMAL_EVALUATION_ALLOWED=False`，只允许原有固定 A2 scope + 同 batch 非 test-only approval。当前修复 Adapter run ID 与 BudgetAwareTransport binding 不一致，以及全 error 批次误报 complete；`...-01`/`...-02` 现场只读保留。修复及固定环境复核通过后，新 live batch 仍须新 ID 和单独批准 |
+| APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | review | ADR-0021 A2 专用 gate 保持全局 `FORMAL_EVALUATION_ALLOWED=False`。`...-03` 获批后实际运行 3 条 DeepSeek 请求：2 条 answer 因系统 Python 缺 `jsonschema` 在 IR Schema 校验失败、无 STEP；1 条 ask 正确停止；summary=`partial`，3/9 HTTP。`...-01`/`...-02`/`...-03` 均只读保留。固定 CAD venv 已核实依赖；后续使用新 batch ID、固定 venv，并另行申请 live 批准 |
 
 ## 当前缺口与限制
 
-- A1 的语言层到后端连接已完成并合入 `main`；当前缺口是受控真实模型→CAD 整链入口及其独立 scope/授权。旧评测 runner 不自动获得 CAD 权限，A2 必须使用新的受控入口。
+- A1 的语言层到后端连接已完成并合入 `main`；A2 已产生真实模型 answer/ask 证据，但真实模型→STEP 仍未完成。`...-03` 的两条合法 answer 因调用解释器缺 `jsonschema` 在 IR 校验前 fail closed；固定 CAD venv 包含所需依赖。旧评测 runner 不自动获得 CAD 权限，A2 继续使用专用受控入口。
 - 已有后端并非零进度。本轮固定 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境下 CAD 13 项、Schema/IR 22 项通过，包含真实本地构造、STEP 导出与回读；这不是自然语言真实模型整链证据。
 - v5 已有固定九案例真实双模型证据，当前没有真实模型→STEP 的整链验收。新模型整链需新受控 scope、输入、预算、batch ID 与项目负责人授权；旧 Schema-only 和 held-out scope 不自动扩展。
 - 15 行覆盖当前冻结单族全部合法目录配置，不是语言训练样本；九案例的条件/模型运行次数不是独立用户需求数。语言覆盖、运行稳定性、跨族扩展分别规划。
@@ -90,7 +90,7 @@
 1. A1 已完成：固定环境独立验收和合并后回归均通过，证据保存在 A1 checkpoint。
 2. **A2 scope 准备已完成并合入 `main`**：`9b9395c` 包含冻结输入、授权 profile、受控入口、正式批准门、summary/raw 证据链及文档收束。
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
-4. `c954741` 的构造器修复已通过复核；ADR-0021 已明确既有 A2 scope + 非 test-only batch approval 是其专用授权路径，全局 gate 继续为 False。Adapter transport/run ID binding 与全失败 summary 状态正在窄修。
-5. **当前关口**：完成代码修复和 Python 3.11.18 独立复核；通过后为新唯一 batch ID 取得单独 live 批准，再运行离线/真实 preflight 和获批 3 条 DeepSeek 整链输入。
+4. `1dc61bc` 修复通过离线回归；`...-03` live 执行证明 Adapter gate 可到达模型，但系统 Python 缺少 `jsonschema`，两条 answer 未生成 STEP。所有已使用 batch 均只读保留。
+5. **当前关口**：先对 `codex/APP-002-A2-GATE-STATUS-FIX` 代码完成独立复核并合入；之后使用 `work/benchcad-output/venv/bin/python`（Python 3.11.18、jsonschema 4.26.0、CadQuery 2.3.0、OCP 7.9.3.0）执行新的离线 preflight，再向负责人申请新唯一 batch ID 的 live 批准。不得重用 `...-03`。
 6. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。下周导师展示是目标；当前只具备模块证据，不宣称真实模型整链已完成。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
