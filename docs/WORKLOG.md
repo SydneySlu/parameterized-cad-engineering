@@ -2510,6 +2510,33 @@ commit=待提交
 - 结果：A2 独立复核 pass；里程碑 B 完成。离线整链证据置于 git-ignore 的 `work/integration-runs/app002-milestone-b-20261112/`，详细报告见 `agent-work/reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md`。
 - 下一步：进入里程碑 C 最小可用演示；是否扩大 live 样本由负责人基于明确语言覆盖假设另行决定，未经新 scope/预算/batch ID/授权不发起新模型请求。
 
+### APP-003-C1-IMPLEMENTATION / CC / review / 2026-11-12
+
+- 动作：在分支 `cc/APP-003-C1-LOCAL-DEMO`（基于 `main=1361f52`）实现首个本地 CAD Web 演示（APP-003-C1，ADR-0022）。
+- 新增文件：
+  - `src/demo/__init__.py`：模块初始化
+  - `src/demo/handler.py`：业务逻辑（DemoHandler、DemoRunResult；复用 run_pipeline + validate_parameters + build_ir_from_schema_payload + compile_ir）
+  - `src/demo/server.py`：标准库 http.server HTTP 服务端，绑定 127.0.0.1；路由 GET /、POST /api/generate、GET /download/<run_id>；嵌入式单页 HTML+JS UI
+  - `scripts/run_cad_demo.py`：启动脚本（固定 CAD venv + PYTHONPATH）
+  - `tests/demo/__init__.py`：测试模块初始化
+  - `tests/demo/test_demo_handler.py`：30 项测试（handler 业务逻辑 + 下载隔离 + 路径穿越拒绝 + 恶意路径/symlink + 先成功后失败不泄漏 + 无网络/LLM 调用）
+- 安全边界（ADR-0022）：
+  - 下载验证：run_id UUID 格式检查→注册表查找→status=success 检查→路径 canonical containment→symlink 拒绝→文件存在且非空→内容 SHA-256 比对
+  - 无 LLM/provider 调用；不读取 `.env`/密钥；不访问 A2 历史批次；不扫描旧 run 目录；`FORMAL_EVALUATION_ALLOWED=False` 不变
+  - 每次 run 新 UUID + 独立目录；失败 run 不返回任何 STEP；成功 run 的 STEP 只通过内存注册表访问
+- 验证（sandbox Python 3.10.12，系统环境）：
+  - `py_compile`：6 个新文件全部通过
+  - `git diff --check`：通过
+  - Demo 测试 30 项：**30/30 通过** (`python3 -m unittest tests.demo.test_demo_handler -v`)
+  - Integration test_pipeline 39 项：**39/39 通过**
+  - Integration test_schema_to_ir 42 项：**42/42 通过**
+  - Schema 17 项：**17/17 通过**
+  - CAD compilation 13 项：9 项通过，4 项 ERROR（CadQuery not available in sandbox），1 项 FAIL（同上）——均为沙盒环境缺少 CadQuery 的既有故障，与本次修改无关（git stash 确认）
+  - Integration test_a2_runner：4 项 FAIL/ERROR 为既有 Python 3.10 vs 3.11 环境差异，与本次修改无关
+  - 注：固定 CAD venv `work/benchcad-output/venv/bin/python` 是指向 macOS homebrew 的断裂符号链接，无法在此 Linux 沙盒中执行。CAD-dependent 测试需 Codex 中枢在 Mac 上用固定 venv 重跑。
+- 不变量：只添加 `src/demo/`、`scripts/run_cad_demo.py`、`tests/demo/`；未修改任何已有文件（pipeline.py、schema、IR adapter、compiler、runner 等均未改动）；未修改 A2 historical batch；`FORMAL_EVALUATION_ALLOWED=False` 不变
+- 下一步：提交独立 commit，标记任务状态为 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核。
+
 ### APP-003-C1 / Codex 中枢 / in_progress / 2026-11-12
 
 - 动作：恢复里程碑 C 上下文并核实无既有 Web framework；将首个实现切片拆为 `APP-003-C1`，由 CC 实现本地可运行演示。
