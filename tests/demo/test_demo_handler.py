@@ -721,6 +721,14 @@ class TestUIHTMLEscape(unittest.TestCase):
         """server.py HTML source contains esc() with all five escape sequences."""
         self._assert_esc_fn_in_server_source()
 
+    def test_download_button_byte_label_is_well_formed(self):
+        """The download button displays the byte count with balanced Chinese punctuation."""
+        from demo.server import _build_html
+
+        html = _build_html()
+        self.assertIn("下载 STEP（${esc(d.step_bytes)} 字节）", html)
+        self.assertNotIn("${esc(d.step_bytes)}) bytes)", html)
+
     def test_esc_ampersand(self):
         """& is escaped to &amp;."""
         esc = self._get_esc_fn()

@@ -259,7 +259,7 @@ function renderResult(d) {{
   if (d.status === 'success') {{
     html += `<div style="margin-top:.8rem">`;
     html += `<a href="/download/${{esc(d.run_id)}}" download="collar-${{esc(d.bore_d_input)}}mm.step">`;
-    html += `<button class="download-btn">⬇ 下载 STEP (${{esc(d.step_bytes)}}) bytes)</button></a>`;
+    html += `<button class="download-btn">⬇ 下载 STEP（${{esc(d.step_bytes)}} 字节）</button></a>`;
     html += `</div>`;
   }}
 
