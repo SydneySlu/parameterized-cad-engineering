@@ -2618,6 +2618,22 @@ commit=待提交
 - commit：`80580ff`（文档与实现工作单元定义；尚未 push）。
 - 下一步：已有 C1 CC 对话框认领并实现离线 fixtures/状态机，提交 review commit；Codex 中枢随后在固定 CAD venv 做独立复核，再决定是否准备新的产品 live smoke scope。
 
+### APP-003-C2-NARROW-FIX / CC / review / 2026-11-13
+
+- 动作：在分支 `cc/APP-003-C2-NL-PRODUCT-FLOW`（HEAD `baba59a`）完成四项窄修。
+- **修复 1：父 run 保持完全不可变**
+  - 删除 `confirm_product_run()` 对 `parent_rec.confirmation` 的直接赋值（原第 612-630 行）。确认信息仅写入 child run。
+- **修复 2：HTTP confirm 参数严格类型校验**
+  - `_handle_product_confirm` 新增 bool-aware isinstance 检查：bool/非 int revision → 400；非 bool confirmed → 400。`"false"` 字符串不再被 `bool()` 误转为 True。
+- **修复 3：补齐 ADR-0023 产品证据字段**
+  - `ProductRunRecord` 新增五个可选字段（均有默认值 None）：`envelope_fixture_path`、`envelope_fixture_sha256`、`pipeline_run_id`、`pipeline_run_dir_relative`、`step_path_relative`；均为仓库相对路径，不暴露绝对路径；新增到 `as_dict()`。
+- **修复 4：pipeline 异常 fail-closed**
+  - `run_pipeline()` 调用外包裹 `try/except Exception`，异常 → child `product_status="failed"`；父 run 不变；`_step_path=None`。
+- 新增测试（23 项）：`TestParentRunImmutability`（3）、`TestHTTPConfirmTypeValidation`（10）、`TestEvidenceFields`（7）、`TestPipelineExceptionFailClosed`（3）。
+- 验证（sandbox Python 3.10.12）：`py_compile` 通过；`git diff --check` 通过；test_product_flow **58/58**（原 35 + 新 23）；test_demo_handler **56/56**；test_pipeline+test_schema_to_ir **81/81**；schema **17/17**。
+- 不变量：不修改 v5/Schema/IR/compiler/A2；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读密钥/不发网络请求；仅修改 `src/demo/product_flow.py`、`src/demo/server.py`、`tests/demo/test_product_flow.py`、checkpoint、WORKLOG。
+- 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核。
+
 ### APP-003-C2-IMPLEMENTATION / CC / review / 2026-11-13
 
 - 动作：在分支 `cc/APP-003-C2-NL-PRODUCT-FLOW`（基于 `main=0210b4e`）实现离线自然语言产品闭环（ADR-0023）。

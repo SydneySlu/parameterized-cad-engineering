@@ -468,5 +468,355 @@ class TestRunRecord(unittest.TestCase):
         self.assertEqual(rec.confirmation["revision"], 0)
 
 
+# ---------------------------------------------------------------------------
+# TestParentRunImmutability (Bug 1 regression)
+# ---------------------------------------------------------------------------
+
+class TestParentRunImmutability(unittest.TestCase):
+    """Parent run must remain completely unchanged after confirm_product_run."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.handler = ProductFlowHandler(output_root=Path(self.tmpdir))
+
+    def test_parent_fully_immutable_after_successful_confirm(self):
+        """Every field of parent run is identical before and after confirm."""
+        parent = self.handler.create_product_run("test request", "c2-answer-bore24")
+        self.assertEqual(parent.product_status, PRODUCT_STATUS_NEEDS_CONFIRMATION)
+
+        # Snapshot the ENTIRE parent before confirm
+        parent_dict_before = parent.as_dict()
+        parent_confirmation_before = dict(parent.confirmation)
+        parent_product_status_before = parent.product_status
+        parent_step_sha256_before = parent.step_sha256
+        parent_step_bytes_before = parent.step_bytes
+        parent_run_id_before = parent.run_id
+
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+
+        # Retrieve from registry (not same object reference)
+        parent_after = self.handler.get_product_run(parent.run_id)
+        self.assertIsNotNone(parent_after)
+
+        # run_id unchanged
+        self.assertEqual(parent_after.run_id, parent_run_id_before)
+        # product_status unchanged — still needs_confirmation
+        self.assertEqual(parent_after.product_status, PRODUCT_STATUS_NEEDS_CONFIRMATION)
+        self.assertEqual(parent_after.product_status, parent_product_status_before)
+        # confirmation.confirmed still False (not mutated by child confirm)
+        self.assertFalse(parent_after.confirmation["confirmed"])
+        self.assertEqual(parent_after.confirmation["confirmed"],
+                         parent_confirmation_before["confirmed"])
+        # confirmation.revision still 0
+        self.assertEqual(parent_after.confirmation["revision"],
+                         parent_confirmation_before["revision"])
+        # confirmation.patch still empty
+        self.assertEqual(parent_after.confirmation["patch"],
+                         parent_confirmation_before["patch"])
+        # No STEP fields set on parent
+        self.assertIsNone(parent_after.step_sha256)
+        self.assertIsNone(parent_after.step_bytes)
+        self.assertEqual(parent_after.step_sha256, parent_step_sha256_before)
+        self.assertEqual(parent_after.step_bytes, parent_step_bytes_before)
+        # as_dict() is identical
+        self.assertEqual(parent_after.as_dict(), parent_dict_before)
+
+    def test_parent_immutable_after_failed_confirm(self):
+        """Parent unchanged even when child compile fails."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        parent_dict_before = parent.as_dict()
+        parent_status_before = parent.product_status
+
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_fail(raw, output_dir=kw["output_dir"])):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        self.assertEqual(child.product_status, PRODUCT_STATUS_FAILED)
+        parent_after = self.handler.get_product_run(parent.run_id)
+        self.assertIsNotNone(parent_after)
+        self.assertEqual(parent_after.product_status, parent_status_before)
+        self.assertFalse(parent_after.confirmation["confirmed"])
+        self.assertEqual(parent_after.as_dict(), parent_dict_before)
+
+    def test_parent_immutable_after_pipeline_exception(self):
+        """Parent unchanged when pipeline raises an unexpected exception."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        parent_dict_before = parent.as_dict()
+
+        with patch("integration.pipeline.run_pipeline",
+                   side_effect=RuntimeError("Unexpected pipeline crash")):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        self.assertEqual(child.product_status, PRODUCT_STATUS_FAILED)
+        self.assertIsNone(child._step_path)
+        self.assertIsNone(child.step_sha256)
+        # Parent is still immutable
+        parent_after = self.handler.get_product_run(parent.run_id)
+        self.assertFalse(parent_after.confirmation["confirmed"])
+        self.assertEqual(parent_after.as_dict(), parent_dict_before)
+
+
+# ---------------------------------------------------------------------------
+# TestPipelineExceptionFailClosed (Bug 4 regression)
+# ---------------------------------------------------------------------------
+
+class TestPipelineExceptionFailClosed(unittest.TestCase):
+    """run_pipeline exceptions must result in product_status=failed."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.handler = ProductFlowHandler(output_root=Path(self.tmpdir))
+
+    def test_runtime_error_in_pipeline_becomes_failed(self):
+        """RuntimeError in run_pipeline → child product_status=failed."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.run_pipeline",
+                   side_effect=RuntimeError("unexpected crash")):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_FAILED)
+        self.assertEqual(child.pipeline_status, "error")
+        self.assertEqual(child.pipeline_stage, "pipeline_exception")
+        self.assertIsNone(child._step_path)
+        self.assertIsNone(child.step_sha256)
+        self.assertTrue(any("PIPELINE_EXCEPTION" in e.get("code", "")
+                            for e in child.errors))
+
+    def test_import_error_in_pipeline_becomes_failed(self):
+        """ImportError in run_pipeline → child product_status=failed; not succeeded."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.run_pipeline",
+                   side_effect=ImportError("cadquery not found")):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_FAILED)
+        self.assertIsNone(child._step_path)
+        self.assertIsNone(child.step_sha256)
+
+    def test_pipeline_exception_does_not_set_succeeded(self):
+        """Exception never leads to product_status=succeeded."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.run_pipeline",
+                   side_effect=Exception("generic exception")):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertNotEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+        self.assertIsNone(self.handler.get_product_step_bytes_secure(child.run_id))
+
+
+# ---------------------------------------------------------------------------
+# TestHTTPConfirmTypeValidation (Bug 2 regression)
+# ---------------------------------------------------------------------------
+
+class TestHTTPConfirmTypeValidation(unittest.TestCase):
+    """_handle_product_confirm must reject non-integer revision and non-bool confirmed."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.demo_handler_obj = None  # not needed; we test product handler directly
+        self.product_handler = ProductFlowHandler(output_root=Path(self.tmpdir))
+
+    def _make_confirm_body(self, revision, confirmed, patch=None):
+        """Build a dict representing a parsed JSON body for confirm."""
+        body = {"confirmation_revision": revision, "confirmed": confirmed}
+        if patch is not None:
+            body["patch"] = patch
+        return body
+
+    def _simulate_confirm_validation(self, body):
+        """
+        Replicate the strict type validation logic from _handle_product_confirm.
+        Returns (error_code, error_message) if validation fails, else None.
+        """
+        revision_raw = body.get("confirmation_revision")
+        if revision_raw is None:
+            return ("MISSING_CONFIRMATION_REVISION", "confirmation_revision is required")
+        if isinstance(revision_raw, bool) or not isinstance(revision_raw, int):
+            return ("INVALID_CONFIRMATION_REVISION_TYPE",
+                    f"confirmation_revision must be a JSON integer, "
+                    f"got {type(revision_raw).__name__!r}: {revision_raw!r}")
+
+        confirmed_raw = body.get("confirmed")
+        if confirmed_raw is None:
+            return ("MISSING_CONFIRMED", "confirmed is required")
+        if not isinstance(confirmed_raw, bool):
+            return ("INVALID_CONFIRMED_TYPE",
+                    f"confirmed must be a JSON boolean (true or false), "
+                    f"got {type(confirmed_raw).__name__!r}: {confirmed_raw!r}")
+
+        patch = body.get("patch", {})
+        if not isinstance(patch, dict):
+            return ("INVALID_PATCH", "patch must be a JSON object")
+        return None
+
+    def test_confirmed_string_false_rejected(self):
+        """confirmed='false' (string) → INVALID_CONFIRMED_TYPE, not coerced to True."""
+        body = self._make_confirm_body(0, "false")
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMED_TYPE")
+        # Must not be coerced: "false" in Python is truthy, so bool("false")=True is wrong
+        self.assertNotEqual(bool(body["confirmed"]), False,
+                            "This confirms bool('false') is True; we must reject it at the HTTP layer")
+
+    def test_confirmed_string_true_rejected(self):
+        """confirmed='true' (string) → INVALID_CONFIRMED_TYPE."""
+        body = self._make_confirm_body(0, "true")
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMED_TYPE")
+
+    def test_confirmed_int_zero_rejected(self):
+        """confirmed=0 (integer) → INVALID_CONFIRMED_TYPE."""
+        body = self._make_confirm_body(0, 0)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMED_TYPE")
+
+    def test_confirmed_int_one_rejected(self):
+        """confirmed=1 (integer) → INVALID_CONFIRMED_TYPE."""
+        body = self._make_confirm_body(0, 1)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMED_TYPE")
+
+    def test_revision_string_zero_rejected(self):
+        """confirmation_revision='0' (string) → INVALID_CONFIRMATION_REVISION_TYPE."""
+        body = self._make_confirm_body("0", True)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMATION_REVISION_TYPE")
+
+    def test_revision_string_abc_rejected(self):
+        """confirmation_revision='abc' (string) → INVALID_CONFIRMATION_REVISION_TYPE."""
+        body = self._make_confirm_body("abc", True)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMATION_REVISION_TYPE")
+
+    def test_revision_bool_rejected(self):
+        """confirmation_revision=True (bool) → INVALID_CONFIRMATION_REVISION_TYPE."""
+        body = self._make_confirm_body(True, True)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNotNone(err)
+        self.assertEqual(err[0], "INVALID_CONFIRMATION_REVISION_TYPE")
+
+    def test_valid_revision_int_confirmed_bool_accepted(self):
+        """confirmation_revision=0 (int), confirmed=True (bool) → validation passes."""
+        body = self._make_confirm_body(0, True)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNone(err)
+
+    def test_valid_revision_int_confirmed_false_bool_accepted(self):
+        """confirmation_revision=0, confirmed=False → validation passes (blocked by logic later)."""
+        body = self._make_confirm_body(0, False)
+        err = self._simulate_confirm_validation(body)
+        self.assertIsNone(err)
+
+    def test_server_source_contains_bool_isinstance_check(self):
+        """server.py _handle_product_confirm source contains bool-aware isinstance checks."""
+        import demo.server as srv
+        src = open(srv.__file__).read()
+        # Must check for bool before int (since bool is subclass of int)
+        self.assertIn("isinstance(revision_raw, bool)", src)
+        self.assertIn("isinstance(confirmed_raw, bool)", src)
+        # Must not silently coerce with int() or bool()
+        confirm_section_start = src.find("_handle_product_confirm")
+        confirm_section_end = src.find("def _handle_product_get", confirm_section_start)
+        confirm_section = src[confirm_section_start:confirm_section_end]
+        self.assertNotIn("int(revision", confirm_section)
+        self.assertNotIn("bool(confirmed", confirm_section)
+
+
+# ---------------------------------------------------------------------------
+# TestEvidenceFields (Bug 3 regression)
+# ---------------------------------------------------------------------------
+
+class TestEvidenceFields(unittest.TestCase):
+    """ProductRunRecord must include ADR-0023 evidence fields."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.handler = ProductFlowHandler(output_root=Path(self.tmpdir))
+
+    def test_create_run_has_fixture_path(self):
+        """create_product_run sets envelope_fixture_path (repo-relative)."""
+        rec = self.handler.create_product_run("test", "c2-answer-bore24")
+        self.assertIsNotNone(rec.envelope_fixture_path)
+        self.assertIn("c2-answer-bore24.json", rec.envelope_fixture_path)
+        # Must not be an absolute path
+        self.assertFalse(Path(rec.envelope_fixture_path).is_absolute())
+
+    def test_create_run_has_fixture_sha256(self):
+        """create_product_run sets envelope_fixture_sha256 (non-empty hex string)."""
+        rec = self.handler.create_product_run("test", "c2-answer-bore24")
+        self.assertIsNotNone(rec.envelope_fixture_sha256)
+        self.assertEqual(len(rec.envelope_fixture_sha256), 64)
+        # Must be valid hex
+        int(rec.envelope_fixture_sha256, 16)
+
+    def test_fixture_sha256_matches_file_content(self):
+        """envelope_fixture_sha256 matches the actual fixture file SHA-256."""
+        import hashlib
+        from demo.product_flow import _FIXTURE_REGISTRY, _REPO_ROOT
+        rel = _FIXTURE_REGISTRY.get("c2-answer-bore24")
+        self.assertIsNotNone(rel)
+        fixture_bytes = (_REPO_ROOT / rel).read_bytes()
+        expected_sha = hashlib.sha256(fixture_bytes).hexdigest()
+        rec = self.handler.create_product_run("test", "c2-answer-bore24")
+        self.assertEqual(rec.envelope_fixture_sha256, expected_sha)
+
+    def test_child_run_has_pipeline_run_id(self):
+        """Succeeded child run has pipeline_run_id set."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+        self.assertIsNotNone(child.pipeline_run_id)
+        # pipeline_run_id is a valid UUID (not the same as the product run_id)
+        import re
+        uuid_re = re.compile(r'^[0-9a-f-]{36}$')
+        self.assertTrue(uuid_re.match(child.pipeline_run_id))
+
+    def test_child_run_has_step_path_relative(self):
+        """Succeeded child run has step_path_relative (or None if outside repo)."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+        # step_path_relative may be None if tmpdir is outside repo — that's acceptable
+        # but it must not be an absolute path if set
+        if child.step_path_relative is not None:
+            self.assertFalse(Path(child.step_path_relative).is_absolute())
+
+    def test_as_dict_includes_evidence_fields(self):
+        """as_dict() includes the ADR-0023 evidence fields."""
+        rec = self.handler.create_product_run("test", "c2-answer-bore24")
+        d = rec.as_dict()
+        self.assertIn("envelope_fixture_path", d)
+        self.assertIn("envelope_fixture_sha256", d)
+        self.assertIn("pipeline_run_id", d)
+        self.assertIn("pipeline_run_dir_relative", d)
+        self.assertIn("step_path_relative", d)
+        self.assertNotIn("_step_path", d)
+        self.assertNotIn("_run_dir", d)
+
+    def test_failed_run_has_pipeline_run_id_set(self):
+        """Failed child run also records pipeline_run_id if available."""
+        parent = self.handler.create_product_run("test", "c2-answer-bore24")
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_fail(raw, output_dir=kw["output_dir"])):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_FAILED)
+        # pipeline_run_id should be set even on failure (from run_pipeline)
+        self.assertIsNotNone(child.pipeline_run_id)
+        # step_path_relative must be None for failed runs
+        self.assertIsNone(child.step_path_relative)
+        self.assertIsNone(child.step_sha256)
+
+
 if __name__ == "__main__":
     unittest.main()

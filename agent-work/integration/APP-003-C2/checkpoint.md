@@ -10,7 +10,7 @@
 
 - 任务 ID：`APP-003-C2-NL-PRODUCT-FLOW`
 - 分支：`cc/APP-003-C2-NL-PRODUCT-FLOW`
-- 基线 commit：`0210b4e`
+- 基线 commit：`0210b4e`；C2 初始实现 commit：`baba59a`
 - 实现边界：ADR-0023；不修改 v5 prompt/contract、Schema、IR、编译器、A2 历史批次；不读取 `.env`/密钥；不发模型或外网请求；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 
 ## 新增/修改文件
@@ -125,3 +125,88 @@ next_agent_focus=Run under real CadQuery: bore24 confirm → succeeded with real
 
 - 状态 `review`，等待 Codex 中枢独立验收
 - 不 push，不合并 main，不自行标记 done
+
+
+## 窄修 R1（本提交，APP-003-C2-NARROW-FIX）
+
+### 修复 1：父 run 保持完全不可变（Bug 1）
+
+**问题**：`confirm_product_run()` 在成功确认后直接执行 `parent_rec.confirmation = {...}` 修改了父 run 的字段。
+
+**修复**：删除对 `parent_rec.confirmation` 的所有直接赋值。确认信息（confirmed=True、patch、actor、confirmed_at）仅写入新的 child run record，父 run 的所有字段保持原样不变。
+
+**验证**：新增 `TestParentRunImmutability`（3 项）：compare `parent.as_dict()` before/after confirm；验证 confirmed 仍为 False；验证 pipeline 异常时父 run 也不变。
+
+### 修复 2：HTTP confirm 参数严格类型校验（Bug 2）
+
+**问题**：`_handle_product_confirm` 使用 `int(revision)` 和 `bool(confirmed)` 隐式转换，导致字符串 `"0"` 被转为 `0`，字符串 `"false"` 被 `bool()` 转为 `True`，整数 `0`/`1` 被 `bool()` 接受。
+
+**修复**：在 HTTP handler 中对两个参数均添加严格 isinstance 检查：
+- `confirmation_revision`：`isinstance(revision_raw, bool) or not isinstance(revision_raw, int)` → HTTP 400
+- `confirmed`：`not isinstance(confirmed_raw, bool)` → HTTP 400
+
+布尔检查先于 int 检查（Python 中 bool 是 int 子类）。
+
+**验证**：新增 `TestHTTPConfirmTypeValidation`（10 项）：覆盖 `confirmed="false"`、`confirmed="true"`、`confirmed=0`、`confirmed=1`、`revision="0"`、`revision="abc"`、`revision=True`，以及合法 `{revision:0, confirmed:true}` 和 `{revision:0, confirmed:false}`；源码中不含 `int(revision` 或 `bool(confirmed`。
+
+### 修复 3：补齐 ADR-0023 产品证据字段（Bug 3）
+
+**问题**：`ProductRunRecord.as_dict()` 缺少 ADR-0023 记录契约中的 fixture provenance 和 pipeline mapping 字段。
+
+**修复**：在 `ProductRunRecord` 中新增五个可选字段（均有默认值 None）：
+- `envelope_fixture_path`：fixture JSON 的仓库相对路径
+- `envelope_fixture_sha256`：fixture 文件内容的 SHA-256
+- `pipeline_run_id`：run_pipeline 返回的内部 run_id
+- `pipeline_run_dir_relative`：pipeline run 目录的仓库相对路径
+- `step_path_relative`：STEP 文件的仓库相对路径（仅 succeeded）
+
+均在 `as_dict()` 中暴露；绝不暴露绝对路径；`_step_path` / `_run_dir` 仍为 internal。
+
+**验证**：新增 `TestEvidenceFields`（7 项）：验证 fixture_path、fixture_sha256、pipeline_run_id 均非 None；fixture_sha256 匹配真实文件内容；child run 有 step_path_relative 且非绝对路径；failed run 的 step_path_relative=None；as_dict 包含全部新字段。
+
+### 修复 4：pipeline 异常 fail-closed（Bug 4）
+
+**问题**：`run_pipeline()` 的调用外没有 try/except，任何未预期异常都会向上传播而不是 fail-closed。
+
+**修复**：在 `run_pipeline()` 调用外包裹 `try/except Exception`，捕获后设 child run 的 `product_status="failed"`、`pipeline_status="error"`、`pipeline_stage="pipeline_exception"`、`errors=[{code:"PIPELINE_EXCEPTION", ...}]`、`_step_path=None`；父 run 仍不可变。
+
+**验证**：新增 `TestPipelineExceptionFailClosed`（3 项）：RuntimeError → failed；ImportError → failed；任何异常不产生 succeeded；get_product_step_bytes_secure 返回 None。
+
+### 新增测试汇总
+
+| 测试类 | 新增项目数 |
+|---|---|
+| TestParentRunImmutability | 3 |
+| TestHTTPConfirmTypeValidation | 10 |
+| TestEvidenceFields | 7 |
+| TestPipelineExceptionFailClosed | 3 |
+| **合计** | **23** |
+
+### 验证结果（sandbox Python 3.10.12）
+
+```text
+py_compile: src/demo/product_flow.py, src/demo/server.py, tests/demo/test_product_flow.py — OK
+git diff --check: OK
+
+PYTHONPATH=src:. python3 -m unittest tests.demo.test_product_flow -v
+Ran 58 tests (原 35 + 新增 23) — OK
+
+PYTHONPATH=src:. python3 -m unittest tests.demo.test_demo_handler -q
+Ran 56 tests — OK (C1 回归无影响)
+
+PYTHONPATH=src:. python3 -m unittest tests.integration.test_pipeline tests.integration.test_schema_to_ir -q
+Ran 81 tests — OK
+
+PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -p 'test_*.py' -q
+Ran 17 tests — OK
+```
+
+### handoff_self_check（R1 更新）
+
+```text
+changed=src/demo/product_flow.py (parent immutable + pipeline exception + evidence fields), src/demo/server.py (strict confirm type validation), tests/demo/test_product_flow.py (58 tests), agent-work/integration/APP-003-C2/checkpoint.md, docs/WORKLOG.md
+commands=py_compile OK; git diff --check OK; test_product_flow 58/58 OK; test_demo_handler 56/56 OK; test_pipeline+test_schema_to_ir 81/81 OK; schema 17/17 OK
+confirmed=parent.as_dict() identical before/after confirm (field-by-field verified); bool(str) coercion now rejected at HTTP layer; pipeline exception caught and returns failed; fixture_sha256 verified against real file content; _step_path/_run_dir still internal; no existing files outside src/demo/ and tests/demo/ modified; FORMAL_EVALUATION_ALLOWED=False unchanged
+unresolved=Codex 中枢在固定 CAD venv (Python 3.11.18) 验证真实构造路径；HTTP-level 路由端到端烟测（server 实例化）
+next_agent_focus=1) run product flow tests under real CadQuery venv; 2) HTTP smoke: POST create → confirm with valid types → download; 3) verify parent as_dict() unchanged at HTTP layer; 4) verify pipeline_exception path with real import error
+```

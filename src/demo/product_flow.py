@@ -89,6 +89,13 @@ class ProductRunRecord:
     errors: list[dict[str, Any]]
     step_sha256: str | None
     step_bytes: int | None
+    # --- ADR-0023 evidence fields (repo-relative, no absolute paths) ---
+    envelope_fixture_path: str | None = None      # repo-relative path to fixture JSON
+    envelope_fixture_sha256: str | None = None    # SHA-256 of fixture file bytes
+    pipeline_run_id: str | None = None            # run_pipeline's internal run_id
+    pipeline_run_dir_relative: str | None = None # repo-relative path to pipeline run dir
+    step_path_relative: str | None = None         # repo-relative path to STEP file (child only)
+    # --- internal fields (not in as_dict) ---
     _step_path: str | None = dc_field(default=None, repr=False)
     _run_dir: str | None = dc_field(default=None, repr=False)
 
@@ -101,6 +108,8 @@ class ProductRunRecord:
             "request_text": self.request_text,
             "extraction_source": self.extraction_source,
             "envelope_fixture_label": self.envelope_fixture_label,
+            "envelope_fixture_path": self.envelope_fixture_path,
+            "envelope_fixture_sha256": self.envelope_fixture_sha256,
             "decision": self.decision,
             "extracted_parameters": self.extracted_parameters,
             "user_explicit_parameters": self.user_explicit_parameters,
@@ -114,6 +123,9 @@ class ProductRunRecord:
             "product_status": self.product_status,
             "pipeline_status": self.pipeline_status,
             "pipeline_stage": self.pipeline_stage,
+            "pipeline_run_id": self.pipeline_run_id,
+            "pipeline_run_dir_relative": self.pipeline_run_dir_relative,
+            "step_path_relative": self.step_path_relative,
             "schema_result": self.schema_result,
             "ir_document": self.ir_document,
             "validation_summary": self.validation_summary,
@@ -266,6 +278,13 @@ class ProductFlowHandler:
             self._registry[rid] = rec
             return rec
 
+        # Compute fixture provenance (repo-relative path and SHA-256)
+        fixture_sha256 = hashlib.sha256(raw_envelope.encode("utf-8")).hexdigest()
+        try:
+            fixture_rel_path = str(fixture_abs.resolve().relative_to(_REPO_ROOT.resolve()))
+        except ValueError:
+            fixture_rel_path = rel_path  # fallback to registry value
+
         # Parse envelope (no CAD)
         from llm.parser import parse_response
         parse_result = parse_response(raw_envelope)
@@ -276,6 +295,8 @@ class ProductFlowHandler:
                 request_text=request_text,
                 extraction_source="synthetic_fixture",
                 envelope_fixture_label=fixture_id,
+                envelope_fixture_path=fixture_rel_path,
+                envelope_fixture_sha256=fixture_sha256,
                 decision="",
                 extracted_parameters={}, user_explicit_parameters={},
                 catalog_derived_parameters={}, rule_derived_parameters={},
@@ -359,6 +380,8 @@ class ProductFlowHandler:
             request_text=request_text,
             extraction_source="synthetic_fixture",
             envelope_fixture_label=fixture_id,
+            envelope_fixture_path=fixture_rel_path,
+            envelope_fixture_sha256=fixture_sha256,
             decision=decision,
             extracted_parameters=extracted,
             user_explicit_parameters={},
@@ -608,14 +631,9 @@ class ProductFlowHandler:
             elif source == "rule_derived":
                 rule_derived[field] = norm.get(field)
 
-        # Update parent confirmation (mark confirmed, don't modify product_status of parent)
-        parent_rec.confirmation = {
-            **parent_rec.confirmation,
-            "confirmed": True,
-            "patch": dict(patch),
-            "actor": "user",
-            "confirmed_at": now,
-        }
+        # Bug fix 1: Parent run MUST remain immutable.
+        # Do NOT mutate parent_rec.confirmation or any other parent field.
+        # Confirmation evidence is recorded only on the new child run.
 
         # Create child run
         child_rid = _new_run_id()
@@ -632,6 +650,8 @@ class ProductFlowHandler:
             request_text=parent_rec.request_text,
             extraction_source="synthetic_fixture",
             envelope_fixture_label=parent_rec.envelope_fixture_label,
+            envelope_fixture_path=parent_rec.envelope_fixture_path,
+            envelope_fixture_sha256=parent_rec.envelope_fixture_sha256,
             decision="answer",
             extracted_parameters=merged,
             user_explicit_parameters=user_explicit,
@@ -652,29 +672,69 @@ class ProductFlowHandler:
             ir_document=None, validation_summary=None,
             errors=[],
             step_sha256=None, step_bytes=None,
+            pipeline_run_id=None,
+            pipeline_run_dir_relative=None,
+            step_path_relative=None,
         )
         self._registry[child_rid] = child_rec
 
-        # Execute pipeline
-        pipeline_result = run_pipeline(
-            parent_rec.request_text,
-            envelope_json,
-            output_root=self._output_root,
-            envelope_fixture_label=parent_rec.envelope_fixture_label,
-        )
+        # Bug fix 2: Wrap run_pipeline in try/except so unexpected exceptions
+        # result in product_status="failed" rather than an unhandled exception.
+        try:
+            pipeline_result = run_pipeline(
+                parent_rec.request_text,
+                envelope_json,
+                output_root=self._output_root,
+                envelope_fixture_label=parent_rec.envelope_fixture_label,
+            )
+        except Exception as exc:
+            child_rec.product_status = PRODUCT_STATUS_FAILED
+            child_rec.pipeline_status = "error"
+            child_rec.pipeline_stage = "pipeline_exception"
+            child_rec.errors = [{
+                "code": "PIPELINE_EXCEPTION",
+                "stage": "pipeline_exception",
+                "message": f"{type(exc).__name__}: {str(exc)[:300]}",
+            }]
+            child_rec._step_path = None
+            child_rec._run_dir = None
+            return child_rec
 
         run_dir = Path(pipeline_result.run_dir) if pipeline_result.run_dir else None
         evidence: dict[str, Any] = {}
         if run_dir and run_dir.is_dir():
             evidence = _read_run_evidence(run_dir)
 
+        # Bug fix 3: Populate evidence/provenance fields (ADR-0023 record contract).
+        # Use repo-relative paths in as_dict(); never expose absolute paths.
+        pipeline_run_id = pipeline_result.run_id
+        pipeline_run_dir_rel: str | None = None
+        if pipeline_result.run_dir:
+            try:
+                pipeline_run_dir_rel = str(
+                    Path(pipeline_result.run_dir).resolve().relative_to(_REPO_ROOT.resolve())
+                )
+            except ValueError:
+                pipeline_run_dir_rel = None  # outside repo — omit
+
         if pipeline_result.status == "success":
             child_rec.product_status = PRODUCT_STATUS_SUCCEEDED
             child_rec.pipeline_status = "success"
             child_rec.pipeline_stage = pipeline_result.stage
+            child_rec.pipeline_run_id = pipeline_run_id
+            child_rec.pipeline_run_dir_relative = pipeline_run_dir_rel
             if pipeline_result.ir_index:
                 child_rec.step_sha256 = pipeline_result.ir_index.get("step_sha256")
                 child_rec.step_bytes = pipeline_result.ir_index.get("step_bytes")
+                # Repo-relative STEP path for traceability (never the absolute path)
+                raw_step_path = pipeline_result.ir_index.get("step_path")
+                if raw_step_path:
+                    try:
+                        child_rec.step_path_relative = str(
+                            Path(raw_step_path).resolve().relative_to(_REPO_ROOT.resolve())
+                        )
+                    except ValueError:
+                        child_rec.step_path_relative = None
             child_rec.ir_document = evidence.get("ir_document")
             child_rec.validation_summary = evidence.get("validation_summary")
             child_rec._step_path = pipeline_result.step_path
@@ -683,6 +743,8 @@ class ProductFlowHandler:
             child_rec.product_status = PRODUCT_STATUS_FAILED
             child_rec.pipeline_status = pipeline_result.status
             child_rec.pipeline_stage = pipeline_result.stage
+            child_rec.pipeline_run_id = pipeline_run_id
+            child_rec.pipeline_run_dir_relative = pipeline_run_dir_rel
             child_rec.errors = pipeline_result.errors
             child_rec._step_path = None
             child_rec._run_dir = pipeline_result.run_dir
@@ -736,6 +798,8 @@ class ProductFlowHandler:
         fixture_id: str,
         code: str,
         message: str,
+        envelope_fixture_path: str | None = None,
+        envelope_fixture_sha256: str | None = None,
     ) -> ProductRunRecord:
         return ProductRunRecord(
             run_id=rid, parent_run_id=None,
@@ -743,6 +807,8 @@ class ProductFlowHandler:
             request_text=request_text,
             extraction_source="synthetic_fixture",
             envelope_fixture_label=fixture_id,
+            envelope_fixture_path=envelope_fixture_path,
+            envelope_fixture_sha256=envelope_fixture_sha256,
             decision="",
             extracted_parameters={}, user_explicit_parameters={},
             catalog_derived_parameters={}, rule_derived_parameters={},
@@ -755,4 +821,6 @@ class ProductFlowHandler:
             schema_result=None, ir_document=None, validation_summary=None,
             errors=[{"code": code, "message": message}],
             step_sha256=None, step_bytes=None,
+            pipeline_run_id=None, pipeline_run_dir_relative=None,
+            step_path_relative=None,
         )

@@ -484,13 +484,37 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
             body = self._read_json_body()
             if body is None:
                 return
-            revision = body.get("confirmation_revision", -1)
-            confirmed = body.get("confirmed", False)
+
+            # Strict type validation — must not coerce types silently.
+            # confirmation_revision must be a JSON integer (not bool, not string).
+            revision_raw = body.get("confirmation_revision")
+            if revision_raw is None:
+                self._send_error_json(400, "MISSING_CONFIRMATION_REVISION",
+                                       "confirmation_revision is required")
+                return
+            if isinstance(revision_raw, bool) or not isinstance(revision_raw, int):
+                self._send_error_json(400, "INVALID_CONFIRMATION_REVISION_TYPE",
+                                       "confirmation_revision must be a JSON integer, "
+                                       f"got {type(revision_raw).__name__!r}: {revision_raw!r}")
+                return
+
+            # confirmed must be a JSON boolean (not int 0/1, not string).
+            confirmed_raw = body.get("confirmed")
+            if confirmed_raw is None:
+                self._send_error_json(400, "MISSING_CONFIRMED", "confirmed is required")
+                return
+            if not isinstance(confirmed_raw, bool):
+                self._send_error_json(400, "INVALID_CONFIRMED_TYPE",
+                                       "confirmed must be a JSON boolean (true or false), "
+                                       f"got {type(confirmed_raw).__name__!r}: {confirmed_raw!r}")
+                return
+
             patch = body.get("patch", {})
             if not isinstance(patch, dict):
                 self._send_error_json(400, "INVALID_PATCH", "patch must be a JSON object")
                 return
-            rec = _product.confirm_product_run(run_id, int(revision), bool(confirmed), patch)
+
+            rec = _product.confirm_product_run(run_id, revision_raw, confirmed_raw, patch)
             self._send_json(200, rec.as_dict())
 
         def _handle_product_get(self, run_id: str) -> None:
