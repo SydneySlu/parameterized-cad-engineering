@@ -2442,3 +2442,12 @@ commit=待提交
 - 安全与批次边界：凭据仅在 Python 进程内从 `.env` 读取，未显示或另行持久化；未读取 evaluator labels 或 raw 正文。`...-03` 已使用，目录只读保留，不补跑、不覆盖、不更新 summary。模型输出原始文本未查看。
 - 另有一个仅影响本次结果显示的脚本错误：run 完成后访问了不存在的 `A2BatchResult.summary_status`，外层以 AttributeError 退出；持久化 summary 与账本仍为实际状态事实源。
 - 下一步：独立复核并合入 `1dc61bc`；之后以固定 CAD venv、新唯一 batch ID 做离线 preflight，并向负责人另行申请 live 执行授权。全局 `FORMAL_EVALUATION_ALLOWED=False` 与 ADR-0021 专用 gate 不变。
+
+### APP-002-A2-CAD-RUNTIME-PREFLIGHT-GUARD / Codex 中枢 / review / 2026-11-12
+
+- 动作：针对 `...-03` 在系统 Python 缺 `jsonschema`、导致真实请求已消费后 CAD Schema 校验失败的问题，在 A2 formal preflight 增加 runtime capability gate。
+- 修正：formal 路径在任何批次目录、BudgetLedger、Transport 或 HTTP 前验证 `jsonschema.Draft202012Validator`、CadQuery 和 OCP。dry-run/mock 不要求完整 CAD 环境，保留轻量测试能力；没有向系统 Python 安装依赖。
+- 测试：新增两项 A2 回归，覆盖依赖缺失时 fail-closed 和正式入口零副作用。
+- 验证：固定 CAD venv Python 3.11.18 下 A2 专项 98/98 通过；formal offline preflight 检测出 jsonschema 4.26.0、Draft 2020-12、CadQuery 2.3.0、OCP 7.9.3.0 并通过。系统 Python 3.11.18 同一检查失败并报告缺少 jsonschema/cadquery。`py_compile`、`git diff --check` 通过。
+- 边界：未发网络/模型请求、未安装或升级依赖；冻结 scope、预算、授权和全局 gate 不变；`...-01` 至 `...-03` 现场只读保留。
+- 下一步：对 runtime guard 独立复核并合入；之后固定以 CAD venv 执行 A2，新的 live batch 仍需新 batch ID 和负责人单独批准。

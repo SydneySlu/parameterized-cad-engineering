@@ -120,6 +120,40 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _check_cad_runtime() -> dict[str, Any]:
+    """Check that this interpreter can validate IR and run the CAD backend.
+
+    This runs during offline preflight so a misconfigured Python environment
+    fails before the formal path creates a batch or sends a model request.
+    """
+    errors: list[str] = []
+    details: dict[str, Any] = {}
+
+    try:
+        from jsonschema import Draft202012Validator
+        Draft202012Validator.check_schema({"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"})
+        from importlib.metadata import version
+        details["jsonschema_version"] = version("jsonschema")
+        details["draft_2020_12_supported"] = True
+    except Exception as exc:  # noqa: BLE001
+        details["draft_2020_12_supported"] = False
+        errors.append(f"jsonschema_unavailable: {type(exc).__name__}: {exc}")
+
+    try:
+        import cadquery
+        import OCP  # noqa: F401
+        from importlib.metadata import version
+        cadquery_version = getattr(cadquery, "__version__", None)
+        details["cadquery_version"] = (
+            cadquery_version if cadquery_version else version("cadquery")
+        )
+        details["ocp_version"] = version("cadquery-ocp")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"cad_runtime_unavailable: {type(exc).__name__}: {exc}")
+
+    return {"ok": not errors, "errors": errors, "details": details}
+
+
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------
@@ -308,6 +342,7 @@ def run_a2_offline_preflight(
     authorization: A2IntegrationAuthorization,
     *,
     batch_dir: Path | None = None,
+    require_cad_runtime: bool = False,
 ) -> dict[str, Any]:
     """Offline preflight checks for A2 (no network calls, no key reads).
 
@@ -317,6 +352,8 @@ def run_a2_offline_preflight(
     3. Budget is feasible (3 runs × 3 attempts = 9 ≤ max_batch_attempts).
     4. Batch directory does not already exist.
     5. Frozen prompt artifact is loadable.
+    6. When requested for a formal execution, this interpreter supports Draft
+       2020-12 and can import the CAD runtime.
 
     Returns a dict with ``ok: bool``, ``errors: list[str]``, and check details.
     """
@@ -369,7 +406,14 @@ def run_a2_offline_preflight(
             "each batch must use a unique batch_id"
         )
 
-    # --- 5. Frozen prompt loadable ---
+    # --- 5. Runtime must support IR validation and CAD before any live request ---
+    if require_cad_runtime:
+        runtime = _check_cad_runtime()
+        details["cad_runtime"] = runtime["details"]
+        if not runtime["ok"]:
+            errors.extend(f"cad_runtime_check: {error}" for error in runtime["errors"])
+
+    # --- 6. Frozen prompt loadable ---
     try:
         prompt = load_frozen_prompt()
         details["prompt_version"] = prompt.version
@@ -1243,7 +1287,7 @@ def run_a2_batch(
         validate_formal_approval_binding(authorization, approval)
 
     # --- Offline preflight must pass before any infra creation ---
-    pf = run_a2_offline_preflight(authorization)
+    pf = run_a2_offline_preflight(authorization, require_cad_runtime=is_formal)
     if not pf["ok"]:
         return A2BatchResult(
             batch_id=authorization.batch_id,

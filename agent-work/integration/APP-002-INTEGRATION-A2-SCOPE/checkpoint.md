@@ -434,3 +434,13 @@ Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未
 - 批次只读统计：3 次预算 attempt，最大 9；结果 2 条 answer→pipeline failed、1 条 ask；summary=`partial`；无 STEP。
 - 结论：本次成功验证了真实模型调用、answer/ask 分流和批次留证，但未完成整链 STEP 验收。A2 维持 `review`，不得将本次表述为整链通过。
 - 下一步：代码差异复核/合并到 main 后，使用 CAD venv 重跑新 ID 的离线 preflight；向负责人说明 `-03` 作废并只读保留，再申请新的 live 批次授权。全局 `FORMAL_EVALUATION_ALLOWED=False`、ADR-0021 专用 A2 gate、冻结 scope 和预算不变。
+
+## APP-002-A2-CAD-RUNTIME-PREFLIGHT-GUARD / Codex 中枢 / review / 2026-11-12
+
+- 目标：防止 A2 正式执行在不具备 Draft 2020-12 Schema 验证或 CAD 运行时的 Python 环境中先消耗模型 HTTP 预算，再于 CAD 阶段失败。
+- 修正：`run_a2_offline_preflight(..., require_cad_runtime=True)` 增加依赖检查，校验 `jsonschema.Draft202012Validator`、CadQuery 和 OCP 可导入；formal `run_a2_batch()` 在任何目录、账本、transport 或 HTTP 前调用此检查。dry-run/mock 保持可在轻量 Python 环境执行。
+- 测试：新增两项回归，覆盖 runtime 缺失时 preflight fail closed，以及正式入口零批次目录/零 BudgetLedger/零 DeepSeekTransport 副作用。
+- 验证：固定 CAD venv Python 3.11.18 下 A2 专项 98/98 通过；formal runtime preflight 通过并识别 jsonschema 4.26.0、Draft 2020-12、CadQuery 2.3.0、OCP 7.9.3.0。系统 Python 3.11.18 的同一 preflight 失败并列出缺少 jsonschema/cadquery。`py_compile` 与 `git diff --check` 通过。
+- 边界：仅预检依赖，不安装/升级 Python 包，不修改冻结模型 scope、预算、授权或 `FORMAL_EVALUATION_ALLOWED=False`；未发网络/模型请求；历史与 `...-03` 批次保持只读。
+- handoff_successor_check：`predecessor=APP-002-INTEGRATION-A2-LIVE-EXECUTION-03, commit=192c58c`; `files_format=新增 runtime capability preflight，并保持 dry-run/mock 行为`; `core_rerun=CAD venv A2 suite 98/98 + positive/negative formal preflight`; `normal_case=固定 CAD venv 通过并识别预期依赖版本`; `failure_case=系统 Python 缺 jsonschema/cadquery 时拒绝，正式入口 mock regression 断言零副作用`; `interface=A2 frozen 3-input / DeepSeek C0 / 9 HTTP scope unchanged`; `limits=no live request; batch -03 immutable; new batch requires separate owner approval`; `result=review`。
+- 下一步：Codex 中枢独立复核该 guard 并合入后，live 运行统一通过 CAD venv 启动；新 batch ID 和 live 执行仍须项目负责人另行批准。

@@ -54,6 +54,7 @@ from integration.a2_runner import (
     _SummaryWriter,
     _atomic_write_json,
     _build_initial_summary,
+    _check_cad_runtime,
     _load_frozen_inputs,
     _plan_combinations,
     run_a2_batch,
@@ -339,6 +340,59 @@ class TestA2OfflinePreflight(unittest.TestCase):
             pf = run_a2_offline_preflight(auth)
         self.assertFalse(pf["ok"])
         self.assertTrue(any("inputs_check" in e for e in pf["errors"]))
+
+    def test_formal_runtime_preflight_rejects_missing_cad_dependencies(self):
+        auth = _make_auth("app002-a2-runtime-missing-test")
+        missing = {
+            "ok": False,
+            "errors": ["jsonschema_unavailable: ImportError"],
+            "details": {"draft_2020_12_supported": False},
+        }
+        with patch("integration.a2_runner._check_cad_runtime", return_value=missing):
+            pf = run_a2_offline_preflight(auth, require_cad_runtime=True)
+        self.assertFalse(pf["ok"])
+        self.assertFalse(pf["details"]["cad_runtime"]["draft_2020_12_supported"])
+        self.assertTrue(any("jsonschema_unavailable" in e for e in pf["errors"]))
+
+    def test_formal_run_with_missing_cad_dependencies_has_zero_side_effects(self):
+        batch_id = "app002-a2-runtime-gate-test"
+        auth = _make_auth(batch_id)
+        approval = A2FormalApproval(
+            batch_id=batch_id,
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="test-owner",
+            approved_at_utc="2026-11-12T00:00:00Z",
+            approval_statement=f"I approve A2 formal execution of batch {batch_id}",
+            is_test_only=False,
+        )
+        missing = {
+            "ok": False,
+            "errors": ["jsonschema_unavailable: ImportError"],
+            "details": {"draft_2020_12_supported": False},
+        }
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch("integration.a2_runner._CANONICAL_RUN_ROOT", Path(tmp)), \
+             patch("integration.a2_runner._check_cad_runtime", return_value=missing), \
+             patch("llm.budget.BudgetLedger") as ledger, \
+             patch("llm.real_transport.DeepSeekTransport") as transport:
+            result = run_a2_batch(
+                authorization=auth,
+                dry_run=False,
+                transport=None,
+                approval=approval,
+            )
+            self.assertFalse(result.preflight_ok)
+            self.assertEqual(result.results, [])
+            self.assertFalse((Path(tmp) / batch_id).exists())
+            ledger.assert_not_called()
+            transport.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
