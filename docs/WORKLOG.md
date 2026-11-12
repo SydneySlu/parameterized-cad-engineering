@@ -2408,3 +2408,12 @@ commit=待提交
   confirmed=BudgetAwareTransport构造器使用位置参数inner;logical_run_id已传入;setup失败finalize为aborted非complete/running;setup失败0次urlopen;real_transport=不在源码中
   unresolved=Python 3.11.18下全量验证(92项A2+LLM全量+Integration全量+Schema17+py_compile+diff --check);cadquery路径(test_pipeline/test_schema_to_ir既有失败VM缺cadquery)
   next_agent_focus=Codex中枢在Python 3.11.18下:1)92项A2测试;2)LLM全量;3)Integration全量(含cadquery);4)Schema17;5)py_compile3文件;6)git diff --check;7)确认BudgetAwareTransport构造器签名匹配、setup失败aborted语义、zero HTTP断言
+
+### APP-002-INTEGRATION-A2-LIVE-FIX / Codex 中枢独立复核 / pass_for_code_fix / 2026-11-12
+
+- 基线：`main` HEAD `c954741`，父提交 `6fdbb86`；工作区干净。固定环境 Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0。
+- 代码核对：`BudgetAwareTransport` 调用已改用位置参数 `inner`，并绑定必需 `logical_run_id`；setup failure 记录为 `aborted` 的修复与测试存在。
+- 验证：A2 `92/92`、Integration `173/173`、Schema `17/17`、LLM `941` 通过且 `8` 个既有 skip；`py_compile`、`git diff --check 6fdbb86..HEAD` 通过。另以隔离临时根目录 mock 正式入口构造 3 个 wrapper，确认 logical/query/condition 绑定正确且 `urlopen=0`。
+- 限制：未调用网络/模型、未读取密钥或 `.env`；`FORMAL_EVALUATION_ALLOWED=False`。原授权 batch 目录未触碰，仍只有失败时的 `batch_summary.json`。
+- 当前获批 batch 的只读 offline preflight 为 `ok=false`，唯一阻断项是 `batch_dir_exists=true`；冻结 inputs hash、prompt 加载、9 HTTP 预算可行性均通过。按唯一 batch 约束，不能复用这个 ID。
+- 结论：窄修代码验收通过，但真实整链尚未运行。下一步需项目负责人批准新的唯一 batch ID 并确认相同 DeepSeek/C0、3 输入、9 HTTP scope；保留旧失败目录，不移动、不覆盖、不重跑。

@@ -321,3 +321,28 @@ blocking_issue=无代码阻断；分支尚未合并 main
 - 当前 A2 状态改为 `blocked`；不得删除、移动、覆盖或重跑该失败现场，不得换 batch ID，不得再次发请求。
 - 交给 CC 做窄修：改用 `BudgetAwareTransport(inner, ledger=..., ...)` 的实际接口，并增加固定环境构造回归与零 HTTP 断言；不得修改 scope、预算、授权、prompt、Schema/IR/CAD、历史批次或 `FORMAL_EVALUATION_ALLOWED`。
 - 窄修后必须由 Codex 中枢独立重跑 A2、Integration、Schema、LLM 回归及 `py_compile`/`git diff --check`；只有通过后才能重新进行同一 batch 的 preflight/运行授权复核。
+
+## APP-002-INTEGRATION-A2-LIVE-FIX independent review (2026-11-12)
+
+### Result: code fix passes; original batch remains blocked by preserved directory
+
+- Reviewed `c954741` on `main`; diff is limited to `src/integration/a2_runner.py`, `tests/integration/test_a2_runner.py`, and WORKLOG. `BudgetAwareTransport` now receives `DeepSeekTransport(...)` as positional `inner` and the required `logical_run_id`; `BudgetLedger`/lock setup failures attempt to finalize summary as `aborted`.
+- Fixed environment: Python 3.11.18, CadQuery 2.3.0, OCP 7.9.3.0.
+- Verification: A2 `92/92`; Integration `173/173`; Schema `17/17`; LLM `941 passed, 8 existing skips`; `py_compile` and `git diff --check 6fdbb86..HEAD` passed.
+- Additional offline formal-path probe patched `BudgetLedger`, `_run_one_logical`, and `urlopen`; `run_a2_batch()` constructed all three `BudgetAwareTransport` wrappers with the expected logical/query/condition bindings, made 0 HTTP calls, and finalized the isolated probe summary. Probe used a separate temporary root and did not access credentials or the authorized batch.
+- `FORMAL_EVALUATION_ALLOWED=False` remains unchanged. No live request, model, key, or `.env` was accessed.
+- Existing authorized batch directory remains untouched and contains only the original `batch_summary.json`. Read-only offline preflight returns `ok=false` because `batch_dir_exists=true`; it also confirms frozen inputs hash, prompt load, and 9-request budget feasibility. The preserved directory prevents reusing this batch ID under the runner's unique-batch rule.
+- Conclusion: the code defect is fixed and independently verified. No live batch was executed. To proceed, the project owner must approve a new unique batch ID and reaffirm the same 3-run DeepSeek/C0/9-HTTP scope; do not modify or rerun the existing failure directory.
+
+### handoff_successor_check
+
+```text
+predecessor=APP-002-INTEGRATION-A2-LIVE-FIX, commit c954741
+files_format=PASS; production fix and five focused regression tests present; working tree clean
+core_rerun=PASS; Python 3.11.18 A2 92, Integration 173, Schema 17, LLM 941 + 8 existing skips
+normal_case=PASS; offline formal-path probe constructed 3 BudgetAwareTransport wrappers with correct bindings
+failure_case=PASS; setup failure unit test finalizes aborted and makes 0 urlopen calls
+interface=PASS; inner positional arg + required logical_run_id match src/llm/budget.py
+limits=PASS; formal gate false; no HTTP/model/key access; original batch untouched
+result=pass_for_code_fix; original_batch=blocked_batch_dir_exists
+```

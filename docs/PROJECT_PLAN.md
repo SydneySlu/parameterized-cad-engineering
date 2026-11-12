@@ -17,7 +17,7 @@
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
-- v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。A2 首次获批 live attempt 在首个 HTTP 前阻塞，真实整链证据尚未产生；held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
+- v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。A2 首次获批 live attempt 在首个 HTTP 前阻塞，runner 窄修已通过但原 batch ID 因保留目录不可复用，真实整链证据尚未产生；held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
