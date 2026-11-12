@@ -9,7 +9,7 @@
 - v5 保持当前 prompt/契约/hash 作为首个集成基线；一般优化不启动 v6。首个真实闭环优先沿用已审查 DeepSeek `deepseek-flash` 配置，Qwen 后续兼容。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
-- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。本轮启动为干净 `993a5b1`、领先已缓存远端 12 个提交；本轮不 push，提交后的实际差异以 Git 为准。
+- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。本轮基线为干净 `00b9819`、与 `origin/main` 对齐；后续提交不自动 push。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。
@@ -67,6 +67,7 @@
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
 | APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | done | runtime guard 已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 已独立复核：3 次 HTTP/9 上限，24 mm 与 80 mm 各生成并回读 STEP，ask 正确停止构造，summary=`complete`、raw 3/3 留存。里程碑 B 六类定向验收完成；批次只读保留。是否增加 live 样本待负责人基于明确假设另行决定 |
+| APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | in_progress | 依据 ADR-0022 启动首切片：localhost Web UI + 用户手动确认结构化参数 + 既有 schema/IR/CAD pipeline；目标含 STEP 生成/下载、IR/验证查看、错误阻断、参数修改后隔离重生成。未接真实模型、不发网络请求；具体实现验收待完成 |
 
 ## 当前缺口与限制
 
@@ -74,6 +75,7 @@
 - 已有后端并非零进度。本轮固定 Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 环境下 CAD 13 项、Schema/IR 22 项通过，包含真实本地构造、STEP 导出与回读；这不是自然语言真实模型整链证据。
 - v5 已有固定九案例真实双模型证据；A2 `...-04` 覆盖 24 mm 合法值、80 mm 第二螺钉边界及缺参 ask。里程碑 B 已补齐单位换算、显式目录冲突和 CAD/STEP 导出失败的本地定向链路验收。证据仍不证明广泛语言覆盖、长期稳定性或制造适用性。是否扩大 live 样本尚未决定；后续真实模型运行仍需新 scope、输入、预算、batch ID 与负责人授权，旧 Schema-only 和 held-out scope 不自动扩展。
 - 15 行覆盖当前冻结单族全部合法目录配置，不是语言训练样本；九案例的条件/模型运行次数不是独立用户需求数。语言覆盖、运行稳定性、跨族扩展分别规划。
+- 里程碑 C 的当前工作单元是 `APP-003-C1`。由于 A2 授权仅限固定三条输入且已消耗，演示首切片使用明确标记的手动参数流程，不将需求文本冒充模型解析结果；产品级 live extraction 暂不启用。
 - 历史 v3/v4 决策缺陷保留为版本证据，不冒充当前 v5 阻塞。v5 历史 32 个 raw 位于批次根目录的授权路径偏离仍如实保留；不移动、不改写、不重跑、不混合统计。
 - 固定环境以外的可移植性、许可/发布范围、螺纹环形近似限制仍保留；几何/STEP 通过不构成制造认证。
 
@@ -92,5 +94,5 @@
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. 里程碑 C 提供需求、参数/确认、状态/失败原因、结果获取和修改后再生成。演示准备可复用 `...-04` 两个 STEP 与参数/IR/验证记录；仍须标明单族、固定环境、小样本及螺纹近似限制。
+6. 里程碑 C 正在推进 `APP-003-C1`：先实现 localhost 离线参数确认演示和真实 CAD/STEP 生成、证据查看、下载及隔离重生成；验收后再评估是否需要产品级 live extraction scope。演示可引用 `...-04` 作为只读示例，但新运行由本地参数输入产生；仍须标明单族、固定环境及螺纹近似限制。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

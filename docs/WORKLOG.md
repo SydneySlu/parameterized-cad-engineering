@@ -2509,3 +2509,11 @@ commit=待提交
 - 批次复核：3 次请求/9 上限；24 mm 与 80 mm 的 IR/STEP hash 匹配 index/manifest，STEP readback comparison `pass=true`；缺参 ask 未进入 CAD。raw 正文与 evaluator labels 未读取，所有 A2 历史批次只读。
 - 结果：A2 独立复核 pass；里程碑 B 完成。离线整链证据置于 git-ignore 的 `work/integration-runs/app002-milestone-b-20261112/`，详细报告见 `agent-work/reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md`。
 - 下一步：进入里程碑 C 最小可用演示；是否扩大 live 样本由负责人基于明确语言覆盖假设另行决定，未经新 scope/预算/batch ID/授权不发起新模型请求。
+
+### APP-003-C1 / Codex 中枢 / in_progress / 2026-11-12
+
+- 动作：恢复里程碑 C 上下文并核实无既有 Web framework；将首个实现切片拆为 `APP-003-C1`，由 CC 实现本地可运行演示。
+- 决策：按 ADR-0022 使用只绑定 `127.0.0.1` 的标准库 Web UI，参数由用户手动填写/确认，文本仅作需求记录；复用现有 deterministic CAD pipeline。当前不接 live LLM，避免把已消耗的 A2 固定范围扩展成产品请求授权。
+- 交付：实施边界/验收条件已记录于 ADR-0022 与 `docs/coordination/prompts/APP-003-C1-local-demo-cc.md`；任务看板、计划、状态、checkpoint 已同步。
+- 验证：仓库根和 git 状态确认；阅读现有 README、pipeline、A2 runner、ADR-0020 及项目状态/计划。此工作单元只定义架构/交接，不运行产品代码测试。
+- 下一步：CC 按 C1 prompt 实现并提交；Codex 中枢独立复核 HTTP/UI、正常/失败路径及固定环境测试。
