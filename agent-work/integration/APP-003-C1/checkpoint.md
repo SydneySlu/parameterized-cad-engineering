@@ -226,7 +226,7 @@ next_agent_focus=Run under real CadQuery (Python 3.11.18): verify bore_d=24 HTTP
 - 安全边界：未调用 LLM/provider 或外网、未读密钥/`.env`、未访问 A2 历史批次；临时 run 输出与服务已清理。全局 gate、冻结契约、Schema/IR/CAD 后端未改。
 - 非阻断发现：下载按钮标签多余右括号，记录为 P3 文案瑕疵；不影响产物或下载验证。
 - 独立审查报告：`agent-work/reviews/APP-003-C1-codex-review.md`。
-- 后续：负责人可按 fast-forward 流程合入 `main`；合入前不标记 done，不 push/merge 由本复核执行。
+- 当时状态（`f49a037` 审查时）：负责人可按 fast-forward 流程合入 `main`；该交接动作已由后续合入收束完成。
 
 ### handoff_successor_check
 
@@ -242,7 +242,7 @@ result=pass
 blocking_issue=none
 ```
 
-## 合入收束（2026-11-12）
+## 合入时收束记录（2026-11-12）
 
 - 合并：负责人已将 `cc/APP-003-C1-LOCAL-DEMO` fast-forward 合入并推送 `main`；本地 `main`、`origin/main` 和远端 `main` 均核实为 `07a98d129022e78cc9e7dc4e44bc9ae2df083f5f`。
 - 工作区：合入后干净，`main` 与 `origin/main` 同步。
@@ -255,4 +255,10 @@ blocking_issue=none
 - 边界：只改 UI 文案和对应回归测试，不改变下载链接、run_id、STEP 字节、HTTP 行为或安全校验。
 - 验证：固定 CAD venv Python 3.11.18 下 Demo 56/56；`py_compile` 和 `git diff --check` 通过。测试仍有 4 条既有 `ResourceWarning`。
 - 提交：`b59b551 fix: correct STEP download byte label [APP-003-C1]`。
-- 状态：review；核心 C1 独立复核仍通过，窄修后工作区干净；待负责人 push/合入。
+- 当时状态（`b59b551` 提交后、合入前）：review；核心 C1 独立复核仍通过，窄修后工作区干净；待负责人 push/合入。该状态已由后续合并完成记录取代。
+
+## 当前状态核验（2026-11-12）
+
+- 独立复核指出的 checkpoint 时间线歧义已收束：上文 `f49a037` 和 `b59b551` 阶段的待合入状态现明确标为历史状态；合入记录注明 `07a98d1` 是功能分支合入时的 HEAD。
+- 当前核验：本地 `main`、`origin/main` 与远端 `main` 均为 `bb0a0dab16e88221c0f01b99804cfee6058e14c1`；该提交包含此前文档收束提交 `bb0a0da`，工作区干净。
+- 任务状态仍为 `done`。APP-003-C1 的代码、测试、独立复核和合入状态没有变化；本次仅校正 checkpoint 时间线说明。

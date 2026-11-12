@@ -2602,3 +2602,10 @@ commit=待提交
 - 合入后验证：固定 CAD venv Python 3.11.18 下 Demo 56/56 通过；C1 独立复核记录的 Integration 81/81、Schema 17/17、CAD compilation 13/13 与真实 localhost/STEP 烟测对应于已合入代码。
 - 收束：`APP-003-C1` 在 ADR-0022 的 localhost 手动参数演示范围内标记 `done`；PROJECT_STATUS、PROJECT_PLAN、TASKS 和 checkpoint 已同步。自由文本模型理解、三维预览、部署包装及 live extraction 不包含在本工作单元。
 - 后续：评估演示/汇报需要，另行规划最小产品包装；若 UI 要调用真实模型，先定义独立 scope、预算与 gate 并取得授权。
+
+### APP-003-C1-CHECKPOINT-TIMELINE-CLEANUP / Codex 中枢 / done / 2026-11-12
+
+- 动作：按独立审查反馈修正 checkpoint 时间线歧义；将 `f49a037` 审查及 `b59b551` 合入前的“待 push/合入”描述标注为对应时点的历史状态，并说明 `07a98d1` 是当时的功能分支合入 HEAD。
+- 当前核验：本地 `main`、`origin/main`、远端 `main` 均为 `bb0a0dab16e88221c0f01b99804cfee6058e14c1`；工作区干净。此前合入后 Demo 56、Integration 179、Schema 17、CAD compilation 13 均通过，本轮没有代码变化，未重复运行测试。
+- 收束：APP-003-C1 仍为 `done`；修正仅涉及 checkpoint 和追加式 WORKLOG，不改变代码、范围、验证结论或后续授权边界。
+- 下一步：按 PROJECT_PLAN 评估导师演示及最小产品包装需求；自由文本模型调用仍需独立 scope、预算与 gate。
