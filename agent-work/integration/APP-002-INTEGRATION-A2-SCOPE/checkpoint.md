@@ -346,3 +346,26 @@ interface=PASS; inner positional arg + required logical_run_id match src/llm/bud
 limits=PASS; formal gate false; no HTTP/model/key access; original batch untouched
 result=pass_for_code_fix; original_batch=blocked_batch_dir_exists
 ```
+
+## Second approved batch blocked by APP-001 formal gate (2026-11-12)
+
+### Scope and authorization
+
+- Project负责人批准继续同一 A2 scope，使用新唯一 batch `app002-a2-smoke-20261112-02`：DeepSeek `deepseek-flash`、C0、`A2-24mm`/`A2-80mm`/`A2-ask-bore`、最多 3 logical runs / 9 HTTP、允许 CAD pipeline。
+- 既有 `...-01` 目录保持原样，没有删除、移动或覆盖。
+
+### Preflight and execution result
+
+- 固定环境：Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0。
+- batch `...-02` 离线 preflight 通过：目录初始不存在、inputs SHA-256 匹配、prompt 可加载、预算上限 9 可行。
+- `.env` 中凭据只加载到当前进程，未显示或写入值。
+- 正式入口启动后，三条 logical runs 全部返回 `ADAPTER_EXCEPTION`，拒绝原因是全局 `FORMAL_EVALUATION_ALLOWED=False`；Adapter 明确要求正式 run gate 开启。
+- 没有 `budget_ledger.json`、raw 文件或 STEP；HTTP 请求/attempt 数为 0。模型未被调用。
+- 新目录 `work/app001-runs/app002-a2-smoke-20261112-02/` 已创建，仅含 `batch_summary.json`。summary 错误地显示 `batch_status=complete`，但三个 run 均为 error；不得将其视为成功证据。该目录和 batch ID 必须保留，禁止覆盖或重跑。
+
+### 当前阻断与边界
+
+- A2 transport 构造器窄修 `c954741` 已通过中枢代码复核；本次没有发现新的网络或预算绕过。
+- 项目事实源仍要求 `FORMAL_EVALUATION_ALLOWED=False`。本次 batch 授权没有明确变更这一全局 gate 的决策；不得绕过 Adapter、临时 monkey patch 或直接修改常量。
+- 当前需先决策是否通过 ADR 为 A2 建立明确、受控的正式 gate 路径（同时定义与 APP-001 全局 gate 的关系）；并窄修 runner，让所有 runs 失败时 batch summary 标为 failed/aborted，而非 complete。完成实现、独立审查后，新的 live attempt 仍需新唯一 batch ID 和负责人批准。
+- 现有 `...-01`、`...-02` 两个 batch 目录均只读保留、不得重跑；不得扩大输入/provider/condition/预算，不改变 prompt/Schema/IR/CAD 或旧批次。

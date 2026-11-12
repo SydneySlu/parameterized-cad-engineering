@@ -2417,3 +2417,12 @@ commit=待提交
 - 限制：未调用网络/模型、未读取密钥或 `.env`；`FORMAL_EVALUATION_ALLOWED=False`。原授权 batch 目录未触碰，仍只有失败时的 `batch_summary.json`。
 - 当前获批 batch 的只读 offline preflight 为 `ok=false`，唯一阻断项是 `batch_dir_exists=true`；冻结 inputs hash、prompt 加载、9 HTTP 预算可行性均通过。按唯一 batch 约束，不能复用这个 ID。
 - 结论：窄修代码验收通过，但真实整链尚未运行。下一步需项目负责人批准新的唯一 batch ID 并确认相同 DeepSeek/C0、3 输入、9 HTTP scope；保留旧失败目录，不移动、不覆盖、不重跑。
+
+### APP-002-INTEGRATION-A2-FORMAL-GATE-BLOCK / Codex 中枢 / blocked / 2026-11-12
+
+- 授权：负责人批准新 batch `app002-a2-smoke-20261112-02`，延续 DeepSeek `deepseek-flash`、C0、三条冻结输入、最多 9 HTTP、允许 CAD pipeline 的 A2 scope。
+- preflight：Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0；目录初始不存在、inputs hash 匹配、prompt 可加载、预算可行，offline preflight 通过。凭据从 `.env` 仅加载到本进程，未显示或写入。
+- 执行：三条 run 均被 Adapter 以 `FORMAL_EVALUATION_ALLOWED=False` 拒绝，状态 `ADAPTER_EXCEPTION`。没有账本、raw、STEP 或 HTTP attempt，模型未调用。
+- 失败现场：`work/app001-runs/app002-a2-smoke-20261112-02/` 仅有 `batch_summary.json`，其顶层 `batch_status=complete` 与 3 条 error 结果矛盾；该 batch ID 作废，目录只读保留，不得重跑或覆盖。此前 `...-01` 失败目录同样保持不动。
+- 判断：A2 runner 构造窄修 `c954741` 已通过中枢复核，但本次获批 batch scope 不会自动更改仓库明确保持关闭的全局 formal gate。不得绕过 Adapter 或擅自改 `FORMAL_EVALUATION_ALLOWED`。
+- 下一步：项目负责人先决定是否批准通过 ADR 建立 A2 专用正式 gate/明确 gate 关系，并接受相应窄修；同时修正全失败批次的 `batch_status`。实现和独立复核完成后再创建新唯一 batch ID 并单独批准 live scope。
