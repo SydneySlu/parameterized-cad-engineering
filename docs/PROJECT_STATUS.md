@@ -67,7 +67,7 @@
 | APP-001-NEXT-REAL-MODEL-EVALUATION | v5 held-out 检索对照 | Codex + 项目负责人 | deferred | R2 与 CLI 补测已验收；本轮在 993a5b1 完成 final offline preflight：12 组合、索引校验通过、预算可行 global=44/Ollama=26、目录不存在。无正式 batch ID/请求授权；研究恢复须重验当前基线并单独授权，不阻塞集成。详见集成基线 preflight 报告 |
 | APP-002-INTEGRATION-A1 | 最小后端连接层与离线统一入口 | CC 实现 / Codex 中枢独立验收 | done | `d6faf70` 已合入并推送 `main`；固定环境集成 81、CAD 13、Schema 17 通过；bore24 合成 envelope 实际生成并回读 STEP，P1 fail-closed 成功门经独立复核通过 |
 | APP-002-INTEGRATION-A2-SCOPE | 真实模型整链范围与受控入口 | Codex 中枢 | done | runtime guard 已合入 `main=0b02a26`；固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 已独立复核：3 次 HTTP/9 上限，24 mm 与 80 mm 各生成并回读 STEP，ask 正确停止构造，summary=`complete`、raw 3/3 留存。里程碑 B 六类定向验收完成；批次只读保留。是否增加 live 样本待负责人基于明确假设另行决定 |
-| APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | in_progress | 依据 ADR-0022 启动首切片：localhost Web UI + 用户手动确认结构化参数 + 既有 schema/IR/CAD pipeline；目标含 STEP 生成/下载、IR/验证查看、错误阻断、参数修改后隔离重生成。未接真实模型、不发网络请求；具体实现验收待完成 |
+| APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | review | `4419e27` 在固定 CAD venv 下通过 Demo 55、Integration 81、Schema 17、CAD 13；真实 localhost 烟测验证 24 mm/80 mm STEP、24.9 阻断、下载完整性/符号链接防护及 run 隔离。最终独立复核通过，待负责人合入 main；详见 `agent-work/reviews/APP-003-C1-codex-review.md`。有一项 P3 下载按钮文案瑕疵 |
 
 ## 当前缺口与限制
 
@@ -94,5 +94,5 @@
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. 里程碑 C 正在推进 `APP-003-C1`：先实现 localhost 离线参数确认演示和真实 CAD/STEP 生成、证据查看、下载及隔离重生成；验收后再评估是否需要产品级 live extraction scope。演示可引用 `...-04` 作为只读示例，但新运行由本地参数输入产生；仍须标明单族、固定环境及螺纹近似限制。
+6. 里程碑 C 的 `APP-003-C1` 已完成中枢独立验收，等待合入 `main` 后才能标记 done。固定环境与真实 localhost 证据见 `agent-work/reviews/APP-003-C1-codex-review.md`；演示仍是用户手动确认参数，不构成模型语言理解证据。合入后再决定是否需要产品级 live extraction scope；仍须标明单族、固定环境及螺纹近似限制。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

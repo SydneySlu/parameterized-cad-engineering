@@ -214,3 +214,30 @@ next_agent_focus=Run under real CadQuery (Python 3.11.18): verify bore_d=24 HTTP
 - 修复：新增 `_parse_bore_d()`；接受整数、整数文本和整数值浮点，拒绝布尔值、非整数浮点和小数文本；拒绝发生在任何 pipeline/CAD 调用前。
 - 回归：新增 24.9、`"24.9"`、`True` 三个拒绝测试，均断言 `compile_ir` 未调用。
 - 状态：review；等待 Codex 中枢固定 CAD venv 复验。
+
+## Codex 中枢最终独立复核（2026-11-12）
+
+- 结论：`pass`（在 ADR-0022 既定手动参数、localhost、单族范围内）；任务状态保持 `review`，须合入 `main` 后才能标记 done。
+- 被审查 HEAD：`4419e27`；基线 `main=1361f52`；分支 `cc/APP-003-C1-LOCAL-DEMO`；复核开始和结束时工作区干净。
+- 环境：固定 CAD venv / Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0 / jsonschema 4.26.0。
+- 测试：Demo 55/55、Integration pipeline + schema_to_ir 81/81、Schema 17/17、CAD compilation 13/13；py_compile 和 `git diff --check` 通过。Demo 测试有 4 条非阻断 `ResourceWarning`；依赖弃用警告不影响通过结果。
+- loopback：服务只监听 `127.0.0.1`。24 mm 实际生成并下载 STEP（148393 bytes、1 solid、35 faces、回读通过、hash 匹配）；80 mm 生成独立 run 且 `second_screw=1`、来源 `rule_derived`。浏览器页面成功显示参数/来源、IR、几何/回读摘要及下载入口。
+- 拒绝和隔离：24.9 返回 `invalid_input/input_validation`；缺 bore 返回 HTTP 400；目录外 25 返回 invalid_input，失败 run 下载 403，之前成功 run 仍可取回；未知格式 ID 400、未知 UUID 404。STEP symlink 逃逸和内容篡改均被拒绝（403）。
+- 安全边界：未调用 LLM/provider 或外网、未读密钥/`.env`、未访问 A2 历史批次；临时 run 输出与服务已清理。全局 gate、冻结契约、Schema/IR/CAD 后端未改。
+- 非阻断发现：下载按钮标签多余右括号，记录为 P3 文案瑕疵；不影响产物或下载验证。
+- 独立审查报告：`agent-work/reviews/APP-003-C1-codex-review.md`。
+- 后续：负责人可按 fast-forward 流程合入 `main`；合入前不标记 done，不 push/merge 由本复核执行。
+
+### handoff_successor_check
+
+```text
+predecessor=APP-003-C1 CC handoff; branch cc/APP-003-C1-LOCAL-DEMO HEAD 4419e27; checkpoint and commits 240a028/5923a5f/4419e27 reviewed
+files_format=handler/server/start script/tests present; manifest field paths match compiler output; no out-of-scope source changes
+core_rerun=Demo 55/55; Integration 81/81; Schema 17/17; CAD 13/13; py_compile and git diff --check pass under fixed CAD venv Python 3.11.18
+normal_case=loopback browser bore_d=24 generated downloadable STEP; hash/readback and UI evidence matched
+failure_case=24.9 rejected before CAD; missing bore 400; non-catalog 25 no STEP; symlink and tamper downloads 403
+interface=manual bore_d input → existing deterministic pipeline → run-isolated evidence and STEP; output includes provenance, IR, validation and hash
+limits=single family, fixed env, thread approximation, no LLM/language-understanding claim; P3 extra parenthesis in download label
+result=pass
+blocking_issue=none
+```

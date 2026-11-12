@@ -2576,3 +2576,13 @@ commit=待提交
 - 边界：保留整数目录值、下载隔离、manifest 映射、XSS 转义和 localhost-only；不修改 CAD/Schema/IR/pipeline 或历史批次。
 - 验证：待固定 CAD venv 重跑 demo、Integration、Schema、CAD 回归及 `py_compile`/`git diff --check`。
 - 下一步：Codex 中枢复核 R2，确认非整数输入无 CAD 调用后再决定合入。
+
+### APP-003-C1-FINAL-INDEPENDENT-REVIEW / Codex 中枢 / review / 2026-11-12
+
+- 动作：在 `cc/APP-003-C1-LOCAL-DEMO` 的 HEAD `4419e27` 上完成 C1 最终独立复核；被审查代码没有修改。
+- 环境与回归：固定 CAD venv Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0；Demo 55/55、Integration 81/81、Schema 17/17、CAD compilation 13/13；`py_compile`、`git diff --check` 通过。Demo 有 4 条非阻断 ResourceWarning。
+- 端到端证据：loopback 服务只绑定 `127.0.0.1`；浏览器 bore_d=24 成功生成/展示/下载真实 STEP，hash、1 solid、35 faces、readback 均匹配；HTTP 烟测 bore_d=80 启用 rule-derived second_screw 并生成独立 run。24.9、缺参、目录外值均按预期拒绝；失败 run 不暴露 STEP；未知 run、symlink 逃逸、hash 篡改被拒绝。
+- 安全边界：无 LLM/provider 或外网请求；未读取密钥、`.env`、A2 历史批次；临时服务和输出已停止/清理。无代码、scope、预算或授权边界修改。
+- 结论：在 ADR-0022 的手动参数本地演示范围内 `pass`；C1 状态改为 `review`，合入 `main` 后才可标记 done。非阻断 P3：下载按钮文案多一个右括号。
+- 证据：`agent-work/reviews/APP-003-C1-codex-review.md`；checkpoint 追加 `handoff_successor_check`。
+- 下一步：负责人按既有 fast-forward 流程合入 `main`；后续产品级 live extraction 需独立 scope/预算/gate。

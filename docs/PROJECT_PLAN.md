@@ -13,7 +13,7 @@
 | A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
 | A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：Codex 中枢推进受控 live 整链 | done；runtime guard 与缺依赖零调用回归已合入 `main=0b02a26`，固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 使用 3/9 HTTP：24 mm 与 80 mm 两条 answer 均通过 Schema、IR、CAD、STEP 导出/回读，缺孔径输入为 ask 且停止构造。Codex 中枢完成独立只读复核；批次只读保留 |
 | B：最小整链验收 | Codex 中枢：复用既有测试并补做缺失案例 | done；六类验收均有证据：真实模型 24 mm 合法值、80 mm 第二螺钉边界、缺参 ask；合成 envelope 的 1.6 cm→16 mm 本地真实 CAD/STEP；显式目录冲突在 Schema 阶段阻断且 CAD 未调用；真实编译器链注入 STEP 导出失败后 status=failed、无 STEP/index。固定 CAD venv 下 A2 98、Integration 179、CAD 13、Schema 17 项通过。合成离线结果不计作额外 live 语言样本 |
-| C：最小可用演示 | APP-003-C1：CC 实现，中枢验收 | in_progress；先按 ADR-0022 做仅 localhost 的离线参数确认 Web 演示，调用现有 pipeline 生成真实本地 STEP；自然语言作为可追溯需求文本，首切片由用户手动确认参数，不调用模型。包含缺参/冲突阻断、IR/验证查看、STEP 下载、修改参数重生成和 run 隔离；三维预览与部署后置 |
+| C：最小可用演示 | APP-003-C1：CC 实现，中枢验收 | review；中枢最终独立复核通过：固定 CAD venv 回归通过，真实 localhost 24/80 mm STEP、边界阻断、下载安全和 run 隔离烟测通过。等待合入 `main` 后标记 done；三维预览与部署后置。证据见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
