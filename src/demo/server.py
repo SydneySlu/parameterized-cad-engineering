@@ -155,6 +155,18 @@ function srcLabel(src) {{
   return '规则派生';
 }}
 
+// HTML-escape dynamic values before inserting into innerHTML.
+// Prevents XSS from pipeline/request data being interpreted as HTML.
+function esc(s) {{
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}}
+
 async function generate() {{
   const reqText = document.getElementById('req-text').value.trim();
   const boreD = document.getElementById('bore-d').value;
@@ -175,8 +187,13 @@ async function generate() {{
     const data = await resp.json();
     renderResult(data);
   }} catch(e) {{
-    document.getElementById('status-area').innerHTML =
-      `<div class="card"><p style="color:red">请求失败: ${{e.message}}</p></div>`;
+    const errDiv = document.createElement('div');
+    errDiv.className = 'card';
+    const errP = document.createElement('p');
+    errP.style.color = 'red';
+    errP.textContent = '请求失败: ' + (e.message || '');
+    errDiv.appendChild(errP);
+    document.getElementById('status-area').replaceChildren(errDiv);
   }} finally {{
     btn.disabled = false;
     btn.textContent = '生成 STEP';
@@ -184,7 +201,7 @@ async function generate() {{
 }}
 
 function renderResult(d) {{
-  const statusClass = `s-${{d.status}}`;
+  const statusClass = `s-${{esc(d.status)}}`;
   const statusText = {{
     success:'成功', blocked:'阻断', failed:'失败', error:'错误',
     ask:'需要澄清', refuse:'拒绝', invalid_input:'输入无效'
@@ -192,14 +209,14 @@ function renderResult(d) {{
 
   let html = `<div class="card">`;
   html += `<div class="section-title">生成结果</div>`;
-  html += `<div>运行 ID：<code>${{d.run_id}}</code></div>`;
-  html += `<div style="margin-top:.4rem">状态：<span class="status-badge ${{statusClass}}">${{statusText}}</span>`;
-  html += ` <span style="font-size:.8rem;color:#666">阶段：${{d.stage}}</span></div>`;
+  html += `<div>运行 ID：<code>${{esc(d.run_id)}}</code></div>`;
+  html += `<div style="margin-top:.4rem">状态：<span class="status-badge ${{statusClass}}">${{esc(statusText)}}</span>`;
+  html += ` <span style="font-size:.8rem;color:#666">阶段：${{esc(d.stage)}}</span></div>`;
 
   if (d.errors && d.errors.length > 0) {{
     html += `<div class="error-list"><b>错误：</b><ul>`;
     d.errors.forEach(e => {{
-      html += `<li>[${{e.code || '?'}}] ${{e.message || JSON.stringify(e)}}</li>`;
+      html += `<li>[${{esc(e.code || '?')}}] ${{esc(e.message || JSON.stringify(e))}}</li>`;
     }});
     html += `</ul></div>`;
   }}
@@ -209,7 +226,7 @@ function renderResult(d) {{
     html += `<table class="params-table"><thead><tr><th>参数</th><th>值</th><th>来源</th></tr></thead><tbody>`;
     for (const [k, v] of Object.entries(d.parameters)) {{
       const src = d.provenance[k] || 'unknown';
-      html += `<tr><td>${{k}}</td><td>${{v}}</td><td><span class="source-tag ${{srcClass(src)}}">${{srcLabel(src)}}</span></td></tr>`;
+      html += `<tr><td>${{esc(k)}}</td><td>${{esc(v)}}</td><td><span class="source-tag ${{esc(srcClass(src))}}">${{esc(srcLabel(src))}}</span></td></tr>`;
     }}
     html += `</tbody></table>`;
   }}
@@ -230,19 +247,19 @@ function renderResult(d) {{
     ];
     items.forEach(([lbl, val]) => {{
       if (val == null) return;
-      html += `<div class="val-item"><div class="val-label">${{lbl}}</div><div class="val-value">${{val}}</div></div>`;
+      html += `<div class="val-item"><div class="val-label">${{esc(lbl)}}</div><div class="val-value">${{esc(val)}}</div></div>`;
     }});
     html += `</div>`;
   }}
 
   if (d.ir_document) {{
-    html += `<details><summary>IR 文档（点击展开）</summary><pre>${{JSON.stringify(d.ir_document, null, 2)}}</pre></details>`;
+    html += `<details><summary>IR 文档（点击展开）</summary><pre>${{esc(JSON.stringify(d.ir_document, null, 2))}}</pre></details>`;
   }}
 
   if (d.status === 'success') {{
     html += `<div style="margin-top:.8rem">`;
-    html += `<a href="/download/${{d.run_id}}" download="collar-${{d.bore_d_input}}mm.step">`;
-    html += `<button class="download-btn">⬇ 下载 STEP (${{d.step_bytes}} bytes)</button></a>`;
+    html += `<a href="/download/${{esc(d.run_id)}}" download="collar-${{esc(d.bore_d_input)}}mm.step">`;
+    html += `<button class="download-btn">⬇ 下载 STEP (${{esc(d.step_bytes)}}) bytes)</button></a>`;
     html += `</div>`;
   }}
 

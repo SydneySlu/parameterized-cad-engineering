@@ -129,6 +129,72 @@ unresolved=Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核；真实
 next_agent_focus=verify in fixed CAD venv: run demo tests with real compile_ir, verify HTTP server starts and serves, verify bore_d=24 produces real STEP, verify download isolation with real files
 ```
 
+## 窄修 R1（本提交，2026-11-12）
+
+### 修复 1：manifest 字段名映射
+
+`_read_run_evidence()` 中的两处错误字段名：
+
+| 位置 | 修改前（错误） | 修改后（正确） |
+|---|---|---|
+| `native_geometry` 实体数 | `native_geo.get("solid_count")` | `native_geo.get("solids")` |
+| `native_geometry` 面数 | `native_geo.get("face_count")` | `native_geo.get("faces")` |
+| `native_geometry` 边数 | `native_geo.get("edge_count")` | `native_geo.get("edges")` |
+| `native_geometry` 顶点数 | `native_geo.get("vertex_count")` | `native_geo.get("vertices")` |
+| readback 通过标志路径 | `manifest["readback"]["pass"]` | `manifest["step_readback"]["comparison"]["pass"]` |
+
+根据：`src/cad_compilation/geometry.py` COUNTS = `("solids","shells","faces","edges","vertices")`；compiler.py 第 307 行 `manifest["step_readback"] = {"geometry": ..., "comparison": comparison}`。
+
+### 修复 2：UI 动态值 HTML 转义
+
+在 `server.py` 的 JS 中：
+- 新增 `function esc(s)` 函数，对 `&`/`<`/`>`/`"`/`'` 执行五种 HTML 转义。
+- `renderResult()` 中所有动态字符串（run_id、stage、错误码、错误消息、参数名/值、IR JSON）均改为 `esc(...)` 包裹。
+- fetch error 展示改为 `textContent`/`createElement` DOM API，避免 innerHTML 注入。
+
+### 验证结果（窄修后，sandbox Python 3.10.12）
+
+```text
+py_compile: src/demo/handler.py, src/demo/server.py, tests/demo/test_demo_handler.py — OK
+git diff --check: OK
+
+Demo tests:
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_demo_handler -v
+  Ran 52 tests (原 30 + 新增 22) — OK
+
+  新增 TestManifestFieldMapping (8 项):
+    solid_count=1 from native_geometry["solids"] ✓
+    face_count=10 from native_geometry["faces"] ✓
+    edge_count=20 from native_geometry["edges"] ✓
+    vertex_count=30 from native_geometry["vertices"] ✓
+    readback_pass=True from step_readback.comparison.pass ✓
+    is_valid, volume_mm3, step_bytes 仍正确 ✓
+    old wrong field names → None（证明修复 load-bearing）✓
+
+  新增 TestUIHTMLEscape (14 项):
+    esc() 五种转义规则 ✓
+    <img src=x onerror=...> 完全转义 ✓
+    <script>alert(1)</script> 完全转义 ✓
+    renderResult 源码含 esc(d.run_id), esc(d.stage), esc(e.code), esc(e.message) ✓
+    d.run_id, d.stage 不出现裸 ${{...}} 拼接 ✓
+    恶意 bore_d 错误消息作为纯文本处理 ✓
+
+Integration regression:
+  test_pipeline 39/39 OK; test_schema_to_ir 42/42 OK; schema 17/17 OK
+
+CAD compilation: 4 ERROR/1 FAIL = 既有 CadQuery 缺失（sandbox），与本次修改无关
+```
+
+## handoff_self_check（R1 更新）
+
+```text
+changed=src/demo/handler.py (manifest field mapping fix), src/demo/server.py (esc() + renderResult), tests/demo/test_demo_handler.py (mock struct + 22 new tests), agent-work/integration/APP-003-C1/checkpoint.md, docs/WORKLOG.md
+commands=py_compile (5 changed files OK); git diff --check (OK); demo 52/52 OK; test_pipeline 39/39 OK; test_schema_to_ir 42/42 OK; schema 17/17 OK
+confirmed=native_geometry field names now match geometry.summarize() output (solids/faces/edges/vertices); readback_pass now reads from step_readback.comparison.pass; renderResult escapes all dynamic values via esc(); download/symlink/hash/path-traversal isolation unchanged; no other files modified
+unresolved=Codex 中枢在固定 CAD venv (Python 3.11.18) 验证真实 manifest 结构；HTTP 端到端浏览器烟测确认 esc() 在浏览器中正常工作
+next_agent_focus=Run under real CadQuery (Python 3.11.18): verify bore_d=24 HTTP smoke returns solid_count=1, face_count>0, readback_pass=True; use browser DevTools to confirm <img onerror> payload in error message is displayed as text, not executed
+```
+
 ## 下一步
 
 - 任务状态 `review`，等待 Codex 中枢独立验收。

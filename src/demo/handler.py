@@ -158,6 +158,8 @@ def _read_run_evidence(run_dir: Path) -> dict[str, Any]:
             pass
 
     # Compilation result → validation summary
+    # native_geometry uses: "solids", "faces", "edges", "vertices" (not *_count)
+    # STEP readback pass lives at manifest["step_readback"]["comparison"]["pass"]
     comp_path = run_dir / "compilation_result.json"
     if comp_path.is_file():
         try:
@@ -165,17 +167,18 @@ def _read_run_evidence(run_dir: Path) -> dict[str, Any]:
             manifest = comp_data.get("manifest") or {}
             native_geo = manifest.get("native_geometry") or {}
             step_info = manifest.get("step") or {}
-            readback = manifest.get("readback") or {}
+            step_readback = manifest.get("step_readback") or {}
+            readback_comparison = step_readback.get("comparison") or {}
             evidence["validation_summary"] = {
-                "solid_count": native_geo.get("solid_count"),
+                "solid_count": native_geo.get("solids"),
                 "is_valid": native_geo.get("is_valid"),
                 "volume_mm3": native_geo.get("volume_mm3"),
-                "face_count": native_geo.get("face_count"),
-                "edge_count": native_geo.get("edge_count"),
-                "vertex_count": native_geo.get("vertex_count"),
+                "face_count": native_geo.get("faces"),
+                "edge_count": native_geo.get("edges"),
+                "vertex_count": native_geo.get("vertices"),
                 "step_bytes": step_info.get("bytes"),
                 "step_sha256": step_info.get("sha256"),
-                "readback_pass": readback.get("pass"),
+                "readback_pass": readback_comparison.get("pass"),
             }
         except Exception:
             pass

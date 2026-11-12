@@ -2510,6 +2510,29 @@ commit=待提交
 - 结果：A2 独立复核 pass；里程碑 B 完成。离线整链证据置于 git-ignore 的 `work/integration-runs/app002-milestone-b-20261112/`，详细报告见 `agent-work/reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md`。
 - 下一步：进入里程碑 C 最小可用演示；是否扩大 live 样本由负责人基于明确语言覆盖假设另行决定，未经新 scope/预算/batch ID/授权不发起新模型请求。
 
+### APP-003-C1-R1-NARROW-FIX / CC / review / 2026-11-12
+
+- 动作：在分支 `cc/APP-003-C1-LOCAL-DEMO`（HEAD 240a028）上完成两项窄修。
+- **修复 1：manifest 字段名映射**（`src/demo/handler.py`）
+  - `native_geometry` 字段名修正：`solid_count→solids`, `face_count→faces`, `edge_count→edges`, `vertex_count→vertices`（依据 `geometry.py` COUNTS 元组）。
+  - readback 通过路径修正：`manifest["readback"]["pass"]` → `manifest["step_readback"]["comparison"]["pass"]`（依据 `compiler.py` 第307行赋值）。
+- **修复 2：UI HTML 注入防御**（`src/demo/server.py`）
+  - 新增 JS 函数 `esc(s)`：对 `&`/`<`/`>`/`"`/`'` 执行五种 HTML 转义。
+  - `renderResult()` 中所有动态字符串（run_id、stage、错误码/消息、参数名/值、IR JSON）均改为 `esc(...)` 包裹。
+  - fetch error 展示改用 `textContent`/`createElement` DOM API，消除 innerHTML 注入路径。
+- **测试更新**（`tests/demo/test_demo_handler.py`）
+  - mock manifest 结构改为真实 compiler 格式（`solids`/`faces`/`edges`/`vertices` + `step_readback.comparison.pass`）。
+  - 新增 `TestManifestFieldMapping`（8 项）：验证实体/面/边/顶点数和 readback_pass 均从正确键读取，并有反向用例证明修复 load-bearing。
+  - 新增 `TestUIHTMLEscape`（14 项）：验证 `esc()` 五种规则、XSS payload 完全转义、`renderResult` 源码使用 `esc()` 包裹动态值、恶意 bore_d 错误消息作为纯文本处理。
+- 验证（sandbox Python 3.10.12）：
+  - `py_compile`：5 个修改文件全部通过
+  - `git diff --check`：通过
+  - Demo 测试：**52/52 通过**（原 30 + 新增 22）
+  - Integration test_pipeline **39/39**、test_schema_to_ir **42/42**、Schema **17/17** 通过
+  - CAD compilation 4 ERROR/1 FAIL = 既有 CadQuery 缺失，与本次修改无关
+- 不变量：不修改 pipeline.py、Schema、IR adapter、compiler、runner 等；不修改 A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；仅修改 `src/demo/handler.py`、`src/demo/server.py`、`tests/demo/test_demo_handler.py`、checkpoint/WORKLOG。
+- 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核。
+
 ### APP-003-C1-IMPLEMENTATION / CC / review / 2026-11-12
 
 - 动作：在分支 `cc/APP-003-C1-LOCAL-DEMO`（基于 `main=1361f52`）实现首个本地 CAD Web 演示（APP-003-C1，ADR-0022）。
