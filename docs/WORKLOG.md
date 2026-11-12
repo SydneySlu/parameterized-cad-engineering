@@ -2515,5 +2515,6 @@ commit=待提交
 - 动作：恢复里程碑 C 上下文并核实无既有 Web framework；将首个实现切片拆为 `APP-003-C1`，由 CC 实现本地可运行演示。
 - 决策：按 ADR-0022 使用只绑定 `127.0.0.1` 的标准库 Web UI，参数由用户手动填写/确认，文本仅作需求记录；复用现有 deterministic CAD pipeline。当前不接 live LLM，避免把已消耗的 A2 固定范围扩展成产品请求授权。
 - 交付：实施边界/验收条件已记录于 ADR-0022 与 `docs/coordination/prompts/APP-003-C1-local-demo-cc.md`；任务看板、计划、状态、checkpoint 已同步。
+- commit：`9873b61`（`docs: define APP-003 C1 local demo scope [APP-003-C1]`）；仅提交 C1 决策、计划和交接文档，未 push。
 - 验证：仓库根和 git 状态确认；阅读现有 README、pipeline、A2 runner、ADR-0020 及项目状态/计划。此工作单元只定义架构/交接，不运行产品代码测试。
 - 下一步：CC 按 C1 prompt 实现并提交；Codex 中枢独立复核 HTTP/UI、正常/失败路径及固定环境测试。
