@@ -44,6 +44,29 @@ CATALOG_TABLE_JS: list[dict[str, int]] = [
     for row in CATALOG_ROWS
 ]
 
+
+def _parse_bore_d(value: Any) -> int:
+    """Parse an integer bore value without silently truncating decimals.
+
+    JSON form submissions normally provide an integer or an integer string.
+    Integral floats are accepted for compatibility with callers that decode
+    numeric JSON as ``float``; non-integral values and booleans are rejected.
+    """
+    if isinstance(value, bool):
+        raise ValueError("bore_d must be an integer")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value.is_integer():
+            return int(value)
+        raise ValueError("bore_d must be an integer; decimal values are not allowed")
+    if isinstance(value, str):
+        text = value.strip()
+        if re.fullmatch(r"[+-]?\d+", text):
+            return int(text)
+        raise ValueError("bore_d must be an integer; decimal values are not allowed")
+    raise ValueError("bore_d must be an integer")
+
 # Output root for demo runs (git-ignored via work/)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DEMO_OUTPUT_ROOT: Path = _REPO_ROOT / "work" / "demo-runs"
@@ -218,7 +241,7 @@ class DemoHandler:
         """
         # --- Input validation (before any CAD call) ---
         try:
-            bore_d = int(bore_d_raw)
+            bore_d = _parse_bore_d(bore_d_raw)
         except (TypeError, ValueError):
             rid = str(uuid.uuid4())
             result = DemoRunResult(

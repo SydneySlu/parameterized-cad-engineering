@@ -129,6 +129,29 @@ class TestInputValidation(unittest.TestCase):
         self.assertEqual(result.status, "invalid_input")
         mock_compile.assert_not_called()
 
+    def test_decimal_bore_d_is_not_truncated_and_no_cad(self):
+        """A decimal must not be truncated to a valid catalog value."""
+        with patch("integration.pipeline.compile_ir") as mock_compile:
+            result = self.handler.run("test", 24.9)
+        self.assertEqual(result.status, "invalid_input")
+        self.assertEqual(result.stage, "input_validation")
+        self.assertIn("integer", result.errors[0]["message"])
+        mock_compile.assert_not_called()
+
+    def test_decimal_string_bore_d_is_not_truncated_and_no_cad(self):
+        """A decimal string from a direct API caller is also rejected."""
+        with patch("integration.pipeline.compile_ir") as mock_compile:
+            result = self.handler.run("test", "24.9")
+        self.assertEqual(result.status, "invalid_input")
+        mock_compile.assert_not_called()
+
+    def test_boolean_bore_d_is_not_accepted_as_integer(self):
+        """Python bool is an int subclass but is not a valid bore value."""
+        with patch("integration.pipeline.compile_ir") as mock_compile:
+            result = self.handler.run("test", True)
+        self.assertEqual(result.status, "invalid_input")
+        mock_compile.assert_not_called()
+
     def test_bore_d_not_in_catalog_rejected_no_cad(self):
         """bore_d=25 (not in catalog) → invalid_input, no CAD call."""
         with patch("integration.pipeline.compile_ir") as mock_compile:

@@ -207,3 +207,10 @@ next_agent_focus=Run under real CadQuery (Python 3.11.18): verify bore_d=24 HTTP
   5. HTTP server 启动和浏览器交互验证
   6. 下载安全六层验证
   7. 无网络/LLM 调用确认
+
+## 窄修 R2：拒绝小数孔径（2026-11-12）
+
+- 根因：`DemoHandler.run()` 原先直接执行 `int(bore_d_raw)`，会把 `24.9` 截断为 24 并生成错误目录件。
+- 修复：新增 `_parse_bore_d()`；接受整数、整数文本和整数值浮点，拒绝布尔值、非整数浮点和小数文本；拒绝发生在任何 pipeline/CAD 调用前。
+- 回归：新增 24.9、`"24.9"`、`True` 三个拒绝测试，均断言 `compile_ir` 未调用。
+- 状态：review；等待 Codex 中枢固定 CAD venv 复验。

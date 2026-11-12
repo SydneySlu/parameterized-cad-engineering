@@ -2568,3 +2568,11 @@ commit=待提交
 - commit：`9873b61`（`docs: define APP-003 C1 local demo scope [APP-003-C1]`）；仅提交 C1 决策、计划和交接文档，未 push。
 - 验证：仓库根和 git 状态确认；阅读现有 README、pipeline、A2 runner、ADR-0020 及项目状态/计划。此工作单元只定义架构/交接，不运行产品代码测试。
 - 下一步：CC 按 C1 prompt 实现并提交；Codex 中枢独立复核 HTTP/UI、正常/失败路径及固定环境测试。
+
+### APP-003-C1-R2-NARROW-FIX / Codex / review / 2026-11-12
+
+- 动作：修正 C1 输入边界，防止 `int()` 静默截断小数 bore_d。
+- 修改：`src/demo/handler.py` 新增严格 `_parse_bore_d()`；`tests/demo/test_demo_handler.py` 新增小数浮点、小数文本和布尔值拒绝回归。
+- 边界：保留整数目录值、下载隔离、manifest 映射、XSS 转义和 localhost-only；不修改 CAD/Schema/IR/pipeline 或历史批次。
+- 验证：待固定 CAD venv 重跑 demo、Integration、Schema、CAD 回归及 `py_compile`/`git diff --check`。
+- 下一步：Codex 中枢复核 R2，确认非整数输入无 CAD 调用后再决定合入。
