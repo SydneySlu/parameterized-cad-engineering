@@ -2502,3 +2502,10 @@ commit=待提交
 - 只读复核：3 个 raw 路径均指向本批次 `raw/` 且文件非空，摘要留有各自 body SHA-256；未打开 raw 正文或 evaluator labels。`...-04` 已消耗，及 `...-01` 至 `...-03` 一样保持只读，不重跑、不覆盖、不混合。
 - 文档同步：更新 PROJECT_PLAN / PROJECT_STATUS，追加本 checkpoint 与 WORKLOG。A2 状态仍为 `review`；本批次完成三个范围内案例，不代表完整六类 Milestone B 验收、广泛语言覆盖或制造认证。剩余：单位换算、显式冲突、CAD 构造/导出失败的整链验收，并独立复核此次证据。
 - 不变量：`FORMAL_EVALUATION_ALLOWED=False` 不变；ADR-0021 A2 专用 gate、模型/输入/条件/预算边界不变；未 push/merge。
+# 2026-11-12 — Codex — APP-002-A2-MILESTONE-B-ACCEPTANCE
+
+- 动作：独立只读复核 A2 批次 `app002-a2-smoke-20261112-04`，并完成里程碑 B 六类定向整链验收。
+- 验证：固定 CAD venv Python 3.11.18；A2 98/98、Integration 179/179、CAD compilation 13/13、Schema 17/17。额外使用真实统一 pipeline 和合成 fixture 验证 1.6 cm→16 mm 实际 STEP、显式目录冲突在 CAD 前阻断、注入 STEP 导出失败后明确 failed 且无 STEP/index。
+- 批次复核：3 次请求/9 上限；24 mm 与 80 mm 的 IR/STEP hash 匹配 index/manifest，STEP readback comparison `pass=true`；缺参 ask 未进入 CAD。raw 正文与 evaluator labels 未读取，所有 A2 历史批次只读。
+- 结果：A2 独立复核 pass；里程碑 B 完成。离线整链证据置于 git-ignore 的 `work/integration-runs/app002-milestone-b-20261112/`，详细报告见 `agent-work/reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md`。
+- 下一步：进入里程碑 C 最小可用演示；是否扩大 live 样本由负责人基于明确语言覆盖假设另行决定，未经新 scope/预算/batch ID/授权不发起新模型请求。

@@ -11,13 +11,14 @@
 | 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
 |---|---|---|
 | A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
-| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：Codex 中枢推进受控 live 整链 | review；runtime guard 与缺依赖零调用回归已合入 `main=0b02a26`，固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。新批次 `app002-a2-smoke-20261112-04` 已获批并完成：3/9 HTTP；24 mm 与 80 mm 两条 answer 均通过 Schema、IR、CAD、STEP 导出/回读，缺孔径输入为 ask 且停止构造。仍需完成里程碑 B 的六类整链验收及独立复核；批次只读保留 |
-| B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | in_progress；已有 `...-04` 的合法 24 mm、第二螺钉 80 mm、缺参 ask 真实模型证据；还需覆盖单位换算、显式冲突、CAD 构造/导出失败，并复核各类失败不误报成功。优先复用现有 fixture 与回归，不重复运行已完成批次 |
+| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：Codex 中枢推进受控 live 整链 | done；runtime guard 与缺依赖零调用回归已合入 `main=0b02a26`，固定 CAD venv Python 3.11.18 下 A2 98 项、Integration 179 项通过。获批批次 `app002-a2-smoke-20261112-04` 使用 3/9 HTTP：24 mm 与 80 mm 两条 answer 均通过 Schema、IR、CAD、STEP 导出/回读，缺孔径输入为 ask 且停止构造。Codex 中枢完成独立只读复核；批次只读保留 |
+| B：最小整链验收 | Codex 中枢：复用既有测试并补做缺失案例 | done；六类验收均有证据：真实模型 24 mm 合法值、80 mm 第二螺钉边界、缺参 ask；合成 envelope 的 1.6 cm→16 mm 本地真实 CAD/STEP；显式目录冲突在 Schema 阶段阻断且 CAD 未调用；真实编译器链注入 STEP 导出失败后 status=failed、无 STEP/index。固定 CAD venv 下 A2 98、Integration 179、CAD 13、Schema 17 项通过。合成离线结果不计作额外 live 语言样本 |
 | C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
-- v5 fixed-set 真实双模型评测已完成。A2 `...-03` 的两条 answer 因系统 Python 缺少 `jsonschema` 未通过 IR Schema 阶段，一条 ask 正确停止；该历史批次只读保留。runtime guard 已合入并在固定 CAD venv 下复验。获批批次 `...-04` 在 CAD venv 中完成 3 次真实 DeepSeek 请求：24 mm 与 80 mm answer 均生成并回读 STEP，缺孔径请求为 ask；账本 3/9，证据及哈希见 A2 checkpoint。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
+- v5 fixed-set 真实双模型评测已完成。A2 `...-03` 的两条 answer 因系统 Python 缺少 `jsonschema` 未通过 IR Schema 阶段，一条 ask 正确停止；该历史批次只读保留。runtime guard 已合入并在固定 CAD venv 下复验。获批批次 `...-04` 在 CAD venv 中完成 3 次真实 DeepSeek 请求：24 mm 与 80 mm answer 均生成并回读 STEP，缺孔径请求为 ask；账本 3/9，Codex 中枢独立核对了 summary、预算、raw 文件路径/哈希元数据、IR/STEP 与 index/manifest hash 及 readback comparison。批次只读保留，证据见 A2 checkpoint 与独立审查报告。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
+- 里程碑 B 已完成固定环境定向验收。单位换算使用合成 envelope 和真实本地 CAD/STEP，不冒充真实模型语言理解；显式冲突与导出失败均验证不误报成功。已完成六类链路验收不等于广泛语言覆盖；是否增加 live 样本留待负责人根据具体语言风险假设另行决定，任何新增请求都须新的 batch scope、预算、ID 和授权。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 

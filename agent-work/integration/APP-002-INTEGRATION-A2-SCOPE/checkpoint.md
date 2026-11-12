@@ -499,3 +499,12 @@ confirmed=24 mm answer→valid one-solid geometry→STEP readback; 80 mm answer�
 unresolved=Milestone B unit conversion, explicit conflict, and CAD failure acceptance; independent review of closeout evidence; broader language coverage/stability
 next_agent_focus=verify doc diff and commit; keep batch -04 read-only; add only missing Milestone B offline tests or prepare the next user-approved work unit
 ```
+
+## Codex independent review and Milestone B closeout / 2026-11-12
+
+- 独立复核报告：[`agent-work/reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md`](../../reviews/APP-002-A2-MILESTONE-B-ACCEPTANCE.md)，结论 `pass`。
+- `app002-a2-smoke-20261112-04` 只读复核通过：summary `complete`、3/3 run、预算 3/9；24 mm 与 80 mm 的 IR/STEP hash 与 index/manifest 一致，回读 comparison 均 `pass=true`；缺参 ask 无 pipeline/STEP。raw 文件只核对路径和非空状态，没有读取正文或重算正文 hash；labels 未读取。
+- 固定 CAD venv Python 3.11.18 验证：A2 98/98、Integration 179/179、CAD compilation 13/13、Schema 17/17。
+- 里程碑 B 六类验收已齐：24 mm 合法成功、1.6 cm 合成 envelope→16 mm 真实本地 STEP、80 mm 第二螺钉分支、缺参 ask、显式目录冲突阻断且不调用 CAD、真实 pipeline 导出注入失败且不误报成功/无 STEP。
+- 新的离线定向产物保存在忽略目录 `work/integration-runs/app002-milestone-b-20261112/`；未发模型/网络请求，未改变 A2 scope、prompt、预算或全局 gate。
+- 状态：A2 和里程碑 B 定向验收完成；是否扩大 live 样本待项目负责人根据明确语言覆盖假设另行决定。下一步转里程碑 C 最小可用演示。
