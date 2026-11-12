@@ -242,6 +242,13 @@ result=pass
 blocking_issue=none
 ```
 
+## 合入收束（2026-11-12）
+
+- 合并：负责人已将 `cc/APP-003-C1-LOCAL-DEMO` fast-forward 合入并推送 `main`；本地 `main`、`origin/main` 和远端 `main` 均核实为 `07a98d129022e78cc9e7dc4e44bc9ae2df083f5f`。
+- 工作区：合入后干净，`main` 与 `origin/main` 同步。
+- 合入后验证：固定 CAD venv Python 3.11.18 下 Demo 56/56 通过；最终复核记录中的 Integration 81/81、Schema 17/17、CAD compilation 13/13 及真实 localhost/STEP 烟测证据对应的代码提交均包含在该 main 历史中。
+- 结论：APP-003-C1 按 ADR-0022 的手动参数 localhost 演示范围标记 `done`。当前不含自由文本模型理解；三维预览、部署包装及产品级 live extraction 是后续独立工作，不在本任务验收范围。
+
 ## P3 下载按钮文案窄修（2026-11-12）
 
 - 修改：`src/demo/server.py` 将含多余括号的 `下载 STEP (N) bytes)` 改为 `下载 STEP（N 字节）`；新增 HTML 输出断言，确认新文案存在且旧格式不存在。

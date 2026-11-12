@@ -2595,3 +2595,10 @@ commit=待提交
 - 边界：只涉及展示文案和测试；下载、安全、HTTP、CAD、模型授权及历史批次均未变。
 - commit：`b59b551 fix: correct STEP download byte label [APP-003-C1]`；工作区干净。
 - 下一步：负责人可 push 并按已审查结果合入 `main`；合入后再同步 `done` 状态。
+
+### APP-003-C1-MERGE-CLOSEOUT / Codex 中枢 / done / 2026-11-12
+
+- 动作：核对负责人完成的 fast-forward 合并与 push；本地 `main`、`origin/main`、远端 `main` 均为 `07a98d129022e78cc9e7dc4e44bc9ae2df083f5f`，工作区干净。
+- 合入后验证：固定 CAD venv Python 3.11.18 下 Demo 56/56 通过；C1 独立复核记录的 Integration 81/81、Schema 17/17、CAD compilation 13/13 与真实 localhost/STEP 烟测对应于已合入代码。
+- 收束：`APP-003-C1` 在 ADR-0022 的 localhost 手动参数演示范围内标记 `done`；PROJECT_STATUS、PROJECT_PLAN、TASKS 和 checkpoint 已同步。自由文本模型理解、三维预览、部署包装及 live extraction 不包含在本工作单元。
+- 后续：评估演示/汇报需要，另行规划最小产品包装；若 UI 要调用真实模型，先定义独立 scope、预算与 gate 并取得授权。

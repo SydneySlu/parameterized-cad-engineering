@@ -30,7 +30,7 @@
 | APP-001-RUNNER | 第一阶段受控运行入口与预算/模型身份边界 | CC + Codex | review | APP-001-PREP、APP-001-ADAPTER、ADR-0014 | `APP-001-RUNNER-001`、R1、R2 已推送；R2 等待独立只读安全复核。复核前不得启动正式请求；交接见 `agent-work/llm/APP-001-runner-R2/` |
 | APP-001 | LLM 结构化抽取与 Prompt 对照（Phase 1） | Codex + 用户 | planned | APP-001-RUNNER-R2 复核通过 | 用户已授权 9 样例×C0/C1×双模型，共 36 逻辑运行、最多 108 次请求；IR/CAD/geometry/STEP 禁用。待 runner 安全复核通过后启动 |
 | APP-002 | 轻量版有限修复循环 | CC（CAD 执行角色） + LLM Agent | planned | CAD-006 | 失败字段可回传并有界重试 |
-| APP-003-C1 | 最小本地 Web 演示：参数确认→隔离 CAD/STEP 生成→证据查看/下载/重生成 | CC 实现 / Codex 中枢独立验收 | review | APP-002 A1/A2、里程碑 B、ADR-0022 | 固定 CAD venv 测试及真实 localhost HTTP/STEP、安全、失败阻断和 run 隔离复核通过；待合入 main 后标记 done。独立审查记录见 `agent-work/reviews/APP-003-C1-codex-review.md` |
+| APP-003-C1 | 最小本地 Web 演示：参数确认→隔离 CAD/STEP 生成→证据查看/下载/重生成 | CC 实现 / Codex 中枢独立验收 | done | APP-002 A1/A2、里程碑 B、ADR-0022 | 已合入并推送至 `main=07a98d1`；固定 CAD venv 测试、真实 localhost HTTP/STEP、安全、失败阻断和 run 隔离复核通过。独立审查记录见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 
 ## 认领格式
 
