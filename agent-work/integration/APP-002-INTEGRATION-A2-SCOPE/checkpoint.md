@@ -369,3 +369,36 @@ result=pass_for_code_fix; original_batch=blocked_batch_dir_exists
 - 项目事实源仍要求 `FORMAL_EVALUATION_ALLOWED=False`。本次 batch 授权没有明确变更这一全局 gate 的决策；不得绕过 Adapter、临时 monkey patch 或直接修改常量。
 - 当前需先决策是否通过 ADR 为 A2 建立明确、受控的正式 gate 路径（同时定义与 APP-001 全局 gate 的关系）；并窄修 runner，让所有 runs 失败时 batch summary 标为 failed/aborted，而非 complete。完成实现、独立审查后，新的 live attempt 仍需新唯一 batch ID 和负责人批准。
 - 现有 `...-01`、`...-02` 两个 batch 目录均只读保留、不得重跑；不得扩大输入/provider/condition/预算，不改变 prompt/Schema/IR/CAD 或旧批次。
+
+## APP-002-INTEGRATION-A2-GATE-STATUS-FIX / Codex 中枢 / review / 2026-11-12
+
+### 范围与决策
+
+- 基线：`main=fa87db7`，工作区干净；在 `codex/APP-002-A2-GATE-STATUS-FIX` 隔离分支实施。
+- 项目负责人明确要求打开测试需要的权限和 gate。新增 ADR-0021，接受既有 A2 专用 scope + 同 batch 非 test-only approval 作为 formal gate；APP-001 全局 `FORMAL_EVALUATION_ALLOWED=False` 保持不变，未给其他入口授权。
+- 旧批次 `app002-a2-smoke-20261112-01` 与 `...-02` 仅依据既有记录保持只读；本次没有读写其目录或 raw 内容，也没有尝试复用 batch ID。
+
+### 定向复核发现与修正
+
+- 根因：A2 创建的 `BudgetAwareTransport.adapter_run_id` 是 `plan.logical_run_id`，但 `_run_one_logical()` 为 Adapter 生成 UUID `run_id`。Adapter 对两者做严格相等校验，因此凭证与 transport 绑定不匹配，拒绝发生在 HTTP 前。
+- 修正：formal A2 路径将 Adapter `run_id` 设为同一冻结 logical run ID；非正式路径仍用 UUID。新增针对真实 Adapter gate 的无网络测试：正确绑定通过 gate 到冻结 prompt 验证，错误 ID 仍 fail closed。
+- 修正 batch 状态：计划项均返回 `error`/`failed` 时 final summary 为 `failed`；混合失败为 `partial`；运行未完成计划即中止为 `aborted`；全部运行到达非错误终态（含 ask/refuse/blocked）才为 `complete`。
+
+### 验证
+
+Python 3.11.18，均为离线/本地测试，未读取凭据、未发 HTTP、未运行模型：
+
+- `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest tests.integration.test_a2_runner -q`：96 项通过。
+- `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest discover -s tests/integration -p 'test_*.py' -q`：176 项通过。
+- `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/schema -p 'test_*.py' -q`：17 项通过。
+- `PYTHONPATH=src:. /opt/homebrew/bin/python3.11 -m unittest discover -s tests/llm -p 'test_*.py' -q`：941 项通过、8 项既有 skip。
+- `py_compile`（runner + A2 tests）和 `git diff --check`：通过。
+- 正常路径：正确 A2 transport/Adapter run binding 通过 gate 并到达 prompt 验证 sentinel；ask mock 终态回归保持通过。
+- 失败路径：错误 Adapter run ID 仍触发 `FormalEvaluationBlockedError`；三条全 error formal summary 为 `failed`。
+
+### 限制与下一步
+
+- 本提交只完成权限决策和离线代码修正，不是 live 执行批准；无真实模型整链成功证据。
+- A2 固定输入、DeepSeek `deepseek-flash`、C0、3 logical runs、9 HTTP cap 和 CAD pipeline scope 未变；预算预留逻辑未改；`FORMAL_EVALUATION_ALLOWED=False` 未变。
+- handoff_self_check：`changed=ADR-0021, A2 formal run ID binding, summary status semantics, four focused regression tests, PROJECT_PLAN/PROJECT_STATUS/checkpoint/WORKLOG; commands=A2 96, integration 176, schema 17, LLM 941+8 existing skips, py_compile, diff-check all pass; confirmed=valid A2 binding accepted before prompt validation, mismatched ID rejected, all-error summary failed, global gate remains false; unresolved=independent review/merge and new batch approval; next_agent_focus=review ADR scope, Adapter positive/negative gate test, batch status aggregation, and no change to old batch artifacts or global gate`。
+- 下一步：中枢完成独立差异复核并合入后，重新执行新的离线 preflight；再向项目负责人申请一个未使用的新 batch ID 的 live preflight + 三条 DeepSeek/C0 整链执行批准。

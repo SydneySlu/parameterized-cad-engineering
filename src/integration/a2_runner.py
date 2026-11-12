@@ -21,8 +21,10 @@ Safety guarantees
 - No formal batch_id is assigned and no network call is made in this module
   unless a :class:`A2IntegrationAuthorization` with an owner-approved batch_id
   is supplied.
-- ``FORMAL_EVALUATION_ALLOWED`` is never set or checked; the gate is entirely
-  mediated by the authorization object and BudgetAwareTransport.
+- ``FORMAL_EVALUATION_ALLOWED`` remains False. Formal A2 execution is allowed
+  only through its ADR-0021 scope-validated authorization plus matching
+  non-test-only batch approval and Adapter-bound BudgetAwareTransport. This
+  does not authorize APP-001 or held-out runners.
 
 Offline dry-run / preflight mode
 ---------------------------------
@@ -931,7 +933,10 @@ def _run_one_logical(
         to decision=answer with Schema passing; raw_envelope is extracted
         directly from the FakeTransport's last response body.
     """
-    run_id = str(uuid.uuid4())
+    # The formal BudgetAwareTransport is bound to the canonical logical run
+    # identifier before this helper is called. Reuse that identifier as the
+    # Adapter run ID so Adapter's strict transport binding check succeeds.
+    run_id = plan.logical_run_id if is_formal else str(uuid.uuid4())
     errors: list[str] = []
 
     # Build AdapterInput (C0: no reference_context)
@@ -1183,12 +1188,10 @@ def run_a2_batch(
         network calls, no Adapter runs, no pipeline calls.  Safe to call
         at any time.  Does NOT require an ``approval`` credential.
     transport:
-        Injectable transport for testing.  Must be a
-        :class:`~llm.transport.FakeTransport` instance when the formal gate
-        is closed (which it always is; ``FORMAL_EVALUATION_ALLOWED=False``).
-        For formal live runs (not yet authorised), pass None and set
-        ``dry_run=False``.  Mock mode (non-None transport) does NOT require
-        an ``approval`` credential.
+        Injectable transport for testing. Use an exact FakeTransport for
+        offline mock runs. For formal A2 execution, pass None and provide the
+        exact A2 authorization plus matching non-test-only approval; the
+        Adapter additionally verifies its BudgetAwareTransport binding.
     output_root:
         Override the pipeline-runs output root.  Defaults to
         ``work/app001-runs/{batch_id}/pipeline-runs/``.
@@ -1416,8 +1419,21 @@ def run_a2_batch(
                 pass
         # Finalize summary
         if is_formal and writer is not None and not summary_write_failed:
+            statuses = [result.combined_status for result in results]
+            failed_statuses = {"error", "failed"}
+            if len(results) < len(planned):
+                final_batch_status = "aborted"
+            elif statuses and all(status in failed_statuses for status in statuses):
+                final_batch_status = "failed"
+            elif any(status in failed_statuses for status in statuses):
+                final_batch_status = "partial"
+            else:
+                # Semantic terminal outcomes such as ask/refuse are completed
+                # evaluations; only infrastructure/pipeline failures prevent
+                # a complete batch status.
+                final_batch_status = "complete"
             try:
-                writer.finalize(batch_status="complete")
+                writer.finalize(batch_status=final_batch_status)
             except SummaryWriteError as exc:
                 # R1-CORRECTION: finalize failure must be explicit, not swallowed.
                 # The caller must not receive a result that looks like the batch

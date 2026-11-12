@@ -2426,3 +2426,10 @@ commit=待提交
 - 失败现场：`work/app001-runs/app002-a2-smoke-20261112-02/` 仅有 `batch_summary.json`，其顶层 `batch_status=complete` 与 3 条 error 结果矛盾；该 batch ID 作废，目录只读保留，不得重跑或覆盖。此前 `...-01` 失败目录同样保持不动。
 - 判断：A2 runner 构造窄修 `c954741` 已通过中枢复核，但本次获批 batch scope 不会自动更改仓库明确保持关闭的全局 formal gate。不得绕过 Adapter 或擅自改 `FORMAL_EVALUATION_ALLOWED`。
 - 下一步：项目负责人先决定是否批准通过 ADR 建立 A2 专用正式 gate/明确 gate 关系，并接受相应窄修；同时修正全失败批次的 `batch_status`。实现和独立复核完成后再创建新唯一 batch ID 并单独批准 live scope。
+
+### APP-002-INTEGRATION-A2-GATE-STATUS-FIX / Codex 中枢 / review / 2026-11-12
+
+- 动作：按负责人明确要求推进测试所需 gate；追加 ADR-0021，将既有 A2 scope + 同 batch 非 test-only approval 明确为 A2 专用 formal gate，保持全局 `FORMAL_EVALUATION_ALLOWED=False`。
+- 修正：查明 Adapter 拒绝原因是 `BudgetAwareTransport.adapter_run_id` 与随机 Adapter `run_id` 不匹配；formal A2 路径改用冻结 logical run ID。Summary 对 all-error=`failed`、mixed errors=`partial`、中途停止=`aborted`、完整非错误终态=`complete`。
+- 验证：Python 3.11.18 下 A2 96 项、Integration 176 项、Schema 17 项通过；LLM 941 项通过/8 项既有 skip；py_compile 与 diff-check 通过。合法绑定到达 prompt 验证，错误 run ID 仍 fail closed；无模型/网络/密钥读取。
+- 下一步：完成中枢差异复核；若通过，合入后重跑离线 preflight，并另行取得新唯一 batch 的明确 live 执行批准。`...-01`、`...-02` 失败现场只读保留。

@@ -575,3 +575,24 @@ RET-003 held-out 清单只提供结构化真值引用，并未提供冻结自然
 ### 责任与验收
 
 CC 负责 A1 连接层实现，中枢负责接口核对与独立验收。Schema→IR→编译器为高风险交接，执行三层协议和正常/失败 double check。首个工作包见 `docs/coordination/prompts/APP-002-INTEGRATION-A1-cc.md`，本轮资产与离线关口证据见 `agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md`。
+
+## ADR-0021：A2 真实模型整链测试的专用授权门与批次状态
+
+- 日期：2026-11-12
+- 状态：accepted
+- 决策人：项目负责人 + Codex 中枢（负责人明确要求打开测试所需权限和 gate）
+- 关联：ADR-0014、ADR-0020、APP-002-INTEGRATION-A2-SCOPE
+
+### 决策
+
+1. 为 A2 保持独立且窄范围的真实模型整链授权：只能使用 `A2IntegrationAuthorization` 与同 batch 的、非 test-only `A2FormalApproval`；固定输入、prompt/contract、DeepSeek `deepseek-flash`、C0、3 条输入、最多 3 次每输入尝试、全批次最多 9 次 HTTP，并仅在 `answer` 且确定性校验通过时进入既有 CAD pipeline。
+2. Adapter 继续使用现有 `FormalRunAuthorization` 类型检查和 runner-bound `BudgetAwareTransport` 校验。A2 子类凭证是 A2 的显式窄门；不改变、不 monkey-patch、不以环境变量覆盖 `FORMAL_EVALUATION_ALLOWED=False`。APP-001 与 held-out 入口不因此获得新的权限。
+3. 每个 A2 Adapter run ID 必须与同一 transport 的 `adapter_run_id` 一致，transport 的 logical run、query、condition、provider、model 仍由账本与 A2 scope 绑定；所有真实 HTTP 继续先 reserve 预算。
+4. 批次摘要的 `batch_status=complete` 仅用于全部计划运行均到达非错误终态（包括预期 ask/refuse/blocked）；若所有结果均为 `error`/`failed`，状态为 `failed`；部分混合错误为 `partial`；未完成计划即中止时为 `aborted`。摘要写失败仍通过既有错误字段报告，不伪称完成。
+5. 此 ADR 打开的是受控 A2 授权机制，不是对旧批次或新 batch 的执行批准。已使用的 `...-01`、`...-02` 永久保留且禁止重跑；任何后续 live preflight/model/CAD 请求都必须使用新唯一 batch ID，并在固定环境离线验证与独立复核通过后，取得项目负责人对该 batch、输入、预算和整链执行的明确批准。
+
+### 原因与验证要求
+
+第二个获批尝试在 HTTP=0 时被 Adapter 拒绝。代码条件表明 transport 的 `adapter_run_id` 绑定逻辑运行 ID，而 A2 helper 生成随机 Adapter run ID，造成合法 A2 凭证与 transport binding 不一致；不需要打开全局布尔 gate。该失败也暴露出全错误批次被标记为 `complete` 的报告缺陷。
+
+修改必须以正反回归验证 ID 绑定和 summary 状态：A2 正式 mock/spy 路径能通过 scope/binding 检查，错误绑定仍拒绝；三条 error 结果不得 finalize 为 complete，ask 等有效终态仍可 complete。`FORMAL_EVALUATION_ALLOWED` 保持 False。实施和中枢复核通过后，才进入新的 batch 授权步骤。

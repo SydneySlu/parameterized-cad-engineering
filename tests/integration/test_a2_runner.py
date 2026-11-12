@@ -2121,6 +2121,158 @@ class TestA2LiveFix(unittest.TestCase):
             source,
             "BudgetAwareTransport must be called with DeepSeekTransport as positional inner")
 
+    def test_formal_adapter_run_id_matches_budget_transport_binding(self):
+        """The A2 Adapter call must use the run ID bound into its transport."""
+        from integration.a2_runner import _run_one_logical
+
+        auth = _make_auth("a2-binding-unit-test")
+        plan = _plan_combinations(auth)[0]
+        observed = {}
+
+        class RecordingAdapter:
+            def run(self, adapter_input, *, run_id, formal_authorization):
+                observed["run_id"] = run_id
+                observed["authorization"] = formal_authorization
+                observed["query_id"] = adapter_input.query_id
+                raise RuntimeError("stop after checking A2 gate binding")
+
+        result = _run_one_logical(
+            plan=plan,
+            natural_language="fixture only",
+            prompt=load_frozen_prompt(),
+            adapter=RecordingAdapter(),
+            authorization=auth,
+            batch_id=auth.batch_id,
+            pipeline_output_root=Path("/tmp/a2-binding-test"),
+            repo_root=Path.cwd(),
+            is_formal=True,
+        )
+
+        self.assertEqual(observed["run_id"], plan.logical_run_id)
+        self.assertEqual(observed["query_id"], plan.input_id)
+        self.assertIs(observed["authorization"], auth)
+        self.assertEqual(result.errors[0]["code"], "ADAPTER_EXCEPTION")
+
+    def test_adapter_accepts_correct_a2_binding_and_rejects_wrong_run_id(self):
+        """Exercise the real Adapter gate without allowing any transport send."""
+        from unittest.mock import MagicMock, patch
+        from llm.adapter import Adapter, AdapterInput
+        from llm.budget import BudgetAwareTransport
+        from llm.real_transport import DeepSeekTransport
+        from llm.gate import FormalEvaluationBlockedError
+
+        auth = _make_auth("a2-adapter-gate-test")
+        plan = _plan_combinations(auth)[0]
+        ledger = MagicMock()
+        ledger.authorization = auth
+        inner = DeepSeekTransport(authorization=auth)
+        transport = BudgetAwareTransport(
+            inner, ledger=ledger, authorization=auth,
+            logical_run_id=plan.logical_run_id,
+            provider=plan.provider, model=plan.model,
+            adapter_run_id=plan.logical_run_id,
+            query_id=plan.input_id, condition_id=plan.condition_id,
+        )
+        adapter = Adapter(provider=plan.provider, transport=transport)
+        prompt = load_frozen_prompt()
+        adapter_input = AdapterInput(
+            query_id=plan.input_id,
+            natural_language_input="fixture only",
+            reference_context=None,
+            system_prompt=prompt.system_prompt,
+            user_prompt_template=prompt.user_template,
+            condition_id=plan.condition_id,
+        )
+
+        class StopBeforeSend(Exception):
+            pass
+
+        with patch("llm.adapter.verify_adapter_input", side_effect=StopBeforeSend):
+            with self.assertRaises(StopBeforeSend):
+                adapter.run(
+                    adapter_input, run_id=plan.logical_run_id,
+                    formal_authorization=auth,
+                )
+
+        with self.assertRaises(FormalEvaluationBlockedError):
+            adapter.run(
+                adapter_input, run_id="wrong-run-id",
+                formal_authorization=auth,
+            )
+
+    def test_all_formal_runs_error_finalize_batch_as_failed(self):
+        """A completed loop with only adapter errors must not say batch complete."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch, MagicMock
+        from llm.a2_authorization import (
+            A2FormalApproval, A2_PROFILE_ID, A2_INPUTS_SHA256,
+            A2_LABELS_SHA256, A2_PROVIDER, A2_MODEL, A2_CONDITION,
+            A2_MAX_BATCH_HTTP,
+        )
+        from integration.a2_runner import A2RunResult, run_a2_batch
+
+        batch_id = "a2-all-error-summary-test"
+        auth = authorize_a2_run(batch_id=batch_id)
+        approval = A2FormalApproval(
+            batch_id=batch_id,
+            profile_id=A2_PROFILE_ID,
+            inputs_sha256=A2_INPUTS_SHA256,
+            evaluator_labels_sha256=A2_LABELS_SHA256,
+            provider=A2_PROVIDER,
+            model=A2_MODEL,
+            condition=A2_CONDITION,
+            max_batch_http=A2_MAX_BATCH_HTTP,
+            enable_cad_pipeline=True,
+            approver="test-owner",
+            approved_at_utc="2026-11-12T00:00:00Z",
+            approval_statement=f"I approve A2 formal execution of batch {batch_id}",
+        )
+
+        def all_error(*, plan, **kwargs):
+            return A2RunResult(
+                logical_run_id=plan.logical_run_id,
+                input_id=plan.input_id,
+                condition_id=plan.condition_id,
+                provider=plan.provider,
+                model=plan.model,
+                llm_status="error",
+                pipeline_status=None,
+                combined_status="error",
+                errors=[{"code": "ADAPTER_EXCEPTION", "message": "blocked"}],
+                questions=[], raw_retention_path=None,
+                pipeline_run_dir=None, step_path=None, ir_index=None,
+                llm_meta={},
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ledger = MagicMock()
+            ledger.authorization = auth
+            with patch("integration.a2_runner._CANONICAL_RUN_ROOT", Path(tmpdir)), \
+                 patch("llm.budget.BudgetLedger", return_value=ledger), \
+                 patch("llm.budget.BudgetAwareTransport"), \
+                 patch("llm.real_transport.DeepSeekTransport"), \
+                 patch("integration.a2_runner._run_one_logical", side_effect=all_error):
+                result = run_a2_batch(
+                    authorization=auth, dry_run=False, transport=None,
+                    approval=approval,
+                )
+
+            summary = json.loads(Path(result.summary_path).read_text("utf-8"))
+            self.assertEqual(len(result.results), 3)
+            self.assertEqual(summary["batch_status"], "failed")
+
+    def test_a2_live_authorization_remains_scope_bound(self):
+        """A2 gate stays narrow; the APP-001 global default remains false."""
+        from llm.contract import FORMAL_EVALUATION_ALLOWED
+        self.assertFalse(FORMAL_EVALUATION_ALLOWED)
+        auth = _make_auth("a2-scope-binding-test")
+        self.assertEqual(auth.providers, frozenset({A2_PROVIDER}))
+        self.assertEqual(auth.models, frozenset({A2_MODEL}))
+        self.assertEqual(auth.conditions, frozenset({A2_CONDITION}))
+        self.assertEqual(auth.max_batch_attempts, A2_MAX_BATCH_HTTP)
+        self.assertTrue(auth.enable_cad_pipeline)
+
 
 if __name__ == "__main__":
     unittest.main()

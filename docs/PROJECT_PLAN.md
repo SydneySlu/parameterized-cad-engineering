@@ -11,13 +11,13 @@
 | 里程碑 | 工作单元 / 负责人 | 当前状态与退出条件 |
 |---|---|---|
 | A：最小后端集成 | A1 `APP-002-INTEGRATION-A1`：CC 实现，中枢独立验收 | done；`d6faf70` 已合入 `main`。需求文本+合成 v5 envelope 经严格 gate、正式 Schema→IR adapter、现有编译器生成真实 STEP，并保存可追溯记录；合成提取不得称真实模型理解 |
-| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | blocked；scope 已合入 `main`，但获批 batch `app002-a2-smoke-20261112-01` 在首个 HTTP 前因 runner 的 `BudgetAwareTransport` 参数名错误失败；需窄修和独立复核后重试同一 scope |
+| A：接入真实提取 | A2 `APP-002-INTEGRATION-A2-SCOPE`：中枢定义新 scope，CC 准备受控模型路径 | review；负责人已接受 ADR-0021 的 A2 专用授权门。修复 Adapter run ID/transport 绑定及 all-error summary 状态后，需独立复核，再为新 batch ID 单独申请 live 执行批准 |
 | B：最小整链验收 | CC 实现缺失集成测试，中枢独立复核 | planned；合法、单位、第二螺钉边界、缺参、冲突、构造/导出失败六类；本地夹具验证后，再取得真实模型整链证据 |
 | C：最小可用演示 | CC 实现，中枢验收 | planned；需求输入、参数及必要确认、状态/错误、文件获取、修改后重生成；先真实生成与隔离，再完善预览 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
-- v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。A2 两次获批 live attempt 均在首个 HTTP 前阻塞，真实整链证据尚未产生；需先解决 Adapter formal gate 与失败 summary 状态；held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
+- v5 fixed-set 真实双模型评测已完成；真实模型→STEP 仍 not_run。A2 两次获批 live attempt 均在首个 HTTP 前阻塞，真实整链证据尚未产生；ADR-0021 已建立 A2 专用正式授权路径且保持全局 gate 关闭，当前修复与独立复核进行中。held-out 检索对照的 final offline preflight 已通过，真实执行 deferred，不阻塞 A/B/C。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
