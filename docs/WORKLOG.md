@@ -2451,3 +2451,28 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下 A2 专项 98/98 通过；formal offline preflight 检测出 jsonschema 4.26.0、Draft 2020-12、CadQuery 2.3.0、OCP 7.9.3.0 并通过。系统 Python 3.11.18 同一检查失败并报告缺少 jsonschema/cadquery。`py_compile`、`git diff --check` 通过。
 - 边界：未发网络/模型请求、未安装或升级依赖；冻结 scope、预算、授权和全局 gate 不变；`...-01` 至 `...-03` 现场只读保留。
 - 下一步：对 runtime guard 独立复核并合入；之后固定以 CAD venv 执行 A2，新的 live batch 仍需新 batch ID 和负责人单独批准。
+
+### APP-002-A2-GATE-STATUS-FIX / CC / review / 2026-11-12
+
+- 基线：分支 `codex/APP-002-A2-GATE-STATUS-FIX`，HEAD `351781f`。工作区开始时干净。
+- 任务：仅测试范围窄修，补齐 A2 CAD runtime preflight 的缺依赖回归断言。
+- 修改：`tests/integration/test_a2_runner.py` 中 `test_formal_run_with_missing_cad_dependencies_has_zero_side_effects` 扩展 spy/mock 断言：
+  - `BudgetAwareTransport` 构造次数为 0（新增 `patch("llm.budget.BudgetAwareTransport")`）；
+  - `DeepSeekTransport` 构造次数为 0（已有，保留）；
+  - `urllib.request.urlopen` 调用次数为 0（新增 `patch("urllib.request.urlopen")`）；
+  - `BudgetLedger` 未构造（已有，保留）；
+  - 批次目录不存在（已有，保留）；
+  - `_check_cad_runtime` 被实际调用（新增 `mock_check.assert_called()`）。
+- 未改生产代码、ADR、scope、预算、授权、冻结输入或 prompt。
+- 验证（VM，Python 3.10.12，无 cadquery）：
+  - 目标测试 `test_formal_run_with_missing_cad_dependencies_has_zero_side_effects`：通过
+  - 全量 98 项：4 项既有失败/错误（`TestA2LiveFix` × 3 + `TestA2R1Correction2` × 1），经 stash 验证为基线 `351781f` 既有问题，非本次引入
+- 未运行（需 Mac 固定环境 `work/benchcad-output/venv/bin/python` Python 3.11.18）：
+  - A2 专项 98 项、Integration 全量 179 项、py_compile、git diff --check
+- 边界：未运行真实模型/live preflight/正式批次；未读取 `.env`/密钥/raw/历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；`...-03` 批次只读。
+- handoff_self_check:
+  changed=tests/integration/test_a2_runner.py(扩展缺依赖测试的零调用断言)
+  commands=target_test通过(Python 3.10.12);4项既有失败经stash确认非本次引入
+  confirmed=BudgetAwareTransport构造0次;DeepSeekTransport构造0次;urlopen调用0次;BudgetLedger未构造;批次目录不存在;_check_cad_runtime被调用
+  unresolved=Python 3.11.18固定环境全量验证(98项A2+179项Integration+py_compile+diff --check)
+  next_agent_focus=Codex中枢在work/benchcad-output/venv/bin/python(Python 3.11.18)下:1)98项A2;2)Integration全量179;3)py_compile;4)git diff --check;5)确认目标测试的6项零调用断言全部通过

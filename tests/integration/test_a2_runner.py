@@ -379,9 +379,11 @@ class TestA2OfflinePreflight(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp, \
              patch("integration.a2_runner._CANONICAL_RUN_ROOT", Path(tmp)), \
-             patch("integration.a2_runner._check_cad_runtime", return_value=missing), \
+             patch("integration.a2_runner._check_cad_runtime", return_value=missing) as mock_check, \
              patch("llm.budget.BudgetLedger") as ledger, \
-             patch("llm.real_transport.DeepSeekTransport") as transport:
+             patch("llm.budget.BudgetAwareTransport") as bat, \
+             patch("llm.real_transport.DeepSeekTransport") as transport, \
+             patch("urllib.request.urlopen") as urlopen_mock:
             result = run_a2_batch(
                 authorization=auth,
                 dry_run=False,
@@ -390,9 +392,18 @@ class TestA2OfflinePreflight(unittest.TestCase):
             )
             self.assertFalse(result.preflight_ok)
             self.assertEqual(result.results, [])
+            # Batch directory must not be created
             self.assertFalse((Path(tmp) / batch_id).exists())
+            # BudgetLedger must not be constructed
             ledger.assert_not_called()
+            # DeepSeekTransport must not be constructed
             transport.assert_not_called()
+            # BudgetAwareTransport must not be constructed
+            bat.assert_not_called()
+            # No HTTP calls (urlopen is the network entry point for DeepSeek)
+            urlopen_mock.assert_not_called()
+            # CAD runtime check was actually called (proves the gate ran)
+            mock_check.assert_called()
 
 
 # ---------------------------------------------------------------------------
