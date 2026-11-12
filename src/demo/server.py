@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from demo.handler import DemoHandler, CATALOG_TABLE_JS
+from demo.product_flow import ProductFlowHandler
 
 # ---------------------------------------------------------------------------
 # HTML UI (single self-contained page, no external resources)
@@ -286,8 +287,10 @@ HTML_CONTENT = _build_html()
 HTML_BYTES = HTML_CONTENT.encode("utf-8")
 
 
-def make_handler_class(demo_handler: DemoHandler):
-    """Return a request handler class bound to the given DemoHandler instance."""
+def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHandler | None = None):
+    """Return a request handler class bound to the given handler instances."""
+
+    _product = product_handler
 
     class _Handler(BaseHTTPRequestHandler):
         _demo = demo_handler
@@ -323,6 +326,17 @@ def make_handler_class(demo_handler: DemoHandler):
                 self._handle_download(run_id)
                 return
 
+            if path.startswith("/product-download/"):
+                run_id = path[len("/product-download/"):]
+                self._handle_product_download(run_id)
+                return
+
+            if path.startswith("/api/product/"):
+                tail = path[len("/api/product/"):]
+                if tail:
+                    self._handle_product_get(tail)
+                    return
+
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
 
         def do_POST(self) -> None:
@@ -330,6 +344,15 @@ def make_handler_class(demo_handler: DemoHandler):
 
             if path == "/api/generate":
                 self._handle_generate()
+                return
+
+            if path == "/api/product/create":
+                self._handle_product_create()
+                return
+
+            if path.startswith("/api/product/confirm/"):
+                run_id = path[len("/api/product/confirm/"):]
+                self._handle_product_confirm(run_id)
                 return
 
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
@@ -408,6 +431,112 @@ def make_handler_class(demo_handler: DemoHandler):
             self.end_headers()
             self.wfile.write(step_bytes)
 
+        def _read_json_body(self) -> dict[str, Any] | None:
+            """Read and parse a JSON request body. Returns None on error."""
+            length_hdr = self.headers.get("Content-Length", "0")
+            try:
+                length = int(length_hdr)
+            except (TypeError, ValueError):
+                self._send_error_json(400, "CONTENT_LENGTH_MISSING", "Content-Length required")
+                return None
+            if length > 65536:
+                self._send_error_json(400, "REQUEST_TOO_LARGE", "Request body exceeds 64 KB")
+                return None
+            try:
+                raw_body = self.rfile.read(length)
+                body = json.loads(raw_body.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                self._send_error_json(400, "INVALID_JSON", f"Invalid JSON: {exc}")
+                return None
+            if not isinstance(body, dict):
+                self._send_error_json(400, "INVALID_BODY", "Body must be a JSON object")
+                return None
+            return body
+
+        def _handle_product_create(self) -> None:
+            """POST /api/product/create — C2 product run creation."""
+            if _product is None:
+                self._send_error_json(503, "PRODUCT_FLOW_DISABLED", "Product flow handler not configured")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            request_text = body.get("request_text", "")
+            if not isinstance(request_text, str) or not request_text.strip():
+                self._send_error_json(400, "MISSING_REQUEST_TEXT",
+                                       "request_text is required and must be a non-empty string")
+                return
+            fixture_id = body.get("fixture_id", "")
+            if not isinstance(fixture_id, str) or not fixture_id.strip():
+                self._send_error_json(400, "MISSING_FIXTURE_ID", "fixture_id is required")
+                return
+            rec = _product.create_product_run(request_text, fixture_id)
+            self._send_json(200, rec.as_dict())
+
+        def _handle_product_confirm(self, run_id: str) -> None:
+            """POST /api/product/confirm/<run_id> — confirm or modify a product run."""
+            if _product is None:
+                self._send_error_json(503, "PRODUCT_FLOW_DISABLED", "Product flow handler not configured")
+                return
+            if not _RUN_ID_RE.match(run_id):
+                self._send_error_json(400, "INVALID_RUN_ID", "run_id must be a UUID v4")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            revision = body.get("confirmation_revision", -1)
+            confirmed = body.get("confirmed", False)
+            patch = body.get("patch", {})
+            if not isinstance(patch, dict):
+                self._send_error_json(400, "INVALID_PATCH", "patch must be a JSON object")
+                return
+            rec = _product.confirm_product_run(run_id, int(revision), bool(confirmed), patch)
+            self._send_json(200, rec.as_dict())
+
+        def _handle_product_get(self, run_id: str) -> None:
+            """GET /api/product/<run_id> — get product run status."""
+            if _product is None:
+                self._send_error_json(503, "PRODUCT_FLOW_DISABLED", "Product flow handler not configured")
+                return
+            if not _RUN_ID_RE.match(run_id):
+                self._send_error_json(400, "INVALID_RUN_ID", "run_id must be a UUID v4")
+                return
+            rec = _product.get_product_run(run_id)
+            if rec is None:
+                self._send_error_json(404, "RUN_NOT_FOUND", f"run_id {run_id!r} not found")
+                return
+            self._send_json(200, rec.as_dict())
+
+        def _handle_product_download(self, run_id: str) -> None:
+            """GET /product-download/<run_id> — STEP download for product flow."""
+            if _product is None:
+                self._send_error_json(503, "PRODUCT_FLOW_DISABLED", "Product flow handler not configured")
+                return
+            if not _RUN_ID_RE.match(run_id):
+                self._send_error_json(400, "INVALID_RUN_ID", "run_id must be a UUID v4")
+                return
+            rec = _product.get_product_run(run_id)
+            if rec is None:
+                self._send_error_json(404, "RUN_NOT_FOUND", f"run_id {run_id!r} not found")
+                return
+            if rec.product_status != "succeeded":
+                self._send_error_json(403, "RUN_NOT_SUCCESSFUL",
+                                       f"Run {run_id} has product_status={rec.product_status!r}; "
+                                       "only succeeded runs can be downloaded")
+                return
+            step_bytes = _product.get_product_step_bytes_secure(run_id)
+            if step_bytes is None:
+                self._send_error_json(403, "STEP_UNAVAILABLE",
+                                       "STEP file unavailable or failed integrity check")
+                return
+            filename = f"product-{run_id[:8]}.step"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(step_bytes)))
+            self.end_headers()
+            self.wfile.write(step_bytes)
+
     return _Handler
 
 
@@ -426,7 +555,8 @@ def run_server(port: int = 8080, output_root: Path | None = None) -> None:
         Override for the demo runs output directory.
     """
     demo_handler = DemoHandler(output_root=output_root)
-    handler_class = make_handler_class(demo_handler)
+    product_handler = ProductFlowHandler(output_root=output_root)
+    handler_class = make_handler_class(demo_handler, product_handler)
     server = HTTPServer(("127.0.0.1", port), handler_class)
     print(f"[demo] Server started at http://127.0.0.1:{port}/", file=sys.stderr)
     print(f"[demo] Output root: {demo_handler._output_root}", file=sys.stderr)

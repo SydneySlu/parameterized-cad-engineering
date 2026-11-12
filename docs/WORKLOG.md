@@ -2617,3 +2617,24 @@ commit=待提交
 - 交付：新增 `docs/coordination/prompts/APP-003-C2-nl-product-flow-cc.md`，指定由已有 C1 CC 对话框实现；同步 PROJECT_PLAN、PROJECT_STATUS、TASKS 和 ADR-0023。
 - commit：`80580ff`（文档与实现工作单元定义；尚未 push）。
 - 下一步：已有 C1 CC 对话框认领并实现离线 fixtures/状态机，提交 review commit；Codex 中枢随后在固定 CAD venv 做独立复核，再决定是否准备新的产品 live smoke scope。
+
+### APP-003-C2-IMPLEMENTATION / CC / review / 2026-11-13
+
+- 动作：在分支 `cc/APP-003-C2-NL-PRODUCT-FLOW`（基于 `main=0210b4e`）实现离线自然语言产品闭环（ADR-0023）。
+- 新增文件：
+  - `src/demo/product_flow.py`：ProductFlowHandler + ProductRunRecord；8 个 fixture 注册表；create_product_run（parse+project+Schema 预检，零 CAD 调用）；confirm_product_run（revision 检查、patch 验证、child run 创建、run_pipeline 调用）；get_product_step_bytes_secure（6 层安全下载）
+  - `tests/demo/fixtures/`：8 个 fixture JSON（answer-bore24、ask-missing-bore、catalog-conflict、unsupported、ask-extra-question、refuse、schema-fail、bore80）
+  - `tests/demo/test_product_flow.py`：35 项测试（create 12 + confirm 12 + download 8 + no-network 3 + record 2）
+  - `src/demo/server.py`（修改）：新增 C2 路由 POST /api/product/create、POST /api/product/confirm/<run_id>、GET /api/product/<run_id>、GET /product-download/<run_id>；make_handler_class 接受可选 product_handler 参数；C1 路由不受影响
+  - `agent-work/integration/APP-003-C2/checkpoint.md`：认领记录
+- 安全边界：确认前零 compile_ir 调用（spy 验证全 8 fixture）；confirmation_revision 不符 → STALE_REVISION blocked；confirmed=False → blocked；child run 新 UUID 隔离；失败不暴露旧 STEP；下载复用 C1 六层逻辑
+- 验证（sandbox Python 3.10.12）：
+  - `py_compile`：3 个新/改文件全部通过
+  - `git diff --check`：通过
+  - Product flow 测试：**35/35 通过**
+  - C1 回归：**56/56 通过**（C1 不受影响）
+  - Integration test_pipeline + test_schema_to_ir：**81/81 通过**
+  - Schema：**17/17 通过**
+  - 注：固定 CAD venv 无法在此沙盒中执行，需 Codex 中枢在 Mac 上用 Python 3.11.18/CadQuery 复跑真实构造路径
+- 不变量：不修改 v5 prompt/contract、Schema、IR 语义、compiler、A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读取 `.env`/密钥；不发模型/外网请求
+- 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv 独立复核

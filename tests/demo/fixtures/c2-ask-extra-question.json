@@ -1,0 +1,11 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "ask",
+  "extracted_parameters": {"bore_d": 24},
+  "unsupported_requests": [],
+  "evidence": [{"field": "bore_d", "quote": "24", "source": "user_input"}],
+  "missing_fields": [],
+  "questions": ["请确认安装方式？"],
+  "confidence": null
+}

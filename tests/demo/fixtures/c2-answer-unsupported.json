@@ -1,0 +1,11 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "answer",
+  "extracted_parameters": {"bore_d": 24},
+  "unsupported_requests": ["阳极氧化表面处理"],
+  "evidence": [{"field": "bore_d", "quote": "24", "source": "user_input"}],
+  "missing_fields": [],
+  "questions": [],
+  "confidence": null
+}

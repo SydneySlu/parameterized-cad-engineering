@@ -1,0 +1,11 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "answer",
+  "extracted_parameters": {"bore_d": 80},
+  "unsupported_requests": [],
+  "evidence": [{"field": "bore_d", "quote": "80 mm", "source": "user_input"}],
+  "missing_fields": [],
+  "questions": [],
+  "confidence": null
+}

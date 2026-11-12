@@ -1,0 +1,11 @@
+{
+  "contract_version": "app001-io.v1",
+  "prompt_version": "app001-extraction.v5",
+  "decision": "ask",
+  "extracted_parameters": {},
+  "unsupported_requests": [],
+  "evidence": [],
+  "missing_fields": ["bore_d"],
+  "questions": ["请问轴环的孔径是多少毫米？"],
+  "confidence": null
+}
