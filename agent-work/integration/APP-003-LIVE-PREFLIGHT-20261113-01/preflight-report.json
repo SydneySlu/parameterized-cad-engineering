@@ -1,0 +1,59 @@
+{
+  "task_id": "APP-003-LIVE-PREFLIGHT-20261113-01",
+  "status": "pass",
+  "mode": "offline_preflight_and_dry_run",
+  "baseline": "main@6fe4b43",
+  "batch_id": "app003-product-live-20261113-01",
+  "profile_id": "app003-product-live.v1",
+  "sample_set": "app003-product-live-smoke.v1",
+  "provider": "DeepSeek",
+  "model": "deepseek-flash",
+  "condition": "C0",
+  "prompt_version": "app001-extraction.v5",
+  "contract_version": "app001-io.v1",
+  "prompt_file_sha256": "18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9",
+  "inputs_sha256": "666a4c08bbbb051a2bac038db4f5184c18a01829d4fff8f6d698832195fc0e8a",
+  "evaluator_labels_sha256": "73c671a7950afebb7e7e4c3a1e4fdc52702ebf43ec85fec0a588308abc4fd795",
+  "input_ids": ["P1-24mm", "P2-ask-bore", "P3-catalog-conflict", "P4-unsupported"],
+  "budget": {
+    "max_logical_runs": 4,
+    "max_chat_attempts_per_run": 3,
+    "computed_max_http": 12,
+    "authorized_max_http": 12,
+    "feasible": true
+  },
+  "cad_runtime": {
+    "python": "3.11.18",
+    "cadquery": "2.3.0",
+    "ocp": "7.9.3.0",
+    "jsonschema": "4.26.0",
+    "draft_2020_12_supported": true
+  },
+  "batch_dir_relative": "work/app001-runs/app003-product-live-20261113-01",
+  "batch_dir_exists": false,
+  "dry_run_planned_runs": [
+    "P1-24mm__C0__DeepSeek__deepseek-flash",
+    "P2-ask-bore__C0__DeepSeek__deepseek-flash",
+    "P3-catalog-conflict__C0__DeepSeek__deepseek-flash",
+    "P4-unsupported__C0__DeepSeek__deepseek-flash"
+  ],
+  "dry_run_results_count": 0,
+  "network_requests": 0,
+  "secret_reads": 0,
+  "formal_approval": "not supplied; required before formal execution",
+  "verification": {
+    "verified_at_utc": "2026-11-13T14:42:04Z",
+    "python": "3.11.18",
+    "commands": {
+      "product_live_tests": "99/99 passed",
+      "product_live_ui_tests": "36/36 passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "run_product_offline_preflight_require_cad_runtime": "ok=true",
+      "run_product_batch_dry_run": "preflight_ok=true, results_count=0"
+    },
+    "network_requests": 0,
+    "secret_reads": 0,
+    "formal_runner_invoked": false
+  }
+}

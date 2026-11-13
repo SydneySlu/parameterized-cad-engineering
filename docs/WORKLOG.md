@@ -18,6 +18,16 @@
 - 收束：同步 `PROJECT_STATUS.md`、`PROJECT_PLAN.md`、`TASKS.md` 和 C2 checkpoint，APP-003-LIVE-UI 状态改为 `done`。
 - 边界：仍未调用 DeepSeek/Ollama、未读取 `.env`/密钥、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。真实产品 live 必须另立 scope、预算、preflight、batch ID 和负责人批准。
 
+### APP-003-LIVE-PREFLIGHT-20261113-01 / Codex / review / 2026-11-13
+
+- 动作：按既定路线准备产品真实抽取 smoke 的独立执行包，基线为 `main=6fe4b43`；选择候选 batch `app003-product-live-20261113-01`。
+- 固定范围：DeepSeek `deepseek-flash`、C0、当前冻结 `app001-extraction.v5`/`app001-io.v1`、4 条 P1–P4 输入、最多 12 次 HTTP；CAD 仅在 P1 抽取结果经用户显式确认后进入 pipeline，P2/P3/P4 和所有失败状态 fail closed。
+- 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261113-01/` 包含 `scope.md`、`preflight-report.json`、`approval-template.md` 和 checkpoint。
+- 离线验证：固定 CAD venv Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0、jsonschema 4.26.0；offline preflight `ok=true`，prompt/inputs hash 通过，预算 `12/12` 可行，4 条 logical run 规划完成；dry-run 结果数 0，batch 目录不存在。
+- 中枢复验：`tests.integration.test_product_live` 99/99、`tests.demo.test_product_live_ui` 36/36、目标文件 `py_compile` 和 `git diff --check` 均通过；显式 `run_product_offline_preflight(..., require_cad_runtime=True)` 返回 `ok=true`，`run_product_batch(dry_run=True)` 返回 `preflight_ok=true`、4 条 planned runs、0 条 results。
+- 边界：未创建正式 batch/ledger，未读取 `.env`/API key，未调用 DeepSeek/Ollama，未运行正式 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：负责人审阅并填写 approval template；明确批准后才做正式 preflight，随后由负责人单独批准执行 live 请求。
+
 ## 2026-11-13
 
 ### APP-003-LIVE-UI / CC / review
