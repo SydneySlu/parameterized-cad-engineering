@@ -33,7 +33,9 @@
 - 动作：项目负责人提供审批人 `Wang sikai`、当前 UTC 时间 `2026-11-13T14:49:33Z`，并要求按项目惯例填写审批引用；在 approval template 记录完整 scope 批准声明。
 - 引用格式：仓库中未发现既有 `approval_record_ref` 约定，故采用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261113-01, user message dated 2026-11-13`，可从任务 ID 与对话日期追溯。
 - 边界：本次只写入审批记录和 checkpoint；没有创建 formal batch/ledger、调用 formal runner、读取密钥或发起真实模型请求。
-- 下一步：执行前重新核对 approval binding、固定输入/prompt hash、批次目录与全局 gate；按已批准 scope 继续受控执行。
+- 后续正式 preflight：2026-11-13T15:00:18Z 在固定 CAD venv 构造 approval 并执行 binding 校验，通过；`run_product_offline_preflight(..., require_cad_runtime=True)` 返回 `ok=true`，预算 12/12 可行，runtime/prompt 检查通过，batch 目录不存在。
+- 边界：仍未调用 formal runner、创建 formal batch/ledger、读取密钥或发起真实模型请求；HTTP=0。
+- 下一步：由负责人决定是否启动已批准 scope 的 live runner；该调用会在 preflight 后实际发请求，最多 12 次。
 
 ## 2026-11-13
 

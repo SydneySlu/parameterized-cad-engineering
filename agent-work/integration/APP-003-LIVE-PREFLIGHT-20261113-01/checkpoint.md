@@ -6,8 +6,9 @@
 - 目标：为产品 live smoke 准备独立 scope、预算、冻结输入绑定、固定环境 preflight 和负责人批准模板。
 - 已完成：固定 CAD venv Python 3.11.18 下 offline preflight `ok=true`；budget `12/12` 可行；CAD runtime、prompt、contract、inputs hash 均通过；dry-run 规划 4 条 logical run，结果数为 0；batch 目录不存在。
 - 批准记录：负责人 Wang sikai 已于 `2026-11-13T14:49:33Z` 提供审批身份和时间；`approval-template.md` 记录本批次完整批准声明，引用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261113-01, user message dated 2026-11-13`。
-- 当前尚未执行：未创建正式 batch/ledger；未读取 key/.env；未发 DeepSeek 请求；未运行 formal runner 或正式 CAD。
-- 下一步：执行前再次核对批次目录、approval binding、hash 和全局 gate，并先运行正式模式所需的 preflight；真实请求须遵守已批准的 batch scope 与 12 HTTP 上限。
+- 正式执行前 preflight（2026-11-13T15:00:18Z）：用批准模板字段构造 `ProductLiveFormalApproval`；`validate_product_formal_approval_binding()` 通过；固定 CAD venv `run_product_offline_preflight(..., require_cad_runtime=True)` 返回 `ok=true`，无 errors，12/12 预算可行，CAD runtime/prompt 通过，batch 目录不存在。
+- 当前尚未执行：没有调用 `run_product_batch(dry_run=False)`；未创建正式 batch/ledger；HTTP=0；未读取 key/.env；未发 DeepSeek 请求；未运行正式 CAD。
+- 下一步：负责人可决定是否启动已批准 scope 的 live runner；若启动，`run_product_batch(dry_run=False, approval=...)` 在 preflight 后会立即发起真实请求，最多 12 次，并只允许用户显式确认后的 CAD pipeline。
 
 ## Codex 中枢复核（2026-11-13）
 
