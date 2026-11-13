@@ -27,6 +27,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch, call
 
@@ -74,11 +75,14 @@ from integration.product_live_runner import (
     PRODUCT_LIVE_STATUS_FAILED,
     PRODUCT_LIVE_STATUS_ERROR,
     ProductLiveRunState,
+    ProductLiveLogicalRunPlan,
     run_product_batch,
     run_product_offline_preflight,
     confirm_product_live_run,
     _load_frozen_inputs,
+    _build_state_from_adapter_result,
 )
+from llm.parser import parse_response
 
 
 # ---------------------------------------------------------------------------
@@ -706,6 +710,84 @@ class TestProductLiveParseContractFailures(unittest.TestCase):
         error_codes = [e.get("code") for e in p1_state.errors]
         self.assertIn("PARSE_ERROR", error_codes)
 
+
+class TestFormalAdapterFailureMapping(unittest.TestCase):
+    """Formal adapter failures retain safe diagnostics and raw evidence links."""
+
+    def setUp(self):
+        self.plan = ProductLiveLogicalRunPlan(
+            logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+            input_id="P1-24mm",
+            condition_id="C0",
+            provider=PRODUCT_PROVIDER,
+            model=PRODUCT_MODEL,
+        )
+
+    def _map(self, *, parse_result, record):
+        return _build_state_from_adapter_result(
+            plan=self.plan,
+            adapter_result=SimpleNamespace(record=record, parse_result=parse_result),
+            llm_meta={"attempt_count": len(record.attempts)},
+            natural_language="Make a collar with a 24 mm bore",
+        )
+
+    def test_transport_failure_is_not_misreported_as_parse_failure(self):
+        record = SimpleNamespace(
+            raw_response_retention={},
+            attempts=[SimpleNamespace(
+                error_code="auth_permission",
+                http_status=None,
+                outcome="non_retryable",
+                error_fields=("auth_permission",),
+            )],
+            stages=[SimpleNamespace(stage="model_call", error_code="auth_permission")],
+        )
+        state = self._map(parse_result=None, record=record)
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_ERROR)
+        self.assertEqual(state.errors[0]["code"], "TRANSPORT_ERROR")
+        self.assertEqual(state.errors[0]["cause_code"], "auth_permission")
+        self.assertEqual(state.errors[0]["attempt_count"], 1)
+        self.assertIsNone(state.raw_retention_meta)
+        self.assertIsNone(state.raw_retention_path)
+
+    def test_parse_failure_keeps_raw_hash_and_path_but_not_parser_message(self):
+        marker = "DO_NOT_COPY_PROVIDER_BODY"
+        parse_result = parse_response('{"untrusted":"' + marker + '"}')
+        record = SimpleNamespace(
+            raw_response_retention={
+                "retained": True,
+                "path": "work/app001-runs/batch/raw/p1.txt",
+                "body_sha256": "a" * 64,
+                "body_length": 45,
+            },
+            attempts=[],
+            stages=[],
+        )
+        state = self._map(parse_result=parse_result, record=record)
+        self.assertEqual(state.errors[0]["code"], "ENVELOPE_VALIDATION_ERROR")
+        self.assertEqual(state.raw_retention_path, "work/app001-runs/batch/raw/p1.txt")
+        self.assertEqual(state.raw_retention_meta["body_sha256"], "a" * 64)
+        self.assertNotIn(marker, json.dumps(state.errors))
+
+    def test_parse_error_path_is_preserved_for_invalid_json_response(self):
+        parse_result = parse_response("not json {{}}")
+        record = SimpleNamespace(
+            raw_response_retention={
+                "retained": True,
+                "path": "work/app001-runs/batch/raw/p1.txt",
+                "body_sha256": "b" * 64,
+                "body_length": 13,
+            },
+            attempts=[],
+            stages=[],
+        )
+        state = self._map(parse_result=parse_result, record=record)
+        self.assertEqual(state.errors[0]["code"], "RESPONSE_PARSE_ERROR")
+        self.assertEqual(state.errors[0]["causes"][0]["code"], "INVALID_JSON")
+        self.assertEqual(state.raw_retention_path, "work/app001-runs/batch/raw/p1.txt")
+
+
+class TestProductLiveSchemaFailures(unittest.TestCase):
     def test_schema_fail_on_bore_out_of_catalog(self):
         """bore_d=99999 not in catalog → Schema blocked, zero CAD."""
         auth = _make_auth()

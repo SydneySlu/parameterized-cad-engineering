@@ -2854,3 +2854,10 @@ commit=待提交
 - 产物：`docs/coordination/prompts/APP-003-live-product-cc.md`。工作单要求新建 CC 对话框和 `cc/APP-003-LIVE-PRODUCT` 分支，新增独立 product authorization/gate、预算账本绑定、服务端 runner、离线 mock/spy 测试和证据脱敏；明确不复用 A2 授权或批次。
 - 边界：本批准只覆盖实现和离线验证。未授权 live preflight、正式 batch、DeepSeek 请求、密钥读取或 CAD 正式运行；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
 - 下一步：新 CC 对话框按工作单实现，完成后交 Codex 中枢独立复核；只有复核通过且负责人再次批准具体 batch ID/执行，才可进入 live preflight。
+### APP-003-LIVE-PREFLIGHT-20261113-01-FAILURE-EVIDENCE-FIX / Codex / review / 2026-11-14
+
+- 动作：针对批准批次 `app003-product-live-20261113-01` 的四条 `PARSE_OR_ENVELOPE_ERROR`，在不重跑旧 batch、不读取 raw 正文和不扩大授权的前提下，修复正式 Product Live runner 的 Adapter 结果映射。
+- 修改：`src/integration/product_live_runner.py` 新增 `_build_state_from_adapter_result()`；无响应结果记录稳定的 `TRANSPORT_ERROR`、原因码、尝试次数、状态和 outcome；有响应但严格解析/Envelope 校验失败时记录 `RESPONSE_PARSE_ERROR` 或 `ENVELOPE_VALIDATION_ERROR` 及错误码/字段；所有收到响应的结果继续传递 `raw_response_retention`，summary 只接收 repo-relative path 和 body SHA-256，正文不进入 state/summary/UI。
+- 测试：固定 CAD venv Python 3.11.18 下 `py_compile` 通过，`tests.integration.test_product_live` **102/102** 通过；新增回归覆盖 transport failure、invalid JSON、Envelope validation、raw hash/path 隔离和 provider 正文 marker 不泄漏。
+- 结果：旧批次事实保持不变（4/4 HTTP、无 raw 文件、未进入 CAD/STEP）；修复只影响后续正式结果映射和证据诊断。`FORMAL_EVALUATION_ALLOWED=False`、产品授权/预算/确认门均未改变。
+- 下一步：独立 Codex 复核 mapper 的真实 Adapter 字段绑定和相关回归；通过后再为新 batch 另行准备 scope、preflight 和负责人批准，禁止复用 `...-01`。

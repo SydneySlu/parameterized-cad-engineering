@@ -1509,7 +1509,6 @@ def run_product_batch(
 
                 # Map adapter result to ProductLiveRunState
                 record = adapter_result.record
-                parse_res = adapter_result.parse_result
                 llm_meta = {
                     "run_id": plan.logical_run_id,
                     "configured_provider": record.configured_provider,
@@ -1523,44 +1522,12 @@ def run_product_batch(
 
                 raw_retention_meta = dict(record.raw_response_retention or {})
 
-                # Build state from adapter result
-                if parse_res is None or parse_res.envelope is None:
-                    llm_status = "error"
-                    result = ProductLiveRunState(
-                        logical_run_id=plan.logical_run_id,
-                        input_id=plan.input_id,
-                        condition_id=plan.condition_id,
-                        provider=plan.provider,
-                        model=plan.model,
-                        llm_status=llm_status,
-                        product_status=PRODUCT_LIVE_STATUS_ERROR,
-                        decision="",
-                        extracted_parameters={},
-                        missing_fields=[],
-                        unsupported_requests=[],
-                        questions=[],
-                        conflicts=[],
-                        errors=[{"code": "PARSE_OR_ENVELOPE_ERROR",
-                                 "message": "adapter returned no parse result or envelope"}],
-                        llm_meta=llm_meta,
-                        raw_retention_meta=raw_retention_meta,
-                        request_text=natural_language,
-                    )
-                else:
-                    env = parse_res.envelope
-                    # Reuse mock path's gate logic via same function
-                    # but feed it the already-parsed envelope
-                    result = _build_state_from_envelope(
-                        plan=plan,
-                        envelope=env,
-                        llm_meta=llm_meta,
-                        natural_language=natural_language,
-                        raw_retention_meta=raw_retention_meta,
-                        raw_retention_path=(
-                            raw_retention_meta.get("path")
-                            if raw_retention_meta.get("retained") else None
-                        ),
-                    )
+                result = _build_state_from_adapter_result(
+                    plan=plan,
+                    adapter_result=adapter_result,
+                    llm_meta=llm_meta,
+                    natural_language=natural_language,
+                )
 
                 results.append(result)
                 if writer is not None:
@@ -1768,6 +1735,110 @@ def _build_state_from_envelope(
         llm_meta=llm_meta, request_text=natural_language,
         raw_retention_meta=raw_retention_meta,
         raw_retention_path=raw_retention_path, created_at=now,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adapter result mapping
+# ---------------------------------------------------------------------------
+
+
+def _build_state_from_adapter_result(
+    *,
+    plan: ProductLiveLogicalRunPlan,
+    adapter_result: Any,
+    llm_meta: dict[str, Any],
+    natural_language: str,
+) -> ProductLiveRunState:
+    """Map Adapter outcomes without conflating transport and parse failures.
+
+    Only stable codes, fields, status codes, and attempt outcomes are copied
+    into product evidence. Provider error bodies and parser diagnostic text can
+    contain untrusted response content, so they are deliberately omitted.
+    Raw response retention metadata is carried for every received response,
+    including parse and envelope validation failures.
+    """
+    record = adapter_result.record
+    parse_result = adapter_result.parse_result
+    raw_meta = dict(record.raw_response_retention or {})
+    raw_path = raw_meta.get("path") if raw_meta.get("retained") else None
+
+    if parse_result is not None and parse_result.envelope is not None:
+        return _build_state_from_envelope(
+            plan=plan,
+            envelope=parse_result.envelope,
+            llm_meta=llm_meta,
+            natural_language=natural_language,
+            raw_retention_meta=raw_meta,
+            raw_retention_path=raw_path,
+        )
+
+    if parse_result is None:
+        attempts = list(getattr(record, "attempts", ()) or ())
+        last_attempt = attempts[-1] if attempts else None
+        model_call_stage = next(
+            (item for item in getattr(record, "stages", ())
+             if getattr(item, "stage", None) == "model_call"),
+            None,
+        )
+        cause_code = (
+            getattr(last_attempt, "error_code", None)
+            or getattr(model_call_stage, "error_code", None)
+            or "NO_RESPONSE"
+        )
+        error = {
+            "code": "TRANSPORT_ERROR",
+            "cause_code": str(cause_code),
+            "message": "model call did not produce a response",
+            "attempt_count": len(attempts),
+        }
+        http_status = getattr(last_attempt, "http_status", None)
+        outcome = getattr(last_attempt, "outcome", None)
+        if http_status is not None:
+            error["http_status"] = http_status
+        if outcome:
+            error["attempt_outcome"] = str(outcome)
+        fields = list(getattr(last_attempt, "error_fields", ()) or ())
+        if fields:
+            error["fields"] = [str(field) for field in fields]
+    else:
+        parse_errors = list(getattr(parse_result, "errors", ()) or ())
+        causes = []
+        for item in parse_errors:
+            cause = {"code": str(getattr(item, "code", "PARSE_ERROR"))}
+            error_stage = getattr(item, "stage", None)
+            if error_stage:
+                cause["stage"] = str(error_stage)
+            fields = list(getattr(item, "fields", ()) or ())
+            if fields:
+                cause["fields"] = [str(field) for field in fields]
+            causes.append(cause)
+        parse_stage = getattr(parse_result, "stage", None)
+        error = {
+            "code": "RESPONSE_PARSE_ERROR" if parse_stage == "parse" else "ENVELOPE_VALIDATION_ERROR",
+            "message": "response failed strict parsing or envelope validation",
+            "causes": causes,
+        }
+
+    return ProductLiveRunState(
+        logical_run_id=plan.logical_run_id,
+        input_id=plan.input_id,
+        condition_id=plan.condition_id,
+        provider=plan.provider,
+        model=plan.model,
+        llm_status="error",
+        product_status=PRODUCT_LIVE_STATUS_ERROR,
+        decision="",
+        extracted_parameters={},
+        missing_fields=[],
+        unsupported_requests=[],
+        questions=[],
+        conflicts=[],
+        errors=[error],
+        llm_meta=llm_meta,
+        raw_retention_meta=raw_meta or None,
+        raw_retention_path=raw_path,
+        request_text=natural_language,
     )
 
 

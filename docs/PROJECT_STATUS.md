@@ -72,7 +72,7 @@
 | APP-003-C3-PRODUCT-UI | C2 自然语言流程的离线确认界面 | CC 实现 / Codex 中枢独立验收 | done | `f105fc4` 已合入并推送 `main`；固定 CAD venv 264 项 demo/integration、Schema 17、CAD 13、localhost 及浏览器验收通过。XSS 纯文本、ask-extra 隐藏确认、ask-missing 补参后真实 STEP/hash、reset 清理均已核验。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
 | APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | done | `db26fda` 已合入 `main`；产品 live 99 项专项、Demo/Integration 264、Schema 17、CAD 13 及 P1 本地 HTTP→STEP 独立复核通过。仅完成受控入口和离线验证；不代表真实 provider 效果，不授权新的 live preflight 或 batch。 |
 | APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | done | `8dce35a` 已合入并推送 `main`；合入后固定 CAD venv 回归保持通过：Product Live/UI 135、C1/C2/C3 183、Integration 81、Schema 17、CAD 13；localhost 浏览器已验证 P1 STEP/hash、P2 阻断和 XSS 纯文本。仅离线注入 transport/本地 CAD，不代表真实 provider 效果。 |
-| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 批次 `app003-product-live-20261113-01` 已按批准 scope 完成正式运行；4/4 HTTP 请求各使用 1 次尝试，均在解析/Envelope 阶段失败，批次 `failed`，未进入确认/CAD/STEP。批次只读保留；raw retention 元数据为空，需先做定向证据修复再决定新 batch。 |
+| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 批次 `app003-product-live-20261113-01` 已按批准 scope 完成正式运行；4/4 HTTP 请求各使用 1 次尝试，均在解析/Envelope 阶段失败，批次 `failed`，未进入确认/CAD/STEP。批次只读保留。已完成定向失败证据修复：正式 Adapter 的 transport、parse 和 envelope 失败分型，收到响应时保留 raw hash/相对路径元数据且不复制正文；固定 CAD venv 产品 live 专项 102/102 通过。待独立复核后再决定新 batch。 |
 
 ## 当前缺口与限制
 

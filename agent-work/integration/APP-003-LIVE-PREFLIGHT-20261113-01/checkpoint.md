@@ -26,3 +26,19 @@
 - confirmed: 4 个冻结 input ID、DeepSeek/deepseek-flash/C0、prompt/inputs/labels hash、12 HTTP 上限、CAD 需确认门、批次目录不存在、零网络/零密钥读取。
 - unresolved: 四条真实响应均未形成 parse/envelope；失败响应 raw retention 元数据为空，当前不能判断是 provider 响应形态、adapter 解析还是 retention 路径问题；不得用本批次重试补证据。
 - next_agent_focus: CC/Codex 先在离线夹具中复现并修复失败响应的 raw retention 与 parse diagnostics，验证零 CAD、summary=`failed` 和不泄露正文；随后以新 batch ID、新 approval 和新 preflight 再决定是否扩大 live。
+
+## 定向失败证据修复（2026-11-14）
+
+- 状态：`review`
+- 改动：`src/integration/product_live_runner.py` 新增 `_build_state_from_adapter_result()`，将正式 Adapter 的 transport failure、严格 parse failure 和 envelope validation failure 分开映射；仅保留稳定错误码/字段、尝试次数、HTTP 状态和安全的 raw retention path/hash 元数据，不复制 provider 响应正文。正式路径对有响应但解析失败的结果继续写入 raw retention 证据；无响应时明确记录 `TRANSPORT_ERROR` 及原因，不再误报 `PARSE_OR_ENVELOPE_ERROR`。
+- 测试：`tests/integration/test_product_live.py` 新增 3 项 Adapter 结果映射回归，覆盖无响应 transport、invalid JSON 和 envelope validation；固定 CAD venv `test_product_live` 102/102 通过，目标文件 `py_compile` 通过。
+- 保持不变量：未读取旧批次 raw 正文，未重跑/追加 `app003-product-live-20261113-01`，未调用网络或密钥；`FORMAL_EVALUATION_ALLOWED=False`、授权/预算/CAD 确认门和历史证据均未改变。
+- 尚未完成：独立复核、文档 closeout，以及任何新 batch 的 scope/preflight/审批。旧批次仍只读；修复通过独立复核前不得发起新的 live 请求。
+
+### handoff_self_check
+
+- changed=`src/integration/product_live_runner.py`, `tests/integration/test_product_live.py`
+- commands=`work/benchcad-output/venv/bin/python -m py_compile ...` 通过；`work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_live -q` 102/102 通过
+- confirmed=transport 与 parse/envelope 错误分型；parse/envelope 失败保留 raw hash/path 元数据但不保留正文；mapper 的正常 envelope 路径复用既有 gate；新增测试验证 provider 正文 marker 不进入错误证据
+- unresolved=尚未运行正式新 batch；尚未由独立 Codex 复核；旧 `...-01` 无 raw 文件的历史事实保持不变
+- next_agent_focus=核对 mapper 在真实 Adapter 结果中的 stage/attempt 字段，重跑产品 live/UI 与相关回归，确认 summary 只写相对路径/hash，再决定是否准备新 scope
