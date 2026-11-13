@@ -33,6 +33,7 @@
 | APP-003-C1 | 最小本地 Web 演示：参数确认→隔离 CAD/STEP 生成→证据查看/下载/重生成 | CC 实现 / Codex 中枢独立验收 | done | APP-002 A1/A2、里程碑 B、ADR-0022 | 已合入并推送至 `main=07a98d1`；固定 CAD venv 测试、真实 localhost HTTP/STEP、安全、失败阻断和 run 隔离复核通过。独立审查记录见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 | APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品流程：offline v5 envelope→确认/补充→Schema/IR/CAD/STEP→证据与隔离 | 已有 C1 CC 对话框 / Codex 中枢独立验收 | done | APP-003-C1、ADR-0023 | `d839954` 已合入；固定 CAD venv 回归与真实 localhost HTTP/STEP 流程通过。仅 synthetic fixtures，不构成模型效果证据。 |
 | APP-003-C3-PRODUCT-UI | C2 API 的离线自然语言确认界面 | 已有 C1/C2 CC 对话框实现 / Codex 中枢独立验收 | done | APP-003-C2、ADR-0023 | `f105fc4` 已合入并推送 `main`；固定 CAD venv、localhost 和浏览器验收通过。仅离线 fixtures；不接模型、不读取密钥、不创建 batch。新的产品 live extraction 需另立 scope 和授权。 |
+| APP-003-LIVE-SCOPE | 产品真实抽取最小 smoke scope 提案 | Codex 中枢 / 项目负责人 | planned | APP-003-C3、ADR-0023 | 提案：DeepSeek `deepseek-flash` / C0、4 条输入、最多 12 HTTP；负责人审阅前不授权实现正式运行、preflight、batch 或网络请求。 |
 
 ## 认领格式
 

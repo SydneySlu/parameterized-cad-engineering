@@ -2735,3 +2735,10 @@ commit=待提交
 - 动作：核对负责人将 C3 分支快进合入 `main` 并推送远端；`main` 与 `origin/main` 均为 `f105fc4`，工作区干净。
 - 结果：C3 固定 CAD venv、localhost、浏览器、XSS 纯文本、ask 未回答问题阻断、补参真实 STEP/hash 和 reset 清理验收均通过；项目状态、计划、任务表和 checkpoint 已同步为 `done`。
 - 边界：C3 仍是 synthetic fixture 离线流程，不调用模型、不读取密钥、不创建 batch，不构成真实模型理解或产品 live extraction 证据。后续 live extraction 必须新建 scope、预算、gate、batch ID 并取得负责人授权。
+
+### APP-003-LIVE-SCOPE-DRAFT / Codex / planned / 2026-11-13
+
+- 动作：在 C3 合入和浏览器验收后，依据 ADR-0023 准备下一阶段产品 live extraction smoke 提案。
+- 产物：`agent-work/integration/APP-003-LIVE-SCOPE/scope-draft.md`；提出 DeepSeek `deepseek-flash` / C0、4 个独立刺激（正常、缺参、目录冲突、unsupported）、最多 12 HTTP、人工确认后才调用 CAD，并列出 product-specific gate、预算账本、preflight、证据脱敏和独立执行批准条件。
+- 状态与边界：仅为待审提案；未选定 batch ID，未创建 batch/ledger，未运行 preflight/provider 请求，未读取密钥/`.env`，未调用 CAD。`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- 下一步：项目负责人审阅并明确批准或修改草案；批准 scope 后再准备独立实现工作单，真实执行仍需另行授权。
