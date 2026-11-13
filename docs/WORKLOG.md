@@ -2869,3 +2869,13 @@ commit=待提交
 - 验证（固定 CAD venv Python 3.11.18）：Product Live **107/107**；Product Live UI **36/36**；C1/C2/C3 **183/183**；Integration pipeline/schema-to-IR **81/81**；Schema **17/17**；CAD compilation **13/13**；目标文件 `py_compile`、`git diff --check` 通过。
 - 保持不变量：旧批次 `app003-product-live-20261113-01` 只读，不重跑、不读取 raw 正文、不追加网络请求；未读取密钥/`.env`；未改变 prompt、Schema/IR、CAD pipeline、授权 profile、预算或 `FORMAL_EVALUATION_ALLOWED=False`。
 - 下一步：提交窄修 commit，交独立 Codex 对话框复核；复核通过后再决定是否准备新的产品 live scope、batch 和负责人批准。
+
+### APP-003-LIVE-PREFLIGHT-20261114-01 / Codex / review / 2026-11-14
+
+- 前置结论：独立复核对 `main=d80fd433c54d37c135581e92c01c4e4bbee31bb3` 给出 `pass`，确认 parser 诊断脱敏、HTTP 顶层 raw path containment 和固定 CAD venv 回归通过；该结论只解除代码审查阻塞，不授权新的真实请求。
+- 动作：更新当前状态/计划，收束 `APP-003-LIVE-PREFLIGHT-20261113-01`；为新的候选 batch `app003-product-live-20261114-01` 准备 scope、离线 preflight 证据和 checkpoint。
+- 候选 scope：沿用冻结四输入、DeepSeek `deepseek-flash` / C0、每条最多 3 次尝试、全批最多 12 HTTP；没有扩充样本或改变产品 gate。P1 等有效 answer 仍须人工显式确认后才可调用 CAD；P2/P3/P4 和任何失败均 fail closed。
+- 固定 CAD venv Python 3.11.18：`run_product_offline_preflight(..., require_cad_runtime=True)` 返回 `ok=true`；输入/prompt hash、Draft 2020-12、CadQuery 2.3.0、OCP 7.9.3.0、jsonschema 4.26.0 检查通过；预算 4×3=12 可行。`run_product_batch(dry_run=True)` 返回 `preflight_ok=true`、4 planned runs、0 results；候选目录执行前后均不存在。
+- 安全边界：0 网络请求；未读取 `.env`/密钥；未创建正式 batch/ledger；没有执行 provider 请求或正式 CAD；旧 batch `app003-product-live-20261113-01` 只读保留；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 产物：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-01/` 下的 `scope.md`、`offline-preflight.json`、`checkpoint.md`；项目状态、计划和任务表同步更新。
+- 状态与下一步：候选保持 `review`，等待负责人审阅/批准具体 scope 与 batch ID。批准后才准备同批正式 approval 并执行 formal preflight；真实请求需再次明确授权。当前阶段不得触发网络调用。

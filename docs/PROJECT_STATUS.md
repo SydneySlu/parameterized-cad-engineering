@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-11-13
+更新时间：2026-11-14
 
 ## 当前结论
 
@@ -9,7 +9,7 @@
 - v5 保持当前 prompt/契约/hash 作为首个集成基线；一般优化不启动 v6。首个真实闭环优先沿用已审查 DeepSeek `deepseek-flash` 配置，Qwen 后续兼容。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
-- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。代码基线为 `6fe4b43`；本轮产品 live smoke 准备包已记录在本地提交 `62eaf79`，当前 `main` 比 `origin/main` 超前 1 个提交，后续提交不自动 push。
+- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。当前本地基线为 `d80fd433c54d37c135581e92c01c4e4bbee31bb3`，比 `origin/main` 超前 7 个提交；本轮只在本地提交，不自动 push。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。
@@ -72,7 +72,8 @@
 | APP-003-C3-PRODUCT-UI | C2 自然语言流程的离线确认界面 | CC 实现 / Codex 中枢独立验收 | done | `f105fc4` 已合入并推送 `main`；固定 CAD venv 264 项 demo/integration、Schema 17、CAD 13、localhost 及浏览器验收通过。XSS 纯文本、ask-extra 隐藏确认、ask-missing 补参后真实 STEP/hash、reset 清理均已核验。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
 | APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | done | `db26fda` 已合入 `main`；产品 live 99 项专项、Demo/Integration 264、Schema 17、CAD 13 及 P1 本地 HTTP→STEP 独立复核通过。仅完成受控入口和离线验证；不代表真实 provider 效果，不授权新的 live preflight 或 batch。 |
 | APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | done | `8dce35a` 已合入并推送 `main`；合入后固定 CAD venv 回归保持通过：Product Live/UI 135、C1/C2/C3 183、Integration 81、Schema 17、CAD 13；localhost 浏览器已验证 P1 STEP/hash、P2 阻断和 XSS 纯文本。仅离线注入 transport/本地 CAD，不代表真实 provider 效果。 |
-| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 批次 `app003-product-live-20261113-01` 已按批准 scope 完成正式运行；4/4 HTTP 请求各使用 1 次尝试，均在解析/Envelope 阶段失败，批次 `failed`，未进入确认/CAD/STEP。批次只读保留。已补齐定向失败证据修复：正式 Adapter 与离线 mock/service 均只保留稳定 parser code/stage/白名单 fields，不复制 provider 控制文本；HTTP 顶层 `raw_retention_path` 统一做 repo-relative fail-closed 归一化；固定 CAD venv Product Live 107/107、UI 36/36、Integration 81、Schema 17、CAD 13 通过。待独立复核后再决定新 batch。 |
+| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧 batch `app003-product-live-20261113-01` 按批准范围完成 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。后续证据映射/脱敏修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。该结论不授权新 live 请求。 |
+| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke 候选范围与离线 preflight | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | 候选 batch `app003-product-live-20261114-01`；沿用冻结四输入、DeepSeek `deepseek-flash`/C0、最多 12 HTTP。固定 CAD venv offline preflight/dry-run 通过，0 网络/0 结果，batch 目录未创建。等待负责人审阅 scope；不构成正式批准或执行授权。 |
 
 ## 当前缺口与限制
 
@@ -88,6 +89,7 @@
 
 - `APP-002-INTEGRATION-A1`：已完成；输入需求文本与明确标为 synthetic 的冻结 v5 envelope，复用 parse/project/Schema，经严格构造门与正式 IR 映射，调用真实本地编译器/验证器生成 STEP。
 - `APP-002-INTEGRATION-A2-SCOPE`：ADR-0021 的 A2 专用 gate 生效，全局 `FORMAL_EVALUATION_ALLOWED=False` 保持不变。Adapter run ID 绑定、all-error summary 状态、CAD runtime preflight 和缺依赖零调用断言均已合入 `main=0b02a26` 并在固定 venv 复验通过。获批 `...-04` 已完成并经 Codex 中枢独立只读复核，`...-01` 至 `...-04` 均只读保留。里程碑 B 六类定向验收完成；是否扩大 live 样本留待项目负责人决定。如需新的真实模型请求，必须另取新 batch 和授权。
+- `APP-003-LIVE-PREFLIGHT-20261113-01`：旧批次失败事实保持只读；后续错误分类/脱敏与 raw path 隔离修复已合入本地 `main=d80fd43`，独立复核为 `pass`。新候选 `APP-003-LIVE-PREFLIGHT-20261114-01` 的固定 CAD venv 离线 preflight 与 dry-run 已通过，等待负责人审阅 scope；没有正式 batch、provider 请求或 live 授权。
 - ask/refuse、missing_fields、unsupported、解析/Schema/IR 失败不调用 CAD；构造/导出/回读失败不能报告成功或发布其他运行旧文件。用户显式值、目录派生值与规则派生值分别保存。
 - `...-04` 的显式授权已用于本次三条真实模型整链请求；后续任何真实模型请求仍须新批次和单独授权。本次文档收束不新增网络/模型请求，不读取密钥、`.env`、raw 正文或 evaluator labels；不修改冻结 prompt、Schema/IR 语义、预算、A2 输入/模型/condition scope 或旧批次，`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 错误几何、关键参数丢失、错误放行、假成功属于交付阻断；措辞、额外语言覆盖与新实验进入 backlog，不自动阻断主闭环。
@@ -99,5 +101,5 @@
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. `APP-003-C1` 已完成并合入；`APP-003-C2-NL-PRODUCT-FLOW` 已由 `d839954` 合入 `main`，Codex 中枢独立验收通过；`APP-003-C3-PRODUCT-UI` 已由 `f105fc4` 合入并推送 `main`，固定环境、localhost 和浏览器验收通过，状态已收束为 `done`。`APP-003-LIVE-PREFLIGHT-20261113-01` 的批准 scope 已执行：4 次 HTTP 均在解析/Envelope 前失败，批次状态为 `failed`，没有 CAD/STEP；该 batch 不得重跑，下一步先修复失败响应证据留存/解析链并重新做离线复核，再提出新的 batch。
+6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。`APP-003-LIVE-PREFLIGHT-20261113-01` 的旧 batch 4 次 HTTP 均在解析/Envelope 前失败且无 CAD/STEP，批次只读保留；修复已在 `d80fd43` 合入本地 `main` 并由独立复核判定 `pass`。新候选 `app003-product-live-20261114-01` 的 scope 草案和固定 CAD venv 离线 preflight 已准备，当前等待负责人审阅/批准 scope；之后仍须 formal preflight 和另行明确 live 执行授权。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

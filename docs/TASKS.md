@@ -35,7 +35,8 @@
 | APP-003-C3-PRODUCT-UI | C2 API 的离线自然语言确认界面 | 已有 C1/C2 CC 对话框实现 / Codex 中枢独立验收 | done | APP-003-C2、ADR-0023 | `f105fc4` 已合入并推送 `main`；固定 CAD venv、localhost 和浏览器验收通过。仅离线 fixtures；不接模型、不读取密钥、不创建 batch。新的产品 live extraction 需另立 scope 和授权。 |
 | APP-003-LIVE-SCOPE | 产品真实抽取最小 smoke scope 与受控入口 | Codex 中枢 / CC / 项目负责人 | done | APP-003-C3、ADR-0023 | `db26fda` 已合入 `main`；固定环境和 P1 本地 HTTP→STEP 独立复核通过。仅完成实现与离线验证，不构成真实 provider 效果证据。 |
 | APP-003-LIVE-UI | 将产品 live 抽取结果接入用户确认界面 | CC + Codex 中枢 | done | APP-003-LIVE-SCOPE、ADR-0023 | `8dce35a` 已合入并推送 `main`；受控 UI、固定 CAD venv 回归、P1 STEP/hash、P2 阻断、XSS 和无 provider/batch 边界均已验收。真实 provider 仍需新 scope 与授权。 |
-| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与受控运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 批次已按批准 scope 执行 4/12 HTTP；P1–P4 均在解析/Envelope 阶段失败，batch `failed`，无 CAD/STEP；不得重跑该 batch。已完成 parser 错误脱敏和 HTTP 顶层 raw 路径归一化，固定 CAD venv 相关回归通过，待独立复核后再决定新 batch。 |
+| APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与受控运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧批次 4/12 HTTP 均在解析/Envelope 阶段失败且无 CAD/STEP，批次只读保留；修复 commit `d80fd43` 已在本地 main，独立复核 `pass`，固定 CAD venv 回归通过。 |
+| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke 候选 scope 与离线 preflight | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | 候选 batch `app003-product-live-20261114-01`，固定四输入、DeepSeek `deepseek-flash`/C0、最多 12 HTTP；CAD venv offline preflight/dry-run 通过，未创建正式 batch/ledger，未联网。待负责人审阅 scope；不代表 live 执行批准。 |
 
 ## 认领格式
 
