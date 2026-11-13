@@ -34,7 +34,7 @@
 | APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品流程：offline v5 envelope→确认/补充→Schema/IR/CAD/STEP→证据与隔离 | 已有 C1 CC 对话框 / Codex 中枢独立验收 | done | APP-003-C1、ADR-0023 | `d839954` 已合入；固定 CAD venv 回归与真实 localhost HTTP/STEP 流程通过。仅 synthetic fixtures，不构成模型效果证据。 |
 | APP-003-C3-PRODUCT-UI | C2 API 的离线自然语言确认界面 | 已有 C1/C2 CC 对话框实现 / Codex 中枢独立验收 | done | APP-003-C2、ADR-0023 | `f105fc4` 已合入并推送 `main`；固定 CAD venv、localhost 和浏览器验收通过。仅离线 fixtures；不接模型、不读取密钥、不创建 batch。新的产品 live extraction 需另立 scope 和授权。 |
 | APP-003-LIVE-SCOPE | 产品真实抽取最小 smoke scope 与受控入口 | Codex 中枢 / CC / 项目负责人 | done | APP-003-C3、ADR-0023 | `db26fda` 已合入 `main`；固定环境和 P1 本地 HTTP→STEP 独立复核通过。仅完成实现与离线验证，不构成真实 provider 效果证据。 |
-| APP-003-LIVE-UI | 将产品 live 抽取结果接入用户确认界面 | CC + Codex 中枢 | planned | APP-003-LIVE-SCOPE、ADR-0023 | 连接 `/api/product-live/*` 到独立或明确标记的 live UI；先用 FakeTransport/synthetic envelope 做离线浏览器与 HTTP 验证，不创建 batch、不发真实请求。 |
+| APP-003-LIVE-UI | 将产品 live 抽取结果接入用户确认界面 | CC + Codex 中枢 | review | APP-003-LIVE-SCOPE、ADR-0023 | `cc/APP-003-LIVE-UI@0b8bd7b` 已完成受控 UI、固定 CAD venv 回归和 localhost 浏览器验收；P1 STEP/hash、P2 阻断、XSS、无 provider/batch 证据齐全，待负责人合入 `main`。 |
 
 ## 认领格式
 

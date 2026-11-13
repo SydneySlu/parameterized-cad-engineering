@@ -143,6 +143,15 @@ unresolved=固定 CAD venv (Python 3.11.18) 下真实 compile_ir 验证；真实
 next_agent_focus=1) Run under real CadQuery (Python 3.11.18): verify P1 confirm → real STEP and /product-live page renders correctly; 2) Codex 独立复核在固定 venv 重跑 135 项（test_product_live + test_product_live_ui）+ C3 regression; 3) FORMAL_EVALUATION_ALLOWED still False; 4) Do NOT create live batch without Codex review + owner approval
 ```
 
+## Codex 独立复核（2026-11-13）
+
+- 分支/提交：`cc/APP-003-LIVE-UI` / `0b8bd7b`；工作区干净；未 push、未合并。
+- 固定环境：`work/benchcad-output/venv/bin/python`，Python 3.11.18、CadQuery 2.3.0、OCP 7.9.3.0。
+- 回归结果：`tests.demo.test_product_live_ui` + `tests.integration.test_product_live` **135/135**；C1/C2/C3 demo 回归 **183/183**；Integration pipeline/schema-to-IR **81/81**；Schema **17/17**；CAD compilation **13/13**；`py_compile`、`git diff --check` 均通过。仅有既有 ResourceWarning 和上游弃用警告。
+- 浏览器证据（localhost `127.0.0.1:8766`，注入 FakeTransport/synthetic envelope）：P1 `needs_confirmation` → 用户确认 → `succeeded`，STEP 148393 bytes，页面 hash 与下载文件 `5ead6f40673fb0887b8eaa6172819289a3de76b64ef9c6fb70a66858d8c8c113` 一致；P2 显示 `blocked`、`missing_fields=bore_d` 和问题，未显示确认/下载入口；恶意 request text `<img src=x onerror=alert(1)>` 仅作为文本显示，DOM 中 `img=0` 且没有 `onerror` 属性。
+- 边界：所有验证使用离线注入 transport 和本地 CAD；未调用 DeepSeek/Ollama、未读取 `.env`/密钥、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 未改变；不构成真实模型效果证据。
+- 结论：**pass，允许负责人合入 `main`**。合入后再将 APP-003-LIVE-UI 收束为 `done`；真实 provider 请求仍需新 batch scope、预算、preflight 和负责人单独批准。
+
 ## 安全边界
 
 - `FORMAL_EVALUATION_ALLOWED=False` 全程不变

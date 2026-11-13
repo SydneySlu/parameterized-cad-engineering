@@ -71,7 +71,7 @@
 | APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品闭环离线接入 | 已有 C1 CC 对话框实现 / Codex 中枢验收 | done | `d839954` 已合入 `main`；固定 CAD venv 下 C2 58、C1 56、Integration 81、Schema 17、CAD 13 项通过；localhost create→严格类型拒绝→confirm→get→STEP 下载烟测通过，bore24/bore80/ask 补参均有真实 STEP 证据。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
 | APP-003-C3-PRODUCT-UI | C2 自然语言流程的离线确认界面 | CC 实现 / Codex 中枢独立验收 | done | `f105fc4` 已合入并推送 `main`；固定 CAD venv 264 项 demo/integration、Schema 17、CAD 13、localhost 及浏览器验收通过。XSS 纯文本、ask-extra 隐藏确认、ask-missing 补参后真实 STEP/hash、reset 清理均已核验。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
 | APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | done | `db26fda` 已合入 `main`；产品 live 99 项专项、Demo/Integration 264、Schema 17、CAD 13 及 P1 本地 HTTP→STEP 独立复核通过。仅完成受控入口和离线验证；不代表真实 provider 效果，不授权新的 live preflight 或 batch。 |
-| APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | planned | 在现有 C3 离线 UI 旁新增或扩展受控 live 页面，连接 `/api/product-live/create`、`confirm`、`GET` 和下载接口；先用注入 FakeTransport/固定 envelope 验证确认门、失败阻断、run 隔离和敏感信息脱敏，不调用真实 provider。 |
+| APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | review | 分支 `cc/APP-003-LIVE-UI` HEAD `0b8bd7b` 已接入 `/product-live`；固定 CAD venv 下 Product Live/UI 135、C1/C2/C3 183、Integration 81、Schema 17、CAD 13 全部通过，并完成 localhost 浏览器 P1 STEP、P2 阻断和 XSS 纯文本验收；未调用真实 provider，等待负责人合入 `main`。 |
 
 ## 当前缺口与限制
 

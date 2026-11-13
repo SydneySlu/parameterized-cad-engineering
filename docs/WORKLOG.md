@@ -2,6 +2,15 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### APP-003-LIVE-UI / Codex / review / 2026-11-13
+
+- 动作：对 `cc/APP-003-LIVE-UI@0b8bd7b` 完成固定 CAD venv 与 localhost 浏览器独立复核；仅更新复核文档和项目状态，未修改实现、未 push、未合并。
+- 固定环境验证：Python 3.11.18 / CadQuery 2.3.0 / OCP 7.9.3.0；Product Live/UI 135/135、C1/C2/C3 demo 183/183、Integration 81/81、Schema 17/17、CAD compilation 13/13；`py_compile` 与 `git diff --check` 通过。
+- 浏览器验证：注入 FakeTransport/synthetic envelope 的 `127.0.0.1:8766/product-live` 完成 P1 `needs_confirmation`→确认→真实本地 STEP `succeeded`，148393 bytes，下载 hash 与页面 hash 一致；P2 `blocked` 且显示缺少 `bore_d`，无确认/下载入口；`<img src=x onerror=alert(1)>` 仅显示文本，DOM 无 `img`/`onerror`。
+- 边界：未调用 DeepSeek/Ollama、未读取 `.env`/密钥、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变；结果不代表真实模型效果。
+- 产物：`agent-work/reviews/APP-003-LIVE-UI-codex-review.md`、checkpoint 复核段；项目状态/计划/任务表改为 `review`。
+- 结论/下一步：**pass，允许负责人合入 `main`**；合入后收束为 `done`，再决定是否准备新的 live batch scope。
+
 ## 2026-11-13
 
 ### APP-003-LIVE-UI / CC / review
