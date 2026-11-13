@@ -2670,6 +2670,16 @@ commit=待提交
 - 状态：`planned`，等待已有 C1/C2 CC 对话框认领；实现后由 Codex 中枢在固定 CAD venv 独立验收。
 - 下一步：将工作单交给已有 C1/C2 CC 对话框实施；验收后再决定是否准备新的产品 live extraction scope。
 
+### APP-003-C3-ASK-FAILCLOSED / CC / review / 2026-11-13
+
+- 动作：修复 `c2-ask-extra-question` 错误放行（decision=ask + questions=["请确认安装方式？"] + missing_fields=[] + 空 patch → 旧代码进入 run_pipeline 生成 STEP）。
+- **API 层修复**（`src/demo/product_flow.py`）：在 `confirm_product_run()` 的 patch 验证前新增"未回答问题"门：若 `decision=ask` 且 `questions` 非空，且 patch 未覆盖全部 `missing_fields`（或 missing_fields 为空），返回 `QUESTIONS_UNANSWERED blocked`。可解决案例（ask-missing-bore + patch bore_d=16）仍允许继续。
+- **UI 层防护**（`src/demo/server.py`）：`renderConfirmSection()` 新增判断 `hasUnanswerableQuestions`；ask-extra-question 的确认页不显示确认按钮，改为展示问题列表和阻断说明。
+- **回归测试**（`tests/demo/test_product_flow.py`，新增 7 项，共 65 项）：ask-extra 空 patch → blocked（compile_ir=0）；ask-missing 空 patch 阻断；ask-missing + bore_d=16 → succeeded；bore24/bore80 answer 路径不受影响；parent run 不变。
+- 验证（sandbox Python 3.10.12）：`py_compile` 通过；`git diff --check` 通过；test_product_flow **65/65**；test_product_ui **62/62**；test_demo_handler **56/56**；integration **81/81**；schema **17/17**。
+- 不变量：不修改 C1/C2 API、Schema/IR/CAD、A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读密钥/`.env`；不发网络/模型请求。
+- 下一步：提交窄修 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv 独立复核。
+
 ### APP-003-C3-PRODUCT-UI-NARROW-FIX / CC / review / 2026-11-13
 
 - 动作：在分支 `cc/APP-003-C3-PRODUCT-UI`（HEAD `2c810d2`）完成 C3 页面信息展示窄修。

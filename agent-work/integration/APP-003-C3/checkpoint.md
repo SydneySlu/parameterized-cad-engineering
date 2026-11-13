@@ -194,3 +194,94 @@ confirmed=esc(d.request_text) in renderConfirmSection; esc(d.step_sha256) inside
 unresolved=固定 CAD venv (Python 3.11.18) 下真实 compile_ir 路径验证；浏览器端 XSS 验证（需 Mac + DevTools 确认 onerror 未执行）
 next_agent_focus=1) run under real CadQuery: bore24/bore80 full flow, verify step_sha256 in page; 2) browser DevTools: confirm esc() renders request_text with XSS payload as text; 3) verify resetAll() on second run shows no residual hash
 ```
+
+
+## 窄修 R2（本提交，ask 错误放行修复）
+
+### 复现事实
+
+`c2-ask-extra-question` fixture：`decision=ask`、`questions=["请确认安装方式？"]`、`missing_fields=[]`、`extracted_parameters={bore_d:24}`。
+
+旧行为：`create_product_run` 返回 `needs_confirmation`，UI 显示"确认并生成 STEP"按钮；提交空 patch 后，`confirm_product_run` 通过 Schema 预检（bore_d 存在，合法）直接进入 `run_pipeline`，返回 `succeeded` 并生成 STEP。这是构造门缺陷：有未回答的澄清问题，但被当作确认。
+
+### 修复 1：product_flow.py — API 层 fail-closed 门
+
+在 `confirm_product_run()` 的 patch 验证之前（行 515，原 `# Validate patch fields`），新增"未回答问题"门：
+
+```python
+if parent_rec.decision == "ask" and parent_rec.questions:
+    unresolved_missing = [f for f in parent_rec.missing_fields if f not in patch]
+    if unresolved_missing or not parent_rec.missing_fields:
+        return ProductRunRecord(..., product_status=PRODUCT_STATUS_BLOCKED,
+            errors=[{"code": "QUESTIONS_UNANSWERED", ...}])
+```
+
+逻辑：
+- 若 `decision=ask` 且 `questions` 非空：
+  - 若 `missing_fields=[]`（如 ask-extra-question）：问题无法通过参数 patch 回答 → 阻断
+  - 若 `missing_fields` 非空但 patch 未覆盖全部缺参（如 ask-missing-bore 空 patch）→ 阻断
+  - 若 `missing_fields=[bore_d]` 且 patch 提供了 `bore_d` → 允许继续（原有路径）
+
+### 修复 2：server.py — UI 层防护（defence-in-depth）
+
+`renderConfirmSection()` 新增判断：若 `decision=ask` + `questions` 非空 + `missing_fields` 为空，不显示确认按钮，改为展示问题列表和阻断说明：
+
+```js
+const hasUnanswerableQuestions = d.decision === 'ask' && (d.questions||[]).length > 0
+  && (d.missing_fields||[]).length === 0;
+if (hasUnanswerableQuestions) {
+  // 展示问题、显示阻断说明、不显示确认按钮
+} else {
+  // 正常显示参数补充表单和确认按钮
+}
+```
+
+UI 修复不能替代 API 层门——直接 HTTP POST confirm 也被 `QUESTIONS_UNANSWERED` 阻断。
+
+### 新增回归测试（7 项，test_product_flow.py）
+
+| 测试 | 覆盖 |
+|---|---|
+| `test_ask_extra_question_empty_patch_blocked` | ask-extra 空 patch → QUESTIONS_UNANSWERED blocked；compile_ir=0 |
+| `test_ask_extra_question_no_step_produced` | blocked confirm 无 step_sha256/step_path |
+| `test_ask_extra_question_parent_unchanged_after_blocked_confirm` | parent run 完全不变 |
+| `test_ask_missing_bore_empty_patch_blocked` | ask-missing-bore 空 patch 不构造 |
+| `test_ask_missing_bore_valid_patch_succeeds` | ask-missing-bore + bore_d=16 → succeeded；parent 不变 |
+| `test_bore24_confirm_still_succeeds` | bore24（answer，无问题）confirm 仍成功 |
+| `test_bore80_confirm_still_succeeds` | bore80（answer，无问题）confirm 仍成功 |
+
+### 验证结果（sandbox Python 3.10.12）
+
+```text
+py_compile: src/demo/product_flow.py, src/demo/server.py, tests/demo/test_product_flow.py — OK
+git diff --check: OK
+
+C2 product flow tests (new 65):
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_product_flow -q
+  Ran 65 tests (原 58 + 新 7) — OK
+
+C3 product UI tests:
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_product_ui -q
+  Ran 62 tests — OK
+
+C1 regression:
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_demo_handler -q
+  Ran 56 tests — OK
+
+Integration:
+  PYTHONPATH=src:. python3 -m unittest tests.integration.test_pipeline tests.integration.test_schema_to_ir -q
+  Ran 81 tests — OK
+
+Schema:
+  Ran 17 tests — OK
+```
+
+### handoff_self_check（R2 更新）
+
+```text
+changed=src/demo/product_flow.py (QUESTIONS_UNANSWERED gate in confirm_product_run), src/demo/server.py (UI: hide confirm btn for unresolvable ask), tests/demo/test_product_flow.py (65 tests), agent-work/integration/APP-003-C3/checkpoint.md, docs/WORKLOG.md
+commands=py_compile OK; git diff --check OK; test_product_flow 65/65 OK; test_product_ui 62/62 OK; test_demo_handler 56/56 OK; integration 81/81 OK; schema 17/17 OK
+confirmed=ask-extra-question empty patch → QUESTIONS_UNANSWERED blocked, compile_ir=0, step_path=None, parent unchanged; ask-missing-bore empty patch blocked, bore_d=16 patch succeeds; bore24/bore80 answer paths unaffected; R1 fixes preserved (request_text display, step_sha256 on success, XSS regression)
+unresolved=固定 CAD venv (Python 3.11.18) 下真实路径验证；浏览器端 UI 层测试（ask-extra 确认按钮不可见）
+next_agent_focus=1) run under real CadQuery: ask-missing-bore patch bore_d=16 → real STEP; 2) browser: verify ask-extra shows no confirm button; 3) verify ask-extra HTTP POST confirm still blocked at API level
+```

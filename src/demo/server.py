@@ -514,14 +514,29 @@ function renderConfirmSection(d) {
 
   const form = document.getElementById('confirm-form');
   if (d.product_status === 'needs_confirmation') {
-    const needsBore = (d.missing_fields||[]).includes('bore_d') || d.decision === 'ask';
-    let fhtml = '<div style="margin-top:.7rem"><b>用户参数补充（可选）:</b></div>';
-    fhtml += `<label for="patch-bore-d" style="margin-top:.5rem">bore_d 轴孔孔径 (mm)${needsBore?' <span style=color:red>*必填</span>':''}</label>`;
-    fhtml += `<input type="number" id="patch-bore-d" placeholder="留空则使用 fixture 中的值" style="max-width:200px">`;
-    fhtml += `<div style="margin-top:.7rem">`;
-    fhtml += `<button class="btn-green" onclick="confirmRun()">确认并生成 STEP</button>`;
-    fhtml += `</div>`;
-    form.innerHTML = fhtml;
+    // Check if there are unanswered questions that cannot be resolved by a parameter patch.
+    // If decision=ask and questions exist but no missing_fields correspond to them,
+    // we show the questions but do NOT show a confirm button.
+    const hasUnanswerableQuestions = d.decision === 'ask' && (d.questions||[]).length > 0
+      && (d.missing_fields||[]).length === 0;
+    const needsBore = (d.missing_fields||[]).includes('bore_d');
+
+    if (hasUnanswerableQuestions) {
+      let fhtml = '<div style="margin-top:.5rem;color:#d46b08;font-weight:600">⚠ 此运行有未回答的追问，当前界面无对应输入字段，无法确认或构造 STEP。</div>';
+      fhtml += '<div style="margin-top:.3rem"><b>待回答问题:</b><ul class="error-list">';
+      (d.questions||[]).forEach(q => { fhtml += `<li>${esc(q)}</li>`; });
+      fhtml += '</ul></div>';
+      fhtml += '<div style="font-size:.8rem;color:#666">如需继续，请重新创建运行并选择适当的 fixture。</div>';
+      form.innerHTML = fhtml;
+    } else {
+      let fhtml = '<div style="margin-top:.7rem"><b>用户参数补充:</b></div>';
+      fhtml += `<label for="patch-bore-d" style="margin-top:.5rem">bore_d 轴孔孔径 (mm)${needsBore?' <span style=color:red>*必填</span>':''}</label>`;
+      fhtml += `<input type="number" id="patch-bore-d" placeholder="留空则使用 fixture 中的值" style="max-width:200px">`;
+      fhtml += `<div style="margin-top:.7rem">`;
+      fhtml += `<button class="btn-green" onclick="confirmRun()">确认并生成 STEP</button>`;
+      fhtml += `</div>`;
+      form.innerHTML = fhtml;
+    }
   } else if (d.product_status === 'blocked') {
     form.innerHTML = '<div style="margin-top:.5rem;color:#d46b08;font-weight:600">⚠ 此运行已阻断，无法继续构造 STEP。请重新创建运行。</div>';
   } else {

@@ -291,6 +291,94 @@ class TestConfirmProductRun(unittest.TestCase):
         self.assertEqual(result.product_status, PRODUCT_STATUS_BLOCKED)
         self.assertTrue(any("NOT_CONFIRMABLE" in e.get("code", "") for e in result.errors))
 
+    def test_ask_extra_question_empty_patch_blocked(self):
+        """ask-extra-question + empty patch → QUESTIONS_UNANSWERED blocked; zero CAD."""
+        parent = self._make_needs_confirmation("c2-ask-extra-question")
+        self.assertEqual(parent.product_status, PRODUCT_STATUS_NEEDS_CONFIRMATION)
+        self.assertEqual(parent.decision, "ask")
+        self.assertGreater(len(parent.questions), 0)
+        self.assertEqual(parent.missing_fields, [])  # bore_d present in fixture
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        self.assertEqual(result.product_status, PRODUCT_STATUS_BLOCKED)
+        self.assertTrue(any("QUESTIONS_UNANSWERED" in e.get("code", "")
+                            for e in result.errors))
+        mock_cad.assert_not_called()
+
+    def test_ask_extra_question_no_step_produced(self):
+        """ask-extra-question blocked confirm: no STEP, no step_sha256."""
+        parent = self._make_needs_confirmation("c2-ask-extra-question")
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(result.product_status, PRODUCT_STATUS_BLOCKED)
+        self.assertIsNone(result.step_sha256)
+        self.assertIsNone(result.step_bytes)
+        self.assertIsNone(result._step_path)
+        mock_cad.assert_not_called()
+
+    def test_ask_extra_question_parent_unchanged_after_blocked_confirm(self):
+        """ask-extra-question: parent run unchanged when confirm is blocked."""
+        parent = self._make_needs_confirmation("c2-ask-extra-question")
+        parent_dict_before = parent.as_dict()
+        with patch("integration.pipeline.compile_ir"):
+            self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        parent_after = self.handler.get_product_run(parent.run_id)
+        self.assertIsNotNone(parent_after)
+        self.assertEqual(parent_after.as_dict(), parent_dict_before)
+
+    def test_ask_missing_bore_empty_patch_blocked(self):
+        """ask-missing-bore + empty patch → questions_unanswered or missing_field; no CAD."""
+        parent = self._make_needs_confirmation("c2-ask-missing-bore")
+        self.assertEqual(parent.product_status, PRODUCT_STATUS_NEEDS_CONFIRMATION)
+        self.assertIn("bore_d", parent.missing_fields)
+
+        with patch("integration.pipeline.compile_ir") as mock_cad:
+            result = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        # Either Schema blocks (bore_d still missing) or questions-gate blocks
+        self.assertNotEqual(result.product_status, PRODUCT_STATUS_SUCCEEDED)
+        mock_cad.assert_not_called()
+
+    def test_ask_missing_bore_valid_patch_succeeds(self):
+        """ask-missing-bore + valid bore_d=16 → succeeded; parent unchanged."""
+        parent = self._make_needs_confirmation("c2-ask-missing-bore")
+        parent_dict_before = parent.as_dict()
+
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {"bore_d": 16})
+
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+        self.assertIsNotNone(child.step_sha256)
+        self.assertEqual(child.parent_run_id, parent.run_id)
+        # Parent unchanged
+        parent_after = self.handler.get_product_run(parent.run_id)
+        self.assertEqual(parent_after.as_dict(), parent_dict_before)
+
+    def test_bore24_confirm_still_succeeds(self):
+        """bore24 (answer, no questions) confirm still works after gate fix."""
+        parent = self._make_needs_confirmation("c2-answer-bore24")
+        self.assertEqual(parent.product_status, PRODUCT_STATUS_NEEDS_CONFIRMATION)
+        self.assertEqual(parent.decision, "answer")
+        self.assertEqual(parent.questions, [])
+
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+        self.assertIsNotNone(child.step_sha256)
+
+    def test_bore80_confirm_still_succeeds(self):
+        """bore80 (answer, no questions) confirm still works after gate fix."""
+        parent = self._make_needs_confirmation("c2-answer-bore80")
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(raw, Path(kw["output_dir"]))):
+            child = self.handler.confirm_product_run(parent.run_id, 0, True, {})
+        self.assertEqual(child.product_status, PRODUCT_STATUS_SUCCEEDED)
+
 
 # ---------------------------------------------------------------------------
 # TestDownloadIsolation

@@ -513,6 +513,57 @@ class ProductFlowHandler:
             )
 
         # Validate patch fields
+        # --- Fail-closed gate: unanswered questions ---
+        # If decision=ask and there are questions that cannot be resolved by
+        # patching a missing parameter field, block construction.
+        # Specifically: if questions is non-empty AND the patch does not supply
+        # all of the missing_fields (e.g. the question is about something other
+        # than a missing parameter), we cannot proceed safely.
+        #
+        # Solvable case: decision=ask + missing_fields=[bore_d] + patch provides bore_d
+        #   → after patch merge, the missing field is supplied → allowed.
+        #
+        # Unsolvable case: decision=ask + questions present + missing_fields=[] + empty patch
+        #   → questions have no parameter-patch answer → must block.
+        if parent_rec.decision == "ask" and parent_rec.questions:
+            # Check whether the patch resolves ALL missing_fields
+            unresolved_missing = [
+                f for f in parent_rec.missing_fields
+                if f not in patch
+            ]
+            if unresolved_missing or not parent_rec.missing_fields:
+                # Either some missing fields remain unprovided, OR there were no
+                # missing fields in the first place (questions can't be answered
+                # by a parameter patch — no input field exists for them).
+                return ProductRunRecord(
+                    run_id=run_id, parent_run_id=None,
+                    confirmation_revision=parent_rec.confirmation_revision,
+                    created_at=now, request_text=parent_rec.request_text,
+                    extraction_source="synthetic_fixture",
+                    envelope_fixture_label=parent_rec.envelope_fixture_label,
+                    decision=parent_rec.decision,
+                    extracted_parameters=parent_rec.extracted_parameters,
+                    user_explicit_parameters={}, catalog_derived_parameters={},
+                    rule_derived_parameters={}, missing_fields=parent_rec.missing_fields,
+                    unsupported_requests=parent_rec.unsupported_requests,
+                    questions=parent_rec.questions, conflicts=parent_rec.conflicts,
+                    confirmation=parent_rec.confirmation,
+                    product_status=PRODUCT_STATUS_BLOCKED,
+                    pipeline_status=None, pipeline_stage="confirm",
+                    schema_result=None, ir_document=None, validation_summary=None,
+                    errors=[{
+                        "code": "QUESTIONS_UNANSWERED",
+                        "message": (
+                            "decision=ask and questions cannot be resolved by the "
+                            "provided patch; construction is blocked until all "
+                            "questions are addressed: "
+                            + "; ".join(parent_rec.questions)
+                        ),
+                        "questions": list(parent_rec.questions),
+                    }],
+                    step_sha256=None, step_bytes=None,
+                )
+
         unknown_patch_fields = [k for k in patch if k not in EXTRACTABLE_FIELDS]
         if unknown_patch_fields:
             return ProductRunRecord(
