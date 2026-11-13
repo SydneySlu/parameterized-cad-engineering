@@ -2960,4 +2960,5 @@ commit=待提交
 - 结果：P1=`answer → needs_confirmation`；P2=`ask → blocked`；P3/P4=`refuse → blocked`。未提交 per-run confirmation，CAD/STEP=0；`FORMAL_EVALUATION_ALLOWED=False`。
 - 隐私边界：只验证 raw 文件存在性、大小和 SHA-256，未读取正文；evaluator labels 仅核 SHA-256；未读取 `.env`/密钥，不发请求，不运行 CAD，不改写任何 batch。
 - 文档：新增 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`，更新 checkpoint、scope/template 状态、PROJECT_STATUS 与 PROJECT_PLAN。
+- 提交：`4c8720e`（独立复核记录与项目文档收束）。
 - 限制/下一步：未评估四条响应的语义正确性，未读取 raw 以核对 runtime-returned model。若要对 P1 生成 CAD/STEP，须负责人单独审阅其抽取参数并明确确认该 run；本 batch 继续只读。
