@@ -114,3 +114,83 @@ next_agent_focus=Run under real CadQuery: verify bore24 full flow at HTTP level;
 
 - 状态 `review`，等待 Codex 中枢独立验收
 - 不 push，不合并 main，不自行标记 done
+
+
+## 窄修 R1（本提交，APP-003-C3-PRODUCT-UI-NARROW-FIX）
+
+### 修复 1：确认页展示原始需求文本
+
+**问题**：`renderConfirmSection()` 未展示 API 响应中的 `request_text`，用户在确认参数前无法对照原始需求。
+
+**修复**：在 `renderConfirmSection()` 顶部信息块中添加 `request_text` 展示行，使用 `esc(d.request_text)` 安全渲染：
+```
+if (d.request_text) html += `<div ...><b>原始需求文本（仅作记录）:</b><br>${esc(d.request_text)}</div>`;
+```
+样式区块（左边框 + 灰色背景）以区别于参数区域。
+
+### 修复 2：成功结果展示 STEP SHA-256
+
+**问题**：`renderResultSection()` 的 `succeeded` 分支仅展示下载按钮，未展示 `step_sha256`；用户无法核对下载文件完整性。
+
+**修复**：在 `succeeded` 分支（下载按钮之前）添加 SHA-256 展示，使用 `esc(d.step_sha256)`：
+```
+if (d.step_sha256) {
+  html += `<div><b>STEP SHA-256:</b><br><code>${esc(d.step_sha256)}</code></div>`;
+}
+```
+失败/阻断路径完全不渲染 step_sha256（该分支不在 `if (d.product_status === 'succeeded')` 块中）。
+
+### 新增回归测试（17 项，test_product_ui.py）
+
+**TestRequestTextDisplay（4 项）**：
+- PRODUCT_HTML 中 `esc(d.request_text)` 存在且无裸插值
+- API 响应包含 request_text 字段，值与输入一致
+- 中文需求文本正确往返
+
+**TestStepHashDisplay（6 项）**：
+- PRODUCT_HTML 中 `esc(d.step_sha256)` 在 succeeded 块内
+- succeeded 响应包含 64 字节 hex step_sha256
+- failed 响应的 step_sha256=None
+- blocked 响应的 step_sha256=None
+- 下载文件实际 hash 匹配 step_sha256
+
+**TestXSSNarrowFix（7 项）**：
+- 无裸 `${d.request_text}` 插值
+- 无裸 `${d.step_sha256}` 插值
+- `esc(d.step_sha256)` 存在于 PRODUCT_HTML
+- `esc(d.request_text)` 存在于 PRODUCT_HTML
+- `<img src=x onerror=...>` 作为 JSON 字符串返回（JSON 上下文安全）
+- resetAll() 清除 result-area（避免旧 hash 残留）
+- step_sha256 仅在 succeeded 块内
+
+### 验证结果（窄修后，sandbox Python 3.10.12）
+
+```text
+py_compile: src/demo/server.py, tests/demo/test_product_ui.py — OK
+git diff --check: OK
+
+C3 product UI tests:
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_product_ui -q
+  Ran 62 tests (原 45 + 新 17) — OK
+
+C2 + C1 regression:
+  PYTHONPATH=src:. python3 -m unittest tests.demo.test_product_flow tests.demo.test_demo_handler -q
+  Ran 114 tests — OK
+
+Integration regression:
+  PYTHONPATH=src:. python3 -m unittest tests.integration.test_pipeline tests.integration.test_schema_to_ir -q
+  Ran 81 tests — OK
+
+Schema regression:
+  Ran 17 tests — OK
+```
+
+### handoff_self_check（R1 更新）
+
+```text
+changed=src/demo/server.py (renderConfirmSection + renderResultSection), tests/demo/test_product_ui.py (62 tests), agent-work/integration/APP-003-C3/checkpoint.md, docs/WORKLOG.md
+commands=py_compile OK; git diff --check OK; test_product_ui 62/62 OK; test_product_flow+test_demo_handler 114/114 OK; integration 81/81 OK; schema 17/17 OK
+confirmed=esc(d.request_text) in renderConfirmSection; esc(d.step_sha256) inside succeeded block only; failed/blocked runs have step_sha256=null in response; resetAll() clears result-area; XSS payload returned as JSON string (browser esc() handles display); no bare interpolation of new fields; C1/C2 APIs unchanged; no LLM/.env/network
+unresolved=固定 CAD venv (Python 3.11.18) 下真实 compile_ir 路径验证；浏览器端 XSS 验证（需 Mac + DevTools 确认 onerror 未执行）
+next_agent_focus=1) run under real CadQuery: bore24/bore80 full flow, verify step_sha256 in page; 2) browser DevTools: confirm esc() renders request_text with XSS payload as text; 3) verify resetAll() on second run shows no residual hash
+```

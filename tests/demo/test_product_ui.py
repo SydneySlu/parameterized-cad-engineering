@@ -716,5 +716,263 @@ class TestProductGetHTTP(unittest.TestCase):
         self.assertEqual(status, 400)
 
 
+# ===========================================================================
+# TestRequestTextDisplay (narrow fix: request_text in confirm section)
+# ===========================================================================
+
+class TestRequestTextDisplay(unittest.TestCase):
+    """renderConfirmSection must display request_text safely."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.hcls = _make_handler(self.tmpdir)
+
+    def test_product_html_renders_request_text(self):
+        """PRODUCT_HTML renderConfirmSection references d.request_text via esc()."""
+        self.assertIn("d.request_text", PRODUCT_HTML_CONTENT)
+        # Must be wrapped in esc(), not bare
+        import re
+        bare = re.search(r'\$\{d\.request_text\}', PRODUCT_HTML_CONTENT)
+        self.assertIsNone(bare, "d.request_text must be wrapped in esc()")
+
+    def test_create_response_includes_request_text(self):
+        """POST /api/product/create response includes request_text field."""
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": "需要孔径 24 mm 的轴环", "fixture_id": "c2-answer-bore24"}
+            )
+        d = _json_body(body)
+        self.assertIn("request_text", d)
+        self.assertEqual(d["request_text"], "需要孔径 24 mm 的轴环")
+
+    def test_create_response_request_text_is_the_input(self):
+        """request_text in response matches what was sent in the request."""
+        req_text = "GN705轴环 24mm轴孔"
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": req_text, "fixture_id": "c2-answer-bore24"}
+            )
+        d = _json_body(body)
+        self.assertEqual(d["request_text"], req_text)
+
+    def test_malicious_request_text_in_api_response_is_plain_data(self):
+        """Malicious request_text is returned as JSON string (not executed)."""
+        malicious = '<img src=x onerror=alert(1)>'
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": malicious, "fixture_id": "c2-answer-bore24"}
+            )
+        d = _json_body(body)
+        # The JSON must contain it as a plain string
+        self.assertEqual(d["request_text"], malicious)
+        # JSON encoding itself is safe — the browser's esc() must handle it
+        body_text = body.decode("utf-8")
+        self.assertIn("img src=x", body_text)  # present as data
+        # JSON encodes it safely: < should be escaped as < or literal
+        # Either way, it's JSON string — the esc() in HTML rendering is what matters
+        self.assertNotIn("<script>", body_text)  # no injected script tags
+
+
+# ===========================================================================
+# TestStepHashDisplay (narrow fix: STEP SHA-256 in result section)
+# ===========================================================================
+
+class TestStepHashDisplay(unittest.TestCase):
+    """renderResultSection must show step_sha256 on success, nothing on failure."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.hcls = _make_handler(self.tmpdir)
+
+    def test_product_html_renders_step_sha256_on_succeeded(self):
+        """PRODUCT_HTML references d.step_sha256 inside the succeeded branch."""
+        # Find the succeeded block in renderResultSection
+        self.assertIn("d.step_sha256", PRODUCT_HTML_CONTENT)
+        # Must be wrapped in esc(), not bare
+        import re
+        bare = re.search(r'\$\{d\.step_sha256\}', PRODUCT_HTML_CONTENT)
+        self.assertIsNone(bare, "d.step_sha256 must be wrapped in esc()")
+
+    def test_product_html_step_sha256_inside_succeeded_block(self):
+        """d.step_sha256 appears only inside the succeeded conditional block."""
+        # Find the section between "if (d.product_status === 'succeeded')" and
+        # the matching closing block
+        idx_succeeded = PRODUCT_HTML_CONTENT.find("if (d.product_status === 'succeeded')")
+        self.assertGreater(idx_succeeded, 0, "Must have succeeded conditional")
+        idx_sha = PRODUCT_HTML_CONTENT.find("d.step_sha256", idx_succeeded)
+        self.assertGreater(idx_sha, idx_succeeded,
+                           "d.step_sha256 must appear after succeeded check")
+
+    def test_full_flow_confirm_response_has_step_sha256(self):
+        """confirm → succeeded response includes step_sha256 field."""
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": "test", "fixture_id": "c2-answer-bore24"}
+            )
+        parent_id = _json_body(body)["run_id"]
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(
+                       raw, Path(kw["output_dir"]))):
+            _, body2 = _make_request(
+                self.hcls, "POST", f"/api/product/confirm/{parent_id}",
+                body={"confirmation_revision": 0, "confirmed": True, "patch": {}}
+            )
+        d2 = _json_body(body2)
+        self.assertEqual(d2["product_status"], "succeeded")
+        self.assertIn("step_sha256", d2)
+        self.assertIsNotNone(d2["step_sha256"])
+        # Must be a 64-char hex string
+        self.assertEqual(len(d2["step_sha256"]), 64)
+        int(d2["step_sha256"], 16)  # valid hex
+
+    def test_failed_run_response_has_no_step_sha256(self):
+        """confirm → failed response has step_sha256=None."""
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": "test", "fixture_id": "c2-answer-bore24"}
+            )
+        parent_id = _json_body(body)["run_id"]
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_fail(
+                       raw, output_dir=kw["output_dir"])):
+            _, body2 = _make_request(
+                self.hcls, "POST", f"/api/product/confirm/{parent_id}",
+                body={"confirmation_revision": 0, "confirmed": True, "patch": {}}
+            )
+        d2 = _json_body(body2)
+        self.assertEqual(d2["product_status"], "failed")
+        # step_sha256 should be None or absent for failed runs
+        self.assertIsNone(d2.get("step_sha256"))
+
+    def test_blocked_run_has_no_step_sha256(self):
+        """blocked run (refuse fixture) has step_sha256=None."""
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": "test", "fixture_id": "c2-refuse"}
+            )
+        d = _json_body(body)
+        self.assertEqual(d["product_status"], "blocked")
+        self.assertIsNone(d.get("step_sha256"))
+
+    def test_step_sha256_matches_downloadable_file(self):
+        """Downloaded STEP file hash matches step_sha256 in confirm response."""
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                self.hcls, "POST", "/api/product/create",
+                body={"request_text": "test", "fixture_id": "c2-answer-bore24"}
+            )
+        parent_id = _json_body(body)["run_id"]
+        with patch("integration.pipeline.compile_ir",
+                   side_effect=lambda raw, **kw: _mock_compile_success(
+                       raw, Path(kw["output_dir"]))):
+            _, body2 = _make_request(
+                self.hcls, "POST", f"/api/product/confirm/{parent_id}",
+                body={"confirmation_revision": 0, "confirmed": True, "patch": {}}
+            )
+        d2 = _json_body(body2)
+        child_id = d2["run_id"]
+        _, step_bytes = _make_request(self.hcls, "GET", f"/product-download/{child_id}")
+        actual_hash = hashlib.sha256(step_bytes).hexdigest()
+        self.assertEqual(actual_hash, d2["step_sha256"])
+
+
+# ===========================================================================
+# TestXSSNarrowFix (narrow fix: request_text + step_sha256 XSS regression)
+# ===========================================================================
+
+class TestXSSNarrowFix(unittest.TestCase):
+    """XSS regression for new dynamic fields: request_text and step_sha256."""
+
+    def test_product_html_no_bare_request_text(self):
+        """d.request_text must not appear bare in template literals."""
+        import re
+        bare = re.search(r'\$\{d\.request_text\}', PRODUCT_HTML_CONTENT)
+        self.assertIsNone(bare, "d.request_text must be in esc()")
+
+    def test_product_html_no_bare_step_sha256(self):
+        """d.step_sha256 must not appear bare in template literals."""
+        import re
+        bare = re.search(r'\$\{d\.step_sha256\}', PRODUCT_HTML_CONTENT)
+        self.assertIsNone(bare, "d.step_sha256 must be in esc()")
+
+    def test_product_html_step_sha256_uses_esc(self):
+        """PRODUCT_HTML uses esc(d.step_sha256) in template."""
+        self.assertIn("esc(d.step_sha256)", PRODUCT_HTML_CONTENT)
+
+    def test_product_html_request_text_uses_esc(self):
+        """PRODUCT_HTML uses esc(d.request_text) in template."""
+        self.assertIn("esc(d.request_text)", PRODUCT_HTML_CONTENT)
+
+    def test_malicious_request_text_in_json_response_safe(self):
+        """XSS payload in request_text is a JSON string; esc() handles it.
+
+        The API correctly returns request_text as a JSON string value.
+        The safety invariant is:
+        1. The payload is inside a JSON string (not bare HTML in the response)
+        2. The browser-side esc() renders it as text, not as HTML
+        This test verifies (1): the payload appears as a JSON-encoded string,
+        not as an executable HTML element outside JSON.
+        """
+        import tempfile
+        tmpdir = tempfile.mkdtemp()
+        hcls = _make_handler(tmpdir)
+        payload = '<img src=x onerror=alert(1)>'
+        with patch("integration.pipeline.compile_ir"):
+            _, body = _make_request(
+                hcls, "POST", "/api/product/create",
+                body={"request_text": payload, "fixture_id": "c2-answer-bore24"}
+            )
+        d = _json_body(body)
+        # API returns it as a plain string; esc() in JS handles rendering
+        self.assertEqual(d["request_text"], payload)
+        # The payload must be inside a JSON string value, not injected as
+        # bare HTML outside the JSON body. We check that it appears as a
+        # JSON-encoded string (with surrounding quotes), not as a raw tag.
+        raw_json = body.decode("utf-8")
+        # Must be inside a JSON string (quoted), not a bare HTML element
+        self.assertIn('"request_text": "<img src=x onerror=alert(1)>"', raw_json,
+                      "Payload must be inside JSON string quotes")
+        # The response Content-Type is application/json (checked elsewhere),
+        # so the browser will parse it as JSON, not as HTML. The esc() in
+        # renderConfirmSection prevents it from being interpreted as HTML.
+
+    def test_switch_run_no_stale_step_sha256(self):
+        """After resetAll (new run), old step_sha256 must not persist.
+
+        This is a source-code check: resetAll() clears result-area innerHTML,
+        so any displayed hash from a prior run is wiped before the new run shows.
+        """
+        # Verify resetAll() clears result-area and step3
+        self.assertIn("result-area", PRODUCT_HTML_CONTENT)
+        self.assertIn("resetAll", PRODUCT_HTML_CONTENT)
+        # resetAll sets innerHTML = '' for result-area
+        idx_reset = PRODUCT_HTML_CONTENT.find("function resetAll")
+        self.assertGreater(idx_reset, 0)
+        reset_block_end = PRODUCT_HTML_CONTENT.find("}", idx_reset + 1)
+        reset_block = PRODUCT_HTML_CONTENT[idx_reset:reset_block_end + 1]
+        self.assertIn("result-area", reset_block)
+
+    def test_step_sha256_inside_succeeded_block_not_in_failed_path(self):
+        """step_sha256 is shown only in succeeded block, not globally."""
+        idx_succeeded = PRODUCT_HTML_CONTENT.find("if (d.product_status === 'succeeded')")
+        self.assertGreater(idx_succeeded, 0)
+        # sha256 must appear after the succeeded check in the same function
+        idx_sha = PRODUCT_HTML_CONTENT.find("step_sha256", idx_succeeded)
+        self.assertGreater(idx_sha, idx_succeeded)
+        # sha256 must NOT appear before the succeeded check in renderResultSection
+        idx_render_result = PRODUCT_HTML_CONTENT.find("function renderResultSection")
+        self.assertGreater(idx_render_result, 0)
+        idx_sha_before = PRODUCT_HTML_CONTENT.find("step_sha256", idx_render_result)
+        # It should not appear before the succeeded block within renderResultSection
+        self.assertGreaterEqual(idx_sha_before, idx_succeeded,
+                                "step_sha256 must only appear inside succeeded block")
+
+
 if __name__ == "__main__":
     unittest.main()

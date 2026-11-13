@@ -463,6 +463,7 @@ function renderConfirmSection(d) {
   let html = `<div>运行 ID: <code>${esc(d.run_id)}</code></div>`;
   html += `<div style="margin:.4rem 0">产品状态: ${statusBadge(d.product_status)} 决策: <b>${esc(d.decision)}</b></div>`;
   if (d.extraction_source) html += `<div style="font-size:.8rem;color:#666">来源: ${esc(d.extraction_source)} / fixture: ${esc(d.envelope_fixture_label)}</div>`;
+  if (d.request_text) html += `<div style="margin-top:.4rem;padding:.4rem .6rem;background:#f5f5f5;border-left:3px solid #aaa;font-size:.85rem"><b>原始需求文本（仅作记录）:</b><br>${esc(d.request_text)}</div>`;
 
   if (d.extracted_parameters && Object.keys(d.extracted_parameters).length) {
     html += '<div style="margin-top:.5rem"><b>抽取参数（来自 fixture）:</b></div>';
@@ -591,6 +592,9 @@ function renderResultSection(d) {
   }
   if (d.product_status === 'succeeded') {
     html += `<div style="margin-top:.8rem">`;
+    if (d.step_sha256) {
+      html += `<div style="margin-bottom:.5rem"><b>STEP SHA-256:</b><br><code style="font-size:.75rem;word-break:break-all">${esc(d.step_sha256)}</code></div>`;
+    }
     html += `<a href="/product-download/${esc(d.run_id)}" download="product-${esc(d.run_id).substring(0,8)}.step">`;
     html += `<button class="btn-green">⬇ 下载 STEP (${esc(d.step_bytes)} 字节)</button></a>`;
     html += `</div>`;

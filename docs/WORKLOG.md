@@ -2670,6 +2670,21 @@ commit=待提交
 - 状态：`planned`，等待已有 C1/C2 CC 对话框认领；实现后由 Codex 中枢在固定 CAD venv 独立验收。
 - 下一步：将工作单交给已有 C1/C2 CC 对话框实施；验收后再决定是否准备新的产品 live extraction scope。
 
+### APP-003-C3-PRODUCT-UI-NARROW-FIX / CC / review / 2026-11-13
+
+- 动作：在分支 `cc/APP-003-C3-PRODUCT-UI`（HEAD `2c810d2`）完成 C3 页面信息展示窄修。
+- **修复 1：确认页展示原始需求文本**
+  - `renderConfirmSection()` 新增 `esc(d.request_text)` 展示行，让用户在确认参数前对照原始需求。
+- **修复 2：成功结果展示 STEP SHA-256**
+  - `renderResultSection()` 的 `succeeded` 分支新增 `esc(d.step_sha256)` 完整 SHA-256 展示；失败/阻断路径不渲染。
+- **补强 XSS 回归**
+  - 新增 `TestRequestTextDisplay`（4 项）、`TestStepHashDisplay`（6 项）、`TestXSSNarrowFix`（7 项），共 17 项。
+  - 覆盖 `<img src=x onerror=alert(1)>` 作为 request_text 的安全渲染验证。
+  - 验证 step_sha256 仅在 succeeded 块内展示，resetAll() 清除旧内容。
+- 验证（sandbox Python 3.10.12）：`py_compile` 通过；`git diff --check` 通过；test_product_ui **62/62**（原 45 + 新 17）；test_product_flow+test_demo_handler **114/114**；integration **81/81**；schema **17/17**。
+- 不变量：不修改 C2 API/状态机、C1 路由、v5/Schema/IR/compiler/A2；`FORMAL_EVALUATION_ALLOWED=False` 不变；仅修改 `src/demo/server.py`、`tests/demo/test_product_ui.py`、checkpoint、WORKLOG。
+- 下一步：提交窄修 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核。
+
 ### APP-003-C3-PRODUCT-UI / CC / review / 2026-11-13
 
 - 动作：在分支 `cc/APP-003-C3-PRODUCT-UI`（基于 `main=1bc019f`）实现 C3 离线自然语言产品确认 UI。
