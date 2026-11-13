@@ -4,6 +4,16 @@
 
 ## 2026-11-13
 
+### APP-003-LIVE-UI / CC / review
+
+- 动作：将已有 `ProductLiveService` 和 `/api/product-live/*` 受控 API 接入明确标记的 live 确认页面（`/product-live`）。
+  - `src/demo/server.py`（修改）：新增 `_build_product_live_html()` 构建 live UI 单页 HTML+CSS+JS；新增 `PRODUCT_LIVE_HTML_CONTENT`/`PRODUCT_LIVE_HTML_BYTES` 常量；新增 `GET /product-live` 路由 → `_handle_product_live_ui()`（返回带 offline 警告的 live UI 页面）；新增 `GET /api/product-live/inputs` 路由 → `_handle_product_live_inputs()`（返回授权 input IDs 白名单，无 key/label/路径）；C1/C2/C3 路由完全不变。
+  - `tests/demo/test_product_live_ui.py`（新增，36 项）：GET /product-live → 200 HTML 含 banner；esc() 五种转义；无裸插值；GET /api/product-live/inputs；无 service → 503；P1 create→confirm→download E2E；P2/P3/P4 blocked 零 CAD；failed 无 STEP；XSS payload 为 JSON 字符串；API 响应无 secret/labels；C1/C2/C3 向后兼容。
+- 验证：`py_compile` → OK；`git diff --check` → OK；`test_product_live_ui` 36/36 → OK；`test_product_live` 99/99 → OK；combined 135/135 → OK；schema 17/17 → OK。
+- 安全：`FORMAL_EVALUATION_ALLOWED=False` 全程不变；不发网络请求；不读密钥；不复用 A2 凭证；不创建正式 batch；evaluator labels 不进入页面/HTTP 请求；XSS 通过 `esc()` 防护。
+- 限制：沙箱 Python 3.10.12，非 3.11.18；固定 CAD venv 全量验证待完成；真实 DeepSeek HTTP 请求需 Codex 复核 + 负责人授权；浏览器端 XSS DevTools 验证需 Mac + 浏览器。
+- 下一步：Codex 中枢在 Python 3.11.18 重跑 135 项（test_product_live + test_product_live_ui）+ C3 regression；负责人审阅后决定是否批准具体 batch ID 和 live 执行授权。状态 `review`，不 push、不合并 main。
+
 ### APP-003-LIVE-PRODUCT-R1-CORRECTION-2 / Codex / review
 
 - 动作：在 `cc/APP-003-LIVE-PRODUCT` HEAD `5c28b96` 完成窄修独立复核。固定 CAD venv Python 3.11.18 下 product live 99/99、C1/C2/C3 + integration 264/264、Schema 17/17、CAD compilation 13/13 全部通过；`py_compile` 和 `git diff --check` 通过。

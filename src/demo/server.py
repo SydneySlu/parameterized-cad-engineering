@@ -653,6 +653,320 @@ PRODUCT_HTML_CONTENT = _build_product_html()
 PRODUCT_HTML_BYTES = PRODUCT_HTML_CONTENT.encode("utf-8")
 
 
+# ---------------------------------------------------------------------------
+# Product Live UI HTML (APP-003-LIVE-UI)
+# ---------------------------------------------------------------------------
+
+def _build_product_live_html() -> str:
+    return """\
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Live 受控抽取确认</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'PingFang SC',system-ui,sans-serif;background:#f5f5f5;color:#222;padding:1rem}
+.container{max-width:920px;margin:0 auto}
+.banner{background:#fffbe6;border:2px solid #d4b106;color:#614700;padding:.7rem 1rem;
+  border-radius:6px;margin-bottom:1rem;font-size:.85rem;font-weight:600}
+.card{background:#fff;border:1px solid #d9d9d9;border-radius:6px;padding:1.2rem;margin-bottom:1rem}
+h2{font-size:1rem;font-weight:600;margin-bottom:.8rem;color:#333;
+  border-bottom:1px solid #eee;padding-bottom:.4rem}
+label{display:block;font-weight:500;margin-bottom:.3rem;font-size:.85rem}
+select,textarea,input[type=text],input[type=number]{width:100%;padding:.45rem .6rem;
+  border:1px solid #ccc;border-radius:4px;font-size:.85rem;background:#fafafa}
+textarea{resize:vertical;height:65px;font-family:inherit}
+button{padding:.5rem 1.2rem;background:#1677ff;color:#fff;border:none;border-radius:4px;
+  cursor:pointer;font-size:.85rem;margin-top:.6rem}
+button:disabled{background:#a0c4ff;cursor:not-allowed}
+.btn-green{background:#389e0d}
+.btn-green:hover{background:#237804}
+.btn-reset{background:#8c8c8c}
+.badge{display:inline-block;padding:.15rem .6rem;border-radius:4px;font-size:.78rem;font-weight:600}
+.s-needs_confirmation{background:#e6f4ff;border:1px solid #91caff;color:#0958d9}
+.s-succeeded{background:#f6ffed;border:1px solid #b7eb8f;color:#389e0d}
+.s-blocked{background:#fff7e6;border:1px solid #ffd591;color:#d46b08}
+.s-failed{background:#fff2f0;border:1px solid #ffccc7;color:#cf1322}
+.s-disabled{background:#f0f0f0;border:1px solid #d9d9d9;color:#888}
+table.info-table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:.4rem}
+table.info-table th,table.info-table td{border:1px solid #e0e0e0;padding:.3rem .6rem;text-align:left}
+table.info-table th{background:#f5f5f5;font-weight:500}
+.error-list{color:#cf1322;font-size:.82rem;margin-top:.4rem}
+.error-list li{margin-left:1rem}
+details{margin-top:.5rem}
+summary{cursor:pointer;font-size:.82rem;color:#1677ff;user-select:none}
+pre{background:#f8f8f8;padding:.5rem;border-radius:4px;font-size:.72rem;
+  overflow:auto;max-height:280px;white-space:pre-wrap;word-break:break-all}
+.val-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:.3rem;margin-top:.4rem}
+.val-item{background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;padding:.3rem .5rem;font-size:.78rem}
+.val-label{color:#666;font-size:.72rem}
+.val-value{font-weight:600}
+.disclaimer{font-size:.73rem;color:#888;margin-top:1rem;padding:.5rem;
+  background:#fafafa;border:1px solid #e0e0e0;border-radius:4px}
+#step2,#step3{display:none}
+.note{font-size:.8rem;color:#666;margin-top:.4rem;background:#fffbe6;
+  padding:.4rem .6rem;border-radius:4px;border:1px solid #ffe58f}
+.status-row{margin:.4rem 0}
+.param-patch{margin-top:.5rem}
+.param-patch label{font-size:.82rem}
+.changed{color:#0958d9;font-weight:600;font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="banner">
+    ⚠ 受控 Product Live UI — offline/mock transport 或 synthetic envelope | 非真实模型效果 |
+    单族 set_screw_shaft_collar (GN 705) | STEP 通过 ≠ 制造认证 | 不接触 API key 或 raw response
+  </div>
+
+  <div id="step1" class="card">
+    <h2>步骤 1：输入需求并选择受控输入</h2>
+    <label for="live-req-text">需求文本（提交到服务端受控抽取 API）</label>
+    <textarea id="live-req-text" placeholder="例：请按 GN 705 做一个轴环，轴孔直径 24 mm。"></textarea>
+    <label for="input-sel" style="margin-top:.6rem">选择受控输入 ID</label>
+    <select id="input-sel">
+      <option value="">— 请选择 —</option>
+    </select>
+    <div class="note">
+      服务端持有所有 transport 和 authorization；浏览器只提交 request_text 和 input_id，
+      不提交模型响应、evaluator labels 或 CAD 结果。
+    </div>
+    <button id="live-create-btn" onclick="liveCreate()">发起受控抽取</button>
+  </div>
+
+  <div id="step2" class="card">
+    <h2>步骤 2：确认或补充参数</h2>
+    <div id="live-run-info"></div>
+    <div id="live-confirm-form"></div>
+  </div>
+
+  <div id="step3" class="card">
+    <h2>步骤 3：构造结果</h2>
+    <div id="live-result-area"></div>
+  </div>
+
+  <div class="disclaimer">
+    本页面为受控 product live 抽取确认界面。测试使用 offline/mock transport 或 synthetic envelope，
+    不构成真实模型理解证据。固定环境 Python 3.11.18 / CadQuery 2.3.0。
+    保留单族、螺纹近似及 "STEP 通过 ≠ 制造认证" 限制。
+  </div>
+</div>
+
+<script>
+let liveRunId = null;
+let liveInputId = null;
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function statusBadge(st) {
+  return `<span class="badge s-${esc(st)}">${esc(st)}</span>`;
+}
+
+async function loadInputs() {
+  try {
+    const r = await fetch('/api/product-live/inputs');
+    if (!r.ok) {
+      document.getElementById('input-sel').innerHTML = '<option value="">— 加载失败 —</option>';
+      return;
+    }
+    const d = await r.json();
+    const sel = document.getElementById('input-sel');
+    sel.innerHTML = '<option value="">— 请选择 —</option>';
+    (d.inputs||[]).forEach(item => {
+      const o = document.createElement('option');
+      o.value = item.input_id;
+      o.textContent = item.input_id + (item.label ? ' — ' + item.label : '');
+      sel.appendChild(o);
+    });
+  } catch(e) {
+    document.getElementById('input-sel').innerHTML = '<option value="">— 加载失败 —</option>';
+  }
+}
+
+async function liveCreate() {
+  const reqText = document.getElementById('live-req-text').value.trim();
+  const inputId = document.getElementById('input-sel').value;
+  if (!reqText) { alert('请填写需求文本'); return; }
+  if (!inputId) { alert('请选择输入 ID'); return; }
+  const btn = document.getElementById('live-create-btn');
+  btn.disabled = true; btn.textContent = '抽取中…';
+  liveInputId = inputId;
+  try {
+    const r = await fetch('/api/product-live/create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({request_text: reqText, input_id: inputId})
+    });
+    const d = await r.json();
+    if (d.error) {
+      // PRODUCT_LIVE_DISABLED or other error
+      document.getElementById('step2').style.display = 'block';
+      document.getElementById('live-run-info').innerHTML =
+        `<div class="status-row">状态: ${statusBadge('disabled')}</div>` +
+        `<div class="error-list">${esc(d.error.message||'Service not configured')}</div>`;
+      document.getElementById('live-confirm-form').innerHTML = '';
+      document.getElementById('step3').style.display = 'none';
+      return;
+    }
+    liveRunId = d.logical_run_id;
+    renderLiveConfirmSection(d);
+    document.getElementById('step2').style.display = 'block';
+    document.getElementById('step3').style.display = 'none';
+  } catch(e) {
+    alert('请求失败: ' + esc(e.message));
+  } finally {
+    btn.disabled = false; btn.textContent = '发起受控抽取';
+  }
+}
+
+function renderLiveConfirmSection(d) {
+  const info = document.getElementById('live-run-info');
+  let html = `<div>逻辑运行 ID: <code>${esc(d.logical_run_id)}</code></div>`;
+  html += `<div class="status-row">产品状态: ${statusBadge(d.product_status)}`;
+  html += ` 决策: <b>${esc(d.decision)}</b></div>`;
+  if (d.request_text) html += `<div style="margin-top:.4rem;padding:.4rem .6rem;background:#f5f5f5;border-left:3px solid #aaa;font-size:.85rem"><b>原始需求文本:</b><br>${esc(d.request_text)}</div>`;
+  if (d.prompt_version) html += `<div style="font-size:.78rem;color:#666;margin-top:.3rem">Prompt: ${esc(d.prompt_version)} | Contract: ${esc(d.contract_version)}</div>`;
+
+  if (d.extracted_parameters && Object.keys(d.extracted_parameters).length) {
+    html += '<div style="margin-top:.5rem"><b>抽取参数:</b></div>';
+    html += '<table class="info-table"><thead><tr><th>参数</th><th>值</th></tr></thead><tbody>';
+    for (const [k,v] of Object.entries(d.extracted_parameters)) {
+      html += `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  if (d.missing_fields && d.missing_fields.length) {
+    html += `<div class="error-list" style="margin-top:.4rem"><b>缺少参数:</b> ${d.missing_fields.map(f=>esc(f)).join(', ')}</div>`;
+  }
+  if (d.questions && d.questions.length) {
+    html += '<div style="margin-top:.4rem"><b>问题:</b><ul class="error-list">';
+    d.questions.forEach(q => { html += `<li>${esc(q)}</li>`; });
+    html += '</ul></div>';
+  }
+  if (d.conflicts && d.conflicts.length) {
+    html += '<div style="margin-top:.4rem"><b style="color:#cf1322">冲突:</b><ul class="error-list">';
+    d.conflicts.forEach(c => { html += `<li>[${esc(c.code||'?')}] ${esc(c.message)}</li>`; });
+    html += '</ul></div>';
+  }
+  if (d.unsupported_requests && d.unsupported_requests.length) {
+    html += `<div class="error-list" style="margin-top:.4rem"><b>不支持的请求:</b> ${d.unsupported_requests.map(esc).join(', ')}</div>`;
+  }
+  if (d.errors && d.errors.length) {
+    html += '<div style="margin-top:.4rem"><b style="color:#cf1322">错误:</b><ul class="error-list">';
+    d.errors.forEach(e => { html += `<li>[${esc(e.code||'?')}] ${esc(e.message||JSON.stringify(e))}</li>`; });
+    html += '</ul></div>';
+  }
+  info.innerHTML = html;
+
+  const form = document.getElementById('live-confirm-form');
+  if (d.product_status === 'needs_confirmation') {
+    const needsBore = (d.missing_fields||[]).includes('bore_d');
+    let fhtml = '<div class="param-patch"><b>用户参数补充:</b></div>';
+    fhtml += `<label for="live-patch-bore-d" style="margin-top:.5rem">bore_d 轴孔孔径 (mm)${needsBore?' <span style=color:red>*必填</span>':''}</label>`;
+    fhtml += `<input type="number" id="live-patch-bore-d" placeholder="留空则使用抽取值" style="max-width:200px">`;
+    fhtml += `<div style="margin-top:.7rem">`;
+    fhtml += `<button class="btn-green" onclick="liveConfirm()">确认并生成 STEP</button>`;
+    fhtml += `</div>`;
+    form.innerHTML = fhtml;
+  } else if (d.product_status === 'blocked') {
+    form.innerHTML = '<div style="margin-top:.5rem;color:#d46b08;font-weight:600">⚠ 此运行已阻断，无法继续构造。请重新创建运行。</div>';
+  } else if (d.product_status === 'failed') {
+    form.innerHTML = '<div style="margin-top:.5rem;color:#cf1322;font-weight:600">⚠ 此运行已失败，无法继续构造。请重新创建运行。</div>';
+  } else {
+    form.innerHTML = '';
+  }
+}
+
+async function liveConfirm() {
+  if (!liveRunId) { alert('无有效 run ID'); return; }
+  const patch = {};
+  const boreVal = document.getElementById('live-patch-bore-d').value.trim();
+  if (boreVal !== '') {
+    const parsed = parseInt(boreVal, 10);
+    if (!isNaN(parsed)) patch.bore_d = parsed;
+  }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '生成中…';
+  try {
+    const r = await fetch(`/api/product-live/confirm/${esc(liveRunId)}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({confirmed: true, patch})
+    });
+    const d = await r.json();
+    renderLiveResultSection(d);
+    document.getElementById('step3').style.display = 'block';
+  } catch(e) {
+    alert('确认失败: ' + esc(e.message));
+  } finally {
+    btn.disabled = false; btn.textContent = '确认并生成 STEP';
+  }
+}
+
+function renderLiveResultSection(d) {
+  const area = document.getElementById('live-result-area');
+  let html = `<div>运行 ID: <code>${esc(d.logical_run_id)}</code></div>`;
+  html += `<div class="status-row">产品状态: ${statusBadge(d.product_status)}`;
+  if (d.pipeline_status) html += ` pipeline: <b>${esc(d.pipeline_status)}</b>`;
+  if (d.pipeline_stage) html += ` / <b>${esc(d.pipeline_stage)}</b>`;
+  html += `</div>`;
+
+  if (d.ir_index && d.ir_index.step_sha256) {
+    html += `<div style="margin-top:.5rem"><b>STEP SHA-256:</b><br><code style="font-size:.75rem;word-break:break-all">${esc(d.ir_index.step_sha256)}</code></div>`;
+  }
+  if (d.ir_index && d.ir_index.step_bytes) {
+    html += `<div style="font-size:.8rem;color:#666;margin-top:.3rem">STEP 字节: ${esc(d.ir_index.step_bytes)}</div>`;
+  }
+
+  if (d.errors && d.errors.length) {
+    html += '<div style="margin-top:.5rem"><b style="color:#cf1322">错误:</b><ul class="error-list">';
+    d.errors.forEach(e => { html += `<li>[${esc(e.code||e.stage||'?')}] ${esc(e.message||JSON.stringify(e))}</li>`; });
+    html += '</ul></div>';
+  }
+
+  if (d.product_status === 'succeeded') {
+    html += `<div style="margin-top:.8rem">`;
+    html += `<a href="/product-live-download/${esc(d.logical_run_id)}" download="product-live-${esc(d.logical_run_id).substring(0,16)}.step">`;
+    html += `<button class="btn-green">⬇ 下载 STEP</button></a>`;
+    html += `</div>`;
+  } else if (d.product_status === 'failed' || d.product_status === 'blocked') {
+    html += `<div style="margin-top:.5rem;color:#cf1322;font-size:.85rem">此运行不产生可下载的 STEP 文件。</div>`;
+  }
+
+  html += `<div style="margin-top:.7rem"><button class="btn-reset" onclick="liveReset()">新建另一个需求</button></div>`;
+  area.innerHTML = html;
+}
+
+function liveReset() {
+  liveRunId = null; liveInputId = null;
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'none';
+  document.getElementById('live-run-info').innerHTML = '';
+  document.getElementById('live-confirm-form').innerHTML = '';
+  document.getElementById('live-result-area').innerHTML = '';
+  document.getElementById('live-req-text').value = '';
+  document.getElementById('input-sel').value = '';
+}
+
+loadInputs();
+</script>
+</body>
+</html>"""
+
+
+PRODUCT_LIVE_HTML_CONTENT = _build_product_live_html()
+PRODUCT_LIVE_HTML_BYTES = PRODUCT_LIVE_HTML_CONTENT.encode("utf-8")
+
+
 def _get_product_live_step_bytes_secure(state: "Any") -> bytes | None:
     """6-layer security check for product live STEP download.
 
@@ -784,6 +1098,11 @@ def make_handler_class(
                 self._handle_product_ui()
                 return
 
+            # Product live UI (APP-003-LIVE-UI)
+            if path == "/product-live" or path == "/product-live/":
+                self._handle_product_live_ui()
+                return
+
             # C3: fixture allowlist
             if path == "/api/product/fixtures":
                 self._handle_product_fixtures()
@@ -806,6 +1125,10 @@ def make_handler_class(
                     return
 
             # Product live routes (GET)
+            if path == "/api/product-live/inputs":
+                self._handle_product_live_inputs()
+                return
+
             if path.startswith("/api/product-live/"):
                 tail = path[len("/api/product-live/"):]
                 if tail:
@@ -1075,6 +1398,51 @@ def make_handler_class(
                 for fid in _product._fixture_registry.keys()
             ]
             self._send_json(200, {"fixtures": fixtures})
+
+        # ------------------------------------------------------------------
+        # Product live UI handlers (APP-003-LIVE-UI)
+        # ------------------------------------------------------------------
+
+        def _handle_product_live_ui(self) -> None:
+            """GET /product-live — Product live extraction confirmation UI.
+
+            Always serves the page HTML regardless of whether a ProductLiveService
+            is configured.  If no service is configured, the page will show
+            'disabled' when the user attempts to create a run.
+            """
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(PRODUCT_LIVE_HTML_BYTES)))
+            self.end_headers()
+            self.wfile.write(PRODUCT_LIVE_HTML_BYTES)
+
+        def _handle_product_live_inputs(self) -> None:
+            """GET /api/product-live/inputs — available input IDs (allowlist only).
+
+            Returns the authorized input IDs from the product live scope.
+            Never returns API keys, model responses, evaluator labels, or paths.
+            If no service is configured, returns PRODUCT_LIVE_DISABLED.
+            """
+            if not _PRODUCT_LIVE_AVAILABLE:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live runner not available")
+                return
+            if _pl_service is None and _product_live is None:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live service not configured")
+                return
+            # Return the frozen input IDs from the authorization scope.
+            # These are labels only — never expose model responses or evaluator labels.
+            try:
+                from integration.product_live_runner import PRODUCT_INPUT_IDS
+                inputs = [
+                    {"input_id": iid, "label": iid}
+                    for iid in PRODUCT_INPUT_IDS
+                ]
+                self._send_json(200, {"inputs": inputs})
+            except Exception as exc:
+                self._send_error_json(503, "PRODUCT_LIVE_INPUTS_ERROR",
+                                      f"Could not load input IDs: {type(exc).__name__}")
 
         # ------------------------------------------------------------------
         # Product live handlers (APP-003-LIVE-PRODUCT)
