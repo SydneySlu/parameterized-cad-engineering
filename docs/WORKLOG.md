@@ -11,6 +11,12 @@
 - HTTP/CAD 烟测：注入 FakeTransport 的 P1 create→needs_confirmation→confirm→succeeded→download 通过，真实 STEP 148393 字节，下载 SHA-256 与 `ir_index.step_sha256` 一致，离线 transport 仅 1 次；P2/P3/P4 阻断和零 CAD 由专项回归覆盖。
 - 结论：本轮窄修 `pass`，可合入 `main`；合入前状态保持 `review`。未创建正式 batch，未发真实 DeepSeek 请求，未读取密钥或 `.env`。合入后再收束任务状态，再由负责人另行批准具体 live batch 和 provider 请求。
 
+### APP-003-LIVE-SCOPE-CLOSEOUT / Codex / done
+
+- 动作：核对负责人已将产品 live 受控入口及路径安全窄修合入 `main`，当前 `main`/`origin/main` 均为 `db26fda`，工作区干净。
+- 结果：APP-003-LIVE-SCOPE 收束为 `done`。固定环境 product live 99、Demo/Integration 264、Schema 17、CAD 13 通过；P1 离线 transport 下 create→confirm→真实 STEP download 通过。该结果证明受控 API 和确认门，不证明真实 provider 效果。
+- 下一步：规划 `APP-003-LIVE-UI`，把 `/api/product-live/*` 接入明确标记的确认页面；先用 FakeTransport/synthetic envelope 离线验收，之后再决定是否申请新的 live batch。现阶段不创建 batch、不发真实请求、不读取密钥。
+
 ### APP-003-LIVE-PRODUCT-R1-CORRECTION-2 / CC / review
 
 - 动作：窄修 `_to_repo_relative_path()` 路径安全问题。旧实现在解析失败时会把相对路径原样返回（`return path_str`），使 `../../outside/file.step` 或 symlink 逃逸路径绕过 containment check 进入 summary/HTTP 响应。
