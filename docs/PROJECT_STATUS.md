@@ -74,7 +74,7 @@
 | APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | done | `8dce35a` 已合入并推送 `main`；合入后固定 CAD venv 回归保持通过：Product Live/UI 135、C1/C2/C3 183、Integration 81、Schema 17、CAD 13；localhost 浏览器已验证 P1 STEP/hash、P2 阻断和 XSS 纯文本。仅离线注入 transport/本地 CAD，不代表真实 provider 效果。 |
 | APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧 batch `app003-product-live-20261113-01` 按批准范围完成 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。后续证据映射/脱敏修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。该结论不授权新 live 请求。 |
 | APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；P1–P4 均以 `TRANSPORT_ERROR/authentication_or_permission` 在模型响应前失败，summary=`failed`，无确认/CAD/STEP，raw/pipeline 文件均为 0。只读核查发现 `.env` key 非空但 formal runner 未加载 `.env`，transport 只读取进程环境；`5bf82ce`/`df3f7b4` fail-closed 加载修复已通过独立复核（固定 CAD venv 凭据专项 9/9、Product Live 107/107、diff check 通过）。不能据旧结果判 provider 权限问题；修复尚未验证 provider 是否接受账户/key；旧 batch 只读，任何重试均需全新 scope/batch/approval/preflight 与明确执行授权。 |
-| APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 候选 batch `app003-product-live-20261114-02` 沿用冻结四输入、DeepSeek `deepseek-flash` / C0、最多 12 HTTP；固定 CAD venv 离线 preflight 与 dry-run 通过，目录不存在，0 网络/凭据读取。负责人已批准并通过 formal preflight；真实请求仍需单独明确执行授权。 |
+| APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | batch `app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP；P1 answer→needs_confirmation，P2 ask、P3/P4 refuse→blocked；CAD/STEP=0。等待独立复核，batch 只读。 |
 
 ## 当前缺口与限制
 
@@ -102,5 +102,5 @@
 3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
 4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 只读保留；新 batch `app003-product-live-20261114-01` 已按批准 scope 消耗 4/12 HTTP，但四条请求均因 `authentication_or_permission` 在模型响应前失败，没有确认/CAD/STEP。该 batch 不得重跑或追加；后续重试必须先解决凭据问题并创建全新 scope/batch/approval/preflight。
+6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 只读保留；batch `app003-product-live-20261114-01` 旧结果保持只读；凭据入口修复后，新 batch `app003-product-live-20261114-02` 完成 4/12 次真实 HTTP：P1 answer→needs_confirmation，P2 ask、P3/P4 refuse→blocked，无 CAD/STEP。当前批次保持只读，进一步确认 P1 并运行 CAD 需独立 per-run 确认。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。

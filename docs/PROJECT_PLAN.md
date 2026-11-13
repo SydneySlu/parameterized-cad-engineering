@@ -26,7 +26,7 @@
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
 - v5 fixed-set 真实双模型评测已完成。A2 `...-03` 的两条 answer 因系统 Python 缺少 `jsonschema` 未通过 IR Schema 阶段，一条 ask 正确停止；该历史批次只读保留。runtime guard 已合入并在固定 CAD venv 下复验。获批批次 `...-04` 在 CAD venv 中完成 3 次真实 DeepSeek 请求：24 mm 与 80 mm answer 均生成并回读 STEP，缺孔径请求为 ask；账本 3/9，Codex 中枢独立核对了 summary、预算、raw 文件路径/哈希元数据、IR/STEP 与 index/manifest hash 及 readback comparison。批次只读保留，证据见 A2 checkpoint 与独立审查报告。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
 - 里程碑 B 已完成固定环境定向验收。单位换算使用合成 envelope 和真实本地 CAD/STEP，不冒充真实模型语言理解；显式冲突与导出失败均验证不误报成功。已完成六类链路验收不等于广泛语言覆盖；是否增加 live 样本留待负责人根据具体语言风险假设另行决定，任何新增请求都须新的 batch scope、预算、ID 和授权。
-- 里程碑 C 已完成 C1 手动参数演示和 C2/C3 离线自然语言产品流程。上一产品 live batch 与本次 batch 均只读保留；本次新 batch 按批准 scope 消耗 4/12 HTTP，但四条请求均因 provider authentication/permission 在响应前失败，无 CAD/STEP。后续若修复凭据并重试，必须另立 scope、batch、approval 和 preflight，不得使用本批次剩余预算。
+- 里程碑 C 已完成 C1 手动参数演示和 C2/C3 离线自然语言产品流程。新 batch `app003-product-live-20261114-02` 在凭据入口修复后完成 4/12 次真实请求；P1 answer 停在 needs_confirmation，P2 ask 与 P3/P4 refuse 均阻断，无 CAD/STEP。结果待独立复核；batch 只读。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 

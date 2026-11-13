@@ -1,0 +1,81 @@
+{
+  "task_id": "APP-003-LIVE-PREFLIGHT-20261114-02",
+  "batch_id": "app003-product-live-20261114-02",
+  "execution_approval": {
+    "approver": "Wang sikai",
+    "approved_at_utc": "2026-11-13T18:28:31Z",
+    "approval_record_ref": "Codex conversation — APP-003-LIVE-PREFLIGHT-20261114-02, user message dated 2026-11-14",
+    "statement": "负责人明确批准执行该 batch 的真实 DeepSeek 请求；范围为已批准 Product Live profile，最多 12 次 HTTP。"
+  },
+  "result": {
+    "batch_status": "complete",
+    "planned_runs": 4,
+    "completed_runs": 4,
+    "total_http_attempts": 4,
+    "max_http_attempts": 12,
+    "provider_attempts": {
+      "DeepSeek": 4
+    },
+    "runs": [
+      {
+        "logical_run_id": "P1-24mm__C0__DeepSeek__deepseek-flash",
+        "product_status": "needs_confirmation",
+        "llm_status": "answer",
+        "attempt_count": 1,
+        "error_codes": [],
+        "raw_retained": true,
+        "raw_sha256": "bae651b5d9237df0ccff127165da09a1776939cd5ddd1c654ef4d625ef3abb99",
+        "step_path": null
+      },
+      {
+        "logical_run_id": "P2-ask-bore__C0__DeepSeek__deepseek-flash",
+        "product_status": "blocked",
+        "llm_status": "ask",
+        "attempt_count": 1,
+        "error_codes": [
+          "GATE_DECISION_ASK"
+        ],
+        "raw_retained": true,
+        "raw_sha256": "4ceb9950c7d9143243e78438640d1902d9943942811fe40a6b190d987fe108c9",
+        "step_path": null
+      },
+      {
+        "logical_run_id": "P3-catalog-conflict__C0__DeepSeek__deepseek-flash",
+        "product_status": "blocked",
+        "llm_status": "refuse",
+        "attempt_count": 1,
+        "error_codes": [
+          "GATE_DECISION_REFUSE"
+        ],
+        "raw_retained": true,
+        "raw_sha256": "d43878d4459cfc007f1a8d32fed52e78bea3ef09beed79879966fa3687fbf5e2",
+        "step_path": null
+      },
+      {
+        "logical_run_id": "P4-unsupported__C0__DeepSeek__deepseek-flash",
+        "product_status": "blocked",
+        "llm_status": "refuse",
+        "attempt_count": 1,
+        "error_codes": [
+          "GATE_DECISION_REFUSE"
+        ],
+        "raw_retained": true,
+        "raw_sha256": "d307f66508ac88d05f663b7e234395fdcdd240d5f799ecebb38d0c0c055e145f",
+        "step_path": null
+      }
+    ],
+    "raw_file_count": 4,
+    "pipeline_directory_count": 0,
+    "summary_finalize_error": null
+  },
+  "safety": {
+    "cad_pipeline_invoked": false,
+    "step_files_created": false,
+    "reason": "P1 returned answer/needs_confirmation and no per-run product parameter confirmation was submitted; P2-P4 were ask/refuse and blocked.",
+    "raw_bodies_read_for_report": false,
+    "secrets_or_authorization_headers_exposed": false,
+    "old_batches_modified_or_replayed": false,
+    "formal_evaluation_allowed": false
+  },
+  "limitations": "Four frozen stimuli only; this is a credential/provider reachability and narrow product smoke result, not broad language quality evidence or manufacturing certification."
+}

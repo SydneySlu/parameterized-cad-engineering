@@ -2941,3 +2941,13 @@ commit=待提交
 - 边界：网络=0，未读取 `.env`/API key，未创建正式 batch/ledger/transport，未运行 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。formal preflight 不等于 live execution approval。
 - 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/formal-preflight.json`；负责人 `Wang sikai`，批准时间 `2026-11-13T18:22:54Z`，引用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261114-02, user message dated 2026-11-14`。
 - 下一步：等待负责人对该新 batch 的真实 DeepSeek 请求作单独明确执行批准；在此之前不发送 HTTP。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-LIVE-EXECUTION / Codex 中枢 / review / 2026-11-14
+
+- 动作：负责人明确批准后，执行全新 batch `app003-product-live-20261114-02` 的真实 DeepSeek Product Live 请求。
+- 结果：4 条冻结输入各 1 次 HTTP，预算 4/12，summary=`complete`；4 个 raw 响应已按策略留存（本记录未读取正文）。P1 为 answer/needs_confirmation；P2 为 ask/blocked；P3、P4 为 refuse/blocked。
+- CAD/STEP：没有提交 P1 的单次产品确认，故未调用 CAD pipeline，无 STEP、无 pipeline 产物。
+- 边界：不重跑、不追加本 batch；旧 batch 只读；不输出 key、Authorization header 或 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/execution-report.json` 与只读 batch summary/ledger。
+- 下一步：独立复核脱敏 summary/ledger/报告；若继续 P1 构造，需负责人针对抽取参数作 per-run 确认。
