@@ -2906,3 +2906,10 @@ commit=待提交
 - 测试：新增 `tests/integration/test_product_live_env.py`，覆盖 `.env` 加载、优先级、空/缺失失败、无输出、正式路径在 batch 创建前失败、dry-run 不加载；固定 CAD venv Python 3.11.18 下 9/9 通过。Product Live 既有专项 107/107 通过；py_compile 与 diff check 通过。
 - 边界：没有发 HTTP、没有验证 provider 账户权限；没有重跑或追加任何历史 batch。`app003-product-live-20261114-01` 仍只读，剩余 8 次不可用。真实 provider 权限判断需在此修复经独立复核后，另行新建 scope/batch/approval/preflight 并取得明确执行授权。
 - 下一步：完成代码/文档复核和本地提交；随后由负责人决定是否批准新的 provider diagnostic smoke。
+
+### APP-003-LIVE-CREDENTIAL-ENTRY-FIX-WHITESPACE / Codex / review / 2026-11-14
+
+- 动作：处理独立复核对 `5bf82ce` 提出的 EOF whitespace 检查项。
+- 修改：移除 `src/llm/env_loader.py` 与 `tests/integration/test_product_live_env.py` 的额外末尾空行。
+- 验证：固定 CAD venv Python 3.11.18 下 py_compile 通过，环境 loader 9/9、Product Live 107/107 通过；输出只有测试既有 ResourceWarning。提交后复跑 `git diff --check a7fe414..HEAD`。
+- 边界：纯 whitespace 修正，无网络、provider、密钥读取或历史 batch 操作。

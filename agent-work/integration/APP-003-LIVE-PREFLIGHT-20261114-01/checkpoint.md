@@ -43,6 +43,12 @@ PY
 git status --short --branch
 ```
 
+### 独立复核 whitespace follow-up
+
+- 独立复核对 `5bf82ce` 给出 `review`：功能/安全/正常与失败路径均通过，唯一问题是该提交范围的 `git diff --check a7fe414..5bf82ce` 指出两个新文件 EOF 额外空行。
+- 已删除 `src/llm/env_loader.py` 与 `tests/integration/test_product_live_env.py` 的多余末尾空行；重跑 py_compile、环境测试 9/9、Product Live 107/107 均通过。准备 follow-up commit 后再次执行基线到 HEAD 的 diff check。
+- 不涉及运行逻辑；未调用 provider/网络，旧批次只读。
+
 结果：离线 preflight `ok=true`、dry-run `preflight_ok=true`；Python 3.11.18；candidate batch dir absent before/after；未调用 provider/网络，未读取 `.env`/密钥，未创建正式 batch/ledger。
 
 ## 尚未完成 / 前置 gate
