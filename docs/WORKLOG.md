@@ -2669,3 +2669,23 @@ commit=待提交
 - 边界：C3 仍仅使用 offline synthetic fixtures；浏览器不接触模型/provider/key；不创建 batch，不改变 C2 状态机或既有 gate。UI 应明确需求文本仅作记录、fixture 提供抽取结果。
 - 状态：`planned`，等待已有 C1/C2 CC 对话框认领；实现后由 Codex 中枢在固定 CAD venv 独立验收。
 - 下一步：将工作单交给已有 C1/C2 CC 对话框实施；验收后再决定是否准备新的产品 live extraction scope。
+
+### APP-003-C3-PRODUCT-UI / CC / review / 2026-11-13
+
+- 动作：在分支 `cc/APP-003-C3-PRODUCT-UI`（基于 `main=1bc019f`）实现 C3 离线自然语言产品确认 UI。
+- 新增/修改文件：
+  - `src/demo/server.py`（修改）：新增 `_build_product_html()` C3 单页 HTML+CSS+JS；`GET /product` 和 `GET /api/product/fixtures` 路由；C1/C2 路由不变
+  - `tests/demo/test_product_ui.py`（新增）：45 项 HTTP 集成测试（使用 MockSocket + mock compile_ir）
+  - `agent-work/integration/APP-003-C3/checkpoint.md`（新增）
+  - `docs/WORKLOG.md`（追加）
+- 安全约束：所有动态值通过 `esc()` 转义；fixture 列表不暴露文件路径；下载复用 C2 六层安全验证；不调用 LLM/provider，不读取 `.env`，不创建 batch
+- 验证（sandbox Python 3.10.12，mock CAD）：
+  - `py_compile`：通过
+  - `git diff --check`：通过
+  - C3 product UI 测试：**45/45 通过**
+  - C2 回归（test_product_flow）：**58/58 通过**
+  - C1 回归（test_demo_handler）：**56/56 通过**
+  - Integration test_pipeline + test_schema_to_ir：**81/81 通过**
+  - Schema：**17/17 通过**
+- 不变量：不修改 v5 prompt/contract、Schema、IR、compiler、A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读取密钥/`.env`；不发模型/外网请求；C1/C2 路由和 API 语义不变
+- 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核

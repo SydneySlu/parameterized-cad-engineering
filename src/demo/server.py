@@ -287,6 +287,339 @@ HTML_CONTENT = _build_html()
 HTML_BYTES = HTML_CONTENT.encode("utf-8")
 
 
+# ---------------------------------------------------------------------------
+# C3 Product UI HTML (single self-contained page)
+# ---------------------------------------------------------------------------
+
+def _build_product_html() -> str:
+    return """\
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C2 离线自然语言产品流程</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'PingFang SC',system-ui,sans-serif;background:#f5f5f5;color:#222;padding:1rem}
+.container{max-width:900px;margin:0 auto}
+.banner{background:#fffbe6;border:2px solid #d4b106;color:#614700;padding:.7rem 1rem;
+  border-radius:6px;margin-bottom:1rem;font-size:.85rem;font-weight:600}
+.card{background:#fff;border:1px solid #d9d9d9;border-radius:6px;padding:1.2rem;margin-bottom:1rem}
+h2{font-size:1rem;font-weight:600;margin-bottom:.8rem;color:#333;
+  border-bottom:1px solid #eee;padding-bottom:.4rem}
+label{display:block;font-weight:500;margin-bottom:.3rem;font-size:.85rem}
+select,textarea,input[type=text],input[type=number]{width:100%;padding:.45rem .6rem;
+  border:1px solid #ccc;border-radius:4px;font-size:.85rem;background:#fafafa}
+textarea{resize:vertical;height:65px;font-family:inherit}
+button{padding:.5rem 1.2rem;background:#1677ff;color:#fff;border:none;border-radius:4px;
+  cursor:pointer;font-size:.85rem;margin-top:.6rem}
+button:disabled{background:#a0c4ff;cursor:not-allowed}
+.btn-green{background:#389e0d}
+.btn-green:hover{background:#237804}
+.btn-reset{background:#8c8c8c}
+.badge{display:inline-block;padding:.15rem .6rem;border-radius:4px;font-size:.78rem;font-weight:600}
+.s-needs_confirmation{background:#e6f4ff;border:1px solid #91caff;color:#0958d9}
+.s-succeeded{background:#f6ffed;border:1px solid #b7eb8f;color:#389e0d}
+.s-blocked{background:#fff7e6;border:1px solid #ffd591;color:#d46b08}
+.s-failed{background:#fff2f0;border:1px solid #ffccc7;color:#cf1322}
+.s-request_received,.s-extraction_pending,.s-constructing{background:#f0f0ff;border:1px solid #aab;color:#333}
+table.info-table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:.4rem}
+table.info-table th,table.info-table td{border:1px solid #e0e0e0;padding:.3rem .6rem;text-align:left}
+table.info-table th{background:#f5f5f5;font-weight:500}
+.src-user{background:#e6f4ff;color:#0958d9;padding:.1rem .4rem;border-radius:3px;font-size:.75rem}
+.src-catalog{background:#f6ffed;color:#389e0d;padding:.1rem .4rem;border-radius:3px;font-size:.75rem}
+.src-rule{background:#fff7e6;color:#d46b08;padding:.1rem .4rem;border-radius:3px;font-size:.75rem}
+.error-list{color:#cf1322;font-size:.82rem;margin-top:.4rem}
+.error-list li{margin-left:1rem}
+details{margin-top:.5rem}
+summary{cursor:pointer;font-size:.82rem;color:#1677ff;user-select:none}
+pre{background:#f8f8f8;padding:.5rem;border-radius:4px;font-size:.72rem;
+  overflow:auto;max-height:280px;white-space:pre-wrap;word-break:break-all}
+.val-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:.3rem;margin-top:.4rem}
+.val-item{background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;padding:.3rem .5rem;font-size:.78rem}
+.val-label{color:#666;font-size:.72rem}
+.val-value{font-weight:600}
+.disclaimer{font-size:.73rem;color:#888;margin-top:1rem;padding:.5rem;
+  background:#fafafa;border:1px solid #e0e0e0;border-radius:4px}
+#step2,#step3{display:none}
+.fixture-note{font-size:.8rem;color:#666;margin-top:.4rem;background:#fffbe6;
+  padding:.4rem .6rem;border-radius:4px;border:1px solid #ffe58f}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="banner">
+    ⚠ 离线 synthetic fixture 模式 — 非真实模型抽取 | 单族 set_screw_shaft_collar (GN 705) |
+    STEP 通过 ≠ 制造认证 | 不调用任何 LLM/模型
+  </div>
+
+  <div id="step1" class="card">
+    <h2>步骤 1：输入需求并选择 Fixture</h2>
+    <label for="req-text">需求文本（仅作记录，不用于参数抽取）</label>
+    <textarea id="req-text" placeholder="例：请按 GN 705 做一个轴环，轴孔孔径 24 mm"></textarea>
+    <label for="fixture-sel" style="margin-top:.6rem">选择离线 Envelope Fixture</label>
+    <select id="fixture-sel">
+      <option value="">— 加载中… —</option>
+    </select>
+    <div class="fixture-note">
+      需求文本只作为产品记录，参数抽取结果来自所选 fixture，非模型解析。
+    </div>
+    <button id="create-btn" onclick="createRun()">创建产品运行</button>
+  </div>
+
+  <div id="step2" class="card">
+    <h2>步骤 2：确认或补充参数</h2>
+    <div id="run-info"></div>
+    <div id="confirm-form"></div>
+  </div>
+
+  <div id="step3" class="card">
+    <h2>步骤 3：构造结果</h2>
+    <div id="result-area"></div>
+  </div>
+
+  <div class="disclaimer">
+    本演示仅用于验证 C2 离线产品流程正确性。fixture 来自 synthetic v5 envelope，不构成真实自然语言理解证据。
+    固定环境 Python 3.11.18 / CadQuery 2.3.0。保留单族、螺纹近似及 "STEP 通过 ≠ 制造认证" 限制。
+  </div>
+</div>
+
+<script>
+let currentRunId = null;
+let currentRevision = 0;
+let currentStatus = null;
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function srcClass(src) {
+  if (src==='user_explicit' || src==='user_input') return 'src-user';
+  if (src==='catalog_derived') return 'src-catalog';
+  return 'src-rule';
+}
+function srcLabel(src) {
+  if (src==='user_explicit' || src==='user_input') return '用户输入';
+  if (src==='catalog_derived') return '目录派生';
+  return '规则派生';
+}
+function statusBadge(st) {
+  return `<span class="badge s-${esc(st)}">${esc(st)}</span>`;
+}
+
+async function loadFixtures() {
+  try {
+    const r = await fetch('/api/product/fixtures');
+    const d = await r.json();
+    const sel = document.getElementById('fixture-sel');
+    sel.innerHTML = '<option value="">— 请选择 —</option>';
+    (d.fixtures||[]).forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.fixture_id;
+      o.textContent = f.label || f.fixture_id;
+      sel.appendChild(o);
+    });
+  } catch(e) {
+    document.getElementById('fixture-sel').innerHTML =
+      '<option value="">— 加载失败 —</option>';
+  }
+}
+
+async function createRun() {
+  const reqText = document.getElementById('req-text').value.trim();
+  const fixtureId = document.getElementById('fixture-sel').value;
+  if (!reqText) { alert('请填写需求文本'); return; }
+  if (!fixtureId) { alert('请选择 fixture'); return; }
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true; btn.textContent = '创建中…';
+  try {
+    const r = await fetch('/api/product/create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({request_text: reqText, fixture_id: fixtureId})
+    });
+    const d = await r.json();
+    currentRunId = d.run_id;
+    currentRevision = (d.confirmation && d.confirmation.revision != null) ? d.confirmation.revision : 0;
+    currentStatus = d.product_status;
+    renderConfirmSection(d);
+    document.getElementById('step2').style.display = 'block';
+    document.getElementById('step3').style.display = 'none';
+  } catch(e) {
+    alert('请求失败: ' + esc(e.message));
+  } finally {
+    btn.disabled = false; btn.textContent = '创建产品运行';
+  }
+}
+
+function renderConfirmSection(d) {
+  const info = document.getElementById('run-info');
+  let html = `<div>运行 ID: <code>${esc(d.run_id)}</code></div>`;
+  html += `<div style="margin:.4rem 0">产品状态: ${statusBadge(d.product_status)} 决策: <b>${esc(d.decision)}</b></div>`;
+  if (d.extraction_source) html += `<div style="font-size:.8rem;color:#666">来源: ${esc(d.extraction_source)} / fixture: ${esc(d.envelope_fixture_label)}</div>`;
+
+  if (d.extracted_parameters && Object.keys(d.extracted_parameters).length) {
+    html += '<div style="margin-top:.5rem"><b>抽取参数（来自 fixture）:</b></div>';
+    html += '<table class="info-table"><thead><tr><th>参数</th><th>值</th></tr></thead><tbody>';
+    for (const [k,v] of Object.entries(d.extracted_parameters)) {
+      html += `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  if (d.catalog_derived_parameters && Object.keys(d.catalog_derived_parameters).length) {
+    html += '<div style="margin-top:.4rem"><b>目录派生参数（只读）:</b></div>';
+    html += '<table class="info-table"><thead><tr><th>参数</th><th>值</th><th>来源</th></tr></thead><tbody>';
+    for (const [k,v] of Object.entries(d.catalog_derived_parameters)) {
+      html += `<tr><td>${esc(k)}</td><td>${esc(v)}</td><td><span class="src-catalog">目录派生</span></td></tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  if (d.rule_derived_parameters && Object.keys(d.rule_derived_parameters).length) {
+    html += '<div style="margin-top:.4rem"><b>规则派生参数（只读）:</b></div>';
+    html += '<table class="info-table"><thead><tr><th>参数</th><th>值</th><th>来源</th></tr></thead><tbody>';
+    for (const [k,v] of Object.entries(d.rule_derived_parameters)) {
+      html += `<tr><td>${esc(k)}</td><td>${esc(v)}</td><td><span class="src-rule">规则派生</span></td></tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  if (d.missing_fields && d.missing_fields.length) {
+    html += `<div class="error-list" style="margin-top:.4rem"><b>缺少参数:</b> ${d.missing_fields.map(f=>esc(f)).join(', ')}</div>`;
+  }
+  if (d.questions && d.questions.length) {
+    html += '<div style="margin-top:.4rem"><b>问题:</b><ul class="error-list">';
+    d.questions.forEach(q => { html += `<li>${esc(q)}</li>`; });
+    html += '</ul></div>';
+  }
+  if (d.conflicts && d.conflicts.length) {
+    html += '<div style="margin-top:.4rem"><b style="color:#cf1322">冲突:</b><ul class="error-list">';
+    d.conflicts.forEach(c => { html += `<li>[${esc(c.code||'?')}] ${esc(c.message)}</li>`; });
+    html += '</ul></div>';
+  }
+  if (d.unsupported_requests && d.unsupported_requests.length) {
+    html += `<div class="error-list" style="margin-top:.4rem"><b>不支持的请求:</b> ${d.unsupported_requests.map(esc).join(', ')}</div>`;
+  }
+  if (d.errors && d.errors.length) {
+    html += '<div style="margin-top:.4rem"><b style="color:#cf1322">错误:</b><ul class="error-list">';
+    d.errors.forEach(e => { html += `<li>[${esc(e.code||'?')}] ${esc(e.message)}</li>`; });
+    html += '</ul></div>';
+  }
+  info.innerHTML = html;
+
+  const form = document.getElementById('confirm-form');
+  if (d.product_status === 'needs_confirmation') {
+    const needsBore = (d.missing_fields||[]).includes('bore_d') || d.decision === 'ask';
+    let fhtml = '<div style="margin-top:.7rem"><b>用户参数补充（可选）:</b></div>';
+    fhtml += `<label for="patch-bore-d" style="margin-top:.5rem">bore_d 轴孔孔径 (mm)${needsBore?' <span style=color:red>*必填</span>':''}</label>`;
+    fhtml += `<input type="number" id="patch-bore-d" placeholder="留空则使用 fixture 中的值" style="max-width:200px">`;
+    fhtml += `<div style="margin-top:.7rem">`;
+    fhtml += `<button class="btn-green" onclick="confirmRun()">确认并生成 STEP</button>`;
+    fhtml += `</div>`;
+    form.innerHTML = fhtml;
+  } else if (d.product_status === 'blocked') {
+    form.innerHTML = '<div style="margin-top:.5rem;color:#d46b08;font-weight:600">⚠ 此运行已阻断，无法继续构造 STEP。请重新创建运行。</div>';
+  } else {
+    form.innerHTML = '';
+  }
+}
+
+async function confirmRun() {
+  const patch = {};
+  const boreVal = document.getElementById('patch-bore-d').value.trim();
+  if (boreVal !== '') {
+    const parsed = parseInt(boreVal, 10);
+    if (!isNaN(parsed)) patch.bore_d = parsed;
+  }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '生成中…';
+  try {
+    const r = await fetch(`/api/product/confirm/${esc(currentRunId)}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({confirmation_revision: currentRevision, confirmed: true, patch})
+    });
+    const d = await r.json();
+    currentStatus = d.product_status;
+    renderResultSection(d);
+    document.getElementById('step3').style.display = 'block';
+  } catch(e) {
+    alert('确认失败: ' + esc(e.message));
+  } finally {
+    btn.disabled = false; btn.textContent = '确认并生成 STEP';
+  }
+}
+
+function renderResultSection(d) {
+  const area = document.getElementById('result-area');
+  let html = `<div>Child 运行 ID: <code>${esc(d.run_id)}</code> (parent: <code>${esc(d.parent_run_id)}</code>)</div>`;
+  html += `<div style="margin:.4rem 0">产品状态: ${statusBadge(d.product_status)}`;
+  if (d.pipeline_status) html += ` pipeline: <b>${esc(d.pipeline_status)}</b>`;
+  if (d.pipeline_stage) html += ` / <b>${esc(d.pipeline_stage)}</b>`;
+  html += `</div>`;
+
+  if (d.validation_summary) {
+    const vs = d.validation_summary;
+    html += '<div style="margin-top:.5rem"><b>几何验证摘要:</b></div><div class="val-grid">';
+    const items = [
+      ['实体数', vs.solid_count], ['有效', vs.is_valid!=null?(vs.is_valid?'是':'否'):null],
+      ['体积(mm³)', vs.volume_mm3!=null?vs.volume_mm3.toFixed(2):null],
+      ['面数', vs.face_count], ['边数', vs.edge_count], ['顶点数', vs.vertex_count],
+      ['STEP字节', vs.step_bytes],
+      ['回读通过', vs.readback_pass!=null?(vs.readback_pass?'是':'否'):null]
+    ];
+    items.forEach(([lbl,val]) => {
+      if (val==null) return;
+      html += `<div class="val-item"><div class="val-label">${esc(lbl)}</div><div class="val-value">${esc(val)}</div></div>`;
+    });
+    html += '</div>';
+  }
+  if (d.errors && d.errors.length) {
+    html += '<div style="margin-top:.5rem"><b style="color:#cf1322">错误:</b><ul class="error-list">';
+    d.errors.forEach(e => { html += `<li>[${esc(e.code||e.stage||'?')}] ${esc(e.message||JSON.stringify(e))}</li>`; });
+    html += '</ul></div>';
+  }
+  if (d.ir_document) {
+    html += `<details><summary>IR 文档（点击展开）</summary><pre>${esc(JSON.stringify(d.ir_document,null,2))}</pre></details>`;
+  }
+  if (d.schema_result) {
+    html += `<details><summary>Schema 结果</summary><pre>${esc(JSON.stringify(d.schema_result,null,2))}</pre></details>`;
+  }
+  if (d.product_status === 'succeeded') {
+    html += `<div style="margin-top:.8rem">`;
+    html += `<a href="/product-download/${esc(d.run_id)}" download="product-${esc(d.run_id).substring(0,8)}.step">`;
+    html += `<button class="btn-green">⬇ 下载 STEP (${esc(d.step_bytes)} 字节)</button></a>`;
+    html += `</div>`;
+  }
+  html += `<div style="margin-top:.7rem"><button class="btn-reset" onclick="resetAll()">新建另一个需求</button></div>`;
+  area.innerHTML = html;
+}
+
+function resetAll() {
+  currentRunId = null; currentRevision = 0; currentStatus = null;
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'none';
+  document.getElementById('run-info').innerHTML = '';
+  document.getElementById('confirm-form').innerHTML = '';
+  document.getElementById('result-area').innerHTML = '';
+  document.getElementById('req-text').value = '';
+  document.getElementById('fixture-sel').value = '';
+}
+
+loadFixtures();
+</script>
+</body>
+</html>"""
+
+
+PRODUCT_HTML_CONTENT = _build_product_html()
+PRODUCT_HTML_BYTES = PRODUCT_HTML_CONTENT.encode("utf-8")
+
+
 def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHandler | None = None):
     """Return a request handler class bound to the given handler instances."""
 
@@ -319,6 +652,16 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
                 self.send_header("Content-Length", str(len(HTML_BYTES)))
                 self.end_headers()
                 self.wfile.write(HTML_BYTES)
+                return
+
+            # C3: offline product confirmation UI
+            if path == "/product" or path == "/product/":
+                self._handle_product_ui()
+                return
+
+            # C3: fixture allowlist
+            if path == "/api/product/fixtures":
+                self._handle_product_fixtures()
                 return
 
             if path.startswith("/download/"):
@@ -560,6 +903,31 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
             self.send_header("Content-Length", str(len(step_bytes)))
             self.end_headers()
             self.wfile.write(step_bytes)
+
+        # ------------------------------------------------------------------
+        # C3 handlers
+        # ------------------------------------------------------------------
+
+        def _handle_product_ui(self) -> None:
+            """GET /product — C3 offline product confirmation UI."""
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(PRODUCT_HTML_BYTES)))
+            self.end_headers()
+            self.wfile.write(PRODUCT_HTML_BYTES)
+
+        def _handle_product_fixtures(self) -> None:
+            """GET /api/product/fixtures — available fixture allowlist (keys only)."""
+            if _product is None:
+                self._send_error_json(503, "PRODUCT_FLOW_DISABLED",
+                                       "Product flow handler not configured")
+                return
+            # Never expose file paths; return only the keys from the registry
+            fixtures = [
+                {"fixture_id": fid, "label": fid}
+                for fid in _product._fixture_registry.keys()
+            ]
+            self._send_json(200, {"fixtures": fixtures})
 
     return _Handler
 
