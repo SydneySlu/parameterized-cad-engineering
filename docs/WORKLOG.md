@@ -2913,3 +2913,12 @@ commit=待提交
 - 修改：移除 `src/llm/env_loader.py` 与 `tests/integration/test_product_live_env.py` 的额外末尾空行。
 - 验证：固定 CAD venv Python 3.11.18 下 py_compile 通过，环境 loader 9/9、Product Live 107/107 通过；输出只有测试既有 ResourceWarning。提交后复跑 `git diff --check a7fe414..HEAD`。
 - 边界：纯 whitespace 修正，无网络、provider、密钥读取或历史 batch 操作。
+
+
+### APP-003-LIVE-CREDENTIAL-ENTRY-FIX-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：记录独立复核对凭据入口修复的 `pass` 结论，并收束 `APP-003-LIVE-PREFLIGHT-20261114-01` 当前文档状态。
+- 复核基线：`main`，提交 `df3f7b4`；相对 `a7fe414` 的 `git diff --check`、该提交的 `git show --check` 均通过。固定 CAD venv Python 3.11.18 下 py_compile、凭据专项 9/9 通过；Product Live 107/107 回归通过。
+- 结论：`.env` credential entry 修复符合 fail-closed 时序，dry-run/mock 不加载凭据，secret 不输出；独立复核关闭 whitespace finding。provider 实际权限未测试，旧批次失败不能作为账户权限证据。
+- 边界：没有执行 live batch、网络/provider 请求或历史 batch 操作；旧 batch `app003-product-live-20261114-01` 仍只读，剩余预算不可用；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：若负责人希望确认 provider 可访问性，需另建窄 scope、新 batch ID、approval 和 preflight，再由负责人明确授权真实请求；在此之前保持 review。

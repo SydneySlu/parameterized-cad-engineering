@@ -99,6 +99,14 @@ next_agent_focus=只读审查 batch summary/ledger 和执行报告；如需再�
 changed=src/llm/env_loader.py; src/integration/product_live_runner.py; src/llm/__init__.py; tests/integration/test_product_live_env.py; PROJECT_STATUS/PLAN/TASKS/WORKLOG/checkpoint
 commands=CAD venv Python 3.11.18: test_product_live_env 9/9; test_product_live 107/107; py_compile 通过; git diff --check 通过
 confirmed=dotenv key 存在且非空、formal process env 原缺失；transport 仅读 os.environ；正式路径在基础设施创建前加载；dry-run不加载；模拟缺凭据时零 batch 创建
-unresolved=未发 HTTP；provider 账户权限尚不能判定；窄修仍待独立复核
+unresolved=未发 HTTP；provider 账户权限尚不能判定；窄修已通过独立复核
 next_agent_focus=复核 dotenv parser 与正式路径时序；确认不输出 key、不影响 mock/dry-run；任何真实 provider 请求必须新 batch 和新授权
 ```
+
+
+## 独立复核收束（2026-11-14）
+
+- 独立复核结论：`pass`。`df3f7b4` 关闭 `5bf82ce` 的 EOF whitespace 检查项；`git diff --check a7fe414..HEAD` 与 `git show --check --oneline df3f7b4` 均通过。
+- 固定 CAD venv Python 3.11.18：`py_compile` 通过，凭据入口专项 9/9 通过；之前记录的 Product Live 107/107 回归通过。
+- 复核确认正式路径在 approval binding、offline preflight 后加载凭据，并在 batch/ledger/transport 创建前 fail closed；dry-run/mock 不加载凭据，secret 不进入输出；`FORMAL_EVALUATION_ALLOWED=False` 未改变。
+- 边界：没有执行 live batch、网络/provider 请求或历史 batch 操作。修复通过不等于 provider 权限已验证；旧 batch `app003-product-live-20261114-01` 保持只读。后续验证 provider 必须新建 scope、batch ID、approval、preflight，并取得明确执行授权。
