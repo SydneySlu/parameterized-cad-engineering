@@ -14,6 +14,13 @@
 - 离线 preflight：`ok=true`；输入 hash 与 prompt 可加载；预算 4 × 3 = 12 可行；候选 batch 目录开始前不存在。
 - dry-run：`preflight_ok=true`，计划 4 个 logical runs、0 个实际结果；执行后 batch 目录仍不存在。
 
+## 批准与正式 preflight
+
+- 负责人批准：`Wang sikai`，`approved_at_utc=2026-11-13T17:14:42Z`。
+- `ProductLiveFormalApproval` 已按新 batch 构造并通过 `validate_product_formal_approval_binding()`；`is_test_only=False`，scope/hash/provider/model/预算均匹配。
+- 正式 preflight（固定 CAD venv，`require_cad_runtime=True`）返回 `ok=true`，错误为空；候选 batch 目录不存在。
+- 记录：`formal-preflight.json`。本轮没有调用 formal runner，没有创建 batch/ledger，没有构造 transport，没有读取密钥，没有网络请求。
+
 ## 实际命令
 
 ```sh
@@ -40,17 +47,16 @@ git status --short --branch
 
 ## 尚未完成 / 前置 gate
 
-- 负责人审阅并批准新候选 scope 与具体 batch ID。
-- 获批后再制作绑定该新 batch 的正式 approval 记录并执行 live preflight。
+- scope 与具体 batch ID 已获负责人批准；正式 approval binding 和 preflight 已通过。
 - 真实 DeepSeek 请求仍需明确的单独执行授权；在此之前不得调用 formal `run_product_batch(dry_run=False, transport=None)`。
 - 结果只能描述本次四条冻结刺激；不代表泛化、统计显著性或制造认证。
 
 ## handoff_self_check
 
 ```text
-changed=新增 scope.md、offline-preflight.json、checkpoint.md；更新 PROJECT_STATUS/PROJECT_PLAN/TASKS/WORKLOG
-commands=固定 CAD venv run_product_offline_preflight(require_cad_runtime=True): ok=true；run_product_batch(dry_run=True): preflight_ok=true, planned=4, results=0；candidate dir absent before/after
-confirmed=hash/profile/input/budget/prompt/runtime checks pass；没有网络请求、密钥读取、正式 batch/ledger 或真实 CAD
-unresolved=负责人对新 scope 和 batch ID 的批准；live approval、正式 preflight 和执行授权
-next_agent_focus=先核对负责人批准文本是否精确匹配 scope；获批后才准备 formal approval/preflight；不得重跑 2026-11-13 旧 batch
+changed=新增 scope.md、offline-preflight.json、formal-preflight.json、checkpoint.md；更新 PROJECT_STATUS/PROJECT_PLAN/TASKS/WORKLOG
+commands=固定 CAD venv run_product_offline_preflight(require_cad_runtime=True): ok=true；run_product_batch(dry_run=True): preflight_ok=true, planned=4, results=0；ProductLiveFormalApproval binding: pass；candidate dir absent before/after
+confirmed=负责人批准 scope/batch；scope/hash/profile/budget/prompt/runtime checks pass；没有网络请求、密钥读取、正式 batch/ledger、transport 或正式 CAD
+unresolved=真实 DeepSeek 请求的单独执行授权
+next_agent_focus=负责人若明确批准执行，再调用 formal runner；否则保持候选 review；不得重跑 2026-11-13 旧 batch
 ```

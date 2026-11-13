@@ -2879,3 +2879,11 @@ commit=待提交
 - 安全边界：0 网络请求；未读取 `.env`/密钥；未创建正式 batch/ledger；没有执行 provider 请求或正式 CAD；旧 batch `app003-product-live-20261113-01` 只读保留；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 产物：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-01/` 下的 `scope.md`、`offline-preflight.json`、`checkpoint.md`；项目状态、计划和任务表同步更新。
 - 状态与下一步：候选保持 `review`，等待负责人审阅/批准具体 scope 与 batch ID。批准后才准备同批正式 approval 并执行 formal preflight；真实请求需再次明确授权。当前阶段不得触发网络调用。
+
+### APP-003-LIVE-PREFLIGHT-20261114-01-APPROVAL / Codex / review / 2026-11-14
+
+- 动作：负责人批准候选 scope 与 batch `app003-product-live-20261114-01`；批准人 `Wang sikai`，UTC 时间 `2026-11-13T17:14:42Z`。按项目惯例记录引用：`Codex conversation — APP-003-LIVE-PREFLIGHT-20261114-01, user message dated 2026-11-14`。
+- 执行：在固定 CAD venv Python 3.11.18 下构造非 test-only `ProductLiveFormalApproval`，通过 `validate_product_formal_approval_binding()`；执行 `run_product_offline_preflight(..., require_cad_runtime=True)`，返回 `ok=true`，错误为空，batch 目录不存在。
+- 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-01/formal-preflight.json`；prompt/inputs/labels hash、provider/model/condition、预算 4×3=12、Draft 2020-12、CadQuery/OCP/jsonschema 均匹配。
+- 边界：本轮未调用 `run_product_batch(dry_run=False)`，未创建正式 batch/ledger，未构造 transport，未读取 `.env`/API key，网络请求为 0，未执行正式 CAD。旧 batch `app003-product-live-20261113-01` 继续只读。
+- 下一步：若负责人明确批准“执行该 batch 的真实 DeepSeek 请求”，再调用 formal runner；当前只完成 scope approval + formal preflight，不能把它描述为 live 运行结果。

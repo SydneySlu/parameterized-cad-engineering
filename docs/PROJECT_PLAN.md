@@ -19,13 +19,13 @@
 | C：产品真实抽取 scope | APP-003-LIVE-SCOPE：Codex 中枢准备 scope，CC 实现受控入口 | done；`db26fda` 已合入 `main`，固定 CAD venv 独立复核通过。受控 API 已具备自然语言抽取结果、确认和 STEP 下载链路，但尚未接入浏览器 UI，也未执行真实 provider 请求。 |
 | C：产品 live 确认界面 | APP-003-LIVE-UI：CC 接入受控 live API，Codex 中枢复核 | done；`8dce35a` 已合入并推送 `main`，固定 CAD venv 与 localhost 浏览器验收完成。下一步若执行真实 provider，必须另立 live scope、预算、preflight、batch ID 和负责人批准。 |
 | C：产品 live smoke 准备与运行 | `APP-003-LIVE-PREFLIGHT-20261113-01`：Codex 中枢 + 项目负责人 | done；旧 batch `app003-product-live-20261113-01` 按批准 scope 执行 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。错误映射/脱敏与 HTTP raw path 隔离修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。 |
-| C：新产品 live smoke 候选 | `APP-003-LIVE-PREFLIGHT-20261114-01`：Codex 中枢准备，负责人审阅 | review；候选 `app003-product-live-20261114-01` 继续使用固定四输入、DeepSeek `deepseek-flash`/C0、12 HTTP 上限。CAD venv 离线 preflight/dry-run 通过，batch 目录未创建；等待负责人审阅 scope。批准前不执行 formal preflight 或真实请求。 |
+| C：新产品 live smoke 正式 preflight | `APP-003-LIVE-PREFLIGHT-20261114-01`：Codex 中枢 + 项目负责人 | review；batch `app003-product-live-20261114-01` scope 已批准，非 test-only approval binding 和固定 CAD venv formal preflight 通过，batch 目录未创建、网络为 0。等待负责人单独明确真实 DeepSeek 执行授权。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
 - v5 fixed-set 真实双模型评测已完成。A2 `...-03` 的两条 answer 因系统 Python 缺少 `jsonschema` 未通过 IR Schema 阶段，一条 ask 正确停止；该历史批次只读保留。runtime guard 已合入并在固定 CAD venv 下复验。获批批次 `...-04` 在 CAD venv 中完成 3 次真实 DeepSeek 请求：24 mm 与 80 mm answer 均生成并回读 STEP，缺孔径请求为 ask；账本 3/9，Codex 中枢独立核对了 summary、预算、raw 文件路径/哈希元数据、IR/STEP 与 index/manifest hash 及 readback comparison。批次只读保留，证据见 A2 checkpoint 与独立审查报告。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
 - 里程碑 B 已完成固定环境定向验收。单位换算使用合成 envelope 和真实本地 CAD/STEP，不冒充真实模型语言理解；显式冲突与导出失败均验证不误报成功。已完成六类链路验收不等于广泛语言覆盖；是否增加 live 样本留待负责人根据具体语言风险假设另行决定，任何新增请求都须新的 batch scope、预算、ID 和授权。
-- 里程碑 C 已完成 C1 手动参数演示和 C2/C3 离线自然语言产品流程；C2 在 `d839954`、C3 在 `f105fc4` 已合入并通过固定 CAD venv、localhost 和浏览器独立验收。C2/C3 均不授权真实模型请求。上一产品 live batch 失败并只读保留；后续代码修复已独立复核通过。新候选 scope `APP-003-LIVE-PREFLIGHT-20261114-01` 的离线检查通过，但负责人尚未批准新 batch，真实请求仍需正式 preflight 与单独执行授权。
+- 里程碑 C 已完成 C1 手动参数演示和 C2/C3 离线自然语言产品流程；C2 在 `d839954`、C3 在 `f105fc4` 已合入并通过固定 CAD venv、localhost 和浏览器独立验收。上一产品 live batch 失败并只读保留，后续代码修复已独立复核通过。新候选 `APP-003-LIVE-PREFLIGHT-20261114-01` scope 已批准，正式 approval binding 与 preflight 通过；真实请求仍需单独执行授权。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
