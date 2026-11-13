@@ -37,6 +37,15 @@
 - 边界：仍未调用 formal runner、创建 formal batch/ledger、读取密钥或发起真实模型请求；HTTP=0。
 - 下一步：由负责人决定是否启动已批准 scope 的 live runner；该调用会在 preflight 后实际发请求，最多 12 次。
 
+### APP-003-LIVE-SMOKE-20261113-01 / Codex / review / 2026-11-13
+
+- 动作：负责人明确允许启动后，按已批准的 `app003-product-live-20261113-01` scope 在固定 CAD venv 执行正式 Product Live runner。
+- 执行：4 次 DeepSeek `deepseek-flash` / C0 HTTP 请求，账本合计 `4/12`，每个 P1–P4 各 1 次尝试；批次 summary 状态为 `failed`。
+- 结果：四条运行均为 `llm_status=error`、`product_status=error`、`PARSE_OR_ENVELOPE_ERROR`（adapter returned no parse result or envelope）；没有进入用户确认、Schema/IR/CAD、pipeline 或 STEP，STEP 文件数为 0。
+- 证据：批次目录 `work/app001-runs/app003-product-live-20261113-01/` 和 `batch_summary.json`、`budget_ledger.json` 只读保留；`raw/` 文件数为 0，summary 中 raw retention path/hash 均为空；未读取 raw 正文。
+- 边界：本批次已经消耗 4 次 HTTP，不重跑、不追加请求、不把失败结果描述为模型效果；`FORMAL_EVALUATION_ALLOWED=False` 未改变。
+- 下一步：先修复并离线验证失败响应的 parse/retention 证据链；任何后续真实请求必须新 batch ID、新 approval、新 preflight。
+
 ## 2026-11-13
 
 ### APP-003-LIVE-UI / CC / review
