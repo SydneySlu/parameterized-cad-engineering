@@ -2887,3 +2887,13 @@ commit=待提交
 - 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-01/formal-preflight.json`；prompt/inputs/labels hash、provider/model/condition、预算 4×3=12、Draft 2020-12、CadQuery/OCP/jsonschema 均匹配。
 - 边界：本轮未调用 `run_product_batch(dry_run=False)`，未创建正式 batch/ledger，未构造 transport，未读取 `.env`/API key，网络请求为 0，未执行正式 CAD。旧 batch `app003-product-live-20261113-01` 继续只读。
 - 下一步：若负责人明确批准“执行该 batch 的真实 DeepSeek 请求”，再调用 formal runner；当前只完成 scope approval + formal preflight，不能把它描述为 live 运行结果。
+
+### APP-003-LIVE-SMOKE-20261114-01 / Codex / review / 2026-11-14
+
+- 动作：负责人明确批准执行 `app003-product-live-20261114-01` 的真实 DeepSeek 请求，最多 12 次 HTTP；使用同批已通过的 formal approval binding 和 preflight。
+- 执行：固定 CAD venv 下 formal runner 完成 4 条逻辑输入，各 1 次尝试，账本合计 `4/12`。P1–P4 均在模型响应前返回 `TRANSPORT_ERROR`，稳定原因码为 `authentication_or_permission`；批次 summary 状态为 `failed`。
+- 结果：没有进入用户确认、Schema、IR、CAD 或 STEP；raw 文件数 0、pipeline 文件数 0；没有读取 raw 正文或输出密钥/header。该结果证明请求前 gate、预算和失败收束生效，不提供模型行为或产品效果证据。
+- 证据：`work/app001-runs/app003-product-live-20261114-01/batch_summary.json`、`budget_ledger.json`（只读）；`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-01/execution-report.json`（脱敏摘要）。
+- 失败脚本说明：首次汇总脚本在 runner 完成后读取不存在的 `run_id` 属性而退出；未触发重跑。随后仅从已写入 summary/ledger 生成脱敏执行报告。
+- 边界：本 batch 已消耗 4 次 HTTP，不重跑、不追加、不改写；旧 batch `app003-product-live-20261113-01` 仍只读；`FORMAL_EVALUATION_ALLOWED=False` 未改变。
+- 下一步：先由负责人在 provider 账户/凭据层面核查 `authentication_or_permission`；若要再次尝试，必须创建全新 batch、scope、approval 和 preflight，不能沿用本 batch 的剩余 8 次预算。

@@ -1,0 +1,98 @@
+{
+  "batch_id": "app003-product-live-20261114-01",
+  "batch_status": "failed",
+  "profile_id": "app003-product-live.v1",
+  "scope": {
+    "protocol_versions": [
+      "app001-extraction.v5",
+      "app001-io.v1"
+    ],
+    "sample_set": "app003-product-live-smoke.v1",
+    "condition": "C0",
+    "provider": "DeepSeek",
+    "model": "deepseek-flash",
+    "max_batch_http": 12,
+    "max_logical_runs": 4,
+    "max_attempts_per_run": 3,
+    "enable_cad_pipeline": true
+  },
+  "total_attempts_used": 4,
+  "max_batch_attempts": 12,
+  "raw_files_written": 0,
+  "pipeline_files_written": 0,
+  "runs": [
+    {
+      "logical_run_id": "P1-24mm__C0__DeepSeek__deepseek-flash",
+      "input_id": "P1-24mm",
+      "product_status": "error",
+      "llm_status": "error",
+      "pipeline_status": null,
+      "attempt_count": 1,
+      "error_codes": [
+        "TRANSPORT_ERROR"
+      ],
+      "cause_codes": [
+        "authentication_or_permission"
+      ],
+      "raw_retention_path": null,
+      "raw_sha256": null,
+      "step_path": null,
+      "step_sha256": null
+    },
+    {
+      "logical_run_id": "P2-ask-bore__C0__DeepSeek__deepseek-flash",
+      "input_id": "P2-ask-bore",
+      "product_status": "error",
+      "llm_status": "error",
+      "pipeline_status": null,
+      "attempt_count": 1,
+      "error_codes": [
+        "TRANSPORT_ERROR"
+      ],
+      "cause_codes": [
+        "authentication_or_permission"
+      ],
+      "raw_retention_path": null,
+      "raw_sha256": null,
+      "step_path": null,
+      "step_sha256": null
+    },
+    {
+      "logical_run_id": "P3-catalog-conflict__C0__DeepSeek__deepseek-flash",
+      "input_id": "P3-catalog-conflict",
+      "product_status": "error",
+      "llm_status": "error",
+      "pipeline_status": null,
+      "attempt_count": 1,
+      "error_codes": [
+        "TRANSPORT_ERROR"
+      ],
+      "cause_codes": [
+        "authentication_or_permission"
+      ],
+      "raw_retention_path": null,
+      "raw_sha256": null,
+      "step_path": null,
+      "step_sha256": null
+    },
+    {
+      "logical_run_id": "P4-unsupported__C0__DeepSeek__deepseek-flash",
+      "input_id": "P4-unsupported",
+      "product_status": "error",
+      "llm_status": "error",
+      "pipeline_status": null,
+      "attempt_count": 1,
+      "error_codes": [
+        "TRANSPORT_ERROR"
+      ],
+      "cause_codes": [
+        "authentication_or_permission"
+      ],
+      "raw_retention_path": null,
+      "raw_sha256": null,
+      "step_path": null,
+      "step_sha256": null
+    }
+  ],
+  "execution_note": "Formal runner completed under explicit owner authorization; no raw response bodies or secrets are included here."
+}

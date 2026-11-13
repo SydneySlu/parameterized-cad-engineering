@@ -60,3 +60,21 @@ confirmed=负责人批准 scope/batch；scope/hash/profile/budget/prompt/runtime
 unresolved=真实 DeepSeek 请求的单独执行授权
 next_agent_focus=负责人若明确批准执行，再调用 formal runner；否则保持候选 review；不得重跑 2026-11-13 旧 batch
 ```
+
+## 正式执行结果
+
+- 负责人于 `2026-11-13T17:19:48Z` 明确批准执行该 batch，最多 12 次 HTTP。
+- formal runner 已执行 4 条逻辑输入，各 1 次 HTTP，账本 `4/12`；批次状态为 `failed`。
+- P1–P4 均为 `product_status=error`、`llm_status=error`、`TRANSPORT_ERROR`，稳定原因码为 `authentication_or_permission`；没有模型响应、确认、Schema/IR/CAD/STEP 结果。
+- `raw/` 文件数为 0，pipeline 文件数为 0；没有读取 raw 正文、密钥或 Authorization header。
+- 执行摘要：`execution-report.json`；批次目录 `work/app001-runs/app003-product-live-20261114-01/` 只读保留，不重跑、不追加请求、不改写历史证据。
+
+### 执行后 handoff_self_check
+
+```text
+changed=新增 execution-report.json；正式 runner 已写入该 batch 的 batch_summary.json 与 budget_ledger.json
+commands=formal run_product_batch(dry_run=False, transport=None): 完成；ledger total_attempts_used=4/12；summary batch_status=failed；raw/pipeline files=0
+confirmed=四条输入均在响应前以 TRANSPORT_ERROR/authentication_or_permission 失败；没有确认、CAD、STEP 或 raw 正文；旧 batch 与本 batch 均不重跑
+unresolved=provider authentication/permission 根因需负责人在外部凭据/账户层面处理；本 batch 授权已消耗，不得追加请求
+next_agent_focus=只读审查 batch summary/ledger 和执行报告；如需再次尝试，必须先解决凭据问题并创建全新 scope、batch、approval 与 preflight
+```
