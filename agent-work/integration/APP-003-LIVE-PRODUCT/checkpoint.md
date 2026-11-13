@@ -152,3 +152,96 @@ next_agent_focus=1) Run under real CadQuery: verify P1 confirm → real STEP wit
 - 不让模型生成或执行 Python
 - 不把 offline mock/fixture 描述为真实模型效果
 - 不创建 live batch 或发送 HTTP
+
+## R1 窄修（APP-003-LIVE-PRODUCT-R1）
+
+### 问题 1：产品 live HTTP 入口没有真正连接 runner
+
+**问题**：`/api/product-live/create` 只从预填充 registry 读取已有 state，不调用 runner；`run_server()` 也没有配置 `product_live_handler`，默认请求返回 `PRODUCT_LIVE_DISABLED`。
+
+**修复**：
+- `src/integration/product_live_runner.py`：新增 `ProductLiveService` 类，封装 FakeTransport 注入的离线模式。`extract(input_id, request_text)` 调用 `_run_one_logical_mock()` 并存入内部 registry；`confirm(run_id, confirmed, patch)` 调用 `confirm_product_live_run()`；`get(run_id)` 查询状态。新增 `_to_repo_relative_path()` 辅助函数。
+- `src/demo/server.py`：
+  - `make_handler_class()` 新增 `product_live_service` 参数（`ProductLiveService` 实例），向下兼容旧 `product_live_handler` dict 接口。
+  - `_handle_product_live_create()` 改为接受 `{request_text, input_id}`，调用 `service.extract(input_id, request_text)` 真正执行抽取，不再只查已有 state。浏览器不提交模型响应、evaluator labels 或 CAD 结果。
+  - `_handle_product_live_confirm()` 调用 `service.confirm(run_id, confirmed, patch)`。
+  - `_handle_product_live_get()` / `_handle_product_live_download()` 通过 service 查询。
+  - 新增 `_sanitize_state_for_http()` 辅助函数：统一剥离绝对路径、raw body、secret、evaluator labels。
+  - `run_server()` 默认不配置 product live service → 返回 `PRODUCT_LIVE_DISABLED`。
+
+### 问题 2：formal summary 中路径没有统一转换为相对路径
+
+**问题**：`_SummaryWriter.update_run()` 直接写入 `pipeline_run_dir` 和 `step_path`，可能产生绝对路径。
+
+**修复**：
+- `src/integration/product_live_runner.py`：
+  - 新增 `_to_repo_relative_path(path_str)`：将绝对路径转为 repo-relative；路径在 repo 外或无法解析时返回 None。
+  - `_SummaryWriter.update_run()` 中 `raw_retention_path`、`pipeline_run_dir`、`step_path` 及 `ir_index["step_path"]` 统一经过 `_to_repo_relative_path()` 转换。
+- `src/demo/server.py`：`_sanitize_state_for_http()` 在 HTTP 响应中也统一转换路径为 repo-relative。
+
+### 新增回归测试（33 项，test_product_live.py 从 52 增至 85）
+
+**TestProductLiveServiceHTTP (15 项)**：离线 HTTP E2E
+- P1 create → needs_confirmation，run_pipeline=0
+- P1 confirm → succeeded（mock pipeline）
+- P1 下载成功，SHA-256 一致
+- P2 create → blocked，零 CAD
+- P3 create → blocked，零 CAD
+- P4 create → blocked，零 CAD
+- 未配置 service → 503 PRODUCT_LIVE_DISABLED，无副作用
+- 未知 input_id → blocked
+- 缺 request_text → 400
+- 缺 input_id → 400
+- confirmed=False → blocked
+- 非 confirmable 状态 confirm → blocked
+- API 响应无 raw body / secret / evaluator labels
+- API 响应路径非绝对
+- C1/C2/C3 路由仍工作
+
+**TestSummaryPathRelative (10 项)**：summary 路径隔离
+- summary 中 pipeline_run_dir 非绝对路径
+- summary 中 step_path 非绝对路径
+- summary 中 raw_retention_path 非绝对路径
+- summary 中 ir_index.step_path 非绝对路径
+- 路径穿越拒绝
+- 外部路径拒绝
+- symlink 逃逸拒绝
+- hash 篡改拒绝
+- API 响应不含绝对路径
+- API 响应不含 raw body
+
+**TestProductLiveServiceBackwardCompat (8 项)**：向后兼容
+- 旧 product_live_handler dict 接口仍可用
+- make_handler_class 2 参数（无 service）仍工作
+- make_handler_class 3 参数（有 service）工作
+- 导入 product live 不改变 FORMAL_EVALUATION_ALLOWED
+- 默认 run_server 不配置 live service
+- C1 GET / 仍返回 C1 HTML
+- C2 /api/product/create 仍工作
+- C3 GET /product 仍工作
+
+### 验证结果（sandbox Python 3.10.12）
+
+```text
+py_compile: src/demo/server.py, src/integration/product_live_runner.py,
+  tests/integration/test_product_live.py — OK
+git diff --check — OK
+
+Product live tests (85 项):
+  PYTHONPATH=src:. python3 -m unittest tests.integration.test_product_live -q
+  Ran 85 tests — OK
+
+Schema regression (17 项):
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -p 'test_*.py' -q
+  Ran 17 tests — OK
+```
+
+### handoff_self_check（R1 更新）
+
+```text
+changed=src/integration/product_live_runner.py (ProductLiveService + _to_repo_relative_path + _SummaryWriter.update_run path normalisation), src/demo/server.py (_handle_product_live_create calls service.extract, _sanitize_state_for_http, product_live_service param), tests/integration/test_product_live.py (85 tests, +33 R1), agent-work/integration/APP-003-LIVE-PRODUCT/checkpoint.md, docs/WORKLOG.md
+commands=py_compile OK; git diff --check OK; test_product_live 85/85 OK; schema 17/17 OK
+confirmed=P1 HTTP create → needs_confirmation with zero run_pipeline; P1 HTTP confirm → succeeded; P2/P3/P4 HTTP create → blocked zero CAD; unconfigured service → 503 PRODUCT_LIVE_DISABLED; summary paths all repo-relative; API responses no absolute paths / raw body / secrets / labels; C1/C2/C3 backward compatible; FORMAL_EVALUATION_ALLOWED=False unchanged
+unresolved=固定 CAD venv (Python 3.11.18) 下真实 compile_ir 路径验证；真实 DeepSeek HTTP 请求验证（需 Codex 复核 + 负责人 batch 授权）；浏览器端 /product-live 页面烟测
+next_agent_focus=1) Run under real CadQuery: verify P1 HTTP confirm → real STEP; 2) Codex 中枢在固定 venv 重跑 test_product_live 85 项 + C3 regression; 3) Verify FORMAL_EVALUATION_ALLOWED still False; 4) Do NOT create live batch or send HTTP without Codex review + owner approval
+```

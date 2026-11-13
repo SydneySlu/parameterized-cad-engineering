@@ -114,6 +114,26 @@ def _safe_filename_component(value: str) -> str:
     return _SAFE_RE.sub("_", value)
 
 
+def _to_repo_relative_path(path_str: str | None) -> str | None:
+    """Convert an absolute or repo-rooted path to a repo-relative string.
+
+    Returns ``None`` if *path_str* is ``None``, empty, outside the repo,
+    or cannot be resolved.  Never raises.
+    """
+    if not path_str:
+        return None
+    try:
+        p = Path(path_str).resolve()
+        root = _REPO_ROOT.resolve()
+        rel = p.relative_to(root)
+        return str(rel)
+    except (ValueError, OSError, RuntimeError):
+        # If it's already relative, return as-is
+        if not Path(path_str).is_absolute():
+            return path_str
+        return None
+
+
 def _utc_now_iso() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -541,12 +561,25 @@ class _SummaryWriter:
         _atomic_write_json(self._summary_path, self._data, self._batch_dir)
 
     def update_run(self, result: "ProductLiveRunState") -> None:
-        """Atomically update the summary with one run result (no raw body)."""
+        """Atomically update the summary with one run result (no raw body, no absolute paths)."""
         raw_sha256: str | None = None
         raw_retained: bool | None = None
         if isinstance(result.raw_retention_meta, dict):
             raw_sha256 = result.raw_retention_meta.get("body_sha256")
             raw_retained = result.raw_retention_meta.get("retained")
+
+        # Normalise all file-system paths to repo-relative before writing to summary.
+        # Absolute paths must never appear in batch_summary.json or HTTP responses.
+        raw_path_rel = _to_repo_relative_path(result.raw_retention_path)
+        pipeline_dir_rel = _to_repo_relative_path(result.pipeline_run_dir)
+        step_path_rel = _to_repo_relative_path(result.step_path)
+
+        # ir_index may carry an absolute step_path; normalise it too.
+        ir_index_clean: dict[str, Any] | None = None
+        if isinstance(result.ir_index, dict):
+            ir_index_clean = dict(result.ir_index)
+            if "step_path" in ir_index_clean:
+                ir_index_clean["step_path"] = _to_repo_relative_path(ir_index_clean["step_path"])
 
         run_entry: dict[str, Any] = {
             "product_status": result.product_status,
@@ -558,13 +591,13 @@ class _SummaryWriter:
             "prompt_file_sha256": result.prompt_file_sha256,
             "configured_provider": result.provider,
             "configured_model": result.model,
-            # raw retention: repo-relative path only, no body content
-            "raw_retention_path": result.raw_retention_path,
+            # repo-relative paths only — raw body, secrets, labels excluded
+            "raw_retention_path": raw_path_rel,
             "raw_retained": raw_retained,
             "raw_sha256": raw_sha256,
-            "pipeline_run_dir": result.pipeline_run_dir,
-            "ir_index": result.ir_index,
-            "step_path": result.step_path,
+            "pipeline_run_dir": pipeline_dir_rel,
+            "ir_index": ir_index_clean,
+            "step_path": step_path_rel,
             "errors": result.errors,
             "questions": result.questions,
         }
@@ -1718,3 +1751,157 @@ def _build_state_from_envelope(
         raw_retention_meta=raw_retention_meta,
         raw_retention_path=raw_retention_path, created_at=now,
     )
+
+
+# ---------------------------------------------------------------------------
+# ProductLiveService — injectable offline service for server.py
+# ---------------------------------------------------------------------------
+
+
+class ProductLiveService:
+    """Injectable service that wires the HTTP layer to the product live runner.
+
+    Encapsulates a FakeTransport (for offline/mock mode) and an in-memory
+    registry.  The server never touches transport details; it only calls
+    ``extract()`` and ``confirm()``.
+
+    Default (no transport): all create calls return PRODUCT_LIVE_DISABLED.
+
+    Security guarantees:
+    - The browser submits only ``request_text`` and ``input_id``.
+    - ``extract()`` calls ``_run_one_logical_mock()`` internally and stores the
+      result in a private registry.  Evaluator labels never enter this path.
+    - ``confirm()`` calls ``confirm_product_live_run()`` — the only path to
+      ``run_pipeline()``.
+    - No network I/O, no .env reads, no FORMAL_EVALUATION_ALLOWED change.
+    """
+
+    def __init__(
+        self,
+        transport: FakeTransport,
+        authorization: "ProductLiveAuthorization | None" = None,
+        output_root: "Path | None" = None,
+    ) -> None:
+        self._transport = transport
+        self._authorization = authorization or _make_offline_auth()
+        self._output_root = Path(output_root) if output_root else (
+            _REPO_ROOT / "work" / "product-live-runs"
+        )
+        self._runs: dict[str, ProductLiveRunState] = {}
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def extract(self, input_id: str, request_text: str) -> ProductLiveRunState:
+        """Run extraction for one input, store state, return result.
+
+        Calls ``_run_one_logical_mock()`` with the injected FakeTransport.
+        Never calls run_pipeline() — that only happens after confirm().
+        """
+        if input_id not in PRODUCT_INPUT_IDS:
+            now = _utc_now_iso()
+            lrid = f"{input_id}__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__{PRODUCT_MODEL}"
+            state = ProductLiveRunState(
+                logical_run_id=lrid, input_id=input_id,
+                condition_id=PRODUCT_CONDITION, provider=PRODUCT_PROVIDER, model=PRODUCT_MODEL,
+                llm_status="error", product_status=PRODUCT_LIVE_STATUS_ERROR,
+                decision="", extracted_parameters={}, missing_fields=[],
+                unsupported_requests=[], questions=[], conflicts=[],
+                errors=[{"code": "UNKNOWN_INPUT_ID",
+                         "message": f"input_id {input_id!r} not in authorized scope: {PRODUCT_INPUT_IDS}"}],
+                request_text=request_text, created_at=now,
+            )
+            self._runs[lrid] = state
+            return state
+
+        prompt = load_frozen_prompt()
+        plan = ProductLiveLogicalRunPlan(
+            logical_run_id=f"{input_id}__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__{PRODUCT_MODEL}",
+            input_id=input_id,
+            condition_id=PRODUCT_CONDITION,
+            provider=PRODUCT_PROVIDER,
+            model=PRODUCT_MODEL,
+        )
+        state = _run_one_logical_mock(
+            plan=plan,
+            natural_language=request_text,
+            prompt=prompt,
+            transport=self._transport,
+            authorization=self._authorization,
+            pipeline_output_root=self._output_root / input_id,
+        )
+        self._runs[plan.logical_run_id] = state
+        return state
+
+    def confirm(
+        self,
+        logical_run_id: str,
+        confirmed: bool,
+        patch: "dict[str, Any] | None" = None,
+    ) -> "ProductLiveRunState | None":
+        """Confirm a pending extraction result and optionally run the CAD pipeline.
+
+        Returns None if the run_id is unknown.  Calls
+        ``confirm_product_live_run()`` — the only path to ``run_pipeline()``.
+        """
+        state = self._runs.get(logical_run_id)
+        if state is None:
+            return None
+        new_state = confirm_product_live_run(
+            state,
+            confirmed=confirmed,
+            patch=patch,
+            output_root=self._output_root,
+        )
+        self._runs[logical_run_id + "__confirmed"] = new_state
+        return new_state
+
+    def get(self, logical_run_id: str) -> "ProductLiveRunState | None":
+        """Return the latest state for a logical run id."""
+        return (
+            self._runs.get(logical_run_id + "__confirmed")
+            or self._runs.get(logical_run_id)
+        )
+
+    def get_step_bytes_secure(self, logical_run_id: str) -> bytes | None:
+        """Return STEP bytes for a succeeded confirmed run with 6-layer security.
+
+        Never exposes absolute paths or other run STEP files.
+        """
+        import hashlib as _hashlib
+        state = self._runs.get(logical_run_id + "__confirmed")
+        if state is None:
+            return None
+        if state.product_status != PRODUCT_LIVE_STATUS_SUCCEEDED:
+            return None
+        step_path_str = state.step_path
+        run_dir_str = state.pipeline_run_dir
+        expected_sha256 = (
+            state.ir_index.get("step_sha256")
+            if isinstance(state.ir_index, dict) else None
+        )
+        if not step_path_str or not run_dir_str or not expected_sha256:
+            return None
+        step_path = Path(step_path_str)
+        expected_prefix = Path(run_dir_str) / "cad_output"
+        try:
+            canonical_step = step_path.resolve()
+            canonical_prefix = expected_prefix.resolve()
+            canonical_step.relative_to(canonical_prefix)
+        except (ValueError, OSError):
+            return None
+        if canonical_step.is_symlink():
+            return None
+        if not canonical_step.is_file() or canonical_step.stat().st_size == 0:
+            return None
+        content = canonical_step.read_bytes()
+        if _hashlib.sha256(content).hexdigest() != expected_sha256:
+            return None
+        return content
+
+
+def _make_offline_auth() -> "ProductLiveAuthorization":
+    """Return a minimal offline-mode authorization for the service (no batch)."""
+    from llm.product_live_authorization import authorize_product_live_run
+    return authorize_product_live_run(batch_id="product-live-offline-service")

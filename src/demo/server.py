@@ -25,9 +25,11 @@ from demo.product_flow import ProductFlowHandler
 try:
     from integration.product_live_runner import (
         ProductLiveRunState,
+        ProductLiveService,
         confirm_product_live_run,
         PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION,
         PRODUCT_LIVE_STATUS_SUCCEEDED,
+        _to_repo_relative_path,
     )
     _PRODUCT_LIVE_AVAILABLE = True
 except ImportError:
@@ -691,20 +693,62 @@ def _get_product_live_step_bytes_secure(state: "Any") -> bytes | None:
     return content
 
 
+def _sanitize_state_for_http(state: "Any") -> dict:
+    """Convert a ProductLiveRunState to a safe HTTP response dict.
+
+    - Removes internal absolute step_path.
+    - Normalises all file-system paths to repo-relative strings.
+    - Strips raw body content, secrets, and evaluator labels from
+      raw_retention_meta (keeps only retained, path, body_sha256).
+    - pipeline_run_dir is normalised to repo-relative (or None if outside repo).
+    """
+    if not _PRODUCT_LIVE_AVAILABLE:
+        return {}
+    resp = state.as_dict()
+    # Remove absolute internal step path — downloads happen via /product-live-download/
+    resp.pop("step_path", None)
+    # Normalise pipeline_run_dir
+    if resp.get("pipeline_run_dir") and not _PRODUCT_LIVE_AVAILABLE:
+        resp["pipeline_run_dir"] = None
+    elif resp.get("pipeline_run_dir") and _PRODUCT_LIVE_AVAILABLE:
+        resp["pipeline_run_dir"] = _to_repo_relative_path(resp["pipeline_run_dir"])
+    # Sanitise ir_index step_path
+    if isinstance(resp.get("ir_index"), dict):
+        idx = dict(resp["ir_index"])
+        if "step_path" in idx:
+            idx["step_path"] = _to_repo_relative_path(idx["step_path"])
+        resp["ir_index"] = idx
+    # Strip raw body — only keep retained, repo-relative path, and body_sha256
+    if isinstance(resp.get("raw_retention_meta"), dict):
+        meta = resp["raw_retention_meta"]
+        resp["raw_retention_meta"] = {
+            "retained": meta.get("retained"),
+            "path": _to_repo_relative_path(meta.get("path")),
+            "body_sha256": meta.get("body_sha256"),
+        }
+    return resp
+
+
 def make_handler_class(
     demo_handler: DemoHandler,
     product_handler: ProductFlowHandler | None = None,
     product_live_handler: dict | None = None,
+    product_live_service: "Any | None" = None,
 ):
     """Return a request handler class bound to the given handler instances.
 
-    ``product_live_handler`` is an optional dict with keys:
-        - ``runs``: a dict[str, ProductLiveRunState] in-memory registry
-        - ``output_root``: Path for pipeline runs
+    ``product_live_service`` is an optional :class:`ProductLiveService` instance
+    (from ``integration.product_live_runner``).  When supplied it is used by
+    the product live HTTP routes to call ``extract()`` / ``confirm()`` / ``get()``.
+    The older ``product_live_handler`` dict interface is kept for backward
+    compatibility but is superseded by ``product_live_service``.
+
+    Default (both None): product live routes return ``PRODUCT_LIVE_DISABLED``.
     """
 
     _product = product_handler
-    _product_live = product_live_handler  # dict with 'runs' and 'output_root'
+    _product_live = product_live_handler  # dict with 'runs' and 'output_root' (legacy)
+    _pl_service = product_live_service    # ProductLiveService instance (preferred)
 
     class _Handler(BaseHTTPRequestHandler):
         _demo = demo_handler
@@ -1037,17 +1081,18 @@ def make_handler_class(
         # ------------------------------------------------------------------
 
         def _handle_product_live_create(self) -> None:
-            """POST /api/product-live/create — create a product live run from request text.
+            """POST /api/product-live/create — run extraction for one input.
 
-            The extraction result (from a pre-queued FakeTransport or formal transport)
-            is returned; never includes API keys, raw body, or evaluator labels.
+            Calls ProductLiveService.extract() (injected offline service) with
+            the browser-supplied request_text and input_id.  Never exposes API
+            keys, raw body, or evaluator labels to the browser.
 
-            Request body: {request_text: str, logical_run_id: str}
-            The logical_run_id identifies which queued mock/formal response to use.
+            Request body: {request_text: str, input_id: str}
             """
-            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+            # Prefer the ProductLiveService interface; fall back to legacy dict.
+            if not _PRODUCT_LIVE_AVAILABLE or (_pl_service is None and _product_live is None):
                 self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
-                                      "Product live handler not configured")
+                                      "Product live service not configured")
                 return
             body = self._read_json_body()
             if body is None:
@@ -1057,46 +1102,46 @@ def make_handler_class(
                 self._send_error_json(400, "MISSING_REQUEST_TEXT",
                                       "request_text is required and must be non-empty")
                 return
-            logical_run_id = body.get("logical_run_id", "")
-            if not isinstance(logical_run_id, str) or not logical_run_id.strip():
-                self._send_error_json(400, "MISSING_LOGICAL_RUN_ID",
-                                      "logical_run_id is required")
-                return
-            # Retrieve existing extraction state from registry
-            runs: dict = _product_live.get("runs", {})
-            state = runs.get(logical_run_id)
-            if state is None:
-                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
-                                      f"logical_run_id {logical_run_id!r} not found")
-                return
-            # Return extraction result — never expose raw body, keys, or labels
-            resp = state.as_dict()
-            # Remove internal fields: step_path (absolute), raw_retention_meta body
-            resp.pop("step_path", None)
-            if isinstance(resp.get("raw_retention_meta"), dict):
-                # Only keep path/sha256, never body content
-                meta = resp["raw_retention_meta"]
-                resp["raw_retention_meta"] = {
-                    "retained": meta.get("retained"),
-                    "path": meta.get("path"),
-                    "body_sha256": meta.get("body_sha256"),
-                }
-            self._send_json(200, resp)
+
+            if _pl_service is not None:
+                # New path: browser provides input_id, service calls the runner
+                input_id = body.get("input_id", "")
+                if not isinstance(input_id, str) or not input_id.strip():
+                    self._send_error_json(400, "MISSING_INPUT_ID",
+                                          "input_id is required (e.g. P1-24mm)")
+                    return
+                state = _pl_service.extract(input_id, request_text.strip())
+                resp = _sanitize_state_for_http(state)
+                self._send_json(200, resp)
+            else:
+                # Legacy path: logical_run_id lookup in pre-populated dict
+                logical_run_id = body.get("logical_run_id", "")
+                if not isinstance(logical_run_id, str) or not logical_run_id.strip():
+                    self._send_error_json(400, "MISSING_LOGICAL_RUN_ID",
+                                          "logical_run_id is required")
+                    return
+                runs: dict = _product_live.get("runs", {})
+                state = runs.get(logical_run_id)
+                if state is None:
+                    self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                          f"logical_run_id {logical_run_id!r} not found")
+                    return
+                resp = _sanitize_state_for_http(state)
+                self._send_json(200, resp)
 
         def _handle_product_live_confirm(self, run_id: str) -> None:
             """POST /api/product-live/confirm/<run_id> — confirm and trigger CAD pipeline.
 
             Only product_status=needs_confirmation runs can be confirmed.
-            Calls confirm_product_live_run() which is the ONLY code path
-            that calls run_pipeline() for product live runs.
+            Calls ProductLiveService.confirm() or confirm_product_live_run(),
+            which is the ONLY code path that calls run_pipeline() for product live runs.
 
             Request body: {confirmed: bool, patch: dict}
             """
-            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+            if not _PRODUCT_LIVE_AVAILABLE or (_pl_service is None and _product_live is None):
                 self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
-                                      "Product live handler not configured")
+                                      "Product live service not configured")
                 return
-            # run_id here is the logical_run_id
             if not run_id or not isinstance(run_id, str):
                 self._send_error_json(400, "INVALID_RUN_ID", "run_id must be non-empty")
                 return
@@ -1117,56 +1162,46 @@ def make_handler_class(
                 self._send_error_json(400, "INVALID_PATCH", "patch must be a JSON object")
                 return
 
-            runs: dict = _product_live.get("runs", {})
-            state = runs.get(run_id)
-            if state is None:
-                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
-                                      f"run_id {run_id!r} not found in product live registry")
-                return
-
-            output_root = _product_live.get("output_root")
-            new_state = confirm_product_live_run(
-                state,
-                confirmed=confirmed_raw,
-                patch=patch or None,
-                output_root=output_root,
-            )
-            # Store the confirmed state under the same run_id (child result)
-            runs[run_id + "__confirmed"] = new_state
-
-            resp = new_state.as_dict()
-            resp.pop("step_path", None)
-            if isinstance(resp.get("raw_retention_meta"), dict):
-                meta = resp["raw_retention_meta"]
-                resp["raw_retention_meta"] = {
-                    "retained": meta.get("retained"),
-                    "path": meta.get("path"),
-                    "body_sha256": meta.get("body_sha256"),
-                }
-            self._send_json(200, resp)
+            if _pl_service is not None:
+                new_state = _pl_service.confirm(run_id, confirmed_raw, patch or None)
+                if new_state is None:
+                    self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                          f"run_id {run_id!r} not found in product live registry")
+                    return
+                resp = _sanitize_state_for_http(new_state)
+                self._send_json(200, resp)
+            else:
+                runs: dict = _product_live.get("runs", {})
+                state = runs.get(run_id)
+                if state is None:
+                    self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                          f"run_id {run_id!r} not found in product live registry")
+                    return
+                output_root = _product_live.get("output_root")
+                new_state = confirm_product_live_run(
+                    state, confirmed=confirmed_raw, patch=patch or None,
+                    output_root=output_root,
+                )
+                runs[run_id + "__confirmed"] = new_state
+                resp = _sanitize_state_for_http(new_state)
+                self._send_json(200, resp)
 
         def _handle_product_live_get(self, run_id: str) -> None:
             """GET /api/product-live/<run_id> — get product live run status."""
-            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+            if not _PRODUCT_LIVE_AVAILABLE or (_pl_service is None and _product_live is None):
                 self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
-                                      "Product live handler not configured")
+                                      "Product live service not configured")
                 return
-            runs: dict = _product_live.get("runs", {})
-            # Check both pre-confirmation and post-confirmation states
-            state = runs.get(run_id) or runs.get(run_id + "__confirmed")
+            if _pl_service is not None:
+                state = _pl_service.get(run_id)
+            else:
+                runs: dict = _product_live.get("runs", {})
+                state = runs.get(run_id) or runs.get(run_id + "__confirmed")
             if state is None:
                 self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
                                       f"run_id {run_id!r} not found")
                 return
-            resp = state.as_dict()
-            resp.pop("step_path", None)
-            if isinstance(resp.get("raw_retention_meta"), dict):
-                meta = resp["raw_retention_meta"]
-                resp["raw_retention_meta"] = {
-                    "retained": meta.get("retained"),
-                    "path": meta.get("path"),
-                    "body_sha256": meta.get("body_sha256"),
-                }
+            resp = _sanitize_state_for_http(state)
             self._send_json(200, resp)
 
         def _handle_product_live_download(self, run_id: str) -> None:
@@ -1175,12 +1210,17 @@ def make_handler_class(
             Only succeeded runs with a valid STEP file can be downloaded.
             Applies path containment and SHA-256 verification.
             """
-            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+            if not _PRODUCT_LIVE_AVAILABLE or (_pl_service is None and _product_live is None):
                 self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
-                                      "Product live handler not configured")
+                                      "Product live service not configured")
                 return
-            runs: dict = _product_live.get("runs", {})
-            state = runs.get(run_id + "__confirmed") or runs.get(run_id)
+            if _pl_service is not None:
+                state = _pl_service.get(run_id)
+                step_bytes = _pl_service.get_step_bytes_secure(run_id) if state else None
+            else:
+                runs: dict = _product_live.get("runs", {})
+                state = runs.get(run_id + "__confirmed") or runs.get(run_id)
+                step_bytes = _get_product_live_step_bytes_secure(state) if state else None
             if state is None:
                 self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
                                       f"run_id {run_id!r} not found")
@@ -1190,8 +1230,6 @@ def make_handler_class(
                                       f"Run {run_id} has product_status={state.product_status!r}; "
                                       "only succeeded runs can be downloaded")
                 return
-            # 6-layer security check
-            step_bytes = _get_product_live_step_bytes_secure(state)
             if step_bytes is None:
                 self._send_error_json(403, "STEP_UNAVAILABLE",
                                       "STEP file unavailable or failed integrity check")

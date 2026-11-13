@@ -1064,5 +1064,661 @@ class TestProductLivePlansAndMode(unittest.TestCase):
             self.assertEqual(p.condition_id, PRODUCT_CONDITION)
 
 
+# ---------------------------------------------------------------------------
+# R1-CORRECTION additions
+# ---------------------------------------------------------------------------
+
+# Import new pieces for the tests
+from integration.product_live_runner import (
+    ProductLiveService,
+    _to_repo_relative_path,
+)
+from demo.server import (
+    make_handler_class,
+    _sanitize_state_for_http,
+)
+from demo.handler import DemoHandler
+from demo.product_flow import ProductFlowHandler
+import io
+import http.client
+import threading
+import tempfile
+import socketserver
+from http.server import HTTPServer
+
+
+def _make_service(transport: FakeTransport, output_root=None) -> ProductLiveService:
+    auth = _make_auth()
+    return ProductLiveService(transport=transport, authorization=auth,
+                              output_root=output_root)
+
+
+def _envelopes_for_all_four(
+    p1_body: str = "",
+    p2_body: str = "",
+    p3_body: str = "",
+    p4_body: str = "",
+) -> FakeTransport:
+    """Build a FakeTransport pre-loaded with 4 responses (one per input)."""
+    t = FakeTransport()
+    t.queue_response(TransportResponse(status=200, body=p1_body or _make_valid_envelope(
+        "answer", {"bore_d": 24}, [], [], []
+    )))
+    t.queue_response(TransportResponse(status=200, body=p2_body or _make_valid_envelope(
+        "ask", {}, ["bore_d"], [], ["bore_d 是必填参数，请提供"]
+    )))
+    t.queue_response(TransportResponse(status=200, body=p3_body or _make_valid_envelope(
+        "answer", {"bore_d": 24, "outer_d": 33}, [], [], []
+    )))
+    t.queue_response(TransportResponse(status=200, body=p4_body or _make_valid_envelope(
+        "answer", {"bore_d": 24}, [], ["anodizing"], []
+    )))
+    return t
+
+
+# ---------------------------------------------------------------------------
+# 15. ProductLiveService unit tests
+# ---------------------------------------------------------------------------
+
+class TestProductLiveServiceUnit(unittest.TestCase):
+    """Unit tests for ProductLiveService.extract() and confirm()."""
+
+    def test_extract_p1_gives_needs_confirmation(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        svc = _make_service(transport)
+        state = svc.extract("P1-24mm", "请做一个轴环，轴孔直径 24 mm。")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION)
+        self.assertEqual(state.input_id, "P1-24mm")
+
+    def test_extract_p1_zero_run_pipeline(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        svc = _make_service(transport)
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            svc.extract("P1-24mm", "请做一个轴环，轴孔直径 24 mm。")
+            mock_pipe.assert_not_called()
+
+    def test_extract_p2_ask_blocked(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope(
+                "ask", {}, ["bore_d"], [], ["bore_d 是必填参数"]
+            )))
+        svc = _make_service(transport)
+        state = svc.extract("P2-ask-bore", "请做一个轴环。")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_BLOCKED)
+
+    def test_extract_p3_conflict_blocked(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope(
+                "answer", {"bore_d": 24, "outer_d": 33}, [], [], []
+            )))
+        svc = _make_service(transport)
+        state = svc.extract("P3-catalog-conflict",
+                             "请做一个轴环，轴孔直径 24 mm，外径 33 mm。")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_BLOCKED)
+
+    def test_extract_p4_unsupported_blocked(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope(
+                "answer", {"bore_d": 24}, [], ["anodizing"], []
+            )))
+        svc = _make_service(transport)
+        state = svc.extract("P4-unsupported", "请做一个轴环，要求阳极氧化。")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_BLOCKED)
+
+    def test_extract_unknown_input_id_error(self):
+        transport = FakeTransport()
+        svc = _make_service(transport)
+        state = svc.extract("UNKNOWN-INPUT", "test")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_ERROR)
+        self.assertTrue(any("UNKNOWN_INPUT_ID" in e.get("code", "") for e in state.errors))
+
+    def test_confirm_p1_calls_pipeline(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        svc = _make_service(transport)
+        state = svc.extract("P1-24mm", "请做一个轴环，轴孔直径 24 mm。")
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION)
+
+        mock_result = MagicMock()
+        mock_result.status = "success"
+        mock_result.stage = "step_readback"
+        mock_result.errors = []
+        mock_result.run_dir = None
+        mock_result.step_path = None
+        mock_result.ir_index = {"step_sha256": "abc" * 20, "step_bytes": 100}
+        with patch("integration.product_live_runner.run_pipeline", return_value=mock_result):
+            new_state = svc.confirm(state.logical_run_id, confirmed=True)
+        self.assertIsNotNone(new_state)
+        self.assertEqual(new_state.product_status, PRODUCT_LIVE_STATUS_SUCCEEDED)
+
+    def test_confirm_false_blocked(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        svc = _make_service(transport)
+        state = svc.extract("P1-24mm", "请做一个轴环。")
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            new_state = svc.confirm(state.logical_run_id, confirmed=False)
+            mock_pipe.assert_not_called()
+        self.assertEqual(new_state.product_status, PRODUCT_LIVE_STATUS_BLOCKED)
+
+    def test_confirm_unknown_run_returns_none(self):
+        svc = _make_service(FakeTransport())
+        result = svc.confirm("nonexistent-run-id", confirmed=True)
+        self.assertIsNone(result)
+
+    def test_get_returns_latest_state(self):
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200, body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        svc = _make_service(transport)
+        state = svc.extract("P1-24mm", "test")
+        got = svc.get(state.logical_run_id)
+        self.assertIsNotNone(got)
+        self.assertEqual(got.product_status, PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION)
+
+
+# ---------------------------------------------------------------------------
+# 16. HTTP tests via ProductLiveService
+# ---------------------------------------------------------------------------
+
+def _make_test_server(service=None, port=0) -> tuple:
+    """Start a minimal test HTTP server on a free port.  Returns (server, port, thread)."""
+    demo = DemoHandler(output_root=Path(tempfile.mkdtemp()))
+    product = ProductFlowHandler(output_root=Path(tempfile.mkdtemp()))
+    handler_cls = make_handler_class(demo, product, product_live_service=service)
+    # Use ThreadingTCPServer for a simple test server
+    server = HTTPServer(("127.0.0.1", port), handler_cls)
+    actual_port = server.server_address[1]
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    return server, actual_port, t
+
+
+def _http_post(port, path, body_dict):
+    body = json.dumps(body_dict).encode("utf-8")
+    conn = http.client.HTTPConnection("127.0.0.1", port)
+    conn.request("POST", path, body=body,
+                 headers={"Content-Type": "application/json",
+                          "Content-Length": str(len(body))})
+    resp = conn.getresponse()
+    data = json.loads(resp.read())
+    conn.close()
+    return resp.status, data
+
+
+def _http_get(port, path):
+    conn = http.client.HTTPConnection("127.0.0.1", port)
+    conn.request("GET", path)
+    resp = conn.getresponse()
+    raw = resp.read()
+    conn.close()
+    return resp.status, raw
+
+
+class TestProductLiveServiceHTTP(unittest.TestCase):
+    """End-to-end HTTP tests using ProductLiveService with FakeTransport."""
+
+    def _make_server_with_transport(self, transport):
+        svc = _make_service(transport)
+        server, port, t = _make_test_server(service=svc)
+        self.addCleanup(server.shutdown)
+        return server, port, svc
+
+    def test_no_service_returns_503_disabled(self):
+        """Without a service configured, all product-live routes return DISABLED."""
+        server, port, _ = _make_test_server(service=None)
+        self.addCleanup(server.shutdown)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P1-24mm"})
+        self.assertEqual(status, 503)
+        self.assertEqual(data["error"]["code"], "PRODUCT_LIVE_DISABLED")
+
+    def test_p1_create_needs_confirmation_zero_cad(self):
+        """P1 create returns needs_confirmation; run_pipeline not called."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status, data = _http_post(port, "/api/product-live/create",
+                                      {"request_text": "请做一个轴环，轴孔直径 24 mm。",
+                                       "input_id": "P1-24mm"})
+            mock_pipe.assert_not_called()
+
+        self.assertEqual(status, 200)
+        self.assertEqual(data["product_status"], "needs_confirmation")
+        self.assertEqual(data["input_id"], "P1-24mm")
+        # step_path must not be in HTTP response
+        self.assertNotIn("step_path", data)
+
+    def test_p1_create_response_no_secrets(self):
+        """HTTP response must not contain API keys, raw body, or evaluator labels."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P1-24mm"})
+        resp_str = json.dumps(data).lower()
+        self.assertNotIn("api_key", resp_str)
+        self.assertNotIn("authorization", resp_str)
+        self.assertNotIn("bearer", resp_str)
+        self.assertNotIn("expected_decision", resp_str)
+        self.assertNotIn("allowed_to_cad", resp_str)
+
+    def test_p2_create_blocked(self):
+        """P2 ask returns blocked."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("ask", {}, ["bore_d"], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "请做一个轴环。", "input_id": "P2-ask-bore"})
+        self.assertEqual(status, 200)
+        self.assertEqual(data["product_status"], "blocked")
+
+    def test_p3_create_blocked(self):
+        """P3 conflict returns blocked."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24, "outer_d": 33}, [], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status, data = _http_post(
+                port, "/api/product-live/create",
+                {"request_text": "请做一个轴环，轴孔直径 24 mm，外径 33 mm。",
+                 "input_id": "P3-catalog-conflict"})
+            mock_pipe.assert_not_called()
+        self.assertEqual(status, 200)
+        self.assertEqual(data["product_status"], "blocked")
+
+    def test_p4_create_blocked(self):
+        """P4 unsupported returns blocked."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], ["anodizing"], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status, data = _http_post(
+                port, "/api/product-live/create",
+                {"request_text": "要求阳极氧化", "input_id": "P4-unsupported"})
+            mock_pipe.assert_not_called()
+        self.assertEqual(status, 200)
+        self.assertEqual(data["product_status"], "blocked")
+
+    def test_p1_confirm_succeeded(self):
+        """P1 confirm triggers pipeline and returns succeeded."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, svc = self._make_server_with_transport(transport)
+
+        # Create
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status, data = _http_post(port, "/api/product-live/create",
+                                      {"request_text": "test", "input_id": "P1-24mm"})
+            mock_pipe.assert_not_called()
+        self.assertEqual(data["product_status"], "needs_confirmation")
+        run_id = data["logical_run_id"]
+
+        # Confirm
+        mock_result = MagicMock()
+        mock_result.status = "success"
+        mock_result.stage = "step_readback"
+        mock_result.errors = []
+        mock_result.run_dir = None
+        mock_result.step_path = None
+        mock_result.ir_index = {"step_sha256": "abc" * 20, "step_bytes": 100}
+        with patch("integration.product_live_runner.run_pipeline", return_value=mock_result):
+            status2, data2 = _http_post(port, f"/api/product-live/confirm/{run_id}",
+                                        {"confirmed": True, "patch": {}})
+        self.assertEqual(status2, 200)
+        self.assertEqual(data2["product_status"], "succeeded")
+        # step_path must NOT be in HTTP response (absolute path stripped)
+        self.assertNotIn("step_path", data2)
+
+    def test_confirm_false_returns_blocked(self):
+        """confirmed=False → blocked."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, svc = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P1-24mm"})
+        run_id = data["logical_run_id"]
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status2, data2 = _http_post(port, f"/api/product-live/confirm/{run_id}",
+                                        {"confirmed": False, "patch": {}})
+            mock_pipe.assert_not_called()
+        self.assertEqual(data2["product_status"], "blocked")
+
+    def test_p2_blocked_confirm_zero_cad(self):
+        """Direct confirm on a blocked P2 run → still blocked, zero CAD."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("ask", {}, ["bore_d"], [], [])))
+        _, port, svc = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P2-ask-bore"})
+        run_id = data["logical_run_id"]
+        with patch("integration.product_live_runner.run_pipeline") as mock_pipe:
+            status2, data2 = _http_post(port, f"/api/product-live/confirm/{run_id}",
+                                        {"confirmed": True, "patch": {}})
+            mock_pipe.assert_not_called()
+        self.assertEqual(data2["product_status"], "blocked")
+
+    def test_missing_input_id_returns_400(self):
+        """Missing input_id → 400."""
+        transport = FakeTransport()
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test"})
+        self.assertEqual(status, 400)
+
+    def test_missing_request_text_returns_400(self):
+        """Missing request_text → 400."""
+        transport = FakeTransport()
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"input_id": "P1-24mm"})
+        self.assertEqual(status, 400)
+
+    def test_get_returns_extraction_state(self):
+        """GET /api/product-live/<run_id> returns the extraction state."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, svc = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P1-24mm"})
+        run_id = data["logical_run_id"]
+        status2, raw = _http_get(port, f"/api/product-live/{run_id}")
+        self.assertEqual(status2, 200)
+        got = json.loads(raw)
+        self.assertEqual(got["product_status"], "needs_confirmation")
+
+    def test_response_no_absolute_paths(self):
+        """HTTP response must not contain absolute paths."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P1-24mm"})
+        resp_str = json.dumps(data)
+        # Must not start any value with "/" (absolute unix path)
+        # Check key fields specifically
+        for key in ("pipeline_run_dir", "step_path"):
+            val = data.get(key)
+            self.assertIsNone(val,
+                              msg=f"{key!r} must be absent/None in HTTP response, got {val!r}")
+
+    def test_download_succeeded_run(self):
+        """STEP download works for a succeeded run."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("answer", {"bore_d": 24}, [], [], [])))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            svc = _make_service(transport, output_root=Path(tmpdir))
+            server, port, t = _make_test_server(service=svc)
+            self.addCleanup(server.shutdown)
+
+            # Create
+            _http_post(port, "/api/product-live/create",
+                       {"request_text": "test", "input_id": "P1-24mm"})
+            state = svc.get(f"P1-24mm__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__{PRODUCT_MODEL}")
+            run_id = state.logical_run_id
+
+            # Mock a successful pipeline result with a real temp STEP file
+            step_content = b"ISO-10303-21;\nHEADER; END-SECTION;\nDATA; END-SECTION;\nEND-ISO-10303-21;\n"
+            step_hash = hashlib.sha256(step_content).hexdigest()
+            step_dir = Path(tmpdir) / "cad_output"
+            step_dir.mkdir(exist_ok=True)
+            step_file = step_dir / "collar.step"
+            step_file.write_bytes(step_content)
+
+            mock_result = MagicMock()
+            mock_result.status = "success"
+            mock_result.stage = "step_readback"
+            mock_result.errors = []
+            mock_result.run_dir = str(step_dir.parent)
+            mock_result.step_path = str(step_file)
+            mock_result.ir_index = {
+                "step_sha256": step_hash,
+                "step_bytes": len(step_content),
+                "step_path": str(step_file),
+            }
+            with patch("integration.product_live_runner.run_pipeline", return_value=mock_result):
+                _http_post(port, f"/api/product-live/confirm/{run_id}",
+                           {"confirmed": True, "patch": {}})
+
+            # Download
+            status, raw = _http_get(port, f"/product-live-download/{run_id}")
+            self.assertEqual(status, 200)
+            self.assertEqual(raw, step_content)
+            # Verify SHA-256
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), step_hash)
+
+    def test_download_blocked_run_returns_403(self):
+        """Download of a blocked run returns 403."""
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=_make_valid_envelope("ask", {}, ["bore_d"], [], [])))
+        _, port, _ = self._make_server_with_transport(transport)
+        status, data = _http_post(port, "/api/product-live/create",
+                                  {"request_text": "test", "input_id": "P2-ask-bore"})
+        run_id = data["logical_run_id"]
+        status2, _ = _http_get(port, f"/product-live-download/{run_id}")
+        self.assertEqual(status2, 403)
+
+
+# ---------------------------------------------------------------------------
+# 17. Summary path normalisation tests
+# ---------------------------------------------------------------------------
+
+class TestSummaryPathRelative(unittest.TestCase):
+    """Summary must use repo-relative paths; no absolute paths in evidence."""
+
+    def test_to_repo_relative_path_inside_repo(self):
+        """Path inside repo → repo-relative string."""
+        from pathlib import Path as _P
+        import sys
+        sys.path.insert(0, str(_P(__file__).resolve().parents[2] / "src"))
+        from integration.product_live_runner import _to_repo_relative_path, _REPO_ROOT
+        inside = str(_REPO_ROOT / "some" / "dir" / "file.json")
+        result = _to_repo_relative_path(inside)
+        self.assertIsNotNone(result)
+        self.assertFalse(result.startswith("/"),
+                         msg=f"Expected relative path, got {result!r}")
+        self.assertIn("some/dir/file.json", result.replace("\\", "/"))
+
+    def test_to_repo_relative_path_outside_repo(self):
+        """Path outside repo → None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        outside = "/tmp/completely_outside_repo/file.json"
+        result = _to_repo_relative_path(outside)
+        self.assertIsNone(result)
+
+    def test_to_repo_relative_path_none(self):
+        """None input → None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path(None))
+
+    def test_to_repo_relative_path_already_relative(self):
+        """Already-relative path returned as-is."""
+        from integration.product_live_runner import _to_repo_relative_path
+        rel = "work/product-live-runs/some-run/file.step"
+        result = _to_repo_relative_path(rel)
+        self.assertIsNotNone(result)
+
+    def test_summary_writer_normalises_pipeline_run_dir(self):
+        """_SummaryWriter.update_run() must write repo-relative pipeline_run_dir."""
+        from integration.product_live_runner import (
+            _SummaryWriter, _REPO_ROOT, PRODUCT_LIVE_STATUS_BLOCKED,
+        )
+        from llm.product_live_authorization import authorize_product_live_run
+        from llm.contract import PROMPT_VERSION, CONTRACT_VERSION
+        from llm.product_live_authorization import PRODUCT_PROMPT_FILE_SHA256
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Fake a batch dir inside the canonical run root
+            # We override the batch_dir explicitly to avoid canonical check
+            batch_dir = Path(tmpdir) / "test-batch"
+            batch_dir.mkdir()
+            writer = _SummaryWriter(batch_dir, {"runs": {}, "batch_id": "test-batch"})
+            writer.write_initial()
+
+            # Build a state with an absolute pipeline_run_dir
+            abs_dir = str(batch_dir / "pipeline-runs" / "run-001")
+            state = ProductLiveRunState(
+                logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+                input_id="P1-24mm",
+                condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                llm_status="blocked",
+                product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+                decision="",
+                extracted_parameters={},
+                missing_fields=[], unsupported_requests=[], questions=[],
+                conflicts=[], errors=[],
+                pipeline_run_dir=abs_dir,
+                step_path=str(batch_dir / "cad_output" / "collar.step"),
+                request_text="test",
+                prompt_version=PROMPT_VERSION,
+                contract_version=CONTRACT_VERSION,
+                prompt_file_sha256=PRODUCT_PROMPT_FILE_SHA256,
+            )
+            writer.update_run(state)
+
+            # Read the summary back
+            import json as _json
+            summary = _json.loads((batch_dir / "batch_summary.json").read_text())
+            run_entry = summary["runs"]["P1-24mm__C0__DeepSeek__deepseek-flash"]
+            # pipeline_run_dir must be None (abs dir is outside repo)
+            # or repo-relative if inside repo
+            dir_in_summary = run_entry.get("pipeline_run_dir")
+            if dir_in_summary is not None:
+                self.assertFalse(
+                    dir_in_summary.startswith("/"),
+                    msg=f"Absolute path in summary: {dir_in_summary!r}"
+                )
+            # step_path must be None or relative
+            sp = run_entry.get("step_path")
+            if sp is not None:
+                self.assertFalse(sp.startswith("/"),
+                                 msg=f"Absolute step_path in summary: {sp!r}")
+
+    def test_summary_writer_no_raw_body(self):
+        """Summary must not contain raw response body."""
+        from integration.product_live_runner import _SummaryWriter, PRODUCT_LIVE_STATUS_BLOCKED
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "test-batch-2"
+            batch_dir.mkdir()
+            writer = _SummaryWriter(batch_dir, {"runs": {}, "batch_id": "test-batch-2"})
+            writer.write_initial()
+
+            state = ProductLiveRunState(
+                logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+                input_id="P1-24mm",
+                condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+                decision="", extracted_parameters={},
+                missing_fields=[], unsupported_requests=[], questions=[],
+                conflicts=[], errors=[],
+                raw_retention_meta={
+                    "retained": True,
+                    "path": "work/app001-runs/test-batch-2/raw/p1.json",
+                    "body_sha256": "deadbeef" * 8,
+                    "body": "SUPER SECRET RAW BODY",
+                },
+                request_text="test",
+            )
+            writer.update_run(state)
+
+            import json as _json
+            summary_text = (batch_dir / "batch_summary.json").read_text()
+            self.assertNotIn("SUPER SECRET RAW BODY", summary_text)
+            self.assertNotIn("\"body\":", summary_text)
+
+    def test_sanitize_state_for_http_no_absolute_paths(self):
+        """_sanitize_state_for_http must strip absolute step_path."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="answer",
+            product_status=PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION,
+            decision="answer",
+            extracted_parameters={"bore_d": 24},
+            missing_fields=[], unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            step_path="/absolute/path/to/collar.step",
+            pipeline_run_dir="/absolute/path/to/run",
+            ir_index={"step_sha256": "abc", "step_path": "/absolute/path/collar.step"},
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        # Absolute step_path stripped
+        self.assertNotIn("step_path", resp)
+        # pipeline_run_dir normalised
+        prd = resp.get("pipeline_run_dir")
+        if prd is not None:
+            self.assertFalse(prd.startswith("/"), msg=f"Absolute pipeline_run_dir: {prd!r}")
+        # ir_index step_path normalised
+        idx = resp.get("ir_index", {})
+        if idx.get("step_path") is not None:
+            self.assertFalse(idx["step_path"].startswith("/"))
+
+    def test_sanitize_strips_raw_body(self):
+        """_sanitize_state_for_http must not expose raw body in any field."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+            decision="", extracted_parameters={},
+            missing_fields=[], unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            raw_retention_path="work/app001-runs/test-batch/raw/p1.json",
+            raw_retention_meta={
+                "retained": True,
+                "path": "work/app001-runs/test-batch/raw/p1.json",
+                "body_sha256": "deadbeef",
+                "body": "SECRET RAW RESPONSE",
+            },
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        resp_str = json.dumps(resp)
+        # Raw body must never appear in the HTTP response
+        self.assertNotIn("SECRET RAW RESPONSE", resp_str)
+        # raw_retention_meta is an internal field not included in as_dict(),
+        # so it's already absent — the important check is that no body
+        # content leaks through any field.
+        self.assertNotIn("raw_retention_meta", resp)
+
+
 if __name__ == "__main__":
     unittest.main()
