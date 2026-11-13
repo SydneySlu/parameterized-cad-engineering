@@ -1,6 +1,6 @@
 # APP-003 Product Live Formal Approval — app003-product-live-20261114-02
 
-**状态：待负责人审阅/填写。** 以下为批准模板，不是已批准记录。负责人批准 scope 后，需明确确认并补齐本模板；批准 formal preflight 不等于批准发送真实请求。
+**状态：历史模板，已由正式批准记录取代。** 本 batch 的 formal preflight 与真实请求分别获批；实际记录见 `formal-preflight.json`、`execution-report.json` 和 `checkpoint.md`。保留下方模板内容用于追溯，不代表当前仍待批准。
 
 ```text
 batch_id: app003-product-live-20261114-02

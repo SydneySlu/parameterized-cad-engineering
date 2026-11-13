@@ -3,7 +3,7 @@
 - 日期：2026-11-14
 - 状态：`review`（负责人已批准 formal preflight 与本批 live execution；4 次真实请求已完成，结果待独立复核）
 - 基线：`main=711b4d3`；工作区开始时 clean；本地 main ahead origin/main 13 commits
-- 候选 batch：`app003-product-live-20261114-02`
+- batch：`app003-product-live-20261114-02`
 - 前置：credential entry fix `df3f7b4` 独立复核 `pass`；未验证 provider 权限
 
 ## 已完成
@@ -70,3 +70,11 @@ confirmed=P1 needs_confirmation; P2 ask blocked; P3/P4 refuse blocked; no CAD/ST
 unresolved=independent review of live evidence and interpretation; no product confirmation submitted for P1
 next_agent_focus=independently review sanitized summary/ledger/report and request/response hashes without opening raw bodies; decide separately whether user wants to confirm P1 parameters and invoke CAD, which requires explicit per-run confirmation
 ```
+
+## 独立复核结果（2026-11-14）
+
+- Codex 中枢只读复核结论：`pass`，限于本批授权、执行证据和安全边界；完整记录见 [`independent-review.md`](independent-review.md)。
+- Batch summary、ledger、execution report、approval scope 与冻结 inputs/prompt/labels hashes 一致；4 次请求均成功记账，每个 run 一次，总计 4/12。
+- 四个 raw 文件仅核验存在性、大小与 SHA-256，hash 全部匹配；未读取正文或 labels 内容，也未读取密钥/`.env`。
+- P1=`answer → needs_confirmation`；P2=`ask → blocked`；P3/P4=`refuse → blocked`。CAD pipeline 与 STEP 产物均为 0；`FORMAL_EVALUATION_ALLOWED=False`。
+- 限制：未评价四条响应的语义正确性，未检查 raw 内 provider-returned model 字段；不构成广泛语言质量结论。Batch 只读。若继续 P1 构造，需负责人单独审阅参数并确认该 run。

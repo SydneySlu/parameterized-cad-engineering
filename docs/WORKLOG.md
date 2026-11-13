@@ -2951,3 +2951,13 @@ commit=待提交
 - 边界：不重跑、不追加本 batch；旧 batch 只读；不输出 key、Authorization header 或 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/execution-report.json` 与只读 batch summary/ledger。
 - 下一步：独立复核脱敏 summary/ledger/报告；若继续 P1 构造，需负责人针对抽取参数作 per-run 确认。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-INDEPENDENT-REVIEW / Codex 中枢 / done / 2026-11-14
+
+- 动作：完成 `app003-product-live-20261114-02` 的只读独立复核并收束任务文档。
+- 结论：`pass`，限于授权、执行证据与安全边界。Summary、ledger、execution report、批准 scope 和冻结 artifact hashes 一致；4 次成功 HTTP / 12 上限，每个 frozen run 一次；四个 raw 文件 hash 与 summary 匹配。
+- 结果：P1=`answer → needs_confirmation`；P2=`ask → blocked`；P3/P4=`refuse → blocked`。未提交 per-run confirmation，CAD/STEP=0；`FORMAL_EVALUATION_ALLOWED=False`。
+- 隐私边界：只验证 raw 文件存在性、大小和 SHA-256，未读取正文；evaluator labels 仅核 SHA-256；未读取 `.env`/密钥，不发请求，不运行 CAD，不改写任何 batch。
+- 文档：新增 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`，更新 checkpoint、scope/template 状态、PROJECT_STATUS 与 PROJECT_PLAN。
+- 限制/下一步：未评估四条响应的语义正确性，未读取 raw 以核对 runtime-returned model。若要对 P1 生成 CAD/STEP，须负责人单独审阅其抽取参数并明确确认该 run；本 batch 继续只读。
