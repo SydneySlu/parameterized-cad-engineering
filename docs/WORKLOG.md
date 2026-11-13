@@ -2742,3 +2742,10 @@ commit=待提交
 - 产物：`agent-work/integration/APP-003-LIVE-SCOPE/scope-draft.md`；提出 DeepSeek `deepseek-flash` / C0、4 个独立刺激（正常、缺参、目录冲突、unsupported）、最多 12 HTTP、人工确认后才调用 CAD，并列出 product-specific gate、预算账本、preflight、证据脱敏和独立执行批准条件。
 - 状态与边界：仅为待审提案；未选定 batch ID，未创建 batch/ledger，未运行 preflight/provider 请求，未读取密钥/`.env`，未调用 CAD。`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
 - 下一步：项目负责人审阅并明确批准或修改草案；批准 scope 后再准备独立实现工作单，真实执行仍需另行授权。
+
+### APP-003-LIVE-PRODUCT-PROMPT / Codex / planned / 2026-11-13
+
+- 动作：项目负责人批准 APP-003-LIVE-SCOPE 的 4 条输入、DeepSeek `deepseek-flash` / C0 和最多 12 次 HTTP；生成产品专用受控入口实现工作单。
+- 产物：`docs/coordination/prompts/APP-003-live-product-cc.md`。工作单要求新建 CC 对话框和 `cc/APP-003-LIVE-PRODUCT` 分支，新增独立 product authorization/gate、预算账本绑定、服务端 runner、离线 mock/spy 测试和证据脱敏；明确不复用 A2 授权或批次。
+- 边界：本批准只覆盖实现和离线验证。未授权 live preflight、正式 batch、DeepSeek 请求、密钥读取或 CAD 正式运行；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- 下一步：新 CC 对话框按工作单实现，完成后交 Codex 中枢独立复核；只有复核通过且负责人再次批准具体 batch ID/执行，才可进入 live preflight。
