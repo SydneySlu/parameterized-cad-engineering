@@ -2654,3 +2654,10 @@ commit=待提交
   - 注：固定 CAD venv 无法在此沙盒中执行，需 Codex 中枢在 Mac 上用 Python 3.11.18/CadQuery 复跑真实构造路径
 - 不变量：不修改 v5 prompt/contract、Schema、IR 语义、compiler、A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读取 `.env`/密钥；不发模型/外网请求
 - 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv 独立复核
+
+### APP-003-C2-CLOSEOUT / Codex / done / 2026-11-13
+
+- 动作：核实项目负责人已将 C2 分支合入 `main`；本地 `main`、`origin/main` 均为 `d839954`，工作区干净。更新 PROJECT_STATUS、PROJECT_PLAN、TASKS 和 C2 checkpoint，记录中枢独立验收证据并将 C2 收束为 done。
+- 独立验证：固定 CAD venv Python 3.11.18 下 C2 58/58、C1 56/56、Integration 81/81、Schema 17/17、CAD compilation 13/13；py_compile、git diff --check 通过。localhost E2E：create → 非法类型 400 且确认调用 0 次 → 合法 confirm → parent GET → STEP download；parent as_dict 完全不变，STEP hash 匹配。bore24、bore80/second_screw=1、ask 补 bore_d=16 均真实生成并回读 STEP。
+- 边界：C2 仅 synthetic fixture，无产品真实模型入口；无密钥/网络调用。浏览器确认 UI 尚未实现，另立 APP-003-C3；新产品 live extraction 仍需独立 scope、预算、gate、batch ID 和负责人授权。
+- 下一步：规划并执行 APP-003-C3-PRODUCT-UI，离线 fixtures 优先；复核通过后再准备 live extraction scope。

@@ -1,5 +1,7 @@
 # APP-003-C2 checkpoint
 
+> 当前收束状态：`done`；已合入 `main`，Codex 中枢独立验收完成。下方实现记录保留原始交接时间线；后续验收和合入证据见文末 closeout。
+
 - 日期：2026-11-13（执行）
 - 负责人：CC 实现 / Codex 中枢独立验收
 - 状态：`review`
@@ -125,6 +127,32 @@ next_agent_focus=Run under real CadQuery: bore24 confirm → succeeded with real
 
 - 状态 `review`，等待 Codex 中枢独立验收
 - 不 push，不合并 main，不自行标记 done
+
+## Codex 中枢独立验收与合入收束（2026-11-13）
+
+- 最终提交：`d839954`，已合入 `main`；当前本地 `main` 与 `origin/main` 对齐，工作区干净。
+- 独立代码复核：父 run 确认前后 `as_dict()` 完全一致；HTTP 确认字段严格类型校验；产品记录提供 fixture hash/path、pipeline run ID/相对目录、STEP 相对路径/hash/bytes；pipeline 抛异常时 child fail-closed。
+- 固定环境：Python 3.11.18 / 固定 CAD venv。
+- 回归结果：`tests.demo.test_product_flow` 58/58；`tests.demo.test_demo_handler` 56/56；Integration 81/81；Schema 17/17；CAD compilation 13/13；py_compile 和 `git diff --check` 通过。仅有既有 ResourceWarning 与 CadQuery 上游弃用警告。
+- 真实离线 CAD 案例：bore24 成功导出并回读 STEP；bore80 `second_screw=1` 成功；ask 缺 bore_d 的 create 阶段无 CAD 输出目录，补充 bore_d=16 后新 run 成功生成 STEP。
+- localhost HTTP E2E：create → 5 种非法类型请求均 HTTP 400 且确认处理调用 0 次 → 合法 confirm → GET parent → download child STEP。父 run 保持完全不变；STEP 下载 SHA-256 匹配记录。
+- 证据关联核对：fixture envelope hash 与确认后 pipeline envelope hash 不同，二者可区分；pipeline run id/相对目录、STEP 相对路径和 hash 可在 child 响应中追溯；绝对路径不进入 API 响应。
+- 边界：仍是 synthetic fixture 驱动的产品流程，不代表真实模型理解或产品 live extraction；当前提供 API，浏览器确认页面另列 APP-003-C3。无真实模型/外网请求、无密钥读取、无 batch。
+- `handoff_successor_check`：
+
+```text
+predecessor=APP-003-C2-NARROW-FIX, commit d839954, agent-work/integration/APP-003-C2/checkpoint.md
+files_format=父 run 不可变、HTTP 字段严格校验、证据字段和 pipeline exception fail-closed 均经代码审读及定向验证
+core_rerun=Python 3.11.18 固定 CAD venv：C2 58/58、C1 56/56、Integration 81/81、Schema 17/17、CAD 13/13；py_compile/git diff --check 通过
+normal_case=真实 bore24/bore80 STEP 生成和回读通过；HTTP 下载 hash 匹配
+failure_case=HTTP 非法类型 400 且零确认调用；ask create 阶段零 CAD；pipeline exception 返回 failed 且无 STEP
+interface=ADR-0023 输入、确认、参数来源、pipeline/STEP 关联字段可追溯
+limits=仅 synthetic fixtures；无浏览器确认 UI、无真实模型调用；单族与固定环境限制保留
+result=pass
+blocking_issue=none
+```
+
+- 下一步：执行 APP-003-C3-PRODUCT-UI，继续离线夹具范围；完成独立验收后再准备新的产品 live extraction scope。
 
 
 ## 窄修 R1（本提交，APP-003-C2-NARROW-FIX）
