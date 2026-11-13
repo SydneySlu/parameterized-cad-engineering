@@ -2,6 +2,23 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+## 2026-11-13
+
+### APP-003-LIVE-PRODUCT / CC / review
+
+- 动作：实现产品专用服务端受控入口（APP-003-LIVE-PRODUCT），支持离线 mock/spy 模式完整证明"浏览器请求 → 服务端 v5 DeepSeek → 产品授权/预算门 → envelope 解析 + 契约/Schema 预检 → C3 确认 UI/API → 显式用户确认 → 既有 Schema→IR→CadQuery→几何/STEP pipeline"时序。本任务不发真实 HTTP。
+  - `src/llm/product_live_authorization.py`（新增）：`ProductLiveAuthorization`（extends `FormalRunAuthorization`），绑定 `profile_id=app003-product-live.v1`、4 个 input IDs、DeepSeek/deepseek-flash/C0、prompt/contract hash、最多 12 HTTP、`enable_cad_pipeline=True`；`ProductLiveFormalApproval` 独立于 A2 的批准凭证；`validate_product_formal_approval_binding()` 在任何目录/账本/transport/网络前校验；拒绝 A2 authorization、test-only approval、错 provider/model/condition/inputs hash/预算/batch binding。
+  - `src/integration/product_live_runner.py`（新增）：`run_product_batch()` 公共入口（dry_run/mock/formal）；`run_product_offline_preflight()` 零网络零密钥 preflight；`confirm_product_live_run()` 用户确认后唯一调用 `run_pipeline()` 的路径；`ProductLiveRunState` 记录 prompt_file_sha256/prompt_version/contract_version/decision/参数/questions/missing/unsupported/conflicts；`_SummaryWriter` 原子批次摘要（不含 raw body/secret/labels）。
+  - `src/demo/server.py`（修改）：新增 `POST /api/product-live/create`、`POST /api/product-live/confirm/<run_id>`、`GET /api/product-live/<run_id>`、`GET /product-live-download/<run_id>` 路由；`make_handler_class()` 新增 `product_live_handler` 可选参数（默认 None，C3 兼容）；`_get_product_live_step_bytes_secure()` 6 层安全下载。C1/C2/C3 路由完全不变。
+  - `agent-work/integration/APP-003-LIVE-PRODUCT/model-inputs.json`（新增）：4 条冻结刺激，SHA-256 `666a4c08...`。
+  - `agent-work/integration/APP-003-LIVE-PRODUCT/evaluator-labels.json`（新增）：物理隔离评估标签，SHA-256 `73c671a7...`。
+  - `tests/integration/test_product_live.py`（新增，52 项）：覆盖 P1 answer 零 CAD + 确认后成功、P2 ask blocked、P3 conflict blocked、P4 unsupported blocked、parse/schema/refuse fail-closed、approval gate（缺失/test-only/错 batch 拒绝）、budget plan、inputs SHA-256、summary 无 raw body/labels、C3 回归、run 隔离。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18/CadQuery；CAD-dependent 测试在沙箱中失败，与 C3 checkpoint 记录的环境限制一致）。
+- 验证：`py_compile` → OK；`git diff --check` → OK；`test_product_live` 52/52 → OK；`schema` 17/17 → OK；C3 create/gate 10/10 → OK；C3 全量回归 183 ran，30 fail + 9 err（全部为 CAD-dependent，沙箱无 CadQuery）；integration 133 ran，25 fail + 3 err（同上）。
+- 安全：`FORMAL_EVALUATION_ALLOWED=False` 全程不变；不读 `.env`/密钥；不调用 DeepSeek/Ollama/外网；evaluator labels 不进入 prompt/transport/summary/日志/测试输入；不创建 live batch 或发送 HTTP；不复用 A2 authorization/batch/approval/raw/summary。
+- 限制：沙箱 Python 3.10.12，非 3.11.18；Codex 独立复审待完成；固定 CAD venv 全量验证待完成；真实 DeepSeek HTTP 请求需 Codex 复核 + 负责人具体 batch 授权。
+- 下一步：Codex 中枢在 Python 3.11.18 重跑 `test_product_live` + C3 回归，确认 CAD 路径；负责人审阅后决定是否批准具体 batch ID 和 live 执行授权。状态 `review`，不 push、不合并 main。
+
 ## 2026-11-11
 
 ### APP-001-NEXT-REAL-MODEL-EVALUATION-RETRIEVAL-PREFLIGHT-FAIL-CLOSED / CC / review

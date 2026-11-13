@@ -21,6 +21,18 @@ from typing import Any
 from demo.handler import DemoHandler, CATALOG_TABLE_JS
 from demo.product_flow import ProductFlowHandler
 
+# Product live handler (optional — only instantiated if the caller supplies one)
+try:
+    from integration.product_live_runner import (
+        ProductLiveRunState,
+        confirm_product_live_run,
+        PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION,
+        PRODUCT_LIVE_STATUS_SUCCEEDED,
+    )
+    _PRODUCT_LIVE_AVAILABLE = True
+except ImportError:
+    _PRODUCT_LIVE_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # HTML UI (single self-contained page, no external resources)
 # ---------------------------------------------------------------------------
@@ -639,10 +651,60 @@ PRODUCT_HTML_CONTENT = _build_product_html()
 PRODUCT_HTML_BYTES = PRODUCT_HTML_CONTENT.encode("utf-8")
 
 
-def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHandler | None = None):
-    """Return a request handler class bound to the given handler instances."""
+def _get_product_live_step_bytes_secure(state: "Any") -> bytes | None:
+    """6-layer security check for product live STEP download.
+
+    Mirrors the security logic in ProductFlowHandler.get_product_step_bytes_secure.
+    Only returns bytes when all checks pass:
+      1. product_status == succeeded
+      2. step_path is set (internal field)
+      3. pipeline_run_dir is set
+      4. step_sha256 is set
+      5. STEP path is inside the run's cad_output/ directory (containment)
+      6. File is not a symlink, exists, is non-empty, and hash matches
+    """
+    import hashlib
+    if state.product_status != PRODUCT_LIVE_STATUS_SUCCEEDED:
+        return None
+    step_path_str = state.step_path
+    run_dir_str = state.pipeline_run_dir
+    expected_sha256 = getattr(state, "ir_index", None)
+    if isinstance(expected_sha256, dict):
+        expected_sha256 = expected_sha256.get("step_sha256")
+    if not step_path_str or not run_dir_str or not expected_sha256:
+        return None
+    step_path = Path(step_path_str)
+    expected_prefix = Path(run_dir_str) / "cad_output"
+    try:
+        canonical_step = step_path.resolve()
+        canonical_prefix = expected_prefix.resolve()
+        canonical_step.relative_to(canonical_prefix)
+    except (ValueError, OSError):
+        return None
+    if canonical_step.is_symlink():
+        return None
+    if not canonical_step.is_file() or canonical_step.stat().st_size == 0:
+        return None
+    content = canonical_step.read_bytes()
+    if hashlib.sha256(content).hexdigest() != expected_sha256:
+        return None
+    return content
+
+
+def make_handler_class(
+    demo_handler: DemoHandler,
+    product_handler: ProductFlowHandler | None = None,
+    product_live_handler: dict | None = None,
+):
+    """Return a request handler class bound to the given handler instances.
+
+    ``product_live_handler`` is an optional dict with keys:
+        - ``runs``: a dict[str, ProductLiveRunState] in-memory registry
+        - ``output_root``: Path for pipeline runs
+    """
 
     _product = product_handler
+    _product_live = product_live_handler  # dict with 'runs' and 'output_root'
 
     class _Handler(BaseHTTPRequestHandler):
         _demo = demo_handler
@@ -699,6 +761,18 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
                     self._handle_product_get(tail)
                     return
 
+            # Product live routes (GET)
+            if path.startswith("/api/product-live/"):
+                tail = path[len("/api/product-live/"):]
+                if tail:
+                    self._handle_product_live_get(tail)
+                    return
+
+            if path.startswith("/product-live-download/"):
+                run_id = path[len("/product-live-download/"):]
+                self._handle_product_live_download(run_id)
+                return
+
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
 
         def do_POST(self) -> None:
@@ -715,6 +789,16 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
             if path.startswith("/api/product/confirm/"):
                 run_id = path[len("/api/product/confirm/"):]
                 self._handle_product_confirm(run_id)
+                return
+
+            # Product live routes (POST)
+            if path == "/api/product-live/create":
+                self._handle_product_live_create()
+                return
+
+            if path.startswith("/api/product-live/confirm/"):
+                run_id = path[len("/api/product-live/confirm/"):]
+                self._handle_product_live_confirm(run_id)
                 return
 
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
@@ -947,6 +1031,178 @@ def make_handler_class(demo_handler: DemoHandler, product_handler: ProductFlowHa
                 for fid in _product._fixture_registry.keys()
             ]
             self._send_json(200, {"fixtures": fixtures})
+
+        # ------------------------------------------------------------------
+        # Product live handlers (APP-003-LIVE-PRODUCT)
+        # ------------------------------------------------------------------
+
+        def _handle_product_live_create(self) -> None:
+            """POST /api/product-live/create — create a product live run from request text.
+
+            The extraction result (from a pre-queued FakeTransport or formal transport)
+            is returned; never includes API keys, raw body, or evaluator labels.
+
+            Request body: {request_text: str, logical_run_id: str}
+            The logical_run_id identifies which queued mock/formal response to use.
+            """
+            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live handler not configured")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            request_text = body.get("request_text", "")
+            if not isinstance(request_text, str) or not request_text.strip():
+                self._send_error_json(400, "MISSING_REQUEST_TEXT",
+                                      "request_text is required and must be non-empty")
+                return
+            logical_run_id = body.get("logical_run_id", "")
+            if not isinstance(logical_run_id, str) or not logical_run_id.strip():
+                self._send_error_json(400, "MISSING_LOGICAL_RUN_ID",
+                                      "logical_run_id is required")
+                return
+            # Retrieve existing extraction state from registry
+            runs: dict = _product_live.get("runs", {})
+            state = runs.get(logical_run_id)
+            if state is None:
+                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                      f"logical_run_id {logical_run_id!r} not found")
+                return
+            # Return extraction result — never expose raw body, keys, or labels
+            resp = state.as_dict()
+            # Remove internal fields: step_path (absolute), raw_retention_meta body
+            resp.pop("step_path", None)
+            if isinstance(resp.get("raw_retention_meta"), dict):
+                # Only keep path/sha256, never body content
+                meta = resp["raw_retention_meta"]
+                resp["raw_retention_meta"] = {
+                    "retained": meta.get("retained"),
+                    "path": meta.get("path"),
+                    "body_sha256": meta.get("body_sha256"),
+                }
+            self._send_json(200, resp)
+
+        def _handle_product_live_confirm(self, run_id: str) -> None:
+            """POST /api/product-live/confirm/<run_id> — confirm and trigger CAD pipeline.
+
+            Only product_status=needs_confirmation runs can be confirmed.
+            Calls confirm_product_live_run() which is the ONLY code path
+            that calls run_pipeline() for product live runs.
+
+            Request body: {confirmed: bool, patch: dict}
+            """
+            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live handler not configured")
+                return
+            # run_id here is the logical_run_id
+            if not run_id or not isinstance(run_id, str):
+                self._send_error_json(400, "INVALID_RUN_ID", "run_id must be non-empty")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            confirmed_raw = body.get("confirmed")
+            if confirmed_raw is None:
+                self._send_error_json(400, "MISSING_CONFIRMED", "confirmed is required")
+                return
+            if not isinstance(confirmed_raw, bool):
+                self._send_error_json(400, "INVALID_CONFIRMED_TYPE",
+                                      "confirmed must be a JSON boolean (true or false), "
+                                      f"got {type(confirmed_raw).__name__!r}: {confirmed_raw!r}")
+                return
+            patch = body.get("patch", {})
+            if not isinstance(patch, dict):
+                self._send_error_json(400, "INVALID_PATCH", "patch must be a JSON object")
+                return
+
+            runs: dict = _product_live.get("runs", {})
+            state = runs.get(run_id)
+            if state is None:
+                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found in product live registry")
+                return
+
+            output_root = _product_live.get("output_root")
+            new_state = confirm_product_live_run(
+                state,
+                confirmed=confirmed_raw,
+                patch=patch or None,
+                output_root=output_root,
+            )
+            # Store the confirmed state under the same run_id (child result)
+            runs[run_id + "__confirmed"] = new_state
+
+            resp = new_state.as_dict()
+            resp.pop("step_path", None)
+            if isinstance(resp.get("raw_retention_meta"), dict):
+                meta = resp["raw_retention_meta"]
+                resp["raw_retention_meta"] = {
+                    "retained": meta.get("retained"),
+                    "path": meta.get("path"),
+                    "body_sha256": meta.get("body_sha256"),
+                }
+            self._send_json(200, resp)
+
+        def _handle_product_live_get(self, run_id: str) -> None:
+            """GET /api/product-live/<run_id> — get product live run status."""
+            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live handler not configured")
+                return
+            runs: dict = _product_live.get("runs", {})
+            # Check both pre-confirmation and post-confirmation states
+            state = runs.get(run_id) or runs.get(run_id + "__confirmed")
+            if state is None:
+                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found")
+                return
+            resp = state.as_dict()
+            resp.pop("step_path", None)
+            if isinstance(resp.get("raw_retention_meta"), dict):
+                meta = resp["raw_retention_meta"]
+                resp["raw_retention_meta"] = {
+                    "retained": meta.get("retained"),
+                    "path": meta.get("path"),
+                    "body_sha256": meta.get("body_sha256"),
+                }
+            self._send_json(200, resp)
+
+        def _handle_product_live_download(self, run_id: str) -> None:
+            """GET /product-live-download/<run_id> — STEP download for product live.
+
+            Only succeeded runs with a valid STEP file can be downloaded.
+            Applies path containment and SHA-256 verification.
+            """
+            if not _PRODUCT_LIVE_AVAILABLE or _product_live is None:
+                self._send_error_json(503, "PRODUCT_LIVE_DISABLED",
+                                      "Product live handler not configured")
+                return
+            runs: dict = _product_live.get("runs", {})
+            state = runs.get(run_id + "__confirmed") or runs.get(run_id)
+            if state is None:
+                self._send_error_json(404, "LOGICAL_RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found")
+                return
+            if state.product_status != PRODUCT_LIVE_STATUS_SUCCEEDED:
+                self._send_error_json(403, "RUN_NOT_SUCCESSFUL",
+                                      f"Run {run_id} has product_status={state.product_status!r}; "
+                                      "only succeeded runs can be downloaded")
+                return
+            # 6-layer security check
+            step_bytes = _get_product_live_step_bytes_secure(state)
+            if step_bytes is None:
+                self._send_error_json(403, "STEP_UNAVAILABLE",
+                                      "STEP file unavailable or failed integrity check")
+                return
+            filename = f"product-live-{run_id[:16]}.step"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(step_bytes)))
+            self.end_headers()
+            self.wfile.write(step_bytes)
 
     return _Handler
 

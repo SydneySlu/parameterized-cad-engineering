@@ -1,0 +1,1 @@
+{"contract_version": "app001-io.v1", "prompt_version": "app001-extraction.v5", "decision": "ask", "extracted_parameters": {}, "unsupported_requests": ["bore_d が必要です"], "evidence": [], "missing_fields": ["bore_d"], "questions": [], "confidence": null}
