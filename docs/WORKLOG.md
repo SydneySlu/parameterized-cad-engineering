@@ -2922,3 +2922,13 @@ commit=待提交
 - 结论：`.env` credential entry 修复符合 fail-closed 时序，dry-run/mock 不加载凭据，secret 不输出；独立复核关闭 whitespace finding。provider 实际权限未测试，旧批次失败不能作为账户权限证据。
 - 边界：没有执行 live batch、网络/provider 请求或历史 batch 操作；旧 batch `app003-product-live-20261114-01` 仍只读，剩余预算不可用；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：若负责人希望确认 provider 可访问性，需另建窄 scope、新 batch ID、approval 和 preflight，再由负责人明确授权真实请求；在此之前保持 review。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02 / Codex 中枢 / review / 2026-11-14
+
+- 动作：为已通过独立复核的 credential entry fix 准备全新 provider diagnostic 候选，不复用旧 batch。
+- 候选：`app003-product-live-20261114-02`；沿用 Product Live 当前冻结四条输入、DeepSeek `deepseek-flash` / C0、最多 12 HTTP。 profile 将输入集合/预算硬编码，本轮未改 profile、代码或 scope。
+- 验证：固定 CAD venv Python 3.11.18；离线 preflight 和 dry-run 通过，planned=4/results=0；CAD runtime 正常，candidate batch dir 不存在。
+- 边界：网络=0、credential reads=0、formal batch/ledger=0；旧 batch 均只读；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 产物：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/scope.md`、`approval-template.md`、`offline-preflight.json`、`checkpoint.md`。
+- 下一步：等待负责人审阅 scope；scope 获批后只做 formal preflight，真实 provider 请求仍需单独明确执行授权。

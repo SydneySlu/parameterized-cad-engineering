@@ -20,6 +20,7 @@
 | C：产品 live 确认界面 | APP-003-LIVE-UI：CC 接入受控 live API，Codex 中枢复核 | done；`8dce35a` 已合入并推送 `main`，固定 CAD venv 与 localhost 浏览器验收完成。下一步若执行真实 provider，必须另立 live scope、预算、preflight、batch ID 和负责人批准。 |
 | C：产品 live smoke 准备与运行 | `APP-003-LIVE-PREFLIGHT-20261113-01`：Codex 中枢 + 项目负责人 | done；旧 batch `app003-product-live-20261113-01` 按批准 scope 执行 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。错误映射/脱敏与 HTTP raw path 隔离修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。 |
 | C：新产品 live smoke 正式运行 | `APP-003-LIVE-PREFLIGHT-20261114-01`：Codex 中枢 + 项目负责人 | review；batch 已执行 4/12 HTTP，P1–P4 均在响应前以 `TRANSPORT_ERROR/authentication_or_permission` 失败，summary=`failed`，无 CAD/STEP。只读诊断发现 `.env` 有非空 DeepSeek key，但 formal runner 未加载 `.env`，而 transport 只读进程环境；`5bf82ce`/`df3f7b4` fail-closed 加载修复已通过独立复核，固定 CAD venv 凭据专项 9/9、Product Live 107/107 和 diff check 通过。不能由旧结果判断账户权限；若要验证 provider，须另建 scope/batch/approval/preflight 并获新执行授权。 |
+| C：凭据修复后 provider diagnostic | `APP-003-LIVE-PREFLIGHT-20261114-02`：Codex 中枢 + 项目负责人 | review；候选 `app003-product-live-20261114-02` 沿用当前冻结 profile；固定 CAD venv 离线 preflight/dry-run 通过，尚未读取凭据或发网络请求。等待 scope 批准；formal preflight 和 live execution 分别设 gate。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
@@ -78,7 +79,7 @@
 - [x] 接通自然语言产品状态机、确认流程与离线 envelope fixtures（APP-003-C2-NL-PRODUCT-FLOW；ADR-0023；`d839954` 已合入并验收）
 - [x] 合入并收束已通过独立验收的离线产品确认 UI（APP-003-C3-PRODUCT-UI；`f105fc4`，浏览器/localhost/CAD 验收完成）
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
-- [ ] 为具体产品 live batch 分配新 batch ID、完成 preflight 并取得单独执行授权后，才可发模型请求
+- [ ] `APP-003-LIVE-PREFLIGHT-20261114-02`：候选 `app003-product-live-20261114-02` 已完成离线 preflight，等待负责人审阅；获批后做 formal preflight，真实请求另需明确授权
 - [ ] 完成技术验收与交付记录（APP-004）
 
 ## APP-001 v5 收束与独立研究
