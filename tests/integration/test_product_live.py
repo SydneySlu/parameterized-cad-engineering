@@ -1720,5 +1720,245 @@ class TestSummaryPathRelative(unittest.TestCase):
         self.assertNotIn("raw_retention_meta", resp)
 
 
+# ---------------------------------------------------------------------------
+# R1-CORRECTION-2: Path traversal / symlink escape regression tests
+# ---------------------------------------------------------------------------
+
+class TestPathTraversalSafety(unittest.TestCase):
+    """_to_repo_relative_path must reject path traversal and symlink escapes."""
+
+    def setUp(self):
+        from integration.product_live_runner import _REPO_ROOT
+        self._repo_root = _REPO_ROOT
+
+    def test_double_dot_traversal(self):
+        """../../outside/file.step must return None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path("../../outside/file.step"))
+
+    def test_single_dot_traversal(self):
+        """../outside/file.step must return None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path("../outside/file.step"))
+
+    def test_absolute_external_path(self):
+        """Absolute path outside repo must return None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path("/tmp/secret_outside/file.step"))
+
+    def test_none_input(self):
+        """None input must return None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path(None))
+
+    def test_empty_string(self):
+        """Empty string must return None."""
+        from integration.product_live_runner import _to_repo_relative_path
+        self.assertIsNone(_to_repo_relative_path(""))
+
+    def test_valid_absolute_inside_repo(self):
+        """Absolute path inside repo returns repo-relative."""
+        from integration.product_live_runner import _to_repo_relative_path, _REPO_ROOT
+        inside = str(_REPO_ROOT / "work" / "test-file.json")
+        result = _to_repo_relative_path(inside)
+        self.assertIsNotNone(result)
+        self.assertFalse(result.startswith("/"))
+        self.assertIn("work/test-file.json", result.replace("\\", "/"))
+
+    def test_valid_relative_inside_repo(self):
+        """Relative path inside repo resolves against _REPO_ROOT and returns relative."""
+        from integration.product_live_runner import _to_repo_relative_path
+        result = _to_repo_relative_path("work/product-live-runs/file.step")
+        self.assertIsNotNone(result)
+        self.assertFalse(result.startswith("/"))
+        self.assertIn("work/product-live-runs/file.step", result.replace("\\", "/"))
+
+    def test_symlink_escape_returns_none(self):
+        """Symlink inside repo pointing outside must return None."""
+        import tempfile
+        from integration.product_live_runner import _to_repo_relative_path, _REPO_ROOT
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a file outside the repo
+            outside_file = Path(tmpdir) / "outside_secret.step"
+            outside_file.write_text("secret")
+
+            # Create symlink inside repo pointing to the outside file
+            link_inside = _REPO_ROOT / "work" / "test_symlink_escape.step"
+            try:
+                link_inside.symlink_to(outside_file)
+                result = _to_repo_relative_path(str(link_inside))
+                self.assertIsNone(
+                    result,
+                    msg=f"Symlink escape should return None, got {result!r}"
+                )
+            finally:
+                link_inside.unlink(missing_ok=True)
+
+    def test_relative_traversal_string_not_returned_as_is(self):
+        """A relative path with .. that resolves outside repo must NOT be returned as-is."""
+        from integration.product_live_runner import _to_repo_relative_path
+        # This used to be returned as-is in the buggy version
+        result = _to_repo_relative_path("../../../etc/passwd")
+        self.assertIsNone(result)
+
+    def test_no_fallback_on_resolve_exception(self):
+        """If resolve raises, the function must return None, not the original string."""
+        from integration.product_live_runner import _to_repo_relative_path
+        # Pass a path with null bytes — will cause ValueError on resolve
+        result = _to_repo_relative_path("work\x00file.step")
+        self.assertIsNone(result)
+
+
+class TestSummaryWriterPathSafety(unittest.TestCase):
+    """Summary writer must write None for traversal/symlink-escape paths."""
+
+    def test_summary_writer_traversal_path_becomes_none(self):
+        """_SummaryWriter.update_run() must write None for a traversal path."""
+        from integration.product_live_runner import (
+            _SummaryWriter, PRODUCT_LIVE_STATUS_BLOCKED,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "test-batch-traversal"
+            batch_dir.mkdir()
+            writer = _SummaryWriter(batch_dir, {"runs": {}, "batch_id": "test-batch-traversal"})
+            writer.write_initial()
+
+            state = ProductLiveRunState(
+                logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+                input_id="P1-24mm",
+                condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+                decision="", extracted_parameters={},
+                missing_fields=[], unsupported_requests=[], questions=[],
+                conflicts=[], errors=[],
+                pipeline_run_dir="../../outside/secret",
+                step_path="../../../etc/passwd",
+                request_text="test",
+            )
+            writer.update_run(state)
+
+            import json as _json
+            summary = _json.loads((batch_dir / "batch_summary.json").read_text())
+            run_entry = summary["runs"]["P1-24mm__C0__DeepSeek__deepseek-flash"]
+            self.assertIsNone(run_entry.get("pipeline_run_dir"),
+                              msg=f"Expected None, got {run_entry.get('pipeline_run_dir')!r}")
+            self.assertIsNone(run_entry.get("step_path"),
+                              msg=f"Expected None, got {run_entry.get('step_path')!r}")
+
+    def test_summary_writer_symlink_escape_becomes_none(self):
+        """_SummaryWriter.update_run() must write None for symlink-escaped paths."""
+        import tempfile
+        from integration.product_live_runner import (
+            _SummaryWriter, PRODUCT_LIVE_STATUS_BLOCKED, _REPO_ROOT,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create an outside file
+            outside_file = Path(tmpdir) / "outside.step"
+            outside_file.write_text("secret")
+
+            # Create symlink inside repo
+            link_inside = _REPO_ROOT / "work" / "test_symlink_summary.step"
+            try:
+                link_inside.symlink_to(outside_file)
+
+                batch_dir = Path(tmpdir) / "test-batch-symlink"
+                batch_dir.mkdir()
+                writer = _SummaryWriter(
+                    batch_dir, {"runs": {}, "batch_id": "test-batch-symlink"}
+                )
+                writer.write_initial()
+
+                state = ProductLiveRunState(
+                    logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+                    input_id="P1-24mm",
+                    condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                    llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+                    decision="", extracted_parameters={},
+                    missing_fields=[], unsupported_requests=[], questions=[],
+                    conflicts=[], errors=[],
+                    step_path=str(link_inside),
+                    request_text="test",
+                )
+                writer.update_run(state)
+
+                import json as _json
+                summary = _json.loads((batch_dir / "batch_summary.json").read_text())
+                run_entry = summary["runs"]["P1-24mm__C0__DeepSeek__deepseek-flash"]
+                self.assertIsNone(run_entry.get("step_path"),
+                                  msg=f"Expected None for symlink escape, got {run_entry.get('step_path')!r}")
+            finally:
+                link_inside.unlink(missing_ok=True)
+
+    def test_summary_writer_no_absolute_paths_in_summary(self):
+        """No path field in summary may start with /."""
+        from integration.product_live_runner import (
+            _SummaryWriter, PRODUCT_LIVE_STATUS_BLOCKED,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            batch_dir = Path(tmpdir) / "test-batch-abs"
+            batch_dir.mkdir()
+            writer = _SummaryWriter(batch_dir, {"runs": {}, "batch_id": "test-batch-abs"})
+            writer.write_initial()
+
+            state = ProductLiveRunState(
+                logical_run_id="P1-24mm__C0__DeepSeek__deepseek-flash",
+                input_id="P1-24mm",
+                condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+                decision="", extracted_parameters={},
+                missing_fields=[], unsupported_requests=[], questions=[],
+                conflicts=[], errors=[],
+                pipeline_run_dir="/absolute/outside/dir",
+                step_path="/absolute/outside/file.step",
+                raw_retention_path="/absolute/outside/raw.json",
+                request_text="test",
+            )
+            writer.update_run(state)
+
+            import json as _json
+            summary_text = (batch_dir / "batch_summary.json").read_text()
+            summary = _json.loads(summary_text)
+            run_entry = summary["runs"]["P1-24mm__C0__DeepSeek__deepseek-flash"]
+
+            for field in ("pipeline_run_dir", "step_path", "raw_retention_path"):
+                val = run_entry.get(field)
+                if val is not None:
+                    self.assertFalse(
+                        val.startswith("/"),
+                        msg=f"Absolute path in summary field {field}: {val!r}"
+                    )
+            # Check ir_index step_path
+            ir_idx = run_entry.get("ir_index")
+            if isinstance(ir_idx, dict):
+                sp = ir_idx.get("step_path")
+                if sp is not None:
+                    self.assertFalse(sp.startswith("/"),
+                                     msg=f"Absolute ir_index.step_path: {sp!r}")
+
+    def test_sanitize_state_traversal_not_exposed(self):
+        """_sanitize_state_for_http must not expose traversal strings."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="blocked", product_status=PRODUCT_LIVE_STATUS_BLOCKED,
+            decision="", extracted_parameters={},
+            missing_fields=[], unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            pipeline_run_dir="../../outside/secret",
+            step_path="../../../etc/passwd",
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        resp_str = json.dumps(resp)
+        self.assertNotIn("../../outside/secret", resp_str)
+        self.assertNotIn("../../../etc/passwd", resp_str)
+        # All path fields must be None
+        self.assertIsNone(resp.get("pipeline_run_dir"))
+        self.assertNotIn("step_path", resp)
+
+
 if __name__ == "__main__":
     unittest.main()

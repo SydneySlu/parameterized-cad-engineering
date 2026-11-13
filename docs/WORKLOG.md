@@ -4,7 +4,17 @@
 
 ## 2026-11-13
 
-### APP-003-LIVE-PRODUCT-R1-CORRECTION-1 / CC / review
+### APP-003-LIVE-PRODUCT-R1-CORRECTION-2 / CC / review
+
+- 动作：窄修 `_to_repo_relative_path()` 路径安全问题。旧实现在解析失败时会把相对路径原样返回（`return path_str`），使 `../../outside/file.step` 或 symlink 逃逸路径绕过 containment check 进入 summary/HTTP 响应。
+  - 重写 `_to_repo_relative_path()`：相对路径以 `_REPO_ROOT` 为基准 resolve（不依赖 CWD）；绝对路径 canonical resolve（symlink 跟随）；canonical 结果必须在 `_REPO_ROOT` 内，否则返回 None；无任何"解析失败后原样返回相对字符串"的 fallback；函数 fail-closed，不抛出未处理异常。
+  - 新增回归测试 14 项（`TestPathTraversalSafety` 9 项 + `TestSummaryWriterPathSafety` 4 项 + `TestSanitizeStateForHttp` 1 项），test_product_live.py 从 85 增至 99 项。
+- 验证：`py_compile` → OK；`git diff --check` → OK；`test_product_live` 99/99 → OK；`schema` 17/17 → OK。手动验证：`../../outside/file.step` → None；symlink→outside → None；abs inside repo → repo-relative；relative inside → repo-relative。
+- 安全：`FORMAL_EVALUATION_ALLOWED=False` 全程不变；不发网络请求；不读密钥；不复用 A2 凭证；不创建正式 batch；evaluator labels 不进入任何公开接口。
+- 限制：沙箱 Python 3.10.12，非 3.11.18；固定 CAD venv 全量验证待完成；真实 DeepSeek HTTP 请求需 Codex 复核 + 负责人授权。
+- 下一步：Codex 中枢在 Python 3.11.18 重跑 99 项 test_product_live + C3 回归，确认路径安全和 CAD 路径正确性。状态 `review`，不 push、不合并 main。
+
+
 
 - 动作：窄修独立复核发现的两个阻断问题，不扩大 live scope。
   - **问题 1 修复**：`src/integration/product_live_runner.py` 新增 `ProductLiveService` 类，封装 FakeTransport 注入的离线模式；`extract(input_id, request_text)` 调用 `_run_one_logical_mock()` 执行真正的抽取并存入内部 registry；`confirm(run_id, confirmed, patch)` 调用 `confirm_product_live_run()`。`src/demo/server.py` 更新 `_handle_product_live_create()` 改为接受 `{request_text, input_id}`、调用 `service.extract()`；`make_handler_class()` 新增 `product_live_service` 参数（ProductLiveService 实例），向下兼容旧 dict 接口；新增 `_sanitize_state_for_http()` 辅助函数统一剥离绝对路径、raw body、secret、evaluator labels。

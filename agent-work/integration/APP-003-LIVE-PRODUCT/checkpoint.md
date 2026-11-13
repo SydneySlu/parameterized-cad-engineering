@@ -245,3 +245,76 @@ confirmed=P1 HTTP create → needs_confirmation with zero run_pipeline; P1 HTTP 
 unresolved=固定 CAD venv (Python 3.11.18) 下真实 compile_ir 路径验证；真实 DeepSeek HTTP 请求验证（需 Codex 复核 + 负责人 batch 授权）；浏览器端 /product-live 页面烟测
 next_agent_focus=1) Run under real CadQuery: verify P1 HTTP confirm → real STEP; 2) Codex 中枢在固定 venv 重跑 test_product_live 85 项 + C3 regression; 3) Verify FORMAL_EVALUATION_ALLOWED still False; 4) Do NOT create live batch or send HTTP without Codex review + owner approval
 ```
+
+## R1-CORRECTION-2 窄修
+
+### 问题
+
+`_to_repo_relative_path()` 在路径解析失败或解析到仓库外时，会把相对路径原样返回（`return path_str`），违反路径穿越和 symlink 逃逸拒绝要求。例如 `../../outside/file.step` 或 symlink 指向外部的相对字符串会被原样写入 summary / HTTP 响应。
+
+### 修复（src/integration/product_live_runner.py）
+
+重写 `_to_repo_relative_path(path_str)`：
+
+- `None` 或空字符串 → `None`
+- 相对路径以 `_REPO_ROOT` 为基准 resolve（不依赖 CWD）
+- 绝对路径 canonical resolve（symlink 跟随）
+- canonical 结果必须在 `_REPO_ROOT` 内，否则 `None`
+- `..` 路径穿越解析到仓库外 → `None`
+- symlink 解析到仓库外 → `None`
+- 无任何"解析失败后原样返回相对字符串"的 fallback
+- 合法路径返回不以 `/` 开头的 repo-relative POSIX 路径
+- 函数 fail-closed，不抛出未处理异常
+
+### 新增回归测试（14 项，test_product_live.py 从 85 增至 99）
+
+**TestPathTraversalSafety (9 项)**：
+- `../../outside/file.step` → None
+- `../outside/file.step` → None
+- 绝对外部路径 → None
+- None 输入 → None
+- 空字符串 → None
+- 合法仓库内绝对路径 → repo-relative
+- 合法仓库内相对路径 → repo-relative
+- 仓库内 symlink 指向外部 → None
+- `../../../etc/passwd` 相对路径 → None（不原样返回）
+
+**TestSummaryWriterPathSafety (4 项)**：
+- `_SummaryWriter.update_run()` 路径穿越 → pipeline_run_dir/step_path 写入 None
+- symlink 逃逸 → step_path 写入 None
+- 外部绝对路径 → 所有路径字段写入 None（不写绝对路径）
+- `_sanitize_state_for_http()` 路径穿越字符串不出现在响应中
+
+### 验证结果（sandbox Python 3.10.12）
+
+```text
+py_compile: src/integration/product_live_runner.py, src/demo/server.py,
+  tests/integration/test_product_live.py — OK
+git diff --check — OK
+
+Product live tests (99 项):
+  PYTHONPATH=src:. python3 -m unittest tests.integration.test_product_live -q
+  Ran 99 tests — OK
+
+Schema regression (17 项):
+  PYTHONPATH=src:. python3 -m unittest discover -s tests/schema -p 'test_*.py' -q
+  Ran 17 tests — OK
+
+手动验证：
+  _to_repo_relative_path("../../outside/file.step") = None ✓
+  _to_repo_relative_path("../outside/file.step") = None ✓
+  _to_repo_relative_path("/tmp/secret.json") = None ✓
+  symlink→outside → None ✓
+  abs inside repo → "work/product-live-runs/file.step" ✓
+  relative inside → "work/product-live-runs/file.step" ✓
+```
+
+### handoff_self_check（R1-CORRECTION-2 更新）
+
+```text
+changed=src/integration/product_live_runner.py (_to_repo_relative_path rewritten), tests/integration/test_product_live.py (99 tests, +14 R1-CORRECTION-2), agent-work/integration/APP-003-LIVE-PRODUCT/checkpoint.md, docs/WORKLOG.md
+commands=py_compile OK; git diff --check OK; test_product_live 99/99 OK; schema 17/17 OK
+confirmed=../../outside → None; ../outside → None; /tmp/secret → None; symlink-to-outside → None; valid abs inside repo → repo-relative; valid rel inside repo → repo-relative; summary writer traversal → None in JSON; summary no absolute paths; sanitize_state_for_http traversal not in response; FORMAL_EVALUATION_ALLOWED=False unchanged; P1 HTTP create/confirm/download still work; C1/C2/C3 backward compatible
+unresolved=固定 CAD venv (Python 3.11.18) 下全量测试；真实 DeepSeek HTTP 请求（需 Codex 复核 + 负责人 batch 授权）；浏览器端 /product-live 页面烟测
+next_agent_focus=1) Run under real CadQuery: verify P1 confirm → real STEP; 2) Codex 中枢在固定 venv 重跑 99 项 + C3 regression; 3) FORMAL_EVALUATION_ALLOWED still False; 4) Do NOT create live batch without Codex review + owner approval
+```

@@ -117,20 +117,38 @@ def _safe_filename_component(value: str) -> str:
 def _to_repo_relative_path(path_str: str | None) -> str | None:
     """Convert an absolute or repo-rooted path to a repo-relative string.
 
-    Returns ``None`` if *path_str* is ``None``, empty, outside the repo,
-    or cannot be resolved.  Never raises.
+    Fail-closed: returns ``None`` for *any* path that cannot be verified as
+    residing inside ``_REPO_ROOT`` after canonical resolution.
+
+    Rules:
+    - ``None`` or empty string → ``None``.
+    - Relative paths are resolved against ``_REPO_ROOT`` (never CWD).
+    - Absolute paths are resolved canonically (symlinks followed).
+    - The canonical result must be inside ``_REPO_ROOT``; otherwise ``None``.
+    - ``..`` traversal that escapes the repo → ``None``.
+    - Symlink that resolves outside the repo → ``None``.
+    - No fallback to returning the original string unvalidated.
+    - Never raises; all exceptions → ``None``.
     """
-    if not path_str:
+    if not path_str or not isinstance(path_str, str):
         return None
     try:
-        p = Path(path_str).resolve()
         root = _REPO_ROOT.resolve()
-        rel = p.relative_to(root)
-        return str(rel)
-    except (ValueError, OSError, RuntimeError):
-        # If it's already relative, return as-is
-        if not Path(path_str).is_absolute():
-            return path_str
+        # Resolve relative paths against _REPO_ROOT, NOT the CWD.
+        raw = Path(path_str)
+        if raw.is_absolute():
+            candidate = raw.resolve()
+        else:
+            candidate = (root / raw).resolve()
+        # Containment check: candidate must be inside root.
+        candidate.relative_to(root)
+        # Return POSIX-style repo-relative path (never starts with /).
+        rel = candidate.relative_to(root)
+        result = str(rel).replace("\\", "/")
+        if result.startswith("/"):
+            return None
+        return result
+    except (ValueError, OSError, RuntimeError, TypeError):
         return None
 
 
