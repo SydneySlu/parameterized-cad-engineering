@@ -93,6 +93,7 @@ from llm.contract import (
     PROMPT_VERSION,
     SCHEMA_VERSION,
 )
+from llm.env_loader import EnvironmentConfigurationError, load_deepseek_environment
 from llm.prompt_loader import load_frozen_prompt, FROZEN_PROMPT_FILE_SHA256
 from llm.transport import FakeTransport, MockTransport, PreparedRequest, TransportResponse
 from integration.pipeline import run_pipeline, PipelineResult
@@ -376,6 +377,10 @@ class ProductLiveBatchResult:
             "summary_path": self.summary_path,
             "summary_finalize_error": self.summary_finalize_error,
         }
+
+
+class ProductLiveConfigurationError(RuntimeError):
+    """Raised when formal product live credentials are not configured."""
 
 
 # ---------------------------------------------------------------------------
@@ -1400,6 +1405,15 @@ def run_product_batch(
             results=[],
             budget_plan=budget_plan,
         )
+
+    if is_formal:
+        # Credential loading is deliberately after approval + offline preflight
+        # and before batch directory/ledger/transport creation.  Dry-run and
+        # mock paths never read .env or process credentials.
+        try:
+            load_deepseek_environment(repo_root=_REPO_ROOT)
+        except EnvironmentConfigurationError as exc:
+            raise ProductLiveConfigurationError(str(exc)) from exc
 
     # Load frozen inputs (SHA-256 verified by preflight, verify again here)
     inputs = _load_frozen_inputs(verify_sha256=True)

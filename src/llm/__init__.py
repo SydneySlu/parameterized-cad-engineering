@@ -26,6 +26,7 @@ Public modules:
 - :mod:`src.llm.adapter` -- the orchestrating adapter tying the stages
   together and emitting staged records.
 - :mod:`src.llm.gate` -- the default-off formal evaluation gate.
+- :mod:`src.llm.env_loader` -- fail-closed credential loading for formal entry points.
 """
 
 __all__ = [
@@ -38,4 +39,5 @@ __all__ = [
     "runrecord",
     "adapter",
     "gate",
+    "env_loader",
 ]

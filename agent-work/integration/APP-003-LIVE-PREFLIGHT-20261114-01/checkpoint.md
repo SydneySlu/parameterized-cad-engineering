@@ -78,3 +78,21 @@ confirmed=四条输入均在响应前以 TRANSPORT_ERROR/authentication_or_permi
 unresolved=provider authentication/permission 根因需负责人在外部凭据/账户层面处理；本 batch 授权已消耗，不得追加请求
 next_agent_focus=只读审查 batch summary/ledger 和执行报告；如需再次尝试，必须先解决凭据问题并创建全新 scope、batch、approval 与 preflight
 ```
+
+## 凭据入口根因核查与窄修（2026-11-14）
+
+- 诊断：只检查 `.env` 中变量名与是否非空，没有输出 key；文件和非空值存在，但 formal runner 进程中的 `DEEPSEEK_API_KEY` 缺失。`DeepSeekTransport.send()` 只读取进程环境变量，因此原 batch 的稳定原因码不能用于判断 DeepSeek 账户权限。
+- 修改候选：`src/llm/env_loader.py` 提供保守、fail-closed 的 required-key loader；Product Live formal path 在审批 binding 和 CAD/runtime offline preflight 通过后、batch 目录/ledger/transport 创建前加载。dry-run/mock 不调用 loader；不修改 transport 的 env-only 行为，也不改变全局 gate。
+- 测试：固定 CAD venv Python 3.11.18，`tests.integration.test_product_live_env` 9/9 通过；`tests.integration.test_product_live` 107/107 通过；py_compile 与 `git diff --check` 通过。测试中模拟 loader 缺 key 时 runner 在 batch root 创建前 fail closed。
+- 边界：本轮无网络/HTTP；没有检查或输出 key 内容；旧批次 `app003-product-live-20261114-01` 仍只读，4/12 已消耗，不得重跑或追加。`.env` 内容未修改、未提交。
+- 未解决：provider 实际是否接受该账户/key 仍未验证。需先完成本窄修复核，再创建全新 scope/batch/approval/preflight 并获得新的明确执行授权，才能做最小真实 provider 诊断。
+
+### handoff_self_check（credential entry fix）
+
+```text
+changed=src/llm/env_loader.py; src/integration/product_live_runner.py; src/llm/__init__.py; tests/integration/test_product_live_env.py; PROJECT_STATUS/PLAN/TASKS/WORKLOG/checkpoint
+commands=CAD venv Python 3.11.18: test_product_live_env 9/9; test_product_live 107/107; py_compile 通过; git diff --check 通过
+confirmed=dotenv key 存在且非空、formal process env 原缺失；transport 仅读 os.environ；正式路径在基础设施创建前加载；dry-run不加载；模拟缺凭据时零 batch 创建
+unresolved=未发 HTTP；provider 账户权限尚不能判定；窄修仍待独立复核
+next_agent_focus=复核 dotenv parser 与正式路径时序；确认不输出 key、不影响 mock/dry-run；任何真实 provider 请求必须新 batch 和新授权
+```

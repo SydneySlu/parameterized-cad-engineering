@@ -2897,3 +2897,12 @@ commit=待提交
 - 失败脚本说明：首次汇总脚本在 runner 完成后读取不存在的 `run_id` 属性而退出；未触发重跑。随后仅从已写入 summary/ledger 生成脱敏执行报告。
 - 边界：本 batch 已消耗 4 次 HTTP，不重跑、不追加、不改写；旧 batch `app003-product-live-20261113-01` 仍只读；`FORMAL_EVALUATION_ALLOWED=False` 未改变。
 - 下一步：先由负责人在 provider 账户/凭据层面核查 `authentication_or_permission`；若要再次尝试，必须创建全新 batch、scope、approval 和 preflight，不能沿用本 batch 的剩余 8 次预算。
+
+### APP-003-LIVE-CREDENTIAL-ENTRY-FIX / Codex / review / 2026-11-14
+
+- 动作：针对 `app003-product-live-20261114-01` 的 `authentication_or_permission` 结果做零网络凭据入口诊断，并准备最小加载修复。
+- 根因证据：仓库 `.env` 文件存在且 `DEEPSEEK_API_KEY` 非空（只检查存在/非空，不输出值）；执行环境原先没有该变量。`DeepSeekTransport.send()` 只读 `os.environ`，没有自动读取 `.env`。因此旧 batch 的失败不能证明 DeepSeek 账户权限被拒绝。
+- 修改：新增 `src/llm/env_loader.py`，正式 Product Live 路径仅在 approval binding 与 CAD/runtime offline preflight 通过后、创建 batch/ledger/transport 之前加载必需 key；不输出值，进程已有非空值优先，缺失/空值 fail closed。dry-run、mock 和 Web offline 路径不加载凭据；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 测试：新增 `tests/integration/test_product_live_env.py`，覆盖 `.env` 加载、优先级、空/缺失失败、无输出、正式路径在 batch 创建前失败、dry-run 不加载；固定 CAD venv Python 3.11.18 下 9/9 通过。Product Live 既有专项 107/107 通过；py_compile 与 diff check 通过。
+- 边界：没有发 HTTP、没有验证 provider 账户权限；没有重跑或追加任何历史 batch。`app003-product-live-20261114-01` 仍只读，剩余 8 次不可用。真实 provider 权限判断需在此修复经独立复核后，另行新建 scope/batch/approval/preflight 并取得明确执行授权。
+- 下一步：完成代码/文档复核和本地提交；随后由负责人决定是否批准新的 provider diagnostic smoke。

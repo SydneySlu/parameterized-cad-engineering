@@ -36,7 +36,7 @@
 | APP-003-LIVE-SCOPE | 产品真实抽取最小 smoke scope 与受控入口 | Codex 中枢 / CC / 项目负责人 | done | APP-003-C3、ADR-0023 | `db26fda` 已合入 `main`；固定环境和 P1 本地 HTTP→STEP 独立复核通过。仅完成实现与离线验证，不构成真实 provider 效果证据。 |
 | APP-003-LIVE-UI | 将产品 live 抽取结果接入用户确认界面 | CC + Codex 中枢 | done | APP-003-LIVE-SCOPE、ADR-0023 | `8dce35a` 已合入并推送 `main`；受控 UI、固定 CAD venv 回归、P1 STEP/hash、P2 阻断、XSS 和无 provider/batch 边界均已验收。真实 provider 仍需新 scope 与授权。 |
 | APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与受控运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧批次 4/12 HTTP 均在解析/Envelope 阶段失败且无 CAD/STEP，批次只读保留；修复 commit `d80fd43` 已在本地 main，独立复核 `pass`，固定 CAD venv 回归通过。 |
-| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；四条请求均 `TRANSPORT_ERROR/authentication_or_permission`，无 CAD/STEP，batch 只读保留。不得重跑/追加；重试需新 scope/batch/approval/preflight。 |
+| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；四条请求均 `TRANSPORT_ERROR/authentication_or_permission`，无 CAD/STEP，batch 只读保留。根因核查发现正式入口未加载 `.env`；新增 fail-closed loader 与离线测试，尚待复核。不能据旧错误判断 provider 账户权限；任何重试需新 scope/batch/approval/preflight。 |
 
 ## 认领格式
 

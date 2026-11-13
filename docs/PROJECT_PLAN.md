@@ -19,7 +19,7 @@
 | C：产品真实抽取 scope | APP-003-LIVE-SCOPE：Codex 中枢准备 scope，CC 实现受控入口 | done；`db26fda` 已合入 `main`，固定 CAD venv 独立复核通过。受控 API 已具备自然语言抽取结果、确认和 STEP 下载链路，但尚未接入浏览器 UI，也未执行真实 provider 请求。 |
 | C：产品 live 确认界面 | APP-003-LIVE-UI：CC 接入受控 live API，Codex 中枢复核 | done；`8dce35a` 已合入并推送 `main`，固定 CAD venv 与 localhost 浏览器验收完成。下一步若执行真实 provider，必须另立 live scope、预算、preflight、batch ID 和负责人批准。 |
 | C：产品 live smoke 准备与运行 | `APP-003-LIVE-PREFLIGHT-20261113-01`：Codex 中枢 + 项目负责人 | done；旧 batch `app003-product-live-20261113-01` 按批准 scope 执行 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。错误映射/脱敏与 HTTP raw path 隔离修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。 |
-| C：新产品 live smoke 正式运行 | `APP-003-LIVE-PREFLIGHT-20261114-01`：Codex 中枢 + 项目负责人 | review；batch 已执行 4/12 HTTP，P1–P4 均在响应前以 `TRANSPORT_ERROR/authentication_or_permission` 失败，summary=`failed`，无 CAD/STEP。batch 只读保留；再次尝试需先解决凭据问题并新建 scope/batch/approval/preflight。 |
+| C：新产品 live smoke 正式运行 | `APP-003-LIVE-PREFLIGHT-20261114-01`：Codex 中枢 + 项目负责人 | review；batch 已执行 4/12 HTTP，P1–P4 均在响应前以 `TRANSPORT_ERROR/authentication_or_permission` 失败，summary=`failed`，无 CAD/STEP。只读诊断发现 `.env` 有非空 DeepSeek key，但 formal runner 未加载 `.env`，而 transport 只读进程环境；已准备 fail-closed 加载修复和离线测试，待审。不能由旧结果判断账户权限；若要验证 provider，须另建 scope/batch/approval/preflight 并获新执行授权。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。

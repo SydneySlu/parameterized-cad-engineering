@@ -9,7 +9,7 @@
 - v5 保持当前 prompt/契约/hash 作为首个集成基线；一般优化不启动 v6。首个真实闭环优先沿用已审查 DeepSeek `deepseek-flash` 配置，Qwen 后续兼容。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
-- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。当前本地基线为 `d80fd433c54d37c135581e92c01c4e4bbee31bb3`，比 `origin/main` 超前 7 个提交；本轮只在本地提交，不自动 push。
+- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。本轮开始时本地基线为 `a7fe414`，比 `origin/main` 超前 10 个提交；本地变更只提交，不自动 push。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。
@@ -73,7 +73,7 @@
 | APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | done | `db26fda` 已合入 `main`；产品 live 99 项专项、Demo/Integration 264、Schema 17、CAD 13 及 P1 本地 HTTP→STEP 独立复核通过。仅完成受控入口和离线验证；不代表真实 provider 效果，不授权新的 live preflight 或 batch。 |
 | APP-003-LIVE-UI | 将产品 live 自然语言抽取接入确认 UI | CC + Codex 中枢 | done | `8dce35a` 已合入并推送 `main`；合入后固定 CAD venv 回归保持通过：Product Live/UI 135、C1/C2/C3 183、Integration 81、Schema 17、CAD 13；localhost 浏览器已验证 P1 STEP/hash、P2 阻断和 XSS 纯文本。仅离线注入 transport/本地 CAD，不代表真实 provider 效果。 |
 | APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与正式运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧 batch `app003-product-live-20261113-01` 按批准范围完成 4 次 HTTP，均在解析/Envelope 阶段失败、无 CAD/STEP，批次只读保留。后续证据映射/脱敏修复已在 `d80fd43` 合入本地 `main`，独立复核 `pass`；固定 CAD venv 回归通过。该结论不授权新 live 请求。 |
-| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；P1–P4 均以 `TRANSPORT_ERROR/authentication_or_permission` 在模型响应前失败，summary=`failed`，无确认/CAD/STEP，raw/pipeline 文件均为 0。batch 只读保留，不重跑或追加；若重试必须新 scope/batch/approval/preflight。 |
+| APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；P1–P4 均以 `TRANSPORT_ERROR/authentication_or_permission` 在模型响应前失败，summary=`failed`，无确认/CAD/STEP，raw/pipeline 文件均为 0。只读核查发现 `.env` key 非空但 formal runner 未加载 `.env`，transport 只读取进程环境；新增 fail-closed 加载修复及离线测试，待独立复核。不能据旧结果判 provider 权限问题；旧 batch 只读，任何重试均需全新 scope/batch/approval/preflight 与授权。 |
 
 ## 当前缺口与限制
 
