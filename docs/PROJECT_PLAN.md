@@ -15,13 +15,13 @@
 | B：最小整链验收 | Codex 中枢：复用既有测试并补做缺失案例 | done；六类验收均有证据：真实模型 24 mm 合法值、80 mm 第二螺钉边界、缺参 ask；合成 envelope 的 1.6 cm→16 mm 本地真实 CAD/STEP；显式目录冲突在 Schema 阶段阻断且 CAD 未调用；真实编译器链注入 STEP 导出失败后 status=failed、无 STEP/index。固定 CAD venv 下 A2 98、Integration 179、CAD 13、Schema 17 项通过。合成离线结果不计作额外 live 语言样本 |
 | C：最小可用演示 | APP-003-C1：CC 实现，中枢验收 | done；已合入并推送至 `main=07a98d1`。固定 CAD venv 回归及真实 localhost 24/80 mm STEP、边界阻断、下载安全和 run 隔离烟测通过。三维预览与部署后置；当前演示仅手动确认参数，不调用 LLM。证据见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 | C：自然语言产品闭环 | APP-003-C2-NL-PRODUCT-FLOW：已有 C1 CC 对话框实现，Codex 中枢独立验收 | done；`d839954` 已合入 `main`。固定 CAD venv 回归和真实 localhost create→confirm→get→download 烟测通过；synthetic fixture 模式下 bore24、bore80 与 ask 补参生成真实 STEP，非法 HTTP 确认类型 400 且零 CAD 调用。详见 C2 checkpoint。 |
-| C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：已有 C1/C2 CC 对话框实现，Codex 中枢独立验收 | review；`f258480` 的 R2 ask fail-closed 修复已由 Codex 中枢在固定 CAD venv 复核：demo/integration 264、Schema 17、CAD 13 通过；localhost 验证 ask-extra 空确认阻断、ask-missing 空 patch 阻断、补 bore_d=16 后真实 STEP 下载 hash 匹配。浏览器 DevTools XSS/视觉烟测未运行。负责人合入 main 并同步 closeout 后，再准备新的 live extraction scope；仍需独立授权。 |
+| C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：已有 C1/C2 CC 对话框实现，Codex 中枢独立验收 | review；`f258480` 的 R2 ask fail-closed 修复已由 Codex 中枢在固定 CAD venv 复核：demo/integration 264、Schema 17、CAD 13 通过；localhost 及浏览器验证 ask-extra 空确认阻断、ask-missing 空 patch 阻断、补 bore_d=16 后真实 STEP 下载 hash 匹配、XSS 纯文本和 reset 清理均通过。负责人合入 main 并同步 closeout 后，再准备新的 live extraction scope；仍需独立授权。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
 - v5 fixed-set 真实双模型评测已完成。A2 `...-03` 的两条 answer 因系统 Python 缺少 `jsonschema` 未通过 IR Schema 阶段，一条 ask 正确停止；该历史批次只读保留。runtime guard 已合入并在固定 CAD venv 下复验。获批批次 `...-04` 在 CAD venv 中完成 3 次真实 DeepSeek 请求：24 mm 与 80 mm answer 均生成并回读 STEP，缺孔径请求为 ask；账本 3/9，Codex 中枢独立核对了 summary、预算、raw 文件路径/哈希元数据、IR/STEP 与 index/manifest hash 及 readback comparison。批次只读保留，证据见 A2 checkpoint 与独立审查报告。ADR-0021 专用 gate 不改变全局 gate。held-out 检索对照仍 deferred，不阻塞 A/B/C。
 - 里程碑 B 已完成固定环境定向验收。单位换算使用合成 envelope 和真实本地 CAD/STEP，不冒充真实模型语言理解；显式冲突与导出失败均验证不误报成功。已完成六类链路验收不等于广泛语言覆盖；是否增加 live 样本留待负责人根据具体语言风险假设另行决定，任何新增请求都须新的 batch scope、预算、ID 和授权。
-- 里程碑 C 已完成 C1 手动参数演示和 C2 离线自然语言产品 API 流程；C2 已在 `d839954` 合入。C3 实现和 R2 ask 未回答问题 fail-closed 修复已通过固定 CAD venv 与 localhost 独立验收，当前仍为 review；浏览器 DevTools XSS/视觉烟测尚未运行。合入并收束后再准备新的产品 live smoke scope。C2/C3 均不授权真实模型请求。
+- 里程碑 C 已完成 C1 手动参数演示和 C2 离线自然语言产品 API 流程；C2 已在 `d839954` 合入。C3 实现和 R2 ask 未回答问题 fail-closed 修复已通过固定 CAD venv、localhost 和浏览器独立验收，当前仍为 review；合入并收束后再准备新的产品 live smoke scope。C2/C3 均不授权真实模型请求。
 - A1 交付与证据见 [`agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A1/checkpoint.md)；A2 scope 准备（CC 实现）见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/checkpoint.md)，scope 草案见 [`agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md`](../agent-work/integration/APP-002-INTEGRATION-A2-SCOPE/scope-draft.md)。
 - 下周导师展示目标：合法需求产 STEP、边界几何正确、非法/不完整阻断、参数/IR/验证可查；未达成前区分模块演示与整链演示。
 
@@ -72,7 +72,7 @@
 - [x] 实现最小集成连接层与严格构造门（APP-002-INTEGRATION-A1，`d6faf70`）；自动字段修复循环后置，不阻塞首次成功闭环
 - [x] 建立 API、演示界面、部署说明和失败案例库的 C1 手动参数切片（APP-003-C1）
 - [x] 接通自然语言产品状态机、确认流程与离线 envelope fixtures（APP-003-C2-NL-PRODUCT-FLOW；ADR-0023；`d839954` 已合入并验收）
-- [ ] 合入并收束已通过独立验收的离线产品确认 UI（APP-003-C3-PRODUCT-UI；浏览器 DevTools XSS/视觉烟测待补）
+- [ ] 合入并收束已通过独立验收的离线产品确认 UI（APP-003-C3-PRODUCT-UI；浏览器/localhost/CAD 验收已完成，待合入 main）
 - [ ] 设计并批准新的产品 live extraction scope（C3 离线 UI 验收后；需新 scope、预算、product gate、batch ID 和负责人授权）
 - [ ] 完成技术验收与交付记录（APP-004）
 

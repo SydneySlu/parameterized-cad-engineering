@@ -253,6 +253,16 @@ if (hasUnanswerableQuestions) {
 - 限制：测试有既有 `ResourceWarning` 和 CadQuery/NumPy 上游弃用警告，不影响通过结果。浏览器 DevTools XSS 验证仍未运行。
 - 结论：ask 未回答问题的 API 构造门和对应离线 UI 逻辑通过独立复核；当前交付保持 `review`，等待负责人合入 `main`。本复核未运行模型、未读取密钥/`.env`、未发 provider 请求，也未改变授权或全局 gate。
 
+## 浏览器验收（2026-11-13）
+
+- 环境：固定 CAD venv 启动 `scripts/run_cad_demo.py --port 18083 --output-root /tmp/app003-c3-browser-review-runs`，通过浏览器打开 `http://127.0.0.1:18083/product`；服务关闭后临时产物未纳入仓库。
+- 页面基础：`GET /product` 正常加载；离线 synthetic 警告、单族限制、STEP 免责声明和 fixture 下拉列表可见。
+- XSS：输入 `<img src=x onerror=window.__c3_xss=1>` 后创建 `c2-answer-bore24`，页面以文本显示 payload，DOM 中没有图片元素，`window.__c3_xss` 未被设置。
+- ask-extra：创建 `c2-ask-extra-question` 后页面展示问题“请确认安装方式？”及阻断说明；页面按钮仅有“创建产品运行”，没有“确认并生成 STEP”。
+- ask-missing：创建 `c2-ask-missing-bore` 后显示 `bore_d` 必填输入；填写 `16` 并确认后页面显示 `succeeded`、几何摘要、STEP SHA-256 和下载链接。下载得到 137034 字节，SHA-256 为 `3ed46b402be57b693d6816c5cf0eb210ea8c3abeeb6c240d7756f93b02f3419f`，与页面展示一致。
+- reset：点击“新建另一个需求”后 request、fixture、confirm 和 result 区域均清空，旧 hash/下载链接不残留。
+- 结论：浏览器视觉/交互、XSS 事件、ask 阻断、补参构造/下载和 reset 验收通过；C3 仍保持 `review`，待负责人合入 `main` 后再标记 `done`。本验收未调用模型/provider、未读取密钥/`.env`、未创建 batch。
+
 UI 修复不能替代 API 层门——直接 HTTP POST confirm 也被 `QUESTIONS_UNANSWERED` 阻断。
 
 ### 新增回归测试（7 项，test_product_flow.py）
