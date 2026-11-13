@@ -11,6 +11,13 @@
 - 产物：`agent-work/reviews/APP-003-LIVE-UI-codex-review.md`、checkpoint 复核段；项目状态/计划/任务表改为 `review`。
 - 结论/下一步：**pass，允许负责人合入 `main`**；合入后收束为 `done`，再决定是否准备新的 live batch scope。
 
+### APP-003-LIVE-UI-CLOSEOUT / Codex / done / 2026-11-13
+
+- 动作：核对负责人已将 `cc/APP-003-LIVE-UI` 合入并推送 `main`；`main`、`origin/main` 和分支均指向 `8dce35a`，工作区干净。
+- 合入后复验：固定 CAD venv Python 3.11.18 下 Product Live/UI **135/135**、C1/C2/C3 demo **183/183**、Integration **81/81**、Schema **17/17**、CAD compilation **13/13**；`py_compile`、`git diff --check` 通过。仅有既有 ResourceWarning 和上游弃用警告。
+- 收束：同步 `PROJECT_STATUS.md`、`PROJECT_PLAN.md`、`TASKS.md` 和 C2 checkpoint，APP-003-LIVE-UI 状态改为 `done`。
+- 边界：仍未调用 DeepSeek/Ollama、未读取 `.env`/密钥、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。真实产品 live 必须另立 scope、预算、preflight、batch ID 和负责人批准。
+
 ## 2026-11-13
 
 ### APP-003-LIVE-UI / CC / review

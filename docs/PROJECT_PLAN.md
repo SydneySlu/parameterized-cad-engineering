@@ -17,7 +17,7 @@
 | C：自然语言产品闭环 | APP-003-C2-NL-PRODUCT-FLOW：已有 C1 CC 对话框实现，Codex 中枢独立验收 | done；`d839954` 已合入 `main`。固定 CAD venv 回归和真实 localhost create→confirm→get→download 烟测通过；synthetic fixture 模式下 bore24、bore80 与 ask 补参生成真实 STEP，非法 HTTP 确认类型 400 且零 CAD 调用。详见 C2 checkpoint。 |
 | C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：已有 C1/C2 CC 对话框实现，Codex 中枢独立验收 | done；`f105fc4` 已合入并推送 `main`。固定 CAD venv 的 demo/integration 264、Schema 17、CAD 13，localhost 及浏览器验证均通过：ask-extra 空确认阻断、ask-missing 空 patch 阻断、补 bore_d=16 后真实 STEP 下载 hash 匹配、XSS 纯文本和 reset 清理均已确认。后续 live extraction 仍需新 scope 和授权。 |
 | C：产品真实抽取 scope | APP-003-LIVE-SCOPE：Codex 中枢准备 scope，CC 实现受控入口 | done；`db26fda` 已合入 `main`，固定 CAD venv 独立复核通过。受控 API 已具备自然语言抽取结果、确认和 STEP 下载链路，但尚未接入浏览器 UI，也未执行真实 provider 请求。 |
-| C：产品 live 确认界面 | APP-003-LIVE-UI：CC 接入受控 live API，Codex 中枢复核 | review；`cc/APP-003-LIVE-UI@0b8bd7b` 已完成固定 CAD venv 回归和 localhost 浏览器验收：P1 确认→真实本地 STEP/下载 hash、P2 缺参阻断、XSS 纯文本；通过后等待合入，再决定新的 live preflight/batch 授权。 |
+| C：产品 live 确认界面 | APP-003-LIVE-UI：CC 接入受控 live API，Codex 中枢复核 | done；`8dce35a` 已合入并推送 `main`，固定 CAD venv 与 localhost 浏览器验收完成。下一步若执行真实 provider，必须另立 live scope、预算、preflight、batch ID 和负责人批准。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。

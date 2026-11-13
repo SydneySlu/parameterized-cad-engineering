@@ -152,6 +152,13 @@ next_agent_focus=1) Run under real CadQuery (Python 3.11.18): verify P1 confirm 
 - 边界：所有验证使用离线注入 transport 和本地 CAD；未调用 DeepSeek/Ollama、未读取 `.env`/密钥、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 未改变；不构成真实模型效果证据。
 - 结论：**pass，允许负责人合入 `main`**。合入后再将 APP-003-LIVE-UI 收束为 `done`；真实 provider 请求仍需新 batch scope、预算、preflight 和负责人单独批准。
 
+## 合入收束（2026-11-13）
+
+- 核对结果：`main`、`origin/main`、`cc/APP-003-LIVE-UI` 均包含 `8dce35a`；工作区干净。
+- 合入后复验：Product Live/UI **135/135**；C1/C2/C3 demo **183/183**；Integration **81/81**；Schema **17/17**；CAD compilation **13/13**；`py_compile`、`git diff --check` 均通过。
+- 状态：`APP-003-LIVE-UI=done`。实现和复核提交均已进入 `main`；本任务不启动真实 provider。
+- 后续：如继续产品真实抽取，必须重新准备 scope、预算、preflight、batch ID 并取得负责人明确批准。
+
 ## 安全边界
 
 - `FORMAL_EVALUATION_ALLOWED=False` 全程不变
