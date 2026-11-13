@@ -28,6 +28,12 @@
 
 若后续希望对 P1 生成 CAD/STEP，项目负责人须单独审阅 P1 抽取参数并明确发起该 run 的确认；本批 live 授权本身不自动授权该确认动作。当前 batch 继续只读保留。
 
+## 后续 per-run 审阅准备（2026-11-14）
+
+为准备下一道确认门，读取了 P1 raw envelope 的**白名单字段**；没有输出或保存 provider 正文、凭据或 Authorization。P1 envelope 结果为：`decision=answer`，`extracted_parameters={"bore_d": 24}`，`missing_fields=[]`，`unsupported_requests=[]`，`questions=[]`，`prompt_version=app001-extraction.v5`，`contract_version=app001-io.v1`。Summary 未包含这些参数，因此该字段核对需要读取 P1 raw。
+
+这一步没有调用 `confirm_product_live_run()`、没有写入 batch 目录、没有运行 CAD/STEP，也没有追加 HTTP。P1 仍处于 `needs_confirmation`；目录派生值和规则派生值尚未进入确认结果。负责人仍需明确确认 `bore_d=24` 是否符合需求，才能进入 per-run CAD confirmation。
+
 ## handoff_successor_check
 
 ```text
@@ -37,7 +43,7 @@ core_rerun=read-only artifact/hash consistency checks; no runner or network reru
 normal_case=P1 answer -> needs_confirmation; raw file exists and hash matches; no CAD/STEP
 failure_case=P2 ask -> blocked; P3/P4 refuse -> blocked; each has one successful HTTP attempt and matching raw hash
 interface=pass; four frozen IDs and logical run IDs match approval, summary, ledger and execution report
-limits=pass; no raw body, secret, evaluator label content, old batch, CAD or network operation accessed
-result=pass
-blocking_issue=none; semantic correctness and provider-returned runtime model identity remain outside this raw-free review
+limits=reviewed; initial batch review was raw-free; a later, explicitly scoped P1 parameter review read only the envelope whitelist fields described above; no secret, evaluator label content, old batch, CAD or network operation accessed
+result=pass_with_scoped_parameter_read
+blocking_issue=none for evidence review; explicit user confirmation of P1 bore_d=24 is still required before CAD
 ```

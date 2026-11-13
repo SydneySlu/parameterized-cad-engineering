@@ -2962,3 +2962,12 @@ commit=待提交
 - 文档：新增 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`，更新 checkpoint、scope/template 状态、PROJECT_STATUS 与 PROJECT_PLAN。
 - 提交：`4c8720e`（独立复核记录与项目文档收束）。
 - 限制/下一步：未评估四条响应的语义正确性，未读取 raw 以核对 runtime-returned model。若要对 P1 生成 CAD/STEP，须负责人单独审阅其抽取参数并明确确认该 run；本 batch 继续只读。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-P1-PARAMETER-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：为下一道 per-run confirmation 门准备 P1 参数审阅。
+- 读取边界：读取 P1 raw envelope 的白名单字段；没有输出或保存 provider 正文、密钥或 Authorization。该动作改变了此前“只核 hash、不读 raw 正文”的复核边界，已在独立复核记录中注明。
+- 结果：`decision=answer`；`extracted_parameters={"bore_d": 24}`；`missing_fields=[]`；`unsupported_requests=[]`；`questions=[]`；prompt/contract 仍为 `app001-extraction.v5` / `app001-io.v1`。P1 仍为 `needs_confirmation`。
+- 安全：未调用确认函数，未运行 CAD/STEP，未追加 HTTP，未修改 batch 产物；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：请负责人审阅并明确确认 P1 的 `bore_d=24`；确认后才可在新的 per-run confirmation 门中运行本地 CAD pipeline。
