@@ -79,7 +79,7 @@
 - [x] 接通自然语言产品状态机、确认流程与离线 envelope fixtures（APP-003-C2-NL-PRODUCT-FLOW；ADR-0023；`d839954` 已合入并验收）
 - [x] 合入并收束已通过独立验收的离线产品确认 UI（APP-003-C3-PRODUCT-UI；`f105fc4`，浏览器/localhost/CAD 验收完成）
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
-- [ ] `APP-003-LIVE-PREFLIGHT-20261114-02`：候选 `app003-product-live-20261114-02` 已完成离线 preflight，等待负责人审阅；获批后做 formal preflight，真实请求另需明确授权
+- [ ] `APP-003-LIVE-PREFLIGHT-20261114-02`：候选 `app003-product-live-20261114-02` 已完成离线 preflight，formal preflight 已通过，等待单独 live execution approval
 - [ ] 完成技术验收与交付记录（APP-004）
 
 ## APP-001 v5 收束与独立研究

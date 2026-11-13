@@ -2932,3 +2932,12 @@ commit=待提交
 - 边界：网络=0、credential reads=0、formal batch/ledger=0；旧 batch 均只读；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 产物：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/scope.md`、`approval-template.md`、`offline-preflight.json`、`checkpoint.md`。
 - 下一步：等待负责人审阅 scope；scope 获批后只做 formal preflight，真实 provider 请求仍需单独明确执行授权。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-FORMAL-PREFLIGHT / Codex 中枢 / review / 2026-11-14
+
+- 动作：负责人批准新 batch `app003-product-live-20261114-02` 的 formal preflight；完成同 batch approval binding 与固定 CAD runtime preflight。
+- 结果：`ProductLiveFormalApproval` binding `pass`；Python 3.11.18 下 `run_product_offline_preflight(require_cad_runtime=True)` 返回 `ok=true`、errors 为空；12 HTTP 预算可行，batch 目录不存在。
+- 边界：网络=0，未读取 `.env`/API key，未创建正式 batch/ledger/transport，未运行 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。formal preflight 不等于 live execution approval。
+- 证据：`agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/formal-preflight.json`；负责人 `Wang sikai`，批准时间 `2026-11-13T18:22:54Z`，引用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261114-02, user message dated 2026-11-14`。
+- 下一步：等待负责人对该新 batch 的真实 DeepSeek 请求作单独明确执行批准；在此之前不发送 HTTP。
