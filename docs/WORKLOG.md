@@ -2714,3 +2714,11 @@ commit=待提交
   - Schema：**17/17 通过**
 - 不变量：不修改 v5 prompt/contract、Schema、IR、compiler、A2 历史批次；`FORMAL_EVALUATION_ALLOWED=False` 不变；不读取密钥/`.env`；不发模型/外网请求；C1/C2 路由和 API 语义不变
 - 下一步：提交独立 commit，状态保持 `review`，等待 Codex 中枢在固定 CAD venv (Python 3.11.18) 独立复核
+
+### APP-003-C3-INDEPENDENT-REVIEW-R2 / Codex / review / 2026-11-13
+
+- 动作：在 `cc/APP-003-C3-PRODUCT-UI`、HEAD `f258480` 上独立复核 ask 未回答问题 fail-closed 窄修；检查实现、UI gate、fixtures 和工作区状态。
+- 固定环境验证：`work/benchcad-output/venv/bin/python` 为 Python 3.11.18。demo + integration（`test_product_flow`, `test_product_ui`, `test_demo_handler`, `test_pipeline`, `test_schema_to_ir`）264/264；Schema 17/17；CAD compilation 13/13；py_compile 和 `git diff --check` 通过。仅有既有文件句柄 ResourceWarning 和 CadQuery/NumPy 上游弃用警告。
+- localhost E2E：ask-extra-question 直接空 patch 确认为 `blocked/QUESTIONS_UNANSWERED`，不含 STEP/hash/bytes，父记录前后完全相同；ask-missing-bore 空 patch 同样阻断。新 ask-missing parent 补 `bore_d=16` 后真实 pipeline 生成 STEP（137034 bytes），下载 hash 与结果记录一致，parent 完全不变。
+- 不变量：仅 synthetic fixtures 和本地 CAD；未调用模型/provider，未读取 `.env`/密钥，未改变 `FORMAL_EVALUATION_ALLOWED=False`、A2 scope 或既有批次。
+- 限制与下一步：未做真实浏览器视觉或 DevTools XSS 事件执行检查；C3 保持 `review`，等待负责人合入 main 后完成状态 closeout，再讨论新的 live extraction scope。

@@ -236,6 +236,23 @@ if (hasUnanswerableQuestions) {
 }
 ```
 
+## Codex 中枢独立复核（2026-11-13）
+
+- 复核对象：`cc/APP-003-C3-PRODUCT-UI`，HEAD `f258480`，父提交 `a305352`；复核时工作区干净。
+- 固定环境：`work/benchcad-output/venv/bin/python`，Python 3.11.18，CadQuery/OCP 可用。
+- 回归命令：
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.demo.test_product_flow tests.demo.test_product_ui tests.demo.test_demo_handler tests.integration.test_pipeline tests.integration.test_schema_to_ir -q` — **264 项通过**。
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest discover -s tests/schema -p 'test_*.py' -q` — **17 项通过**。
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest discover -s tests/cad_compilation -p 'test_*.py' -q` — **13 项通过**。
+  - `py_compile`（product_flow/server 和两个 demo 测试文件）、`git diff --check` — 通过。
+- localhost E2E（`127.0.0.1:18082`，临时 output root）：
+  - `c2-ask-extra-question` create → 空 patch confirm 返回 `blocked` + `QUESTIONS_UNANSWERED`；没有 STEP/hash/bytes，GET parent 前后完整 JSON 相同。
+  - `c2-ask-missing-bore` 空 patch confirm 返回 `blocked` + `QUESTIONS_UNANSWERED`。
+  - 新建 ask-missing parent 后以 `patch={bore_d:16}` confirm，生成 succeeded child；STEP 137034 bytes，下载成功，下载 SHA-256 与结果字段一致；parent 前后完整 JSON 相同。
+  - UI 逻辑代码检查确认 ask-extra 隐藏确认按钮并展示未回答问题；测试套件覆盖路由和 UI 内容。未进行真实浏览器视觉/DevTools 执行检查。
+- 限制：测试有既有 `ResourceWarning` 和 CadQuery/NumPy 上游弃用警告，不影响通过结果。浏览器 DevTools XSS 验证仍未运行。
+- 结论：ask 未回答问题的 API 构造门和对应离线 UI 逻辑通过独立复核；当前交付保持 `review`，等待负责人合入 `main`。本复核未运行模型、未读取密钥/`.env`、未发 provider 请求，也未改变授权或全局 gate。
+
 UI 修复不能替代 API 层门——直接 HTTP POST confirm 也被 `QUESTIONS_UNANSWERED` 阻断。
 
 ### 新增回归测试（7 项，test_product_flow.py）
