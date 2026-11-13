@@ -5,8 +5,9 @@
 - 候选 batch：`app003-product-live-20261113-01`
 - 目标：为产品 live smoke 准备独立 scope、预算、冻结输入绑定、固定环境 preflight 和负责人批准模板。
 - 已完成：固定 CAD venv Python 3.11.18 下 offline preflight `ok=true`；budget `12/12` 可行；CAD runtime、prompt、contract、inputs hash 均通过；dry-run 规划 4 条 logical run，结果数为 0；batch 目录不存在。
-- 未完成：负责人批准具体 batch 执行；未创建正式 batch/ledger；未读取 key/.env；未发 DeepSeek 请求；未运行正式 CAD。
-- 下一步：负责人审阅 `scope.md` 和 `approval-template.md`。明确批准后才执行正式 preflight，并在执行前再次核对 batch 目录、approval binding 和全局 gate。
+- 批准记录：负责人 Wang sikai 已于 `2026-11-13T14:49:33Z` 提供审批身份和时间；`approval-template.md` 记录本批次完整批准声明，引用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261113-01, user message dated 2026-11-13`。
+- 当前尚未执行：未创建正式 batch/ledger；未读取 key/.env；未发 DeepSeek 请求；未运行 formal runner 或正式 CAD。
+- 下一步：执行前再次核对批次目录、approval binding、hash 和全局 gate，并先运行正式模式所需的 preflight；真实请求须遵守已批准的 batch scope 与 12 HTTP 上限。
 
 ## Codex 中枢复核（2026-11-13）
 

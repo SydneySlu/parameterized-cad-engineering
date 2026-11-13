@@ -28,6 +28,13 @@
 - 边界：未创建正式 batch/ledger，未读取 `.env`/API key，未调用 DeepSeek/Ollama，未运行正式 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：负责人审阅并填写 approval template；明确批准后才做正式 preflight，随后由负责人单独批准执行 live 请求。
 
+### APP-003-LIVE-PREFLIGHT-APPROVAL / Codex / review / 2026-11-13
+
+- 动作：项目负责人提供审批人 `Wang sikai`、当前 UTC 时间 `2026-11-13T14:49:33Z`，并要求按项目惯例填写审批引用；在 approval template 记录完整 scope 批准声明。
+- 引用格式：仓库中未发现既有 `approval_record_ref` 约定，故采用 `Codex conversation — APP-003-LIVE-PREFLIGHT-20261113-01, user message dated 2026-11-13`，可从任务 ID 与对话日期追溯。
+- 边界：本次只写入审批记录和 checkpoint；没有创建 formal batch/ledger、调用 formal runner、读取密钥或发起真实模型请求。
+- 下一步：执行前重新核对 approval binding、固定输入/prompt hash、批次目录与全局 gate；按已批准 scope 继续受控执行。
+
 ## 2026-11-13
 
 ### APP-003-LIVE-UI / CC / review

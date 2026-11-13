@@ -15,9 +15,9 @@ evaluator_labels_sha256: 73c671a7950afebb7e7e4c3a1e4fdc52702ebf43ec85fec0a588308
 prompt_file_sha256: 18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9
 max_batch_http: 12
 enable_cad_pipeline: true
-approver: <负责人姓名或标识>
-approved_at_utc: <ISO-8601 UTC 时间>
-approval_record_ref: <可选记录链接或编号>
+approver: Wang sikai
+approved_at_utc: 2026-11-13T14:49:33Z
+approval_record_ref: Codex conversation — APP-003-LIVE-PREFLIGHT-20261113-01, user message dated 2026-11-13
 is_test_only: false
 approval_statement: I approve product live formal execution of batch app003-product-live-20261113-01 with the exact scope above: four frozen inputs, DeepSeek deepseek-flash, condition C0, maximum 12 HTTP attempts, and CAD pipeline enabled only after explicit user confirmation. I understand ask/refuse/conflict/unsupported/parse/Schema/IR/CAD/STEP failures must fail closed and that this is a smoke run, not a broad language evaluation or manufacturing certification.
 ```
