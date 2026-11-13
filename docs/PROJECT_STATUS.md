@@ -70,7 +70,7 @@
 | APP-003-C1 | 最小本地 Web 演示 | CC 实现 / Codex 中枢独立验收 | done | 已合入并推送至 `main=07a98d1`。固定 CAD venv 下 Demo 56、Integration 81、Schema 17、CAD 13 通过；真实 localhost 烟测验证 24/80 mm STEP、24.9 阻断、下载完整性/符号链接防护及 run 隔离。仅手动参数演示，不调用 LLM；详见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 | APP-003-C2-NL-PRODUCT-FLOW | 自然语言产品闭环离线接入 | 已有 C1 CC 对话框实现 / Codex 中枢验收 | done | `d839954` 已合入 `main`；固定 CAD venv 下 C2 58、C1 56、Integration 81、Schema 17、CAD 13 项通过；localhost create→严格类型拒绝→confirm→get→STEP 下载烟测通过，bore24/bore80/ask 补参均有真实 STEP 证据。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
 | APP-003-C3-PRODUCT-UI | C2 自然语言流程的离线确认界面 | CC 实现 / Codex 中枢独立验收 | done | `f105fc4` 已合入并推送 `main`；固定 CAD venv 264 项 demo/integration、Schema 17、CAD 13、localhost 及浏览器验收通过。XSS 纯文本、ask-extra 隐藏确认、ask-missing 补参后真实 STEP/hash、reset 清理均已核验。仅使用 synthetic fixtures，不构成真实模型产品入口。 |
-| APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | planned | scope 已批准；实现工作单为 `docs/coordination/prompts/APP-003-live-product-cc.md`，交给新建 CC 对话框。仅授权实现和离线验证；不授权 live preflight、batch、provider 请求或 CAD 正式运行。 |
+| APP-003-LIVE-SCOPE | 产品真实抽取 smoke 范围与受控入口 | Codex 中枢 / CC / 项目负责人 | review | `cc/APP-003-LIVE-PRODUCT` HEAD `5c28b96` 已完成实现、99 项专项和固定 CAD venv 独立复核；路径穿越/symlink 逃逸修复通过，尚待合入 `main`。仅授权实现和离线验证；不授权 live preflight、batch、provider 请求或 CAD 正式运行。 |
 
 ## 当前缺口与限制
 

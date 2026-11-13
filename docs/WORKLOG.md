@@ -4,6 +4,13 @@
 
 ## 2026-11-13
 
+### APP-003-LIVE-PRODUCT-R1-CORRECTION-2 / Codex / review
+
+- 动作：在 `cc/APP-003-LIVE-PRODUCT` HEAD `5c28b96` 完成窄修独立复核。固定 CAD venv Python 3.11.18 下 product live 99/99、C1/C2/C3 + integration 264/264、Schema 17/17、CAD compilation 13/13 全部通过；`py_compile` 和 `git diff --check` 通过。
+- 定向证据：`_to_repo_relative_path()` 对 `..` 穿越、仓库外绝对路径和仓库内 symlink 外逃均返回 `None`，合法仓库路径正确转为 repo-relative；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- HTTP/CAD 烟测：注入 FakeTransport 的 P1 create→needs_confirmation→confirm→succeeded→download 通过，真实 STEP 148393 字节，下载 SHA-256 与 `ir_index.step_sha256` 一致，离线 transport 仅 1 次；P2/P3/P4 阻断和零 CAD 由专项回归覆盖。
+- 结论：本轮窄修 `pass`，可合入 `main`；合入前状态保持 `review`。未创建正式 batch，未发真实 DeepSeek 请求，未读取密钥或 `.env`。合入后再收束任务状态，再由负责人另行批准具体 live batch 和 provider 请求。
+
 ### APP-003-LIVE-PRODUCT-R1-CORRECTION-2 / CC / review
 
 - 动作：窄修 `_to_repo_relative_path()` 路径安全问题。旧实现在解析失败时会把相对路径原样返回（`return path_str`），使 `../../outside/file.step` 或 symlink 逃逸路径绕过 containment check 进入 summary/HTTP 响应。

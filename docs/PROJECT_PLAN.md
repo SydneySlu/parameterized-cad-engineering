@@ -16,7 +16,7 @@
 | C：最小可用演示 | APP-003-C1：CC 实现，中枢验收 | done；已合入并推送至 `main=07a98d1`。固定 CAD venv 回归及真实 localhost 24/80 mm STEP、边界阻断、下载安全和 run 隔离烟测通过。三维预览与部署后置；当前演示仅手动确认参数，不调用 LLM。证据见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 | C：自然语言产品闭环 | APP-003-C2-NL-PRODUCT-FLOW：已有 C1 CC 对话框实现，Codex 中枢独立验收 | done；`d839954` 已合入 `main`。固定 CAD venv 回归和真实 localhost create→confirm→get→download 烟测通过；synthetic fixture 模式下 bore24、bore80 与 ask 补参生成真实 STEP，非法 HTTP 确认类型 400 且零 CAD 调用。详见 C2 checkpoint。 |
 | C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：已有 C1/C2 CC 对话框实现，Codex 中枢独立验收 | done；`f105fc4` 已合入并推送 `main`。固定 CAD venv 的 demo/integration 264、Schema 17、CAD 13，localhost 及浏览器验证均通过：ask-extra 空确认阻断、ask-missing 空 patch 阻断、补 bore_d=16 后真实 STEP 下载 hash 匹配、XSS 纯文本和 reset 清理均已确认。后续 live extraction 仍需新 scope 和授权。 |
-| C：产品真实抽取 scope | APP-003-LIVE-SCOPE：Codex 中枢准备 scope，CC 实现受控入口 | planned；4 输入/12 HTTP 的 scope 已获负责人批准，CC 实现工作单见 `docs/coordination/prompts/APP-003-live-product-cc.md`。当前只授权实现与离线验证；live gate、preflight、batch 和 provider 请求仍需后续独立批准。 |
+| C：产品真实抽取 scope | APP-003-LIVE-SCOPE：Codex 中枢准备 scope，CC 实现受控入口 | review；`cc/APP-003-LIVE-PRODUCT` 的 `5c28b96` 已通过固定 CAD venv 独立复核（product live 99、回归 264、Schema 17、CAD 13）；待合入 `main`。当前只授权实现与离线验证；live gate、preflight、batch 和 provider 请求仍需后续独立批准。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。
