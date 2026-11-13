@@ -2971,3 +2971,22 @@ commit=待提交
 - 结果：`decision=answer`；`extracted_parameters={"bore_d": 24}`；`missing_fields=[]`；`unsupported_requests=[]`；`questions=[]`；prompt/contract 仍为 `app001-extraction.v5` / `app001-io.v1`。P1 仍为 `needs_confirmation`。
 - 安全：未调用确认函数，未运行 CAD/STEP，未追加 HTTP，未修改 batch 产物；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：请负责人审阅并明确确认 P1 的 `bore_d=24`；确认后才可在新的 per-run confirmation 门中运行本地 CAD pipeline。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-P1-CONFIRMATION / Codex 中枢 / done / 2026-11-14
+
+- 动作：负责人接受 P1 `bore_d=24` 并批准 per-run 本地 CAD confirmation。
+- 执行：调用 `confirm_product_live_run()` 一次；无新增 DeepSeek 请求，原 live batch summary/ledger/raw 保持只读未改。
+- 结果：独立确认目录中的 P1 run 为 `succeeded` / `success` / `step_readback`；native geometry valid（1 solid、35 faces、73 edges、38 vertices）；STEP 148393 bytes，SHA-256 `9884f733f4c07a0408526b37fac391b68140a0fe3b2610570ff1ba8fc00d1486`；CAD-006 native→STEP 回读比较通过。
+- 证据：`work/product-live-runs/app003-product-live-20261114-02-P1-24mm-confirmation/`；完整独立复核记录见同任务 `independent-review.md` 与 checkpoint。
+- 边界：这是负责人确认后的单次 P1 构造证据，不改变原 batch 的 4/12 HTTP 统计，不构成广泛语言质量或制造认证结论。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-P1-EVIDENCE-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：对负责人已批准的 P1 per-run CAD confirmation 做只读产物核验，并修正交接记录中的过时阻塞状态。
+- 核验：Schema validation 通过；compiler summary 为 `success/step_readback`；native 与 STEP 回读 geometry 均 valid，1 solid、35 faces、73 edges、38 vertices；CAD-006 比较通过且 hard mismatches 为空；STEP 文件实测 148393 bytes，SHA-256 与 index 一致。
+- 原 live batch：只核计数，ledger 4/12、raw 文件 4 个、STEP 文件 0 个；batch 不变且保持只读。P1 STEP 位于独立 confirmation run。
+- 安全边界：没有重跑 CAD runner、发 HTTP、读取 raw 正文、`.env` 或密钥；FORMAL_EVALUATION_ALLOWED=False 不变。
+- 结论边界：仅验证单次经负责人确认的 P1 参数进入既有 CAD/STEP 链，不代表广泛语言质量或制造认证。
+- 下一步：如需继续 live 样本，需先定义新 scope、预算与 batch ID，完成 preflight 并单独取得执行批准；否则可由负责人先人工检查 P1 STEP。

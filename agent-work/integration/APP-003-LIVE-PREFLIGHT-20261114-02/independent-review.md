@@ -26,13 +26,15 @@
 
 本结论确认凭据入口修复后 provider transport 可达，并且本 batch 的四个响应被 runner 成功接收和分类；不判断 P1–P4 输出的语义正确性，不构成广泛语言质量评测。为遵守 raw 隔离要求，没有读取 raw 正文，因此没有独立核验 provider 响应正文中的 runtime-returned model 字段。没有重跑或追加本批请求，也未读取密钥、`.env` 或 Authorization header。
 
-若后续希望对 P1 生成 CAD/STEP，项目负责人须单独审阅 P1 抽取参数并明确发起该 run 的确认；本批 live 授权本身不自动授权该确认动作。当前 batch 继续只读保留。
+负责人随后明确接受 P1 的 `bore_d=24` 并批准该 run 的本地 CAD pipeline。确认结果写入独立目录 `work/product-live-runs/app003-product-live-20261114-02-P1-24mm-confirmation/`；原 live batch 继续只读，未追加 HTTP 或改写 batch summary/ledger/raw。
 
 ## 后续 per-run 审阅准备（2026-11-14）
 
 为准备下一道确认门，读取了 P1 raw envelope 的**白名单字段**；没有输出或保存 provider 正文、凭据或 Authorization。P1 envelope 结果为：`decision=answer`，`extracted_parameters={"bore_d": 24}`，`missing_fields=[]`，`unsupported_requests=[]`，`questions=[]`，`prompt_version=app001-extraction.v5`，`contract_version=app001-io.v1`。Summary 未包含这些参数，因此该字段核对需要读取 P1 raw。
 
-这一步没有调用 `confirm_product_live_run()`、没有写入 batch 目录、没有运行 CAD/STEP，也没有追加 HTTP。P1 仍处于 `needs_confirmation`；目录派生值和规则派生值尚未进入确认结果。负责人仍需明确确认 `bore_d=24` 是否符合需求，才能进入 per-run CAD confirmation。
+确认调用了唯一的 `confirm_product_live_run()` CAD 路径；没有追加 HTTP。P1 confirmation 使用 `bore_d=24`，Schema 校验通过后生成 STEP，目录派生值和规则派生值由确定性 CAD 链补齐。
+
+结果：`product_status=succeeded`、`pipeline_status=success`、`pipeline_stage=step_readback`；native geometry `is_valid=true`、`solids=1`、`faces=35`、`edges=73`、`vertices=38`、`volume_mm3=12513.344684954385`；STEP 148393 bytes，SHA-256 `9884f733f4c07a0408526b37fac391b68140a0fe3b2610570ff1ba8fc00d1486`。`CAD-006.geometry-comparison.v1` 的 native→STEP 回读比较通过，hard mismatches 为空。
 
 ## handoff_successor_check
 
@@ -44,6 +46,6 @@ normal_case=P1 answer -> needs_confirmation; raw file exists and hash matches; n
 failure_case=P2 ask -> blocked; P3/P4 refuse -> blocked; each has one successful HTTP attempt and matching raw hash
 interface=pass; four frozen IDs and logical run IDs match approval, summary, ledger and execution report
 limits=reviewed; initial batch review was raw-free; a later, explicitly scoped P1 parameter review read only the envelope whitelist fields described above; no secret, evaluator label content, old batch, CAD or network operation accessed
-result=pass_with_scoped_parameter_read
-blocking_issue=none for evidence review; explicit user confirmation of P1 bore_d=24 is still required before CAD
+result=pass_with_scoped_parameter_read; P1 confirmation was subsequently approved and its local CAD/STEP artifacts were verified
+blocking_issue=none for this scoped review; further live samples require a separate scope, preflight, batch ID and approval
 ```

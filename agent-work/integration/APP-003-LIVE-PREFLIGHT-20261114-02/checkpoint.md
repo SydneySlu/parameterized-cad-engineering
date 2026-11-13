@@ -1,7 +1,7 @@
 # APP-003-LIVE-PREFLIGHT-20261114-02 — Checkpoint
 
 - 日期：2026-11-14
-- 状态：`review`（负责人已批准 formal preflight 与本批 live execution；4 次真实请求已完成，结果待独立复核）
+- 状态：`review`（live batch 独立复核通过；P1 per-run confirmation 已执行并完成证据核验；本地文档收束尚未推送）
 - 基线：`main=711b4d3`；工作区开始时 clean；本地 main ahead origin/main 13 commits
 - batch：`app003-product-live-20261114-02`
 - 前置：credential entry fix `df3f7b4` 独立复核 `pass`；未验证 provider 权限
@@ -78,3 +78,29 @@ next_agent_focus=independently review sanitized summary/ledger/report and reques
 - 四个 raw 文件仅核验存在性、大小与 SHA-256，hash 全部匹配；未读取正文或 labels 内容，也未读取密钥/`.env`。
 - P1=`answer → needs_confirmation`；P2=`ask → blocked`；P3/P4=`refuse → blocked`。CAD pipeline 与 STEP 产物均为 0；`FORMAL_EVALUATION_ALLOWED=False`。
 - 限制：未评价四条响应的语义正确性，未检查 raw 内 provider-returned model 字段；不构成广泛语言质量结论。Batch 只读。若继续 P1 构造，需负责人单独审阅参数并确认该 run。
+
+## P1 per-run confirmation（2026-11-14）
+
+- 负责人明确接受 `P1-24mm` 的 envelope 参数 `bore_d=24`，批准该 run 进入本地 CAD pipeline；没有追加 DeepSeek HTTP。
+- 确认目录：`work/product-live-runs/app003-product-live-20261114-02-P1-24mm-confirmation/`；原 batch `work/app001-runs/app003-product-live-20261114-02/` 未修改。
+- 结果：`succeeded` / `success` / `step_readback`；native geometry valid，1 solid、35 faces、73 edges、38 vertices；STEP 148393 bytes。
+- STEP SHA-256：`9884f733f4c07a0408526b37fac391b68140a0fe3b2610570ff1ba8fc00d1486`；native→STEP `CAD-006.geometry-comparison.v1` 回读比较通过，hard mismatches 为空。
+- 限制：该证据是单次、已确认的 P1 产品 run；不改变原 batch 的 4/12 HTTP 统计，也不扩大模型质量结论。
+
+### 中枢 P1 产物核验（2026-11-14）
+
+- 只读检查独立 confirmation run 的 `summary.json`、`schema_result.json`、`compilation_result.json`、`index.json` 和 STEP 文件；未重跑 pipeline、未调用网络、未读取 `.env`/密钥或原 live raw 正文。
+- Schema：`validation_ok=true`、errors 为空；normalized parameters 为 `bore_d=24`、catalog-derived `outer_d=40/screw_d=8/screw_len=12/width=16`、rule-derived `second_screw=0`。
+- Compiler：`ok=true`、`status=step_readback`；manifest validation `ok=true`；native 和 STEP readback 均为 valid、1 solid/35 faces/73 edges/38 vertices。`CAD-006.geometry-comparison.v1` comparison `pass=true`，`hard_mismatches=[]`。
+- 实际 STEP 文件大小 148393 bytes，实际 SHA-256 与 `index.json` 一致：`9884f733f4c07a0408526b37fac391b68140a0fe3b2610570ff1ba8fc00d1486`。`summary.json` 状态为 `success`、stage 为 `step_readback`、errors 为空。
+- 对原 live batch 仅核对文件计数：raw 响应 4 个、STEP 0 个；budget ledger 仍为 4 次 HTTP。原 batch 继续只读，P1 的 STEP 保存在独立 confirmation 目录。
+- 结论边界：P1 单例的抽取参数经负责人确认后可通过现有 Schema/CAD/STEP 链；不代表其他输入正确，也不构成广泛语言质量、制造认证或产品发布结论。
+
+```text
+handoff_successor_check:
+  p1_artifacts=pass; schema validation, compiler summary, native/readback geometry, STEP size and SHA-256 agree
+  live_batch=read_only; 4 raw files, 4/12 budget attempts, 0 STEP files
+  network_or_secrets=none; no runner rerun, HTTP, .env or key access
+  limits=single user-confirmed P1 local CAD result; no broad language-quality claim
+  next=project owner decides whether to review the STEP visually or define a separate next live scope
+```
