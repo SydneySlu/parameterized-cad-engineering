@@ -9,7 +9,7 @@
 - v5 保持当前 prompt/契约/hash 作为首个集成基线；一般优化不启动 v6。首个真实闭环优先沿用已审查 DeepSeek `deepseek-flash` 配置，Qwen 后续兼容。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
-- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。当前基线为干净 `d839954`，与 `origin/main` 对齐；后续提交不自动 push。
+- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。当前基线为 `b90a83c`，包含 C2 closeout 文档提交，工作区干净且本地 ahead `origin/main` 1 个提交；后续提交不自动 push。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。

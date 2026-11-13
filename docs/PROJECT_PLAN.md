@@ -15,7 +15,7 @@
 | B：最小整链验收 | Codex 中枢：复用既有测试并补做缺失案例 | done；六类验收均有证据：真实模型 24 mm 合法值、80 mm 第二螺钉边界、缺参 ask；合成 envelope 的 1.6 cm→16 mm 本地真实 CAD/STEP；显式目录冲突在 Schema 阶段阻断且 CAD 未调用；真实编译器链注入 STEP 导出失败后 status=failed、无 STEP/index。固定 CAD venv 下 A2 98、Integration 179、CAD 13、Schema 17 项通过。合成离线结果不计作额外 live 语言样本 |
 | C：最小可用演示 | APP-003-C1：CC 实现，中枢验收 | done；已合入并推送至 `main=07a98d1`。固定 CAD venv 回归及真实 localhost 24/80 mm STEP、边界阻断、下载安全和 run 隔离烟测通过。三维预览与部署后置；当前演示仅手动确认参数，不调用 LLM。证据见 `agent-work/reviews/APP-003-C1-codex-review.md` |
 | C：自然语言产品闭环 | APP-003-C2-NL-PRODUCT-FLOW：已有 C1 CC 对话框实现，Codex 中枢独立验收 | done；`d839954` 已合入 `main`。固定 CAD venv 回归和真实 localhost create→confirm→get→download 烟测通过；synthetic fixture 模式下 bore24、bore80 与 ask 补参生成真实 STEP，非法 HTTP 确认类型 400 且零 CAD 调用。详见 C2 checkpoint。 |
-| C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：CC 实现，Codex 中枢独立验收 | planned；复用 C2 API 完成需求输入、抽取参数/来源、必要确认或补充、状态与失败原因展示、STEP 下载和修改后新 run。使用离线 fixtures，不调用模型、不读取密钥、不创建 batch；通过固定 CAD venv 和 localhost E2E 后，再准备新的 live extraction scope。 |
+| C：自然语言确认界面 | APP-003-C3-PRODUCT-UI：已有 C1/C2 CC 对话框实现，Codex 中枢独立验收 | planned；CC 工作单已定义，复用 C2 API 完成需求输入、抽取参数/来源、必要确认或补充、状态与失败原因展示、STEP 下载和修改后新 run。使用离线 fixtures，不调用模型、不读取密钥、不创建 batch；通过固定 CAD venv 和 localhost E2E 后，再准备新的 live extraction scope。详见 `docs/coordination/prompts/APP-003-C3-product-ui-cc.md`。 |
 
 - 资产核验：Schema 已实现；单族 IR v0.2.0 与白名单编译器/几何/STEP 回读已有固定环境证据。A1 已补齐正式语言→Schema→IR→CAD 连接层；固定环境 CAD 13 项、Schema/IR 22 项及 A1 集成 81 项复验通过，不重做后端。
 - 复用 RET-001 的全部 15 行单族目录回归证据；它不是 15 条语言训练样本，九案例的条件/模型运行也不是独立需求样本数。

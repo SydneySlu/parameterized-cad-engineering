@@ -2661,3 +2661,11 @@ commit=待提交
 - 独立验证：固定 CAD venv Python 3.11.18 下 C2 58/58、C1 56/56、Integration 81/81、Schema 17/17、CAD compilation 13/13；py_compile、git diff --check 通过。localhost E2E：create → 非法类型 400 且确认调用 0 次 → 合法 confirm → parent GET → STEP download；parent as_dict 完全不变，STEP hash 匹配。bore24、bore80/second_screw=1、ask 补 bore_d=16 均真实生成并回读 STEP。
 - 边界：C2 仅 synthetic fixture，无产品真实模型入口；无密钥/网络调用。浏览器确认 UI 尚未实现，另立 APP-003-C3；新产品 live extraction 仍需独立 scope、预算、gate、batch ID 和负责人授权。
 - 下一步：规划并执行 APP-003-C3-PRODUCT-UI，离线 fixtures 优先；复核通过后再准备 live extraction scope。
+
+### APP-003-C3-PRODUCT-UI-PLAN / Codex / planned / 2026-11-13
+
+- 动作：恢复 C2 合入事实、ADR-0023、交接协议和项目计划；核对 C2 HTTP API 与 ProductRunRecord 字段，定义 APP-003-C3 可执行 CC 工作单。
+- 产物：`docs/coordination/prompts/APP-003-C3-product-ui-cc.md`、`agent-work/integration/APP-003-C3/checkpoint.md`；修正 PROJECT_STATUS 的仓库基线为本地 `b90a83c`（含 C2 closeout 文档提交）。
+- 边界：C3 仍仅使用 offline synthetic fixtures；浏览器不接触模型/provider/key；不创建 batch，不改变 C2 状态机或既有 gate。UI 应明确需求文本仅作记录、fixture 提供抽取结果。
+- 状态：`planned`，等待已有 C1/C2 CC 对话框认领；实现后由 Codex 中枢在固定 CAD venv 独立验收。
+- 下一步：将工作单交给已有 C1/C2 CC 对话框实施；验收后再决定是否准备新的产品 live extraction scope。
