@@ -37,7 +37,7 @@
 | APP-003-LIVE-UI | 将产品 live 抽取结果接入用户确认界面 | CC + Codex 中枢 | done | APP-003-LIVE-SCOPE、ADR-0023 | `8dce35a` 已合入并推送 `main`；受控 UI、固定 CAD venv 回归、P1 STEP/hash、P2 阻断、XSS 和无 provider/batch 边界均已验收。真实 provider 仍需新 scope 与授权。 |
 | APP-003-LIVE-PREFLIGHT-20261113-01 | 产品 live smoke 执行准备与受控运行 | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-UI、APP-003-LIVE-SCOPE | 旧批次 4/12 HTTP 均在解析/Envelope 阶段失败且无 CAD/STEP，批次只读保留；修复 commit `d80fd43` 已在本地 main，独立复核 `pass`，固定 CAD venv 回归通过。 |
 | APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；四条请求均 `TRANSPORT_ERROR/authentication_or_permission`，无 CAD/STEP，batch 只读保留。根因核查发现正式入口未加载 `.env`；`5bf82ce`/`df3f7b4` fail-closed loader 已通过独立复核（固定 CAD venv 凭据专项 9/9、Product Live 107/107、diff check）。不能据旧错误判断 provider 账户权限；任何重试需新 scope/batch/approval/preflight 和明确执行授权。 |
-| APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 候选 batch `app003-product-live-20261114-02`，沿用冻结四输入、DeepSeek `deepseek-flash` / C0、最多 12 HTTP；离线 preflight 通过、目录不存在、0 网络/凭据读取。scope 已批准，formal preflight 通过；真实请求仍需单独明确授权。 |
+| APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | batch `app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP；P1 answer→needs_confirmation，P2 ask、P3/P4 refuse→blocked；无 CAD/STEP。等待独立复核，batch 只读。 |
 
 ## 认领格式
 

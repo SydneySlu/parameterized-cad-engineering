@@ -16,7 +16,7 @@
 
 ## Gate / 下一步
 
-负责人批准此精确 scope 后，记录真实 approval credential 并运行 formal preflight。Formal preflight 通过后，仍须另获明确真实 provider 请求授权。此候选材料本身不批准读取 `.env`/key、不创建正式 batch、不发请求。
+Formal preflight 已通过；负责人随后明确批准本 batch 的真实 DeepSeek 请求。请求已执行 4 次（4/12）；batch 及证据保持只读，不重跑、不追加。
 
 ## handoff_self_check
 
@@ -24,8 +24,8 @@
 changed=APP-003-LIVE-PREFLIGHT-20261114-02/scope.md,approval-template.md,offline-preflight.json,checkpoint.md; docs/PROJECT_STATUS.md,PROJECT_PLAN.md,TASKS.md,WORKLOG.md
 commands=CAD venv Python 3.11.18 run_product_offline_preflight(require_cad_runtime=True): ok; run_product_batch(dry_run=True): preflight_ok, planned=4, results=0; git diff --check
 confirmed=batch dir absent; network=0; secrets read=0; formal batch/ledger=0; FORMAL_EVALUATION_ALLOWED=False
-unresolved=负责人尚未批准新 scope；provider 权限未知；formal preflight 和真实请求均未执行
-next_agent_focus=等待负责人审阅 scope；批准 scope 后只做 formal preflight，真实请求需另行明确授权
+unresolved=独立复核 live evidence 与解释边界；provider 已响应但产品效果样本仍仅四条
+next_agent_focus=独立复核脱敏 summary/ledger/report；如继续 P1 构造，需单独确认抽取参数并走 per-run confirmation
 ```
 
 
