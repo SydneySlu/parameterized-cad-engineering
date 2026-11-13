@@ -1026,6 +1026,12 @@ def _sanitize_state_for_http(state: "Any") -> dict:
         resp["pipeline_run_dir"] = None
     elif resp.get("pipeline_run_dir") and _PRODUCT_LIVE_AVAILABLE:
         resp["pipeline_run_dir"] = _to_repo_relative_path(resp["pipeline_run_dir"])
+    # Normalize the top-level raw retention path as well.  It is evidence
+    # metadata only; never expose an absolute or traversal path to the client.
+    if "raw_retention_path" in resp:
+        resp["raw_retention_path"] = _to_repo_relative_path(
+            resp.get("raw_retention_path")
+        )
     # Sanitise ir_index step_path
     if isinstance(resp.get("ir_index"), dict):
         idx = dict(resp["ir_index"])

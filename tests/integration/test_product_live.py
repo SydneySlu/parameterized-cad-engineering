@@ -710,6 +710,31 @@ class TestProductLiveParseContractFailures(unittest.TestCase):
         error_codes = [e.get("code") for e in p1_state.errors]
         self.assertIn("PARSE_ERROR", error_codes)
 
+    def test_mock_parse_error_does_not_copy_provider_control_text(self):
+        """Offline parser evidence contains stable fields only, never body text."""
+        marker = "PROVIDER_CONTROL_MARKER_SHOULD_NOT_LEAK"
+        auth = _make_auth()
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(
+            status=200,
+            body=json.dumps({marker: "untrusted", "other": "payload"}),
+        ))
+        for _ in range(3):
+            transport.queue_response(TransportResponse(status=200, body=_make_valid_envelope(
+                "ask", {}, ["bore_d"], [], []
+            )))
+
+        result = run_product_batch(authorization=auth, dry_run=False, transport=transport)
+        state = result.results[0]
+        self.assertEqual(state.product_status, PRODUCT_LIVE_STATUS_BLOCKED)
+        self.assertNotIn(marker, json.dumps(state.as_dict(), ensure_ascii=False))
+
+        from demo.server import _sanitize_state_for_http
+        response = _sanitize_state_for_http(state)
+        self.assertNotIn(marker, json.dumps(response, ensure_ascii=False))
+        self.assertEqual(response["errors"][0]["code"], "PARSE_ERROR")
+        self.assertTrue(response["errors"][0]["causes"])
+
 
 class TestFormalAdapterFailureMapping(unittest.TestCase):
     """Formal adapter failures retain safe diagnostics and raw evidence links."""
@@ -2040,6 +2065,85 @@ class TestSummaryWriterPathSafety(unittest.TestCase):
         # All path fields must be None
         self.assertIsNone(resp.get("pipeline_run_dir"))
         self.assertNotIn("step_path", resp)
+
+    def test_sanitize_top_level_raw_path_outside_repo_is_none(self):
+        """Top-level raw retention paths must use the same fail-closed policy."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="error", product_status=PRODUCT_LIVE_STATUS_ERROR,
+            decision="", extracted_parameters={}, missing_fields=[],
+            unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            raw_retention_path="/tmp/provider-raw.json",
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        self.assertIsNone(resp.get("raw_retention_path"))
+        self.assertNotIn("/tmp/provider-raw.json", json.dumps(resp))
+
+    def test_sanitize_top_level_raw_path_traversal_is_none(self):
+        """Traversal strings must not survive HTTP sanitization."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="error", product_status=PRODUCT_LIVE_STATUS_ERROR,
+            decision="", extracted_parameters={}, missing_fields=[],
+            unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            raw_retention_path="../../outside/raw.json",
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        self.assertIsNone(resp.get("raw_retention_path"))
+        self.assertNotIn("../../outside/raw.json", json.dumps(resp))
+
+    def test_sanitize_top_level_raw_path_inside_repo_is_relative(self):
+        """A valid raw path remains available only as a repo-relative path."""
+        from demo.server import _sanitize_state_for_http
+        state = ProductLiveRunState(
+            logical_run_id="test",
+            input_id="P1-24mm",
+            condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+            llm_status="error", product_status=PRODUCT_LIVE_STATUS_ERROR,
+            decision="", extracted_parameters={}, missing_fields=[],
+            unsupported_requests=[], questions=[], conflicts=[], errors=[],
+            raw_retention_path="work/app001-runs/test-batch/raw/p1.json",
+            request_text="test",
+        )
+        resp = _sanitize_state_for_http(state)
+        self.assertEqual(
+            resp.get("raw_retention_path"),
+            "work/app001-runs/test-batch/raw/p1.json",
+        )
+
+    def test_sanitize_top_level_raw_path_symlink_escape_is_none(self):
+        """A repo symlink pointing outside must not be exposed."""
+        import tempfile
+        from demo.server import _sanitize_state_for_http
+        from integration.product_live_runner import _REPO_ROOT
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outside = Path(tmpdir) / "outside.raw"
+            outside.write_text("secret")
+            link = _REPO_ROOT / "work" / "test_raw_path_escape.json"
+            try:
+                link.symlink_to(outside)
+                state = ProductLiveRunState(
+                    logical_run_id="test",
+                    input_id="P1-24mm",
+                    condition_id="C0", provider="DeepSeek", model="deepseek-flash",
+                    llm_status="error", product_status=PRODUCT_LIVE_STATUS_ERROR,
+                    decision="", extracted_parameters={}, missing_fields=[],
+                    unsupported_requests=[], questions=[], conflicts=[], errors=[],
+                    raw_retention_path=str(link),
+                    request_text="test",
+                )
+                resp = _sanitize_state_for_http(state)
+                self.assertIsNone(resp.get("raw_retention_path"))
+            finally:
+                link.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

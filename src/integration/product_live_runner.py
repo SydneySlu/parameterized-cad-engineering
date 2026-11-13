@@ -87,6 +87,8 @@ from llm.contract import (
     ADAPTER_VERSION,
     CONTRACT_VERSION,
     DEEPSEEK_PROVIDER,
+    ENVELOPE_KEYS,
+    EXTRACTABLE_FIELDS,
     FORMAL_EVALUATION_ALLOWED,
     PROMPT_VERSION,
     SCHEMA_VERSION,
@@ -112,6 +114,34 @@ _SUMMARY_SCHEMA_VERSION = "product-live-batch-summary.v1"
 
 def _safe_filename_component(value: str) -> str:
     return _SAFE_RE.sub("_", value)
+
+
+def _safe_parse_error_causes(parse_result: Any) -> list[dict[str, Any]]:
+    """Return parser diagnostics without copying provider-controlled text.
+
+    Parser messages may include excerpts of an untrusted model response.  The
+    product state and HTTP UI only need stable classification data.
+    """
+    causes: list[dict[str, Any]] = []
+    # Parser ``fields`` can contain arbitrary response key names (for example
+    # an unexpected JSON key).  Keep only the frozen contract vocabulary so a
+    # provider cannot smuggle response text into evidence through a field name.
+    safe_fields = set(ENVELOPE_KEYS) | set(EXTRACTABLE_FIELDS) | {"confidence"}
+    for item in list(getattr(parse_result, "errors", ()) or ()):
+        cause: dict[str, Any] = {
+            "code": str(getattr(item, "code", "PARSE_ERROR")),
+        }
+        stage = getattr(item, "stage", None)
+        if stage:
+            cause["stage"] = str(stage)
+        fields = [
+            str(field) for field in list(getattr(item, "fields", ()) or ())
+            if str(field) in safe_fields
+        ]
+        if fields:
+            cause["fields"] = fields
+        causes.append(cause)
+    return causes
 
 
 def _to_repo_relative_path(path_str: str | None) -> str | None:
@@ -805,8 +835,11 @@ def _run_one_logical_mock(
             unsupported_requests=[],
             questions=[],
             conflicts=[],
-            errors=[{"code": "PARSE_ERROR",
-                     "message": str([e.as_dict() for e in parse_result.errors])}],
+            errors=[{
+                "code": "PARSE_ERROR",
+                "message": "response failed strict parsing or envelope validation",
+                "causes": _safe_parse_error_causes(parse_result),
+            }],
             llm_meta=llm_meta,
             request_text=natural_language,
             created_at=now,
@@ -1802,17 +1835,7 @@ def _build_state_from_adapter_result(
         if fields:
             error["fields"] = [str(field) for field in fields]
     else:
-        parse_errors = list(getattr(parse_result, "errors", ()) or ())
-        causes = []
-        for item in parse_errors:
-            cause = {"code": str(getattr(item, "code", "PARSE_ERROR"))}
-            error_stage = getattr(item, "stage", None)
-            if error_stage:
-                cause["stage"] = str(error_stage)
-            fields = list(getattr(item, "fields", ()) or ())
-            if fields:
-                cause["fields"] = [str(field) for field in fields]
-            causes.append(cause)
+        causes = _safe_parse_error_causes(parse_result)
         parse_stage = getattr(parse_result, "stage", None)
         error = {
             "code": "RESPONSE_PARSE_ERROR" if parse_stage == "parse" else "ENVELOPE_VALIDATION_ERROR",

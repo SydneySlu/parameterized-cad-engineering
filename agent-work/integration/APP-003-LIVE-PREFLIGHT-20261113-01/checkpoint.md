@@ -42,3 +42,11 @@
 - confirmed=transport 与 parse/envelope 错误分型；parse/envelope 失败保留 raw hash/path 元数据但不保留正文；mapper 的正常 envelope 路径复用既有 gate；新增测试验证 provider 正文 marker 不进入错误证据
 - unresolved=尚未运行正式新 batch；尚未由独立 Codex 复核；旧 `...-01` 无 raw 文件的历史事实保持不变
 - next_agent_focus=核对 mapper 在真实 Adapter 结果中的 stage/attempt 字段，重跑产品 live/UI 与相关回归，确认 summary 只写相对路径/hash，再决定是否准备新 scope
+
+## 定向隔离窄修（2026-11-14）
+
+- 状态：`review`
+- 修复：离线 mock/service parser 失败证据只保留稳定 code/stage 与冻结字段白名单；HTTP 顶层 `raw_retention_path` 经过 repo-relative canonical containment/symlink fail-closed 归一化。
+- 回归：固定 CAD venv Product Live 107/107、Product Live UI 36/36、C1/C2/C3 183/183、Integration 81/81、Schema 17/17、CAD 13/13；`py_compile` 与 `git diff --check` 通过。
+- 证据边界：旧 `app003-product-live-20261113-01` 不重跑、不读取 raw 正文、不追加网络请求；本轮仍未调用 provider 或读取密钥。
+- 下一步：独立 Codex 复核本窄修；通过后才讨论新的产品 live batch。

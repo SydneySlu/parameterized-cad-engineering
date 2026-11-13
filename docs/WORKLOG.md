@@ -2861,3 +2861,11 @@ commit=待提交
 - 测试：固定 CAD venv Python 3.11.18 下 `py_compile` 通过，`tests.integration.test_product_live` **102/102** 通过；新增回归覆盖 transport failure、invalid JSON、Envelope validation、raw hash/path 隔离和 provider 正文 marker 不泄漏。
 - 结果：旧批次事实保持不变（4/4 HTTP、无 raw 文件、未进入 CAD/STEP）；修复只影响后续正式结果映射和证据诊断。`FORMAL_EVALUATION_ALLOWED=False`、产品授权/预算/确认门均未改变。
 - 下一步：独立 Codex 复核 mapper 的真实 Adapter 字段绑定和相关回归；通过后再为新 batch 另行准备 scope、preflight 和负责人批准，禁止复用 `...-01`。
+
+### APP-003-LIVE-PREFLIGHT-20261113-01-ISOLATION-FIX / Codex / review / 2026-11-14
+
+- 动作：根据独立复核，完成两个窄修：离线 mock/service parser 失败不再把 provider 控制内容复制到 state/UI；HTTP sanitizer 对顶层 `raw_retention_path` 统一执行 repo-relative、canonical containment 和 symlink fail-closed 归一化。
+- 修改：`src/integration/product_live_runner.py` 新增安全 parser cause 映射，仅保留稳定 code/stage 与冻结 contract/parameter 白名单 fields；`src/demo/server.py` 归一化顶层 raw retention path；`tests/integration/test_product_live.py` 新增 provider marker 隔离和 raw path（repo 内、repo 外、traversal、symlink）回归。
+- 验证（固定 CAD venv Python 3.11.18）：Product Live **107/107**；Product Live UI **36/36**；C1/C2/C3 **183/183**；Integration pipeline/schema-to-IR **81/81**；Schema **17/17**；CAD compilation **13/13**；目标文件 `py_compile`、`git diff --check` 通过。
+- 保持不变量：旧批次 `app003-product-live-20261113-01` 只读，不重跑、不读取 raw 正文、不追加网络请求；未读取密钥/`.env`；未改变 prompt、Schema/IR、CAD pipeline、授权 profile、预算或 `FORMAL_EVALUATION_ALLOWED=False`。
+- 下一步：提交窄修 commit，交独立 Codex 对话框复核；复核通过后再决定是否准备新的产品 live scope、batch 和负责人批准。
