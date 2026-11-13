@@ -261,7 +261,13 @@ if (hasUnanswerableQuestions) {
 - ask-extra：创建 `c2-ask-extra-question` 后页面展示问题“请确认安装方式？”及阻断说明；页面按钮仅有“创建产品运行”，没有“确认并生成 STEP”。
 - ask-missing：创建 `c2-ask-missing-bore` 后显示 `bore_d` 必填输入；填写 `16` 并确认后页面显示 `succeeded`、几何摘要、STEP SHA-256 和下载链接。下载得到 137034 字节，SHA-256 为 `3ed46b402be57b693d6816c5cf0eb210ea8c3abeeb6c240d7756f93b02f3419f`，与页面展示一致。
 - reset：点击“新建另一个需求”后 request、fixture、confirm 和 result 区域均清空，旧 hash/下载链接不残留。
-- 结论：浏览器视觉/交互、XSS 事件、ask 阻断、补参构造/下载和 reset 验收通过；C3 仍保持 `review`，待负责人合入 `main` 后再标记 `done`。本验收未调用模型/provider、未读取密钥/`.env`、未创建 batch。
+- 结论：浏览器视觉/交互、XSS 事件、ask 阻断、补参构造/下载和 reset 验收通过；负责人已合入并推送 `main=f105fc4`，C3 收束为 `done`。本验收未调用模型/provider、未读取密钥/`.env`、未创建 batch。
+
+## Closeout（2026-11-13）
+
+- 负责人已将 `cc/APP-003-C3-PRODUCT-UI` 快进合入 `main` 并推送远端，当前 `main=origin/main=f105fc4`，工作区干净。
+- 固定 CAD venv、localhost 和浏览器独立验收均已完成；无未解决的 C3 交付阻塞。
+- 状态：`done`。C3 只证明 synthetic fixture 离线产品流程，不代表真实模型抽取效果；任何产品 live extraction 必须另立 scope、预算、gate、batch ID 和负责人授权。
 
 UI 修复不能替代 API 层门——直接 HTTP POST confirm 也被 `QUESTIONS_UNANSWERED` 阻断。
 

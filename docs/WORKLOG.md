@@ -2729,3 +2729,9 @@ commit=待提交
 - 结果：页面离线警告、fixture allowlist 和单族免责声明可见；XSS payload 以纯文本显示，未创建 DOM 图片元素，`onerror` 未执行；ask-extra 显示未回答问题且没有确认按钮；ask-missing 补 `bore_d=16` 后浏览器显示 succeeded、几何摘要、STEP hash 和下载链接；下载 137034 字节，SHA-256 `3ed46b402be57b693d6816c5cf0eb210ea8c3abeeb6c240d7756f93b02f3419f` 与页面一致；“新建另一个需求”清空旧状态和下载链接。
 - 边界：使用 synthetic fixture 和本地 CadQuery，未调用模型/provider，未读取 `.env`/密钥，未创建 batch；服务监听 `127.0.0.1`，验证后已停止。
 - 下一步：C3 维持 `review`，负责人合入 main 后同步 closeout，再决定新的产品 live extraction scope。
+
+### APP-003-C3-CLOSEOUT / Codex / done / 2026-11-13
+
+- 动作：核对负责人将 C3 分支快进合入 `main` 并推送远端；`main` 与 `origin/main` 均为 `f105fc4`，工作区干净。
+- 结果：C3 固定 CAD venv、localhost、浏览器、XSS 纯文本、ask 未回答问题阻断、补参真实 STEP/hash 和 reset 清理验收均通过；项目状态、计划、任务表和 checkpoint 已同步为 `done`。
+- 边界：C3 仍是 synthetic fixture 离线流程，不调用模型、不读取密钥、不创建 batch，不构成真实模型理解或产品 live extraction 证据。后续 live extraction 必须新建 scope、预算、gate、batch ID 并取得负责人授权。
