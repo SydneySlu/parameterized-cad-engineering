@@ -157,4 +157,4 @@ handoff_self_check:
 - 修复：脱敏测试要求 summary 文件存在且 marker 不在 summary 中，并在 `TemporaryDirectory` 退出前完成断言。首次硬断言运行暴露了断言写在临时目录清理之后的问题，现已将断言移动到目录生命周期内。
 - 验证：固定 CAD venv Python 3.11.18 下语言 scope + formal runner **98/98**；Product Live **109/109**；测试文件 `py_compile` 通过；`git diff --check` 通过。Product Live 有既有 HTTP socket `ResourceWarning`，测试仍通过。
 - 限制：未执行 formal live、未读取凭据或 labels、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
-- 提交：修复和文档同步已于后续 commit 记录；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
+- 提交：`633fc8d`（`test: require persisted sanitized summary`）；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
