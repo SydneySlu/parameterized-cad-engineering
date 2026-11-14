@@ -3131,3 +3131,10 @@ commit=待提交
 - 合入后固定 CAD venv Python 3.11.18 复验：`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q` 为 98/98；`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_live -q` 为 109/109。后者输出既有 HTTP socket `ResourceWarning`，没有失败。
 - 结论：本地合入和合入后回归成立；不把离线/mock 回归描述为真实模型效果。`FORMAL_EVALUATION_ALLOWED=False` 保持，目标 batch `app003-product-language-20261114-01` 未创建，未读取凭据或 evaluator labels，未发送 DeepSeek/网络请求，历史批次保持只读。
 - 下一步：如需同步远端由负责人明确 push；如进入真实语言样本运行，需再次确认该 batch 的执行授权并按既有 preflight、预算和独立复核流程推进。
+
+### APP-003-LANGUAGE-SAMPLE-FORMAL-EXECUTION-AUTH / Codex 中枢 / review / 2026-11-15
+
+- 动作：负责人确认 `main` 已 push；核对 `main` 与 `origin/main` 同步于 `9fc2778`，工作区干净。
+- 执行前准备：在固定 CAD venv Python 3.11.18 重跑 `run_language_offline_preflight()`，结果 `ok=true`。冻结十条输入和 hash、DeepSeek `deepseek-flash`/C0、最多 20 HTTP、prompt hash 和目录可用性均通过；evaluator labels、凭据和网络均未读取/调用，目标 batch 目录不存在。
+- 授权边界：formal runner 的 approval gate 必须先通过，才允许创建 batch 目录、ledger、transport、读取凭据或触网。按该不变量，本轮没有提前创建实际 batch；已生成 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/execution-authorization-request.json`，等待负责人填写并确认执行授权。
+- 下一步：收到明确授权后，使用同一 batch ID 执行最多 20 次 DeepSeek HTTP；不调用 CAD；完成后提交脱敏执行摘要并交独立复核。

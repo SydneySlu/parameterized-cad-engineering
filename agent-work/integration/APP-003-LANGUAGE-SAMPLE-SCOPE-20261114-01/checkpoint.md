@@ -180,3 +180,10 @@ handoff_successor_check:
 - 合入后固定 CAD venv Python 3.11.18 复验：`tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner` 为 98/98；`tests.integration.test_product_live` 为 109/109，均通过。Product Live 测试输出既有 HTTP socket `ResourceWarning`，不影响退出结果。
 - 合入后确认：formal runner、输入/profile/hash/预算和 summary/raw 隔离行为未改变；`FORMAL_EVALUATION_ALLOWED=False` 保持；未读取凭据或 evaluator labels，未创建目标 batch，未发送网络请求。
 - 当前状态仍为 `review`，因为真实 DeepSeek 执行尚未开始。下一步由负责人决定是否 push；若启动真实运行，必须沿用已通过的离线 formal preflight，先取得该 batch 的明确执行授权，再创建 batch 并执行，随后由独立复核核对 summary、预算、raw/hash 和失败收束。
+
+### 真实执行授权准备（2026-11-15）
+
+- 已确认 `main` 与 `origin/main` 同步于 `9fc2778`，工作区干净。
+- 对既定 batch `app003-product-language-20261114-01` 在固定 CAD venv Python 3.11.18 重跑离线 formal preflight：`ok=true`；10 条冻结输入、inputs hash、prompt hash、DeepSeek `deepseek-flash`/C0、最多 20 HTTP（每条最多 2 次）均通过；batch 目录不存在；未读 evaluator labels、凭据，网络请求为 0。
+- 代码的正式执行门要求 `ProductLanguageFormalApproval(is_test_only=False)` 在创建 batch 目录、ledger、transport、读取凭据和网络请求之前完成绑定校验。因此当前不创建实际 batch 目录；已生成 `execution-authorization-request.json` 供负责人审阅和授权。
+- 待负责人明确授权后，才创建该 batch 的 canonical 目录并执行真实 DeepSeek 请求；执行后保持无 CAD 管道，由独立复核检查 20 次预算、raw/hash、summary 脱敏和失败收束。

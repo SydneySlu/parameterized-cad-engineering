@@ -1,0 +1,36 @@
+{
+  "task_id": "APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01",
+  "batch_id": "app003-product-language-20261114-01",
+  "status": "awaiting_owner_execution_approval",
+  "scope": {
+    "profile_id": "app003-product-language.v1",
+    "provider": "DeepSeek",
+    "model": "deepseek-flash",
+    "condition": "C0",
+    "input_count": 10,
+    "input_ids": ["L01-legal-24mm", "L02-inch-noncatalog", "L03-catalog-conflict", "L04-missing-bore", "L05-unsupported-finish", "L06-near-boundary-25mm", "L07-meter-24mm", "L08-unsupported-keyway", "L09-ambiguous-fallback", "L10-vague-size"],
+    "inputs_sha256": "8339431ee66a14d838cdbded48240019254182886c85af5cd611e04eaf361801",
+    "evaluator_labels_sha256": "a5055025e4a01740b9bc25daa5ab51e43bdac9748151ccd10c152cdf7151bcf9",
+    "max_http_attempts": 20,
+    "max_attempts_per_input": 2,
+    "automatic_cad_pipeline": false,
+    "formal_evaluation_allowed": false
+  },
+  "preflight": {
+    "status": "pass",
+    "inputs_sha256_ok": true,
+    "prompt_ok": true,
+    "batch_dir_exists": false,
+    "evaluator_labels_opened": false,
+    "network_requests": 0,
+    "credentials_read": false,
+    "preflight_utc": "2026-11-14T18:10:26Z"
+  },
+  "approval_to_supply": {
+    "approver": "Wang sikai",
+    "approved_at_utc": "<fill when approved>",
+    "approval_record_ref": "Codex conversation — APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01, execution approval message dated 2026-11-15",
+    "approval_statement": "I approve execution of the exact app003-product-language-20261114-01 batch: ten frozen inputs, DeepSeek deepseek-flash, condition C0, maximum 20 HTTP attempts with at most 2 per input, evaluator labels isolated, no automatic CAD construction, and fail-closed raw/summary retention."
+  },
+  "execution_boundary": "No batch directory, ledger, credentials, transport, or network request is created until the owner supplies the approval fields above."
+}
