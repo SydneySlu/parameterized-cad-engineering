@@ -158,3 +158,18 @@ handoff_self_check:
 - 验证：固定 CAD venv Python 3.11.18 下语言 scope + formal runner **98/98**；Product Live **109/109**；测试文件 `py_compile` 通过；`git diff --check` 通过。Product Live 有既有 HTTP socket `ResourceWarning`，测试仍通过。
 - 限制：未执行 formal live、未读取凭据或 labels、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
 - 提交：`633fc8d`（`test: require persisted sanitized summary`）；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
+
+### Codex 中枢独立复核（R1）
+
+handoff_successor_check:
+  predecessor=APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01; R1 fix 633fc8d; documentation c38167d
+  files_format=pass; changed paths and commit contents match checkpoint; worktree clean
+  core_rerun=pass; fixed CAD venv Python 3.11.18: language scope+formal runner 98/98; Product Live 109/109; py_compile and git diff --check pass
+  normal_case=pass; FakeTransport all-answer scenario returns 10 answer runs
+  failure_case=pass; formal Adapter exception remains sanitized in result/errors/on-disk batch_summary.json; summary existence required before temp cleanup
+  interface=pass; no runner API or frozen input/profile/hash/budget changes in R1
+  limits=pass; no real provider request, credentials, evaluator labels, batch creation, or change to FORMAL_EVALUATION_ALLOWED=False
+  result=pass
+  blocking_issue=none for R1; branch still awaits merge to main and post-merge verification before task completion
+
+- 独立审查记录：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。

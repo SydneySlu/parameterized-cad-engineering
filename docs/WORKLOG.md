@@ -3117,3 +3117,10 @@ commit=待提交
 - 验证（固定 CAD venv，Python 3.11.18）：`PYTHONPATH=src:. ... -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q` 98/98；`... -m unittest tests.integration.test_product_live -q` 109/109；目标测试 `py_compile` 和 `git diff --check` 通过。Product Live 输出有既有未关闭 HTTP socket `ResourceWarning`，测试通过。
 - 提交：`633fc8d`（`test: require persisted sanitized summary`）。
 - 边界：未执行 formal live/DeepSeek 请求，未读取凭据或 evaluator labels，未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。状态仍为 `review`，未 push/merge。
+
+### APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-REVIEW / Codex 中枢 / pass / 2026-11-15
+
+- 动作：对 `633fc8d` 的 summary 脱敏测试修复及 `c38167d` 交接记录进行独立验收。
+- 验证：固定 CAD venv Python 3.11.18 下 language scope + formal runner 98/98、Product Live 109/109、正常 FakeTransport answer 与 formal Adapter 异常脱敏定向用例 2/2；py_compile 和 `git diff --check 9a0bb0f..HEAD` 通过。Product Live 存在未关闭 HTTP socket `ResourceWarning`，不影响结果。
+- 核验：脱敏用例在临时目录清理前强制检查 summary 文件存在及敏感 marker 缺失；全局 gate 仍为 False；目标 batch 目录不存在。未读取凭据/labels、未触网、未创建 batch。
+- 结论：本轮 R1 小修 `pass`；报告见 `agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。任务保持 `review`，分支未 push/merge；合入后仍需在 main 上复验。
