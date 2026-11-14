@@ -173,3 +173,31 @@ handoff_successor_check:
   blocking_issue=none for R1; branch still awaits merge to main and post-merge verification before task completion
 
 - 独立审查记录：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。
+
+### CC 测试隔离窄修（真实 batch 已创建后专项测试 batch ID 碰撞修复）
+
+- 背景：真实 batch `app003-product-language-20261114-01` 已合法创建于 `work/app001-runs/`。专项测试默认使用该正式 batch ID 作为 `_auth()` / `_real_approval()` / `_test_approval()` 的默认值，导致 preflight 检查 `batch_directory_already_exists` 失败。
+- 修复范围：
+  1. 将测试默认 `BATCH_ID` 从 `"app003-product-language-20261114-01"` 改为 `"lang-formal-runner-test-offline-20261114-01"`（唯一测试专用 ID）。
+  2. 新增 `REAL_BATCH_ID` 常量保留正式 batch ID，仅用于反向回归测试。
+  3. 新增 `test_real_batch_directory_already_exists_regression`：使用 `REAL_BATCH_ID` 调用 `run_language_offline_preflight`，断言返回 `batch_directory_already_exists`；该测试不创建、删除、移动、重命名或读取真实 batch 的任何内容。
+  4. 不修改 formal runner 生产逻辑、授权门、预算、profile、输入 hash 或 transport 行为。
+- 验证命令与结果（系统 Python 3.10 / Linux 沙盒）：
+  - `py_compile`：通过
+  - `git diff --check`：通过
+  - `test_product_language_scope + test_product_language_formal_runner`：99/99 通过（含新增 1 项反向回归）
+  - `test_product_live`：109/109 通过
+  - `tests/schema`：17/17 通过
+- 正常案例：`test_mock_all_answer_returns_ten_results` — FakeTransport all-answer 返回 10 条 answer runs，pass。
+- 失败案例：`test_real_batch_directory_already_exists_regression` — 正式目录已存在时 preflight 返回 `batch_directory_already_exists`，pass。
+- 限制：固定 CAD venv (Python 3.11.18) 全量回归留待 Codex 复核；真实 batch 未修改/删除/读取 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 提交：本窄修即将提交；分支 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
+
+### 自检（测试隔离窄修）
+
+handoff_self_check:
+  changed=tests/integration/test_product_language_formal_runner.py, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md, docs/WORKLOG.md
+  commands=py_compile 1/1; git diff --check pass; test_product_language_scope+formal_runner 99/99; test_product_live 109/109; schema 17/17
+  confirmed=真实 batch ID 不再作为测试默认值; 反向回归测试验证正式目录 batch_directory_already_exists; 正常 mock 案例通过; FORMAL_EVALUATION_ALLOWED 不变
+  unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行
+  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归；确认真实 batch 未修改；确认 batch ID 隔离有效

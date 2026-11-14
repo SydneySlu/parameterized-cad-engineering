@@ -3124,3 +3124,20 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下 language scope + formal runner 98/98、Product Live 109/109、正常 FakeTransport answer 与 formal Adapter 异常脱敏定向用例 2/2；py_compile 和 `git diff --check 9a0bb0f..HEAD` 通过。Product Live 存在未关闭 HTTP socket `ResourceWarning`，不影响结果。
 - 核验：脱敏用例在临时目录清理前强制检查 summary 文件存在及敏感 marker 缺失；全局 gate 仍为 False；目标 batch 目录不存在。未读取凭据/labels、未触网、未创建 batch。
 - 结论：本轮 R1 小修 `pass`；报告见 `agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。任务保持 `review`，分支未 push/merge；合入后仍需在 main 上复验。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / CC / 2026-11-14 / 测试隔离窄修
+
+- 动作：对 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`（基线 `6e74487`）修复测试 batch ID 碰撞。
+- 背景：真实 batch `app003-product-language-20261114-01` 已合法创建，专项测试默认使用该 ID 导致 `batch_directory_already_exists` 失败。
+- 修复：
+  1. 测试默认 `BATCH_ID` → `"lang-formal-runner-test-offline-20261114-01"`（唯一测试专用 ID）。
+  2. 新增 `REAL_BATCH_ID` 常量，仅用于反向回归测试。
+  3. 新增 `test_real_batch_directory_already_exists_regression`：使用 `REAL_BATCH_ID` 断言正式目录已存在时 preflight 返回 `batch_directory_already_exists`；不创建/删除/读取真实 batch。
+- 命令与结果：
+  - `py_compile`：通过
+  - `git diff --check`：通过
+  - `test_product_language_scope + test_product_language_formal_runner`：99/99 通过
+  - `test_product_live`：109/109 通过
+  - `tests/schema`：17/17 通过
+- 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒 venv 断链）；真实 DeepSeek HTTP；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：提交窄修 commit，交 Codex 中枢复核。
