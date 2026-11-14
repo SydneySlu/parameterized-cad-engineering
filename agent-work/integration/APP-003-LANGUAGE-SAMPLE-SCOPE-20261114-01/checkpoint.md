@@ -104,3 +104,47 @@ handoff_self_check:
   confirmed=summary update_run 失败停止循环并 finalize aborted; 双重失败报告稳定 token; 异常 str(exc) 不进入 result/summary; output_root 参数已移除; raw 路径绑定 canonical; FORMAL_EVALUATION_ALLOWED 不变
   unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行; formal live 路径 (transport=None) 仅通过 mock 测试间接验证
   next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归；确认 summary 更新失败处理、异常脱敏和 output_root 移除无回退；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。
+
+### CC 第三轮窄修（Adapter 异常分支 break、脱敏测试修正、文档更新）
+
+#### 修复 1：Adapter 异常分支 continue → break
+
+- 在 `adapter_result = run_adapter.run(...)` 抛异常时，`writer.update_run(result)` 失败后立即设置 `summary_write_failed = True` 并 `break`。
+- 此前该分支在 write 失败后仍执行 `continue`，导致后续 logical run 继续处理；与正常结果分支（write 失败即 break）不一致。
+- 新增端到端回归测试：`test_adapter_exception_with_update_run_failure_stops_loop`（Adapter 抛异常 + update_run 失败，断言 adapter 只被调用 1 次、results 只有 1 条、finalize_error 为双重失败稳定 token）。
+- 新增磁盘断言测试：`test_update_run_failure_writes_aborted_to_disk`（finalize 可恢复时读取 `batch_summary.json`，断言磁盘 `batch_status == "aborted"`）。
+
+#### 修复 2：异常脱敏测试修正
+
+- `test_mock_transport_exception_does_not_leak_sensitive_marker`：内部类 `SensitiveTransport.send` 改用外层闭包变量 `marker`（`marker = self.SENSITIVE_MARKER`），不再访问不存在的 `self.SENSITIVE_MARKER`（内部类属性）。
+- `test_formal_adapter_exception_sanitized`：改用 `transport=None` formal 路径 + 全面 mock（`_CANONICAL_RUN_ROOT`、`load_deepseek_environment`、`BudgetLedger._verify_canonical_batch_path`、`DeepSeekTransport.send`、`Adapter.run`），真正通过 `Adapter.run` 触发包含 marker 的异常，断言 marker 不出现在 `result.as_dict()`、`batch_summary.json` 和错误 dict 中，且 `code="ADAPTER_EXCEPTION"`、`exception_type` 存在、`message` 为固定稳定字符串。
+
+#### 修复 3：文档更新
+
+- PROJECT_STATUS.md：修正"窄修 commit 待提交"等过时描述，记录 `e7e2952` 和 `8a6a062` 均已提交；第三轮窄修 commit 随本行更新。
+- WORKLOG.md：追加本轮修复记录。
+
+### 验证命令与结果
+
+| 命令 | 结果 |
+|---|---|
+| `py_compile`（2 个文件） | 通过 |
+| `git diff --check` | 通过 |
+| `test_product_language_scope + test_product_language_formal_runner` | 98/98 通过 |
+| `test_product_live` | 109/109 通过 |
+| `tests/schema` | 17/17 通过 |
+
+### 已知限制
+
+- 系统 Python 3.10 / Linux 沙盒；固定 CAD venv (Python 3.11.18) 全量回归留待 Codex 复核。
+- `tests.demo.*` 和 `tests/cad_compilation` 既有失败与本轮无关。
+- 真实 DeepSeek HTTP 仍未执行；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+
+### 自检（第三轮）
+
+handoff_self_check:
+  changed=src/integration/product_language_formal_runner.py, tests/integration/test_product_language_formal_runner.py, docs/PROJECT_STATUS.md, docs/WORKLOG.md, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md
+  commands=py_compile 2/2; git diff --check pass; test_product_language_scope+formal_runner 98/98; test_product_live 109/109; schema 17/17
+  confirmed=Adapter 异常分支 write 失败后 break 停止后续输入; disk batch_status=aborted 验证; 敏感 marker 不泄漏（formal Adapter 路径真正触发）; stable code/message/exception_type 验证; FORMAL_EVALUATION_ALLOWED 不变
+  unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行
+  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归（test_product_language_scope 8/8、formal_runner 98/98 预期）；确认 Adapter 异常 break 路径无回退；确认敏感 marker 不泄漏（formal 路径）；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。

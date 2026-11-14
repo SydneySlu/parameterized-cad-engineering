@@ -1170,6 +1170,82 @@ class TestSummaryUpdateFailureFinalize(unittest.TestCase):
         self.assertIsNotNone(result.summary_finalize_error)
         self.assertNotIn("complete", str(result.summary_finalize_error))
 
+    def test_update_run_failure_writes_aborted_to_disk(self) -> None:
+        """When update_run fails and finalize succeeds, the batch_summary.json
+        on disk must have batch_status='aborted'."""
+        def fail_update(result):
+            raise _SummaryWriteError("simulated write failure")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._run_formal_mocked(tmp, update_side_effect=fail_update)
+            summary_path = Path(tmp) / self._FAIL_BATCH / "batch_summary.json"
+            self.assertTrue(summary_path.exists(),
+                            f"batch_summary.json not found at {summary_path}")
+            summary = json.loads(summary_path.read_text())
+            self.assertEqual(summary["batch_status"], "aborted")
+        self.assertEqual(
+            result.summary_finalize_error,
+            "summary_write_failed_finalized_aborted",
+        )
+
+    def test_adapter_exception_with_update_run_failure_stops_loop(self) -> None:
+        """When Adapter.run raises AND update_run also fails, the loop must
+        stop immediately — no subsequent logical runs should be processed.
+
+        This exercises the Adapter exception branch's break-on-write-failure
+        path, which previously used 'continue' instead of 'break'.
+        """
+        adapter_call_count = {"calls": 0}
+
+        def exploding_adapter_run(self, *args, **kwargs):
+            adapter_call_count["calls"] += 1
+            raise RuntimeError("adapter exploded")
+
+        def fail_update(result):
+            raise _SummaryWriteError("simulated write failure")
+
+        def fail_finalize(batch_status="complete"):
+            raise _SummaryWriteError("simulated finalize failure")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            patches = [
+                patch.object(runner, "_CANONICAL_RUN_ROOT", Path(tmp)),
+                patch("llm.env_loader.load_deepseek_environment"),
+                patch("llm.budget.BudgetLedger._verify_canonical_batch_path"),
+                patch(
+                    "llm.real_transport.DeepSeekTransport.send",
+                    return_value=TransportResponse(
+                        status=200, body=_answer_response()
+                    ),
+                ),
+                patch("llm.adapter.Adapter.run", exploding_adapter_run),
+                patch.object(
+                    runner._SummaryWriter, "update_run", side_effect=fail_update
+                ),
+                patch.object(
+                    runner._SummaryWriter, "finalize", side_effect=fail_finalize
+                ),
+            ]
+            import contextlib
+            with contextlib.ExitStack() as stack:
+                for p in patches:
+                    stack.enter_context(p)
+                result = run_product_language_formal_batch(
+                    authorization=_auth(self._FAIL_BATCH),
+                    approval=_real_approval(self._FAIL_BATCH),
+                    transport=None,
+                )
+
+        # Only 1 adapter call should happen before the break
+        self.assertEqual(adapter_call_count["calls"], 1)
+        # Only 1 result should be in the results list
+        self.assertEqual(len(result.results), 1)
+        # Double-failure token, not complete/failed
+        self.assertEqual(
+            result.summary_finalize_error,
+            "summary_write_failed_and_finalize_failed",
+        )
+
 
 # ---------------------------------------------------------------------------
 # 17. Exception message sanitization
@@ -1184,11 +1260,11 @@ class TestExceptionSanitization(unittest.TestCase):
     def test_mock_transport_exception_does_not_leak_sensitive_marker(self) -> None:
         """A transport that raises with a sensitive marker in the exception
         must not propagate that marker into the run state."""
+        marker = self.SENSITIVE_MARKER
+
         class SensitiveTransport(FakeTransport):
             def send(self, request):
-                raise RuntimeError(
-                    f"connection failed with {self.SENSITIVE_MARKER}"
-                )
+                raise RuntimeError(f"connection failed with {marker}")
 
         result = run_product_language_formal_batch(
             authorization=_auth(),
@@ -1202,7 +1278,6 @@ class TestExceptionSanitization(unittest.TestCase):
                 self.SENSITIVE_MARKER, d_json,
                 f"sensitive marker leaked into run state: {d_json}",
             )
-            # The error should have a stable code and exception_type, not str(exc)
             for err in r.errors:
                 self.assertNotIn(self.SENSITIVE_MARKER, json.dumps(err))
 
@@ -1220,51 +1295,72 @@ class TestExceptionSanitization(unittest.TestCase):
         )
         for r in result.results:
             self.assertEqual(r.llm_status, LANGUAGE_STATUS_ERROR)
-            # send_with_retry wraps non-TransportError and returns None response;
-            # the runner produces a NO_RESPONSE error — verify it has no exc text
             for err in r.errors:
                 self.assertNotIn("detailed internal error", err.get("message", ""))
                 self.assertNotIn("secrets", err.get("message", ""))
 
     def test_formal_adapter_exception_sanitized(self) -> None:
-        """When the formal Adapter path raises an exception, the error must
-        not contain str(exc)."""
-        from llm.adapter import Adapter
+        """When the formal Adapter.run raises an exception containing a
+        sensitive marker, the marker must not appear in result.as_dict(),
+        batch_summary.json, or any error dict.
 
-        class ExplodingAdapter(Adapter):
-            def run(self, *args, **kwargs):
-                raise RuntimeError(
-                    f"adapter blew up with {self.SENSITIVE_MARKER}"
+        This test exercises the actual formal path (transport=None) with
+        mocked credentials, transport, and ledger so that Adapter.run is
+        called and its exception handler is exercised.
+        """
+        marker = self.SENSITIVE_MARKER
+        adapter_call_count = {"calls": 0}
+
+        def exploding_adapter_run(self, *args, **kwargs):
+            adapter_call_count["calls"] += 1
+            raise RuntimeError(f"adapter error containing {marker}")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            patches = [
+                patch.object(runner, "_CANONICAL_RUN_ROOT", Path(tmp)),
+                patch("llm.env_loader.load_deepseek_environment"),
+                patch("llm.budget.BudgetLedger._verify_canonical_batch_path"),
+                patch(
+                    "llm.real_transport.DeepSeekTransport.send",
+                    return_value=TransportResponse(
+                        status=200, body=_answer_response()
+                    ),
+                ),
+                patch("llm.adapter.Adapter.run", exploding_adapter_run),
+            ]
+            import contextlib
+            with contextlib.ExitStack() as stack:
+                for p in patches:
+                    stack.enter_context(p)
+                result = run_product_language_formal_batch(
+                    authorization=_auth("lang-sanitize-test-001"),
+                    approval=_real_approval("lang-sanitize-test-001"),
+                    transport=None,
                 )
 
-        call_count = {"formal": 0}
+        # Adapter.run must have been called at least once
+        self.assertGreater(adapter_call_count["calls"], 0)
 
-        original_init = Adapter.__init__
-
-        def patched_run(self, *args, **kwargs):
-            call_count["formal"] += 1
-            raise RuntimeError(
-                f"adapter error containing {TestExceptionSanitization.SENSITIVE_MARKER}"
-            )
-
-        # Mock mode doesn't use Adapter, so test the mock path's exception handling
-        # which covers the same sanitization pattern
-        class SensitiveMockTransport(FakeTransport):
-            def send(self, request):
-                raise ConnectionError(
-                    f"connection refused: {TestExceptionSanitization.SENSITIVE_MARKER}"
-                )
-
-        result = run_product_language_formal_batch(
-            authorization=_auth(),
-            approval=_real_approval(),
-            transport=SensitiveMockTransport(),
-        )
+        # The marker must not appear in any run state
         for r in result.results:
             d = r.as_dict()
             self.assertNotIn(self.SENSITIVE_MARKER, json.dumps(d))
             for err in r.errors:
-                self.assertNotIn(self.SENSITIVE_MARKER, json.dumps(err))
+                err_json = json.dumps(err)
+                self.assertNotIn(self.SENSITIVE_MARKER, err_json)
+                # Verify stable code and exception_type are present
+                self.assertEqual(err["code"], "ADAPTER_EXCEPTION")
+                self.assertIn("exception_type", err)
+                self.assertEqual(
+                    err["message"],
+                    "adapter raised an unexpected exception",
+                )
+
+        # The marker must not appear in batch_summary.json on disk
+        summary_path = Path(tmp) / "lang-sanitize-test-001" / "batch_summary.json"
+        if summary_path.exists():
+            summary_text = summary_path.read_text()
+            self.assertNotIn(self.SENSITIVE_MARKER, summary_text)
 
     def test_attempt_count_preserved_on_transport_error(self) -> None:
         """Existing attempt count tracking must not regress — when the

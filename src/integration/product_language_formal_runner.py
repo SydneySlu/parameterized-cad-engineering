@@ -1165,6 +1165,7 @@ def run_product_language_formal_batch(
                             writer.update_run(result)
                         except _SummaryWriteError:
                             summary_write_failed = True
+                            break  # stop processing further inputs
                     continue
 
                 record = adapter_result.record

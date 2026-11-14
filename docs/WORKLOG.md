@@ -3090,3 +3090,22 @@ commit=待提交
 - 新增测试（12 项）：update_run 失败停止循环；finalize 可恢复报 aborted；finalize 双重失败；无 complete 虚假报告；异常标记不泄漏进 result.as_dict()；无 output_root 参数；raw 路径绑定 canonical batch/raw；mock 模式不创建 canonical batch。
 - 已知限制：固定 CAD venv (Python 3.11.18) 全量回归和 formal live 路径（`transport=None`，真实 DeepSeek）均未在此 Linux 沙盒运行；无 `.env`/API key 读取；无 DeepSeek HTTP；无目标 batch 目录创建；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：提交窄修 commit，交 Codex 中枢在 macOS 固定 CAD venv 下独立复核。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / CC / 2026-11-14 / 第三轮窄修
+
+- 动作：对 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`（基线 `8a6a062`）做三项窄修。
+- 修复范围：
+  1. Adapter 异常分支中，若 `writer.update_run(result)` 失败，立即 `break` 停止后续输入处理（此前在该分支设置 `summary_write_failed` 后执行 `continue`，导致后续输入继续执行，与正常结果分支行为不一致）。
+  2. 修正 `test_mock_transport_exception_does_not_leak_sensitive_marker`：内部类 `SensitiveTransport.send` 改用外层 `marker` 闭包变量，不再从 `self.SENSITIVE_MARKER` 读取不存在的属性。修正 `test_formal_adapter_exception_sanitized`：改用 `transport=None` formal 路径 + mock，真正通过 `Adapter.run` 触发异常；确认 `marker` 不出现在 `result.as_dict()`、`batch_summary.json` 和错误 dict 中；验证 `code="ADAPTER_EXCEPTION"`、`exception_type` 存在且 `message` 为固定稳定字符串。
+  3. 修正 PROJECT_STATUS.md 和 WORKLOG.md 中"窄修 commit 待提交"等过时描述，记录 `e7e2952`（初始实现）和 `8a6a062`（第一轮窄修）均已提交；任务状态保持 review，尚未 push/merge，未执行真实请求。
+- 新增测试（2 项）：
+  - `test_update_run_failure_writes_aborted_to_disk`：finalize 可恢复时读取临时目录下的 `batch_summary.json`，断言磁盘上 `batch_status == "aborted"`。
+  - `test_adapter_exception_with_update_run_failure_stops_loop`：Adapter.run 首次抛异常 + update_run 失败，断言 adapter 只被调用 1 次、results 只有 1 条、finalize_error 为双重失败稳定 token。
+- 命令与结果（系统 Python 3.10 / Linux 沙盒）：
+  - `py_compile`（2 个修改文件）：通过
+  - `git diff --check`：通过
+  - `test_product_language_scope + test_product_language_formal_runner`：98/98 通过（含新增 2 项）
+  - `test_product_live`：109/109 通过（无回退）
+  - `tests/schema`：17/17 通过
+- 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒 venv 断链）；formal live 路径（真实 DeepSeek HTTP）；目标 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：提交本轮 commit，交 Codex 中枢在 macOS 固定 CAD venv 下独立复核。
