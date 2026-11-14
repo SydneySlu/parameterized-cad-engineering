@@ -191,7 +191,7 @@ handoff_successor_check:
 - 正常案例：`test_mock_all_answer_returns_ten_results` — FakeTransport all-answer 返回 10 条 answer runs，pass。
 - 失败案例：`test_real_batch_directory_already_exists_regression` — 正式目录已存在时 preflight 返回 `batch_directory_already_exists`，pass。
 - 限制：固定 CAD venv (Python 3.11.18) 全量回归留待 Codex 复核；真实 batch 未修改/删除/读取 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
-- 提交：本窄修即将提交；分支 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
+- 提交：`fbe1f58`（`fix: isolate test batch ID from real batch directory [APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01]`）；分支 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
 
 ### 自检（测试隔离窄修）
 
@@ -201,3 +201,16 @@ handoff_self_check:
   confirmed=真实 batch ID 不再作为测试默认值; 反向回归测试验证正式目录 batch_directory_already_exists; 正常 mock 案例通过; FORMAL_EVALUATION_ALLOWED 不变
   unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行
   next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归；确认真实 batch 未修改；确认 batch ID 隔离有效
+
+### Codex 中枢独立复核（测试隔离窄修）
+
+handoff_successor_check:
+  predecessor=APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01; CC fix fbe1f58
+  files_format=pass; 测试默认 batch ID、REAL_BATCH_ID 反向回归、checkpoint 和 WORKLOG 均存在；工作区在复核前干净
+  core_rerun=pass; 固定 CAD venv Python 3.11.18：language scope + formal runner 99/99；Product Live 109/109；Schema 17/17；目标测试 py_compile 通过；git diff --check 6e74487..fbe1f58 通过
+  normal_case=pass; FakeTransport all-answer 场景返回 10 条结果
+  failure_case=pass; 使用真实 batch ID 的 preflight 返回 batch_directory_already_exists
+  interface=pass; 仅修改测试隔离和反向回归，formal runner、授权/profile、输入 hash、预算和 transport 未改
+  limits=pass; 未读取真实 batch 文件内容、raw 正文、凭据或 evaluator labels；未触网、未重跑 batch；FORMAL_EVALUATION_ALLOWED=False 保持不变
+  result=pass
+  blocking_issue=none for this narrow fix; branch still awaits merge to main and post-merge verification before task completion
