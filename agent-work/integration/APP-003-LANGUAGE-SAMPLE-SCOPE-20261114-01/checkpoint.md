@@ -245,7 +245,7 @@ handoff_successor_check:
 
 ### 合并收束（2026-11-15）
 
-- 测试隔离窄修 `fbe1f58` 与中枢复核记录已合入并推送 `main`；合并提交和远端同步状态以当前 Git 历史为准。
+- 测试隔离窄修 `fbe1f58` 与中枢复核记录已合入本地 `main`，合并提交为 `86bb2fe`。当前 `origin/main` 仍为 `db390ef`；远端 push 尚未确认。
 - 合入后固定 CAD venv Python 3.11.18：language scope + formal runner 99/99、Product Live 109/109、Schema 17/17；目标测试 `py_compile` 与合并差异 `git diff --check` 通过。
 - 本次合入解决专项测试与已存在真实 batch 的 ID 碰撞；不改变生产 runner、授权、预算、profile、输入 hash 或 `FORMAL_EVALUATION_ALLOWED=False`。
-- 最终状态：测试隔离窄修验收 pass；语言样本 live 批次仍为 partial/review，transport failure 原因待诊断。真实 batch 保持只读，不读取 raw 正文、不追加请求。
+- 最终状态：测试隔离窄修验收 pass；本地合并完成，push 待负责人执行或确认；语言样本 live 批次仍为 partial/review，transport failure 原因待诊断。真实 batch 保持只读，不读取 raw 正文、不追加请求。

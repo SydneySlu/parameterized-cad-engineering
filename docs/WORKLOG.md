@@ -3176,3 +3176,10 @@ commit=待提交
 - 正常案例：FakeTransport all-answer 返回 10 条结果；失败案例：真实 batch ID 的 preflight 返回 `batch_directory_already_exists`。
 - 范围：仅测试默认 batch ID 与反向回归测试变更；formal runner、授权/profile、输入 hash、预算、transport 和全局 gate 未改。真实 batch 目录未修改，未读取其文件内容、raw 正文、凭据或 evaluator labels，未触网或重跑。
 - 结论：本窄修独立复核 `pass`；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，尚未 push/merge，合入 main 后仍需复验。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / merge closeout / 2026-11-15
+
+- 动作：完成 `fbe1f58` 测试隔离窄修与复核记录的本地合并；合并提交 `86bb2fe`。合并时保留 main 上真实执行/复核历史和功能分支上的窄修/复核记录，更新 PROJECT_STATUS、PROJECT_PLAN 与 checkpoint。
+- 合入后验证（固定 CAD venv Python 3.11.18）：scope + formal runner 99/99；Product Live 109/109；Schema 17/17；相关源文件与测试 `py_compile` 通过；`git diff --cached --check` 通过。
+- 当前 Git 状态：本地 `main=86bb2fe`；`origin/main=db390ef`，尚未 push。工作区在收束提交后干净。
+- 结论：测试隔离窄修已在本地 main 完成合入与复验。真实语言 batch 仍是 `partial`（2/20 HTTP，8 条 transport errors），证据复核通过但原因待诊断；批次只读保留，不重跑、不追加请求。`FORMAL_EVALUATION_ALLOWED=False` 未变。
