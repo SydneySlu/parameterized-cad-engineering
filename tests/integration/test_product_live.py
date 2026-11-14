@@ -1332,6 +1332,51 @@ class TestProductLiveServiceUnit(unittest.TestCase):
         self.assertIsNotNone(got)
         self.assertEqual(got.product_status, PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION)
 
+    def test_repeated_input_creates_isolated_run_and_never_returns_old_step(self):
+        """A new create for the same frozen input must not resolve to an old STEP."""
+        transport = FakeTransport()
+        body = _make_valid_envelope("answer", {"bore_d": 24}, [], [], [])
+        transport.queue_response(TransportResponse(status=200, body=body))
+        transport.queue_response(TransportResponse(status=200, body=body))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            svc = _make_service(transport, output_root=root)
+            first = svc.extract("P1-24mm", "first request")
+            first_step = b"STEP-FROM-FIRST-RUN"
+            first_run_dir = root / "first-run"
+            first_cad_dir = first_run_dir / "cad_output"
+            first_cad_dir.mkdir(parents=True)
+            first_step_path = first_cad_dir / "first.step"
+            first_step_path.write_bytes(first_step)
+            pipeline_result = SimpleNamespace(
+                status="success",
+                stage="step_readback",
+                errors=[],
+                run_dir=str(first_run_dir),
+                step_path=str(first_step_path),
+                ir_index={
+                    "step_sha256": hashlib.sha256(first_step).hexdigest(),
+                    "step_bytes": len(first_step),
+                },
+            )
+            with patch(
+                "integration.product_live_runner.run_pipeline",
+                return_value=pipeline_result,
+            ):
+                first_confirmed = svc.confirm(first.logical_run_id, confirmed=True)
+
+            second = svc.extract("P1-24mm", "second request")
+
+            self.assertNotEqual(first.logical_run_id, second.logical_run_id)
+            self.assertEqual(svc.get(second.logical_run_id), second)
+            self.assertEqual(svc.get(second.logical_run_id).request_text, "second request")
+            self.assertEqual(svc.get(second.logical_run_id).product_status,
+                             PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION)
+            self.assertEqual(svc.get(first.logical_run_id), first_confirmed)
+            self.assertIsNone(svc.get_step_bytes_secure(second.logical_run_id))
+            self.assertEqual(svc.get_step_bytes_secure(first.logical_run_id), first_step)
+
 
 # ---------------------------------------------------------------------------
 # 16. HTTP tests via ProductLiveService
@@ -1563,6 +1608,54 @@ class TestProductLiveServiceHTTP(unittest.TestCase):
         got = json.loads(raw)
         self.assertEqual(got["product_status"], "needs_confirmation")
 
+    def test_repeated_http_create_does_not_expose_previous_confirmed_step(self):
+        """The second browser create must have its own run and no old STEP."""
+        transport = FakeTransport()
+        body = _make_valid_envelope("answer", {"bore_d": 24}, [], [], [])
+        transport.queue_response(TransportResponse(status=200, body=body))
+        transport.queue_response(TransportResponse(status=200, body=body))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            svc = _make_service(transport, output_root=Path(tmpdir))
+            server, port, _ = _make_test_server(service=svc)
+            self.addCleanup(server.shutdown)
+
+            _, first_data = _http_post(
+                port, "/api/product-live/create",
+                {"request_text": "first", "input_id": "P1-24mm"},
+            )
+            first_id = first_data["logical_run_id"]
+            step = b"FIRST-STEP"
+            run_dir = Path(tmpdir) / "confirmed-first"
+            cad_dir = run_dir / "cad_output"
+            cad_dir.mkdir(parents=True)
+            step_path = cad_dir / "first.step"
+            step_path.write_bytes(step)
+            result = MagicMock(
+                status="success", stage="step_readback", errors=[],
+                run_dir=str(run_dir), step_path=str(step_path),
+                ir_index={"step_sha256": hashlib.sha256(step).hexdigest(),
+                          "step_bytes": len(step)},
+            )
+            with patch("integration.product_live_runner.run_pipeline", return_value=result):
+                status, _ = _http_post(
+                    port, f"/api/product-live/confirm/{first_id}",
+                    {"confirmed": True, "patch": {}},
+                )
+            self.assertEqual(status, 200)
+
+            _, second_data = _http_post(
+                port, "/api/product-live/create",
+                {"request_text": "second", "input_id": "P1-24mm"},
+            )
+            second_id = second_data["logical_run_id"]
+            self.assertNotEqual(first_id, second_id)
+            self.assertEqual(second_data["product_status"], "needs_confirmation")
+            status2, _ = _http_get(port, f"/product-live-download/{second_id}")
+            self.assertEqual(status2, 403)
+            status3, first_raw = _http_get(port, f"/product-live-download/{first_id}")
+            self.assertEqual(status3, 200)
+            self.assertEqual(first_raw, step)
+
     def test_response_no_absolute_paths(self):
         """HTTP response must not contain absolute paths."""
         transport = FakeTransport()
@@ -1592,10 +1685,11 @@ class TestProductLiveServiceHTTP(unittest.TestCase):
             self.addCleanup(server.shutdown)
 
             # Create
-            _http_post(port, "/api/product-live/create",
-                       {"request_text": "test", "input_id": "P1-24mm"})
-            state = svc.get(f"P1-24mm__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__{PRODUCT_MODEL}")
-            run_id = state.logical_run_id
+            _, create_data = _http_post(
+                port, "/api/product-live/create",
+                {"request_text": "test", "input_id": "P1-24mm"},
+            )
+            run_id = create_data["logical_run_id"]
 
             # Mock a successful pipeline result with a real temp STEP file
             step_content = b"ISO-10303-21;\nHEADER; END-SECTION;\nDATA; END-SECTION;\nEND-ISO-10303-21;\n"

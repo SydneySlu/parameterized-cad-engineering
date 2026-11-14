@@ -1942,8 +1942,15 @@ class ProductLiveService:
             return state
 
         prompt = load_frozen_prompt()
+        # The frozen input ID identifies a stimulus, not a product run. Give
+        # every create request its own run identity so a later extraction for
+        # the same stimulus cannot shadow the earlier confirmation or STEP.
+        import uuid as _uuid
         plan = ProductLiveLogicalRunPlan(
-            logical_run_id=f"{input_id}__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__{PRODUCT_MODEL}",
+            logical_run_id=(
+                f"{input_id}__{PRODUCT_CONDITION}__{PRODUCT_PROVIDER}__"
+                f"{PRODUCT_MODEL}__{_uuid.uuid4().hex}"
+            ),
             input_id=input_id,
             condition_id=PRODUCT_CONDITION,
             provider=PRODUCT_PROVIDER,

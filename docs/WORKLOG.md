@@ -3000,3 +3000,12 @@ commit=待提交
 - 原 batch：`app003-product-live-20261114-02` 保持只读，4/12 HTTP、4 个 raw、0 个 batch 内 STEP；P1 STEP 仅位于独立 confirmation 目录。
 - 结论边界：本次是单个负责人确认样本的自然语言抽取→确认→CAD→STEP 产品路径验收，不代表广泛模型质量、制造认证或扩大 live 样本的授权。
 - 下一步：若扩大 live 样本，先提出明确验证假设，另建 scope、预算、batch ID，完成 preflight 并取得单独批准。
+
+### APP-003-FAILURE-PATHS-LANGUAGE-MATRIX / Codex 中枢 / review / 2026-11-14
+
+- 动作：按已批准路线先盘点失败路径，并并行起草下一轮 8–12 条语言输入矩阵；本轮未调用模型、未创建 live batch、未读取密钥或旧 raw 正文。
+- 复现：离线用 FakeTransport 和临时目录验证同一 `input_id` 连续创建两次时，旧实现复用固定 `logical_run_id`；第一次确认成功后，第二次 `get()` 和安全下载仍返回第一次的旧 confirmed state/STEP。
+- 修复：`ProductLiveService.extract()` 为每次 create 生成独立 UUID 运行 ID；新增回归测试确认第二次 run 保持 `needs_confirmation`、不能下载旧 STEP，第一次已确认 run 仍可独立下载。既有固定 run ID 的测试改为使用 create 响应中的真实 ID。
+- 验证：固定 CAD venv Python 3.11.18 下定向回归 1/1、Product Live 专项 108/108 通过；输出有既有 HTTP socket `ResourceWarning`，无失败。本轮补丁后的 UI/C1/C2/C3 跨模块回归尚未重跑。
+- 设计产物：新增 `agent-work/integration/APP-003-FAILURE-PATHS-LANGUAGE-MATRIX/failure-paths-and-language-matrix.md`，盘点抽取/解析、ask/refuse、Schema/patch、pipeline/STEP、路径/hash、跨 run 与泄漏路径，并草拟 L01–L10。标签与输入分离原则、DeepSeek/C0/no-retrieval 候选范围和 10×最多 2 次预算仅为草案。
+- 边界：未改变 v5 prompt/Schema/IR、单族范围、授权 profile 或 `FORMAL_EVALUATION_ALLOWED=False`；历史 batch 只读。下一步是补跑 UI/全回归、HTTP 重复 create E2E，并交独立 Codex 复核；通过后再讨论新 live scope。

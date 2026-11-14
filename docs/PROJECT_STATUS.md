@@ -104,3 +104,4 @@
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
 6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 和 `...-20261114-01` 只读保留；`app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP并经独立复核 `pass`。负责人已单独确认 P1 `bore_d=24`，隔离 confirmation run 生成并回读 STEP；P2 ask、P3/P4 refuse 仍阻断。原 batch 只读，P1 证据不代表广泛语言质量结论。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
+8. 当前工作单元 `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 处于 `review`：已离线修复并测试同一 frozen input 重复创建导致旧 STEP 被第二次 run 解析/下载的问题，并建立失败路径覆盖盘点和 10 条语言样本草案。补丁后的 UI/跨模块回归、独立复核和 HTTP 重复创建 E2E 仍是下一道 gate；样本未冻结或授权，不能启动新的 live batch。
