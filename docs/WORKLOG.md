@@ -3109,3 +3109,10 @@ commit=待提交
   - `tests/schema`：17/17 通过
 - 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒 venv 断链）；formal live 路径（真实 DeepSeek HTTP）；目标 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：提交本轮 commit，交 Codex 中枢在 macOS 固定 CAD venv 下独立复核。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / review / 2026-11-15
+
+- 动作：在 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`（基线 `9a0bb0f`）完成一轮小修和重新验收。
+- 修复：`test_formal_adapter_exception_sanitized` 现在必须断言 `batch_summary.json` 存在并且不含敏感 marker；首次运行发现断言放在 `TemporaryDirectory` 清理之后，现将其移入目录生命周期内。同步 PROJECT_STATUS、PROJECT_PLAN 对 `9a0bb0f` 提交状态的记录。
+- 验证（固定 CAD venv，Python 3.11.18）：`PYTHONPATH=src:. ... -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q` 98/98；`... -m unittest tests.integration.test_product_live -q` 109/109；目标测试 `py_compile` 和 `git diff --check` 通过。Product Live 输出有既有未关闭 HTTP socket `ResourceWarning`，测试通过。
+- 边界：未执行 formal live/DeepSeek 请求，未读取凭据或 evaluator labels，未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 不变。状态仍为 `review`；本轮提交 hash 由后续工作日志记录。

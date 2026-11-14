@@ -148,3 +148,13 @@ handoff_self_check:
   confirmed=Adapter 异常分支 write 失败后 break 停止后续输入; disk batch_status=aborted 验证; 敏感 marker 不泄漏（formal Adapter 路径真正触发）; stable code/message/exception_type 验证; FORMAL_EVALUATION_ALLOWED 不变
   unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行
   next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归（test_product_language_scope 8/8、formal_runner 98/98 预期）；确认 Adapter 异常 break 路径无回退；确认敏感 marker 不泄漏（formal 路径）；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。
+
+### Codex 小修与重新验收（2026-11-15）
+
+- 范围：在 `test_formal_adapter_exception_sanitized` 中将 `batch_summary.json` 的条件式检查改为必须存在后再检查敏感 marker；同步 `PROJECT_STATUS.md` 和 `PROJECT_PLAN.md` 中的第三轮窄修提交状态。
+- 基线：分支 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，起始 HEAD `9a0bb0f`，工作区干净。
+- 基线验证：固定 CAD venv Python 3.11.18 下 `PYTHONPATH=src:. ... -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q`，98/98 通过。
+- 修复：脱敏测试要求 summary 文件存在且 marker 不在 summary 中，并在 `TemporaryDirectory` 退出前完成断言。首次硬断言运行暴露了断言写在临时目录清理之后的问题，现已将断言移动到目录生命周期内。
+- 验证：固定 CAD venv Python 3.11.18 下语言 scope + formal runner **98/98**；Product Live **109/109**；测试文件 `py_compile` 通过；`git diff --check` 通过。Product Live 有既有 HTTP socket `ResourceWarning`，测试仍通过。
+- 限制：未执行 formal live、未读取凭据或 labels、未创建 batch；`FORMAL_EVALUATION_ALLOWED=False` 保持不变。
+- 提交：修复和文档同步已于后续 commit 记录；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。

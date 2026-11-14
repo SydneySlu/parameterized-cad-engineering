@@ -1338,6 +1338,16 @@ class TestExceptionSanitization(unittest.TestCase):
                     transport=None,
                 )
 
+            # Keep the assertion inside TemporaryDirectory's lifetime so it
+            # verifies the formal runner's on-disk summary before cleanup.
+            summary_path = Path(tmp) / "lang-sanitize-test-001" / "batch_summary.json"
+            self.assertTrue(
+                summary_path.is_file(),
+                f"batch_summary.json not found at {summary_path}",
+            )
+            summary_text = summary_path.read_text()
+            self.assertNotIn(self.SENSITIVE_MARKER, summary_text)
+
         # Adapter.run must have been called at least once
         self.assertGreater(adapter_call_count["calls"], 0)
 
@@ -1355,12 +1365,6 @@ class TestExceptionSanitization(unittest.TestCase):
                     err["message"],
                     "adapter raised an unexpected exception",
                 )
-
-        # The marker must not appear in batch_summary.json on disk
-        summary_path = Path(tmp) / "lang-sanitize-test-001" / "batch_summary.json"
-        if summary_path.exists():
-            summary_text = summary_path.read_text()
-            self.assertNotIn(self.SENSITIVE_MARKER, summary_text)
 
     def test_attempt_count_preserved_on_transport_error(self) -> None:
         """Existing attempt count tracking must not regress — when the
