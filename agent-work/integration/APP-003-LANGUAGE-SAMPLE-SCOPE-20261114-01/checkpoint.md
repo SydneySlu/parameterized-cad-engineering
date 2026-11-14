@@ -17,3 +17,15 @@
 ## 下一步
 
 独立复核样本类别、标签预期和隔离；由负责人审阅并确认是否冻结。若确认，另建 profile/runner 实现任务，再做离线验证及独立审查。真实模型执行仍需要后续新 batch、offline preflight 和明确执行授权。
+
+## 本轮实现与验证
+
+- 新增 `src/llm/product_language_authorization.py`、`src/integration/product_language_runner.py`、`tests/integration/test_product_language_scope.py`。
+- 固定 CAD venv Python 3.11.18：专项测试 8/8 通过；3 个文件 `py_compile` 通过；`git diff --check` 通过。
+- 正常案例：preflight 规划 10 条 logical runs、20 次 HTTP 上限，输入 hash 通过。
+- 失败案例：输入 hash 错误、已有 batch 目录、错误 profile/hash、错误授权类型均 fail-closed；执行 API 明确抛出 offline-preflight-only；spy 确认不读 labels、不读凭据、不触网。
+- 未调用 DeepSeek、未读取 `.env`/API key、未创建 batch、未执行 CAD。
+
+## 下一步
+
+独立复核新 profile、输入 hash/labels 隔离和离线 preflight；通过后再准备具体 batch ID 和 formal preflight。真实模型执行仍需要单独明确执行授权。

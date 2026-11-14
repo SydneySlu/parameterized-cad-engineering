@@ -3022,3 +3022,10 @@ commit=待提交
 - 结果：固定候选 DeepSeek `deepseek-flash` / C0 / 无检索；预算建议 10 条×最多 2 次 HTTP=20；输入 hash `8339431e…361801`，标签 hash `a5055025…51bcf9`。JSON 格式校验通过。
 - 执行阻塞：当前 Product Live authorization profile 硬绑定既有 P1–P4 和对应输入 hash，不能直接执行新十条。若负责人接受矩阵，须新增版本化 profile/runner、离线隔离测试、独立复核和新 batch preflight；不复用旧 profile/batch。
 - 边界：这是候选，不是冻结集、batch、preflight 或执行授权；没有模型、网络、密钥读取或 CAD 调用；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / review / 2026-11-14
+
+- 动作：负责人授权继续推进十条候选语言矩阵的技术准备；新增独立版本化 profile `app003-product-language.v1` 和离线 preflight，保持旧 Product Live P1–P4 profile、旧 batch、prompt/Schema/IR 和全局 gate 不变。
+- 产物：`src/llm/product_language_authorization.py`、`src/integration/product_language_runner.py`、`tests/integration/test_product_language_scope.py`、ADR-0024 及本 scope checkpoint。
+- 验证：固定 CAD venv Python 3.11.18 下专项 8/8 通过；`py_compile`、`git diff --check` 通过。输入 hash、十条 ID、20 HTTP 预算和已有目录拒绝均核验；labels、凭据和网络 spy 均为 0 次。
+- 边界：本轮没有实现真实执行路径；没有读取 `.env`/API key、发送 DeepSeek 请求、创建 batch、读取 evaluator labels 或运行 CAD。下一步交独立 Codex 复核，之后才可准备 formal preflight。

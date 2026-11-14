@@ -690,3 +690,16 @@ CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、�
 ### 后续 live 接入条件
 
 离线 C2 与独立复核通过后，才准备新的产品 live smoke scope（建议正常、缺参、冲突/非法各一条）。该 scope 不继承 A2 的批准或预算，必须绑定新的输入/prompt/contract hash、预算、product gate、batch ID 和负责人授权；`FORMAL_EVALUATION_ALLOWED=False` 继续保持。
+
+## ADR-0024：APP-003 十条语言样本 scope 与独立授权 profile
+
+- 日期：2026-11-14
+- 状态：accepted（负责人已授权继续准备；不等同于真实模型执行批准）
+- 关联：ADR-0020、ADR-0023、APP-003-FAILURE-PATHS-LANGUAGE-MATRIX
+
+### 决策
+
+1. 十条中文需求作为独立、版本化的语言样本 scope，使用 DeepSeek `deepseek-flash`、C0、无检索、单零件族；不扩写旧 `app003-product-live.v1` 的 P1–P4 profile 或历史 batch。
+2. 输入文件与 evaluator-only labels 物理分离，输入 hash 与 labels hash 固定绑定。labels 不得进入 prompt、transport、UI、summary 或 runner 执行路径。
+3. 本轮先实现独立授权对象和离线 preflight。preflight 只检查输入 hash、十条 ID 顺序、预算（10×最多 2 次=20 HTTP）、profile/provider/model/condition 和目录可用性；不读密钥、不触网、不创建 batch。
+4. 真实执行需要另一个明确的 runner、正式 batch ID、formal preflight 和负责人单独批准；在此之前执行入口保持 fail-closed。`FORMAL_EVALUATION_ALLOWED=False` 不变。

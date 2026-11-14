@@ -105,3 +105,9 @@
 6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 和 `...-20261114-01` 只读保留；`app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP并经独立复核 `pass`。负责人已单独确认 P1 `bore_d=24`，隔离 confirmation run 生成并回读 STEP；P2 ask、P3/P4 refuse 仍阻断。原 batch 只读，P1 证据不代表广泛语言质量结论。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
 8. 当前工作单元 `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 处于 `review`：已离线修复并测试同一 frozen input 重复创建导致旧 STEP 被第二次 run 解析/下载的问题，并建立失败路径覆盖盘点和 10 条语言样本草案。补丁后的 UI/跨模块回归、独立复核和 HTTP 重复创建 E2E 仍是下一道 gate；样本未冻结或授权，不能启动新的 live batch。
+
+## APP-003 语言样本 scope 当前状态
+
+- 十条中文输入与 evaluator-only labels 已由 ADR-0024 独立版本化；新增 profile `app003-product-language.v1`，绑定输入 hash `8339431e…361801`、labels hash `a5055025…51bcf9`、DeepSeek `deepseek-flash`/C0、10 条输入和最多 20 次 HTTP。
+- 已完成仅离线的授权与 preflight 实现；固定 CAD venv 专项 8/8、`py_compile` 和 `git diff --check` 通过。labels 未被加载，未读凭据、未触网、未创建 batch。
+- 当前保持 `review`。独立复核通过后才能准备正式 batch ID 和 formal preflight；真实执行仍需负责人单独批准，不复用旧 Product Live profile/batch。
