@@ -187,3 +187,10 @@ handoff_successor_check:
 - 对既定 batch `app003-product-language-20261114-01` 在固定 CAD venv Python 3.11.18 重跑离线 formal preflight：`ok=true`；10 条冻结输入、inputs hash、prompt hash、DeepSeek `deepseek-flash`/C0、最多 20 HTTP（每条最多 2 次）均通过；batch 目录不存在；未读 evaluator labels、凭据，网络请求为 0。
 - 代码的正式执行门要求 `ProductLanguageFormalApproval(is_test_only=False)` 在创建 batch 目录、ledger、transport、读取凭据和网络请求之前完成绑定校验。因此当前不创建实际 batch 目录；已生成 `execution-authorization-request.json` 供负责人审阅和授权。
 - 待负责人明确授权后，才创建该 batch 的 canonical 目录并执行真实 DeepSeek 请求；执行后保持无 CAD 管道，由独立复核检查 20 次预算、raw/hash、summary 脱敏和失败收束。
+
+### 真实执行（2026-11-14 UTC）
+
+- 负责人批准执行 `app003-product-language-20261114-01`；approval 记录为 `Wang sikai`、`2026-11-14T18:14:10Z`，精确绑定十条输入、DeepSeek `deepseek-flash`/C0、最多 20 HTTP、无自动 CAD。
+- 固定 CAD venv formal runner 实际处理 10 条逻辑输入，使用 2 次 HTTP：L01=`answer`，L02=`refuse`，L03–L10=`TRANSPORT_ERROR`；批次 summary=`partial`，ledger `2/20`。
+- 只读证据核对：raw 文件 2 个并有哈希元数据；无 pipeline 文件、无 STEP 文件；没有调用 CAD；summary 未读取 raw 正文，不含 raw 正文、绝对路径或 evaluator labels。历史批次未修改。
+- 脱敏执行报告：`execution-report.json`。当前状态为 `review`，等待独立复核；不得把本批次结果扩大为十条语言样本的完整模型效果结论。

@@ -1,0 +1,54 @@
+{
+  "task_id": "APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01",
+  "batch_id": "app003-product-language-20261114-01",
+  "status": "executed_pending_independent_review",
+  "approval": {
+    "approver": "Wang sikai",
+    "approved_at_utc": "2026-11-14T18:14:10Z",
+    "approval_record_ref": "Codex conversation — APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01, execution approval message dated 2026-11-15",
+    "profile_id": "app003-product-language.v1",
+    "provider": "DeepSeek",
+    "model": "deepseek-flash",
+    "condition": "C0",
+    "max_http": 20,
+    "automatic_cad_pipeline": false
+  },
+  "execution": {
+    "logical_runs": 10,
+    "http_attempts_used": 2,
+    "batch_status": "partial",
+    "cad_calls": 0,
+    "pipeline_files": 0,
+    "step_files": 0,
+    "raw_files": 2,
+    "raw_body_read_by_reviewer": false
+  },
+  "run_results": {
+    "L01-legal-24mm": {"status": "answer", "attempts": 1, "raw_retained": true},
+    "L02-inch-noncatalog": {"status": "refuse", "attempts": 1, "error_code": "GATE_DECISION_REFUSE", "raw_retained": true},
+    "L03-catalog-conflict": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L04-missing-bore": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L05-unsupported-finish": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L06-near-boundary-25mm": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L07-meter-24mm": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L08-unsupported-keyway": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L09-ambiguous-fallback": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"},
+    "L10-vague-size": {"status": "error", "attempts": 1, "error_code": "TRANSPORT_ERROR", "cause_code": "other_non_retryable"}
+  },
+  "evidence": {
+    "summary_path": "work/app001-runs/app003-product-language-20261114-01/batch_summary.json",
+    "ledger_path": "work/app001-runs/app003-product-language-20261114-01/budget_ledger.json",
+    "raw_dir": "work/app001-runs/app003-product-language-20261114-01/raw",
+    "summary_contains_raw_body": false,
+    "summary_contains_evaluator_labels": false,
+    "summary_contains_absolute_paths": false,
+    "automatic_cad_pipeline": false
+  },
+  "limits": {
+    "credentials_or_api_key_in_report": false,
+    "evaluator_labels_opened": false,
+    "historical_batches_modified": false,
+    "real_model_effect_claim": false
+  },
+  "next_step": "Independent read-only review of summary, ledger, raw/hash metadata, budget, and fail-closed behavior; do not read raw response bodies unless separately authorized."
+}

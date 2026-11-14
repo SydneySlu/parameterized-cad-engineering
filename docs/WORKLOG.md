@@ -3138,3 +3138,11 @@ commit=待提交
 - 执行前准备：在固定 CAD venv Python 3.11.18 重跑 `run_language_offline_preflight()`，结果 `ok=true`。冻结十条输入和 hash、DeepSeek `deepseek-flash`/C0、最多 20 HTTP、prompt hash 和目录可用性均通过；evaluator labels、凭据和网络均未读取/调用，目标 batch 目录不存在。
 - 授权边界：formal runner 的 approval gate 必须先通过，才允许创建 batch 目录、ledger、transport、读取凭据或触网。按该不变量，本轮没有提前创建实际 batch；已生成 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/execution-authorization-request.json`，等待负责人填写并确认执行授权。
 - 下一步：收到明确授权后，使用同一 batch ID 执行最多 20 次 DeepSeek HTTP；不调用 CAD；完成后提交脱敏执行摘要并交独立复核。
+
+### APP-003-LANGUAGE-SAMPLE-FORMAL-EXECUTION / Codex 中枢 / review / 2026-11-14
+
+- 动作：负责人明确批准执行 `app003-product-language-20261114-01`；按 approval gate 记录 approver=`Wang sikai`、approved_at_utc=`2026-11-14T18:14:10Z`，scope 为十条冻结输入、DeepSeek `deepseek-flash`/C0、最多 20 HTTP、每条最多 2 次、无自动 CAD。
+- 执行：固定 CAD venv formal runner 完成 10 条逻辑输入，实际 HTTP=2。L01 返回 `answer`，L02 返回 `refuse`，L03–L10 在 transport 阶段 fail-closed 为 `TRANSPORT_ERROR`；summary=`partial`，ledger=`2/20`。
+- 证据：raw 文件 2 个，summary/ledger 和 raw 哈希元数据已存在；pipeline 文件=0、STEP 文件=0、CAD 调用=0。没有读取 raw 正文、evaluator labels 或输出凭据；历史批次保持只读。
+- 边界：该批次提供受控输入响应和失败收束证据，不构成广泛语言效果、CAD 整链或制造可用性结论。脱敏报告见 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/execution-report.json`。
+- 下一步：独立只读复核 summary、ledger、预算、raw/hash 留存和错误分类；复核前不重跑、不追加请求、不读取 raw 正文。
