@@ -1,0 +1,80 @@
+{
+  "task_id": "APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01",
+  "batch_id": "app003-product-language-20261114-01",
+  "status": "formal_preflight_passed_execution_blocked_runner_unavailable",
+  "approval_binding": "pass",
+  "approval": {
+    "approver": "Wang sikai",
+    "approved_at_utc": "2026-11-14T08:56:46Z",
+    "approval_statement": "I approve preparation of the new app003-product-language-20261114-01 batch and its formal preflight for the exact frozen ten-input Product Language scope: DeepSeek deepseek-flash, condition C0, maximum 20 HTTP attempts, evaluator labels isolated, and no automatic CAD construction. The user also approved proceeding toward real DeepSeek execution; the execution path must remain fail-closed until a separately reviewed formal runner exists.",
+    "approval_record_ref": "Codex conversation — APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01, user message dated 2026-11-14",
+    "batch_id": "app003-product-language-20261114-01",
+    "profile_id": "app003-product-language.v1",
+    "inputs_sha256": "8339431ee66a14d838cdbded48240019254182886c85af5cd611e04eaf361801",
+    "evaluator_labels_sha256": "a5055025e4a01740b9bc25daa5ab51e43bdac9748151ccd10c152cdf7151bcf9",
+    "provider": "DeepSeek",
+    "model": "deepseek-flash",
+    "condition": "C0",
+    "max_batch_http": 20,
+    "automatic_cad_pipeline": false
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "details": {
+      "inputs_sha256_ok": true,
+      "input_count": 10,
+      "input_ids": [
+        "L01-legal-24mm",
+        "L02-inch-noncatalog",
+        "L03-catalog-conflict",
+        "L04-missing-bore",
+        "L05-unsupported-finish",
+        "L06-near-boundary-25mm",
+        "L07-meter-24mm",
+        "L08-unsupported-keyway",
+        "L09-ambiguous-fallback",
+        "L10-vague-size"
+      ],
+      "profile_id": "app003-product-language.v1",
+      "provider": "DeepSeek",
+      "model": "deepseek-flash",
+      "condition": "C0",
+      "formal_evaluation_allowed": false,
+      "execution_enabled": false,
+      "budget_plan": {
+        "logical_runs": 10,
+        "max_attempts_per_run": 2,
+        "computed_max_http": 20,
+        "authorized_max_http": 20,
+        "feasible": true
+      },
+      "batch_dir": "work/app001-runs/app003-product-language-20261114-01",
+      "batch_dir_exists": false,
+      "evaluator_labels_opened": false,
+      "credentials_read": false,
+      "network_requests": 0,
+      "formal_batch_created": false
+    },
+    "planned_runs": [
+      {"logical_run_id": "L01-legal-24mm__C0__DeepSeek__deepseek-flash", "input_id": "L01-legal-24mm"},
+      {"logical_run_id": "L02-inch-noncatalog__C0__DeepSeek__deepseek-flash", "input_id": "L02-inch-noncatalog"},
+      {"logical_run_id": "L03-catalog-conflict__C0__DeepSeek__deepseek-flash", "input_id": "L03-catalog-conflict"},
+      {"logical_run_id": "L04-missing-bore__C0__DeepSeek__deepseek-flash", "input_id": "L04-missing-bore"},
+      {"logical_run_id": "L05-unsupported-finish__C0__DeepSeek__deepseek-flash", "input_id": "L05-unsupported-finish"},
+      {"logical_run_id": "L06-near-boundary-25mm__C0__DeepSeek__deepseek-flash", "input_id": "L06-near-boundary-25mm"},
+      {"logical_run_id": "L07-meter-24mm__C0__DeepSeek__deepseek-flash", "input_id": "L07-meter-24mm"},
+      {"logical_run_id": "L08-unsupported-keyway__C0__DeepSeek__deepseek-flash", "input_id": "L08-unsupported-keyway"},
+      {"logical_run_id": "L09-ambiguous-fallback__C0__DeepSeek__deepseek-flash", "input_id": "L09-ambiguous-fallback"},
+      {"logical_run_id": "L10-vague-size__C0__DeepSeek__deepseek-flash", "input_id": "L10-vague-size"}
+    ]
+  },
+  "formal_runner_invoked": false,
+  "network_requests": 0,
+  "formal_batch_created": false,
+  "batch_dir_exists_after": false,
+  "secrets_read": false,
+  "evaluator_labels_opened": false,
+  "execution_enabled": false,
+  "blocking_issue": "product_language_runner.run_product_language_batch is explicitly offline-preflight-only; no reviewed formal live runner, budget ledger, raw retention, or execution report exists for this scope"
+}

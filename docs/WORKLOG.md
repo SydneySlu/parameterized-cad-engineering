@@ -3039,3 +3039,11 @@ commit=待提交
 - 动作：完成新十条语言样本 scope 的独立复核，记录见 `agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-codex-review.md`。
 - 结果：新 profile、输入/labels hash 隔离、20 HTTP 预算和 fail-closed preflight 通过；固定 CAD venv 下专项 8/8、旧 Product Live 109/109、C1/C2/C3/Integration 300/300、Schema 17/17、CAD 13/13 通过。
 - 边界：旧 P1–P4 profile 与历史 batch 未修改；本轮未调用 DeepSeek、未读取凭据、未创建 batch、未执行 CAD。结论只允许进入新 batch 准备，不等同于真实执行授权。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-FORMAL-PREFLIGHT / Codex 中枢 / review / 2026-11-14
+
+- 动作：负责人批准推进新十条语言样本 scope 的真实 DeepSeek 执行准备；指定新 batch `app003-product-language-20261114-01` 并完成离线 formal preflight。
+- 批准绑定：`Wang sikai`，`2026-11-14T08:56:46Z`；DeepSeek `deepseek-flash` / C0；冻结输入 hash `8339431ee66a14d838cdbded48240019254182886c85af5cd611e04eaf361801`、labels hash `a5055025e4a01740b9bc25daa5ab51e43bdac9748151ccd10c152cdf7151bcf9`；最多 20 HTTP（10 条×每条最多 2 次）；不自动执行 CAD。批准引用：当前 Codex 对话中负责人 2026-11-14 的批准消息。
+- 验证：固定 CAD venv Python 3.11.18 执行 `run_product_language_offline_preflight()`，`ok=true`；十条 ID/顺序和 inputs hash 匹配，预算可行，batch 目录不存在，`FORMAL_EVALUATION_ALLOWED=false`、`execution_enabled=false`。完整结果见 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/formal-preflight.json`。
+- 阻塞：`run_product_language_batch()` 明确抛出 `offline-preflight-only`，尚无正式 runner、20 次硬预算 ledger、批准 raw/summary 留存和执行报告链路。负责人已批准执行方向不构成绕过代码 gate 的理由；须先由 CC 实现并经固定环境验证及独立复核。
+- 边界：未创建 batch/ledger，未读取 `.env`/API key 或 evaluator labels，未发送网络请求，未运行 CAD；历史批次保持只读，旧 Product Live profile 不变。状态维持 `review`。
