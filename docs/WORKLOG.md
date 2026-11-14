@@ -3070,3 +3070,23 @@ commit=待提交
 - 失败案例：test-only 批准、batch_id 不匹配、错误授权类型均 fail-closed（无 side effects）；输入 hash 错误、已有 batch 目录返回 preflight 失败；全批 error 时 `batch_status` 逻辑为 `failed`，非 `complete`；`FORMAL_EVALUATION_ALLOWED` 不变。
 - 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒中 venv 是断链）；formal live 路径（`transport=None`，真实 DeepSeek HTTP）未运行；无目标 batch `app003-product-language-20261114-01` 创建。
 - 下一步：交 Codex 中枢独立复核（固定 CAD venv 下全回归 + 新专项）；复核通过后方可真实 DeepSeek 执行。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / CC / 2026-11-14 / 窄修
+
+- 动作：对 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`（基线 `e7e2952`）做四项窄修。
+- 修复范围：
+  1. summary update_run 失败时停止后续处理，尽力 finalize 为 `aborted`；finalize 也失败时报告稳定 token `summary_write_failed_and_finalize_failed`；结果中不出现虚假 `complete` 或 `failed`；不泄露绝对路径或异常原文。
+  2. formal Adapter 和 mock transport 异常均替换为固定稳定 message（`str(exc)` 移除）；保留 `exception_type` 分类字段；不回退 attempt 计数或错误分类。
+  3. 移除 `run_product_language_formal_batch()` 的 `output_root` 参数（死变量，formal raw 路径始终为 canonical `work/app001-runs/{batch_id}/raw`，调用方无法覆盖）。
+  4. 更新 checkpoint、PROJECT_STATUS.md、PROJECT_PLAN.md，修正"formal runner 尚未实现"等过时描述；明确 `e7e2952`+本轮窄修 commit 尚未通过中枢复核，真实请求仍未执行。
+- 命令与结果（系统 Python 3.10 / Linux 沙盒）：
+  - `py_compile`（3 个文件）：通过
+  - `git diff --check`：通过
+  - `python3 -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner`：96/96 通过（含新增 12 项）
+  - `python3 -m unittest tests.integration.test_product_live`：109/109 通过（无回退）
+  - `python3 -m unittest tests.demo.test_product_live_ui tests.demo.test_product_flow tests.demo.test_product_ui tests.demo.test_demo_handler`：与 e7e2952 基线同量（failures=30, errors=9，全为 CadQuery 在 Linux 沙盒缺失导致的既有失败，本轮无新增）
+  - `tests/schema`：17/17 通过
+  - `tests/cad_compilation`：与 e7e2952 基线同量（failures=7, errors=5，全为既有 CAD venv 相关限制）
+- 新增测试（12 项）：update_run 失败停止循环；finalize 可恢复报 aborted；finalize 双重失败；无 complete 虚假报告；异常标记不泄漏进 result.as_dict()；无 output_root 参数；raw 路径绑定 canonical batch/raw；mock 模式不创建 canonical batch。
+- 已知限制：固定 CAD venv (Python 3.11.18) 全量回归和 formal live 路径（`transport=None`，真实 DeepSeek）均未在此 Linux 沙盒运行；无 `.env`/API key 读取；无 DeepSeek HTTP；无目标 batch 目录创建；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：提交窄修 commit，交 Codex 中枢在 macOS 固定 CAD venv 下独立复核。

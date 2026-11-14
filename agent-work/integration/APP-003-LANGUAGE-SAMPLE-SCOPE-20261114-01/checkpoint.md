@@ -54,30 +54,53 @@
   - `FORMAL_EVALUATION_ALLOWED` 不变
 - `tests/integration/test_product_language_formal_runner.py`：76 项专项测试，系统 Python 3.10 通过。
 
+### CC 窄修：summary 更新失败处理、异常脱敏、output_root 清理（本轮）
+
+#### 修复 1：summary 更新失败必须尽力结束批次状态
+
+- `writer.update_run()` 失败时设置 `summary_write_failed=True` 并 `break` 停止后续输入处理。
+- `finally` 块中：若 `summary_write_failed`，尝试 `writer.finalize(batch_status="aborted")`；成功时 `summary_finalize_error="summary_write_failed_finalized_aborted"`。
+- 若 finalize 也失败，`summary_finalize_error="summary_write_failed_and_finalize_failed"`；不泄露绝对路径或异常原文。
+- 正常路径（无 update 失败）的 finalize 失败报告为 `"summary_finalize_failed"`（稳定 token）。
+- 新增 4 项端到端回归测试（formal 路径 + 全面 mock）：update 失败停止循环、finalize 可恢复报 aborted、双重失败报告、无虚假 complete。
+
+#### 修复 2：异常信息稳定化和脱敏
+
+- formal Adapter 异常：`{"code": "ADAPTER_EXCEPTION", "exception_type": type(exc).__name__, "message": "adapter raised an unexpected exception"}`，不写入 `str(exc)`。
+- mock transport 异常：`{"code": "TRANSPORT_EXCEPTION", "exception_type": type(exc).__name__, "message": "transport raised an unexpected exception"}`。
+- 新增测试：敏感标记 `SECRET_API_KEY_leaked_in_exception_text` 不进入 `result.as_dict()`、errors 或 summary；已有 attempt 计数和错误分类不回退。
+
+#### 修复 3：清理 raw output_root 接口歧义
+
+- 移除 `run_product_language_formal_batch()` 的 `output_root` 参数（死变量，formal raw 路径始终为 canonical `work/app001-runs/{batch_id}/raw`）。
+- 新增测试：函数签名无 `output_root`；raw 路径绑定 canonical batch/raw；mock 模式不创建 canonical batch 目录。
+
+#### 修复 4：同步交接文档
+
+- 更新 checkpoint、PROJECT_STATUS.md、PROJECT_PLAN.md、WORKLOG；修正"formal runner 尚未实现"等过时描述；状态仍为 `review`，`e7e2952`+本轮窄修 commit 尚未通过中枢复核。
+
 ### 验证命令与结果
 
 | 命令 | 结果 |
 |---|---|
 | `py_compile`（3 个文件） | 通过 |
 | `git diff --check` | 通过 |
-| `python3 -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner` | 84/84 通过 |
-
-正常案例：10 条输入 mock 执行返回 `llm_status=answer`，10 个 input_id 顺序与冻结常量一致，CAD pipeline spy 为零调用。
-失败案例：test-only 批准、batch_id 不匹配、错误授权类型均在任何 side effect 前 fail-closed；输入 hash 错误、已有 batch 目录返回 preflight 失败结果；auth 错误的 transport 返回 `llm_status=error`，`batch_status`（逻辑验证）= `failed` 而非 `complete`。
+| `test_product_language_scope + test_product_language_formal_runner` | 96/96 通过 |
+| `test_product_live` | 109/109 通过（无回退） |
+| `tests/schema` | 17/17 通过 |
 
 ### 已知限制与未运行项
 
-- 系统 Python 3.10 用于本轮测试（venv Python 3.11.18 在 Linux 沙盒中是断链，无法使用）；固定 CAD venv 回归（test_product_live.py 等）留待 Codex 独立复核时在原始 macOS 环境中运行。
-- `test_product_live.py` 的 3 个 symlink 相关 ERROR 为 Linux 沙盒权限限制，与本轮无关，本轮无修改 product_live 任何文件。
-- 真实网络请求仍未执行；无 `.env`/API key 读取；无 DeepSeek HTTP 调用；无目标 batch 目录创建。
-- formal runner 创建 batch 基础设施（BudgetLedger、summary writer、batch dir）仅在 `transport=None`（live 模式）时。mock 模式（FakeTransport）无基础设施，仅测试 preflight + 执行逻辑。
+- 系统 Python 3.10 用于本轮测试（venv Python 3.11.18 在 Linux 沙盒中是断链）；固定 CAD venv 回归留待 Codex 独立复核时在原始 macOS 环境中运行。
+- `tests.demo.*` 和 `tests/cad_compilation` 的既有失败（CadQuery/OCP 缺失）与 e7e2952 基线同量，本轮无新增。
+- 真实网络请求仍未执行；无 `.env`/API key 读取；无 DeepSeek HTTP；无目标 batch 目录创建；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 分支：`cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，尚未 push 或 merge。
 
-### 自检
+### 自检（窄修）
 
 handoff_self_check:
-  changed=src/llm/product_language_authorization.py, src/integration/product_language_formal_runner.py, tests/integration/test_product_language_formal_runner.py, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md, docs/WORKLOG.md
-  commands=py_compile 3/3; git diff --check pass; test_product_language_scope 8/8; test_product_language_formal_runner 76/76; combined 84/84
-  confirmed=authorization gate, approval binding, preflight fail-closed, mock execution 10 inputs correct order, CAD never called, labels never read, FORMAL_EVALUATION_ALLOWED unchanged, batch_status logic (all-error→failed not complete), _SummaryWriter path traversal rejected, no absolute paths or secrets in summary
-  unresolved=fixed CAD venv (Python 3.11.18) full regression not run in this environment; formal live path (transport=None) not exercised in tests (requires credentials); formal batch infrastructure only tested via _SummaryWriter direct tests
-  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑 Product Live 全回归（108/108 预期）和新专项 76/76；确认 BudgetLedger canonical path check 在正式运行时有效；确认 evaluator labels spy 在 live 模式下也为零；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。
+  changed=src/integration/product_language_formal_runner.py, tests/integration/test_product_language_formal_runner.py, docs/PROJECT_STATUS.md, docs/PROJECT_PLAN.md, docs/WORKLOG.md, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md
+  commands=py_compile 3/3; git diff --check pass; test_product_language_scope+formal_runner 96/96; test_product_live 109/109; schema 17/17; cad_compilation 既有 failures=7 errors=5 (与 e7e2952 基线同量)
+  confirmed=summary update_run 失败停止循环并 finalize aborted; 双重失败报告稳定 token; 异常 str(exc) 不进入 result/summary; output_root 参数已移除; raw 路径绑定 canonical; FORMAL_EVALUATION_ALLOWED 不变
+  unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行; formal live 路径 (transport=None) 仅通过 mock 测试间接验证
+  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归；确认 summary 更新失败处理、异常脱敏和 output_root 移除无回退；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。

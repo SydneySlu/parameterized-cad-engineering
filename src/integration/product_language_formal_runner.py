@@ -620,6 +620,8 @@ def _run_one_logical_mock(
     try:
         response, attempts, elapsed_ms = send_with_retry(transport, request)
     except Exception as exc:
+        # Do not copy str(exc) — it may contain provider-controlled content.
+        exc_type = type(exc).__name__
         return LanguageSampleRunState(
             logical_run_id=plan.logical_run_id,
             input_id=plan.input_id,
@@ -632,7 +634,9 @@ def _run_one_logical_mock(
             missing_fields=[],
             unsupported_requests=[],
             questions=[],
-            errors=[{"code": "TRANSPORT_EXCEPTION", "message": str(exc)}],
+            errors=[{"code": "TRANSPORT_EXCEPTION",
+                     "exception_type": exc_type,
+                     "message": "transport raised an unexpected exception"}],
             raw_retention_path=None,
             raw_retention_meta=None,
             llm_meta=llm_meta,
@@ -902,7 +906,6 @@ def run_product_language_formal_batch(
     authorization: ProductLanguageAuthorization,
     approval: ProductLanguageFormalApproval,
     transport: Any = None,
-    output_root: Path | None = None,
 ) -> LanguageSampleBatchResult:
     """Run the language sample extraction batch.
 
@@ -918,8 +921,6 @@ def run_product_language_formal_batch(
     transport:
         Injectable :class:`~llm.transport.FakeTransport` for offline mock
         testing.  For formal live execution, pass ``None``.
-    output_root:
-        Override the raw-retention root (testing only).
 
     Notes
     -----
@@ -929,6 +930,8 @@ def run_product_language_formal_batch(
     - The formal path reads credentials from ``.env`` only after all
       gate checks pass and only once per batch.
     - Budget is enforced atomically via BudgetLedger before each HTTP call.
+    - Raw retention for formal runs is always written to the canonical path
+      ``work/app001-runs/{batch_id}/raw/``; callers cannot redirect this.
     """
     ts = _utc_now_iso()
 
@@ -992,10 +995,6 @@ def run_product_language_formal_batch(
     prompt = load_frozen_prompt()
 
     safe_batch_id = _safe_component(authorization.batch_id)
-    if output_root is None:
-        raw_root = _CANONICAL_RUN_ROOT / safe_batch_id / "raw"
-    else:
-        raw_root = Path(output_root) / "raw"
 
     # ----------------------------------------------------------------
     # Formal infrastructure (batch dir, ledger, summary writer)
@@ -1138,6 +1137,9 @@ def run_product_language_formal_batch(
                         formal_authorization=authorization,
                     )
                 except Exception as exc:
+                    # Do not copy str(exc) — it may contain provider-controlled
+                    # content, credentials, or response bodies.
+                    exc_type = type(exc).__name__
                     result = LanguageSampleRunState(
                         logical_run_id=plan.logical_run_id,
                         input_id=plan.input_id,
@@ -1150,7 +1152,8 @@ def run_product_language_formal_batch(
                         unsupported_requests=[],
                         questions=[],
                         errors=[{"code": "ADAPTER_EXCEPTION",
-                                 "message": str(exc)}],
+                                 "exception_type": exc_type,
+                                 "message": "adapter raised an unexpected exception"}],
                         raw_retention_path=None,
                         raw_retention_meta=None,
                         llm_meta=llm_meta,
@@ -1162,7 +1165,6 @@ def run_product_language_formal_batch(
                             writer.update_run(result)
                         except _SummaryWriteError:
                             summary_write_failed = True
-                            break
                     continue
 
                 record = adapter_result.record
@@ -1181,7 +1183,7 @@ def run_product_language_formal_batch(
                         writer.update_run(result)
                     except _SummaryWriteError:
                         summary_write_failed = True
-                        break
+                        break  # stop processing further inputs
 
             else:
                 # Mock mode: FakeTransport, no ledger
@@ -1199,23 +1201,36 @@ def run_product_language_formal_batch(
                 ledger.release_lock()
             except Exception:
                 pass
-        if is_formal and writer is not None and not summary_write_failed:
-            error_statuses = {LANGUAGE_STATUS_ERROR}
-            statuses = [r.llm_status for r in results]
-            if len(results) < len(planned):
-                final_batch_status = "aborted"
-            elif statuses and all(s in error_statuses for s in statuses):
-                final_batch_status = "failed"
-            elif any(s in error_statuses for s in statuses):
-                final_batch_status = "partial"
+        if is_formal and writer is not None:
+            if summary_write_failed:
+                # summary update failed mid-batch; attempt best-effort finalize
+                # as "aborted" so the file is not left in "running" state.
+                try:
+                    writer.finalize(batch_status="aborted")
+                except _SummaryWriteError:
+                    # Both update and finalize failed: record the double failure.
+                    finalize_error = "summary_write_failed_and_finalize_failed"
+                else:
+                    finalize_error = "summary_write_failed_finalized_aborted"
             else:
-                final_batch_status = "complete"
-            try:
-                writer.finalize(batch_status=final_batch_status)
-            except _SummaryWriteError as exc:
-                finalize_error = str(exc)
-            else:
-                finalize_error = None
+                error_statuses = {LANGUAGE_STATUS_ERROR}
+                statuses = [r.llm_status for r in results]
+                if len(results) < len(planned):
+                    final_batch_status = "aborted"
+                elif statuses and all(s in error_statuses for s in statuses):
+                    final_batch_status = "failed"
+                elif any(s in error_statuses for s in statuses):
+                    final_batch_status = "partial"
+                else:
+                    final_batch_status = "complete"
+                try:
+                    writer.finalize(batch_status=final_batch_status)
+                except _SummaryWriteError:
+                    # Finalize failed; expose a stable error token, never
+                    # absolute paths or exception text.
+                    finalize_error = "summary_finalize_failed"
+                else:
+                    finalize_error = None
         else:
             finalize_error = None
 
