@@ -2990,3 +2990,13 @@ commit=待提交
 - 安全边界：没有重跑 CAD runner、发 HTTP、读取 raw 正文、`.env` 或密钥；FORMAL_EVALUATION_ALLOWED=False 不变。
 - 结论边界：仅验证单次经负责人确认的 P1 参数进入既有 CAD/STEP 链，不代表广泛语言质量或制造认证。
 - 下一步：如需继续 live 样本，需先定义新 scope、预算与 batch ID，完成 preflight 并单独取得执行批准；否则可由负责人先人工检查 P1 STEP。
+
+
+### APP-003-LIVE-PREFLIGHT-20261114-02-CLOSEOUT / Codex 中枢 / done / 2026-11-14
+
+- 动作：负责人确认已在 FreeCAD 检查 P1 STEP 且无问题，批准合入并收束本批任务。
+- 合入状态：本轮全部为文档收束；提交位于本地 `main`，随后同步 `origin/main`。没有待合并的功能分支。
+- 验收：P1 隔离 confirmation run 的 Schema、STEP SHA-256、native/readback 几何比较由 Codex 只读核验通过；FreeCAD 目视检查由负责人完成。
+- 原 batch：`app003-product-live-20261114-02` 保持只读，4/12 HTTP、4 个 raw、0 个 batch 内 STEP；P1 STEP 仅位于独立 confirmation 目录。
+- 结论边界：本次是单个负责人确认样本的自然语言抽取→确认→CAD→STEP 产品路径验收，不代表广泛模型质量、制造认证或扩大 live 样本的授权。
+- 下一步：若扩大 live 样本，先提出明确验证假设，另建 scope、预算、batch ID，完成 preflight 并取得单独批准。

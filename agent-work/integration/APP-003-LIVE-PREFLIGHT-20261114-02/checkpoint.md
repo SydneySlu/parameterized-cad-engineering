@@ -1,7 +1,7 @@
 # APP-003-LIVE-PREFLIGHT-20261114-02 — Checkpoint
 
 - 日期：2026-11-14
-- 状态：`review`（live batch 独立复核通过；P1 per-run confirmation 已执行并完成证据核验；本地文档收束尚未推送）
+- 状态：`done`（live batch 独立复核通过；P1 per-run confirmation 产物核验和负责人 FreeCAD 目视检查完成；文档已收束）
 - 基线：`main=711b4d3`；工作区开始时 clean；本地 main ahead origin/main 13 commits
 - batch：`app003-product-live-20261114-02`
 - 前置：credential entry fix `df3f7b4` 独立复核 `pass`；未验证 provider 权限
@@ -86,6 +86,7 @@ next_agent_focus=independently review sanitized summary/ledger/report and reques
 - 结果：`succeeded` / `success` / `step_readback`；native geometry valid，1 solid、35 faces、73 edges、38 vertices；STEP 148393 bytes。
 - STEP SHA-256：`9884f733f4c07a0408526b37fac391b68140a0fe3b2610570ff1ba8fc00d1486`；native→STEP `CAD-006.geometry-comparison.v1` 回读比较通过，hard mismatches 为空。
 - 限制：该证据是单次、已确认的 P1 产品 run；不改变原 batch 的 4/12 HTTP 统计，也不扩大模型质量结论。
+- 负责人已使用 FreeCAD 检查该 STEP 文件并确认无问题；此为目视验收记录，不扩大几何验证或制造认证结论。
 
 ### 中枢 P1 产物核验（2026-11-14）
 
@@ -102,5 +103,6 @@ handoff_successor_check:
   live_batch=read_only; 4 raw files, 4/12 budget attempts, 0 STEP files
   network_or_secrets=none; no runner rerun, HTTP, .env or key access
   limits=single user-confirmed P1 local CAD result; no broad language-quality claim
-  next=project owner decides whether to review the STEP visually or define a separate next live scope
+  visual_review=project owner inspected the P1 STEP in FreeCAD and accepted it
+  next=any additional live sample requires a separate scope, preflight, batch ID and approval
 ```
