@@ -13,7 +13,7 @@
 
 ## 已确认限制
 
-现有 Product Live profile 只绑定 P1–P4，不能直接运行十条新输入。需要新的版本化 authorization profile/runner 接入与独立验证，不能扩写旧批次、旧授权或把评测标签输入模型。本 checkpoint 不代表样本已获批或 scope 可执行。
+现有 Product Live profile 只绑定 P1–P4，不能直接运行十条新输入。新的版本化 authorization profile、输入/labels 隔离和离线 formal preflight 已完成并通过复核；不能扩写旧批次、旧授权或把评测标签输入模型。本 checkpoint 记录的是已批准的准备 scope，不代表正式 runner 已可发送请求。
 
 ## 下一步
 
@@ -48,4 +48,4 @@ handoff_successor_check:
   interface=pass; new profile is isolated from legacy P1-P4 Product Live profile and labels are not loaded
   limits=pass; no model request, credential read, batch creation or CAD execution was performed
   result=pass
-  blocking_issue=none; live execution still requires a new batch, formal preflight and separate owner approval
+  blocking_issue=execution remains blocked by the explicitly offline-preflight-only runner; a separately reviewed formal runner with budget ledger/raw-summary retention is required before any DeepSeek request

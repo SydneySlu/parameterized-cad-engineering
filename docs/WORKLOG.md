@@ -3047,3 +3047,10 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 执行 `run_product_language_offline_preflight()`，`ok=true`；十条 ID/顺序和 inputs hash 匹配，预算可行，batch 目录不存在，`FORMAL_EVALUATION_ALLOWED=false`、`execution_enabled=false`。完整结果见 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/formal-preflight.json`。
 - 阻塞：`run_product_language_batch()` 明确抛出 `offline-preflight-only`，尚无正式 runner、20 次硬预算 ledger、批准 raw/summary 留存和执行报告链路。负责人已批准执行方向不构成绕过代码 gate 的理由；须先由 CC 实现并经固定环境验证及独立复核。
 - 边界：未创建 batch/ledger，未读取 `.env`/API key 或 evaluator labels，未发送网络请求，未运行 CAD；历史批次保持只读，旧 Product Live profile 不变。状态维持 `review`。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-FORMAL-PREFLIGHT-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：对新 batch 的 formal-preflight 记录和执行边界完成独立复核，并修正 checkpoint 中过时的“未获批”表述。
+- 验证：固定 CAD venv 下语言专项 8/8；正常 preflight 规划 10 条/20 HTTP 且网络与凭据 spy 为 0；已有目录、错误 hash 和 execution API 均 fail-closed；profile/runner/专项测试 `py_compile` 与 `git diff --check` 通过。
+- 结论：`pass` 仅适用于批准绑定、输入/labels 隔离、预算和离线 preflight。真实执行继续保持 `review`，因为 `run_product_language_batch()` 仍明确抛出 `offline-preflight-only`，尚无经独立复核的正式 runner、ledger、raw/summary 留存和执行报告。
+- 证据：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-FORMAL-PREFLIGHT-codex-review.md`；未调用 DeepSeek、未读凭据或 labels、未创建 batch、未运行 CAD。
