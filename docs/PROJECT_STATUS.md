@@ -104,11 +104,11 @@
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
 6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 和 `...-20261114-01` 只读保留；`app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP并经独立复核 `pass`。负责人已单独确认 P1 `bore_d=24`，隔离 confirmation run 生成并回读 STEP；P2 ask、P3/P4 refuse 仍阻断。原 batch 只读，P1 证据不代表广泛语言质量结论。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
-8. 当前工作单元 `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 保持 `review`：获批 batch `app003-product-language-20261114-01` 已完成 10 条逻辑输入、2/20 HTTP；L01=`answer`、L02=`refuse`、L03–L10=`TRANSPORT_ERROR`，summary=`partial`，无 CAD/STEP。批次证据独立复核通过；测试固定正式 batch ID 的碰撞已由 `fbe1f58` 修复并合入 main，固定 CAD venv 语言专项 99/99、Product Live 109/109、Schema 17/17 通过。真实 batch 只读保留；transport failure 原因待诊断，不将小批次扩大为完整语言效果结论。
+8. `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 的测试隔离修复已合入本地 `main`（`fbe1f58`，merge `86bb2fe`，收束记录 `5617e29`），固定 CAD venv 语言专项 99/99、Product Live 109/109、Schema 17/17 通过。负责人报告本地 `main` 已 push；当前执行环境无法连接远端完成独立确认。相关真实 batch `app003-product-language-20261114-01` 仍为 `partial`：10 条逻辑输入、2/20 HTTP，L01=`answer`、L02=`refuse`、L03–L10=`TRANSPORT_ERROR`，无 CAD/STEP；批次证据独立复核通过并只读保留。后续如诊断 transport failure，须使用新的 scope/batch/approval，不重跑或追加旧 batch，也不将小批次扩大为完整语言效果结论。
 
 ## APP-003 语言样本 scope 当前状态
 
 - 十条中文输入与 evaluator-only labels 已由 ADR-0024 独立版本化；新增 profile `app003-product-language.v1`，绑定输入 hash `8339431e…361801`、labels hash `a5055025…51bcf9`、DeepSeek `deepseek-flash`/C0、10 条输入和最多 20 次 HTTP。
 - 授权与 offline preflight 实现、formal runner 及获批执行均已完成；labels 未进入模型输入。批次执行与只读复核细节见下条和对应 checkpoint。
 - `run_product_language_formal_batch()` 已合入 `main`：包含七层授权门控、预算原子预留、canonical raw 路径、脱敏 summary、异常脱敏及 summary 写入失败收束；测试隔离窄修 `fbe1f58` 将默认 batch ID 改为测试专用值，并保留真实目录存在时 fail-closed 的反向测试。固定 CAD venv Python 3.11.18 下 scope + formal runner 99/99、Product Live 109/109、Schema 17/17 通过，`py_compile` 和 `git diff --check` 通过。
-- live batch `app003-product-language-20261114-01` 已按单独授权执行，结果为 10 条输入、2/20 HTTP、1 answer、1 refuse、8 transport errors，summary=`partial`；无 CAD/STEP，批次证据独立复核通过且只读保留。当前语言样本任务仍为 `review`，transport failure 原因需单独诊断；不复用旧 batch、不自动重跑、不读取 raw 正文，`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- live batch `app003-product-language-20261114-01` 已按单独授权执行，结果为 10 条输入、2/20 HTTP、1 answer、1 refuse、8 transport errors，summary=`partial`；无 CAD/STEP，批次证据独立复核通过且只读保留。formal runner 的测试隔离修复已合入并完成固定 CAD venv 复验；代码交付已收束。批次 transport failure 原因仍待诊断，作为后续独立工作项；不复用旧 batch、不自动重跑、不读取 raw 正文，`FORMAL_EVALUATION_ALLOWED=False` 不变。

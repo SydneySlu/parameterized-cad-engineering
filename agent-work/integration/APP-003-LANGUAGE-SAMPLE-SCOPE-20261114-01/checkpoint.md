@@ -1,8 +1,8 @@
 # APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 checkpoint
 
-- 日期：2026-11-14
+- 日期：2026-11-15（收束更新）
 - 状态：review
-- 目的：记录 APP-003 十条语言样本从 scope/preflight、获批 live 执行到测试隔离修复的交付证据。当前状态为 review：真实批次因 transport failure 为 partial；测试隔离窄修已在固定 CAD venv 复验通过并合入 main。
+- 目的：记录 APP-003 十条语言样本从 scope/preflight、获批 live 执行到测试隔离修复的交付证据。测试隔离修复已合入并完成固定 CAD venv 复验；真实批次仍为 `partial`，transport failure 原因未解决，因此批次评估维持 review。
 
 ## 产物
 
@@ -17,7 +17,7 @@
 
 ## 当前下一步
 
-测试 batch ID 碰撞已通过窄修关闭，真实批次仍只读且状态为 `partial`（2/20 HTTP；8 条 `TRANSPORT_ERROR`），无 CAD/STEP。下一步应分析脱敏 transport 错误分类并判断 provider/网络可用性；在定位原因并形成新的明确 scope/授权前，不重跑旧 batch、不追加请求，也不把本批次当作广泛语言效果结论。
+测试 batch ID 碰撞已通过窄修关闭并在 main 完成固定环境复验；该代码交付已收束。真实批次仍只读且状态为 `partial`（2/20 HTTP；8 条 `TRANSPORT_ERROR`），无 CAD/STEP。后续若分析脱敏 transport 错误分类或判断 provider/网络可用性，应作为新的工作单元；在新 scope、batch 和授权齐备前，不重跑旧 batch、不追加请求，也不把本批次当作广泛语言效果结论。
 
 ## 本轮实现与验证
 
@@ -249,3 +249,10 @@ handoff_successor_check:
 - 合入后固定 CAD venv Python 3.11.18：language scope + formal runner 99/99、Product Live 109/109、Schema 17/17；目标测试 `py_compile` 与合并差异 `git diff --check` 通过。
 - 本次合入解决专项测试与已存在真实 batch 的 ID 碰撞；不改变生产 runner、授权、预算、profile、输入 hash 或 `FORMAL_EVALUATION_ALLOWED=False`。
 - 最终状态：测试隔离窄修验收 pass；本地合并完成，push 待负责人执行或确认；语言样本 live 批次仍为 partial/review，transport failure 原因待诊断。真实 batch 保持只读，不读取 raw 正文、不追加请求。
+
+### 负责人同步后的最终收束（2026-11-15）
+
+- 负责人确认已完成同步操作；本地核对 `main` HEAD=`5617e29`、工作区干净，`fbe1f58` 与合并提交 `86bb2fe` 均在历史中。
+- 负责人报告已 push。尝试通过 `git ls-remote origin refs/heads/main` 独立核验时远端连接未返回结果，因此记录为“负责人确认已推送，Codex 当前环境未能独立读取远端 ref”，不将本地 `origin/main` 的旧跟踪值当作最新远端事实。
+- 测试隔离修复的代码交付、独立复核、合入和合入后验证均已完成；固定 CAD venv Python 3.11.18 下 scope + formal runner 99/99、Product Live 109/109、Schema 17/17 通过。
+- 原 live batch 继续只读保留：2/20 HTTP、8 条 transport errors、无 CAD/STEP。原因诊断不属于本次修复的未完成项，后续需另立工作单元；不得复用旧 batch 或追加请求。`FORMAL_EVALUATION_ALLOWED=False` 未变。

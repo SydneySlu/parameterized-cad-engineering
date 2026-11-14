@@ -3183,3 +3183,10 @@ commit=待提交
 - 合入后验证（固定 CAD venv Python 3.11.18）：scope + formal runner 99/99；Product Live 109/109；Schema 17/17；相关源文件与测试 `py_compile` 通过；`git diff --cached --check` 通过。
 - 当前 Git 状态：本地 `main=86bb2fe`；`origin/main=db390ef`，尚未 push。工作区在收束提交后干净。
 - 结论：测试隔离窄修已在本地 main 完成合入与复验。真实语言 batch 仍是 `partial`（2/20 HTTP，8 条 transport errors），证据复核通过但原因待诊断；批次只读保留，不重跑、不追加请求。`FORMAL_EVALUATION_ALLOWED=False` 未变。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / closeout sync / 2026-11-15
+
+- 动作：负责人表示已完成同步并要求收束；核对本地 `main=5617e29`、工作区干净，`fbe1f58` 窄修和 merge `86bb2fe` 均在历史中。
+- 同步状态：负责人报告已 push。尝试 `git ls-remote origin refs/heads/main` 独立核验时远端连接长时间无响应并终止；因此只记录负责人确认，不声称 Codex 已观察到最新远端 ref。当前本地 `origin/main` 跟踪引用仍为旧值，不能据此判断推送失败。
+- 收束：测试隔离代码修复、独立复核、合入及固定 CAD venv 合入后复验已完成；复验为 scope/formal runner 99/99、Product Live 109/109、Schema 17/17。详见该 scope checkpoint。
+- 后续边界：真实 batch `app003-product-language-20261114-01` 仍只读、`partial`（2/20 HTTP；1 answer、1 refuse、8 transport errors），无 CAD/STEP。批次证据复核通过；transport failure 原因诊断另立工作项，不重跑、不追加旧 batch。`FORMAL_EVALUATION_ALLOWED=False` 保持。
