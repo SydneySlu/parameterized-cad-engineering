@@ -3124,3 +3124,10 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下 language scope + formal runner 98/98、Product Live 109/109、正常 FakeTransport answer 与 formal Adapter 异常脱敏定向用例 2/2；py_compile 和 `git diff --check 9a0bb0f..HEAD` 通过。Product Live 存在未关闭 HTTP socket `ResourceWarning`，不影响结果。
 - 核验：脱敏用例在临时目录清理前强制检查 summary 文件存在及敏感 marker 缺失；全局 gate 仍为 False；目标 batch 目录不存在。未读取凭据/labels、未触网、未创建 batch。
 - 结论：本轮 R1 小修 `pass`；报告见 `agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。任务保持 `review`，分支未 push/merge；合入后仍需在 main 上复验。
+
+### APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-MERGE-RECHECK / Codex 中枢 / review / 2026-11-15
+
+- 动作：核对负责人提供的合入后终端记录，并在共享仓库确认 `main` 已包含 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER` 的实现与 R1 验收记录；本地 HEAD=`6e74487`，工作区干净，`main` 比 `origin/main` ahead 15，未 push。
+- 合入后固定 CAD venv Python 3.11.18 复验：`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q` 为 98/98；`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_live -q` 为 109/109。后者输出既有 HTTP socket `ResourceWarning`，没有失败。
+- 结论：本地合入和合入后回归成立；不把离线/mock 回归描述为真实模型效果。`FORMAL_EVALUATION_ALLOWED=False` 保持，目标 batch `app003-product-language-20261114-01` 未创建，未读取凭据或 evaluator labels，未发送 DeepSeek/网络请求，历史批次保持只读。
+- 下一步：如需同步远端由负责人明确 push；如进入真实语言样本运行，需再次确认该 batch 的执行授权并按既有 preflight、预算和独立复核流程推进。

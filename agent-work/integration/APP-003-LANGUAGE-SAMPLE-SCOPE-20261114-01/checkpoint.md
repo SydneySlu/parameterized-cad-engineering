@@ -173,3 +173,10 @@ handoff_successor_check:
   blocking_issue=none for R1; branch still awaits merge to main and post-merge verification before task completion
 
 - 独立审查记录：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER-R1-codex-review.md`。
+
+### 合入后复验与收束（2026-11-15）
+
+- 本地 `main` 已包含 formal runner 分支及独立验收记录，HEAD=`6e74487`；工作区干净；`main` 比 `origin/main` ahead 15，尚未 push。
+- 合入后固定 CAD venv Python 3.11.18 复验：`tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner` 为 98/98；`tests.integration.test_product_live` 为 109/109，均通过。Product Live 测试输出既有 HTTP socket `ResourceWarning`，不影响退出结果。
+- 合入后确认：formal runner、输入/profile/hash/预算和 summary/raw 隔离行为未改变；`FORMAL_EVALUATION_ALLOWED=False` 保持；未读取凭据或 evaluator labels，未创建目标 batch，未发送网络请求。
+- 当前状态仍为 `review`，因为真实 DeepSeek 执行尚未开始。下一步由负责人决定是否 push；若启动真实运行，必须沿用已通过的离线 formal preflight，先取得该 batch 的明确执行授权，再创建 batch 并执行，随后由独立复核核对 summary、预算、raw/hash 和失败收束。
