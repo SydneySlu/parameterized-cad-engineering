@@ -1,0 +1,12 @@
+[
+  {"input_id":"L01-legal-24mm","request_text":"请做一个轴孔直径 24 毫米的紧定螺钉轴环。"},
+  {"input_id":"L02-inch-noncatalog","request_text":"轴环的孔按 0.8 英寸做，其他按标准件默认。"},
+  {"input_id":"L03-catalog-conflict","request_text":"我需要内孔 16 mm，外径 33 mm。"},
+  {"input_id":"L04-missing-bore","request_text":"做一个轴环，轴孔直径先留空。"},
+  {"input_id":"L05-unsupported-finish","request_text":"做一个轴环，孔径 24 mm，并给它阳极氧化。"},
+  {"input_id":"L06-near-boundary-25mm","request_text":"要一个能夹紧 25 mm 轴的轴环。"},
+  {"input_id":"L07-meter-24mm","request_text":"请做内孔 0.024 米的轴环。"},
+  {"input_id":"L08-unsupported-keyway","request_text":"轴孔做 24 mm；不要紧定螺钉，改用键槽固定。"},
+  {"input_id":"L09-ambiguous-fallback","request_text":"先按 24 mm 生成；如果不行就做 25 mm。"},
+  {"input_id":"L10-vague-size","request_text":"我想要一个小一点的轴环，能套在轴上就行。"}
+]

@@ -1,0 +1,12 @@
+[
+  {"input_id":"L01-legal-24mm","explicit_parameters":{"bore_d_mm":24},"expected_decision":["answer"],"expected_gate":"needs_confirmation","cad_after_confirmation":true,"unsupported_requests":[]},
+  {"input_id":"L02-inch-noncatalog","explicit_parameters":{"bore_d_in":0.8,"bore_d_mm":20.32},"expected_decision":["ask","refuse"],"expected_gate":"blocked_before_cad","cad_after_confirmation":false,"unsupported_requests":[]},
+  {"input_id":"L03-catalog-conflict","explicit_parameters":{"bore_d_mm":16,"outer_d_mm":33},"expected_decision":["answer","ask","refuse"],"expected_gate":"schema_or_rule_blocked","cad_after_confirmation":false,"unsupported_requests":[]},
+  {"input_id":"L04-missing-bore","explicit_parameters":{},"expected_decision":["ask","refuse"],"expected_gate":"blocked_before_cad","cad_after_confirmation":false,"unsupported_requests":[]},
+  {"input_id":"L05-unsupported-finish","explicit_parameters":{"bore_d_mm":24},"expected_decision":["ask","refuse"],"expected_gate":"unsupported_blocked","cad_after_confirmation":false,"unsupported_requests":["anodizing"]},
+  {"input_id":"L06-near-boundary-25mm","explicit_parameters":{"bore_d_mm":25},"expected_decision":["ask","refuse"],"expected_gate":"schema_or_rule_blocked","cad_after_confirmation":false,"unsupported_requests":[]},
+  {"input_id":"L07-meter-24mm","explicit_parameters":{"bore_d_m":0.024,"bore_d_mm":24},"expected_decision":["answer"],"expected_gate":"needs_confirmation","cad_after_confirmation":true,"unsupported_requests":[]},
+  {"input_id":"L08-unsupported-keyway","explicit_parameters":{"bore_d_mm":24},"expected_decision":["ask","refuse"],"expected_gate":"unsupported_blocked","cad_after_confirmation":false,"unsupported_requests":["keyway","no_set_screw"]},
+  {"input_id":"L09-ambiguous-fallback","explicit_parameters":{"bore_d_mm":24,"fallback_bore_d_mm":25},"expected_decision":["ask","refuse"],"expected_gate":"ambiguous_blocked","cad_after_confirmation":false,"unsupported_requests":[]},
+  {"input_id":"L10-vague-size","explicit_parameters":{},"expected_decision":["ask","refuse"],"expected_gate":"blocked_before_cad","cad_after_confirmation":false,"unsupported_requests":[]}
+]

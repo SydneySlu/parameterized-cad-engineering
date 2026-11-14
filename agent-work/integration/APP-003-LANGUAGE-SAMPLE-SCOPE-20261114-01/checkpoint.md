@@ -1,0 +1,19 @@
+# APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 checkpoint
+
+- 日期：2026-11-14
+- 状态：review
+- 目的：形成失败路径修复复核后可供负责人审阅的语言样本候选；不调用模型、不建 batch、不执行 preflight。
+
+## 产物
+
+- `model-inputs.json`：10 条中文需求输入；SHA-256 `8339431ee66a14d838cdbded48240019254182886c85af5cd611e04eaf361801`
+- `evaluator-labels.json`：独立标签；SHA-256 `a5055025e4a01740b9bc25daa5ab51e43bdac9748151ccd10c152cdf7151bcf9`
+- `scope.md`：候选假设、DeepSeek/C0/no-retrieval、重试/预算和执行前条件。
+
+## 已确认限制
+
+现有 Product Live profile 只绑定 P1–P4，不能直接运行十条新输入。需要新的版本化 authorization profile/runner 接入与独立验证，不能扩写旧批次、旧授权或把评测标签输入模型。本 checkpoint 不代表样本已获批或 scope 可执行。
+
+## 下一步
+
+独立复核样本类别、标签预期和隔离；由负责人审阅并确认是否冻结。若确认，另建 profile/runner 实现任务，再做离线验证及独立审查。真实模型执行仍需要后续新 batch、offline preflight 和明确执行授权。

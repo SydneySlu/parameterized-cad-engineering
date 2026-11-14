@@ -3015,3 +3015,10 @@ commit=待提交
 - 动作：对 `3958ed5` 做独立复核，重点检查重复 input 的 run identity、HTTP confirm/get/download 一致性和语言矩阵范围边界。
 - 结果：旧实现的跨 run 旧 STEP 暴露已由离线复现确认，UUID run identity 修复和 unit/HTTP 回归均通过；Product Live 109、组合 UI/C1/C2/C3/Integration 300、Schema 17、CAD 13 以及目标 diff check 通过。
 - 结论：修复可在离线 ProductLiveService 边界内继续推进，记录为 `review`；语言矩阵仍是未冻结草案，失败路径补强项不冒充已完成证据，不启动新的 live batch。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / review / 2026-11-14
+
+- 动作：在失败路径修复独立复核后，准备十条中文语言输入候选、物理隔离 evaluator labels 和范围草案。
+- 结果：固定候选 DeepSeek `deepseek-flash` / C0 / 无检索；预算建议 10 条×最多 2 次 HTTP=20；输入 hash `8339431e…361801`，标签 hash `a5055025…51bcf9`。JSON 格式校验通过。
+- 执行阻塞：当前 Product Live authorization profile 硬绑定既有 P1–P4 和对应输入 hash，不能直接执行新十条。若负责人接受矩阵，须新增版本化 profile/runner、离线隔离测试、独立复核和新 batch preflight；不复用旧 profile/batch。
+- 边界：这是候选，不是冻结集、batch、preflight 或执行授权；没有模型、网络、密钥读取或 CAD 调用；`FORMAL_EVALUATION_ALLOWED=False` 不变。
