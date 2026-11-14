@@ -3054,3 +3054,19 @@ commit=待提交
 - 验证：固定 CAD venv 下语言专项 8/8；正常 preflight 规划 10 条/20 HTTP 且网络与凭据 spy 为 0；已有目录、错误 hash 和 execution API 均 fail-closed；profile/runner/专项测试 `py_compile` 与 `git diff --check` 通过。
 - 结论：`pass` 仅适用于批准绑定、输入/labels 隔离、预算和离线 preflight。真实执行继续保持 `review`，因为 `run_product_language_batch()` 仍明确抛出 `offline-preflight-only`，尚无经独立复核的正式 runner、ledger、raw/summary 留存和执行报告。
 - 证据：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-FORMAL-PREFLIGHT-codex-review.md`；未调用 DeepSeek、未读凭据或 labels、未创建 batch、未运行 CAD。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / CC / in_progress / 2026-11-14
+
+- 动作：实现 APP-003 十条语言样本 scope 的正式执行 runner 链路（`cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，基线 `f1012a9`）。
+- 命令与结果：
+  - `py_compile`（`product_language_authorization.py`、`product_language_formal_runner.py`、`test_product_language_formal_runner.py`）：通过
+  - `git diff --check`：通过
+  - `python3 -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner`：84/84 通过
+- 新增文件：
+  - `src/llm/product_language_authorization.py`（扩展 `ProductLanguageFormalApproval`、`validate_product_language_formal_approval_binding`、`make_language_test_approval`）
+  - `src/integration/product_language_formal_runner.py`（scope-bound formal runner：七层门控、BudgetLedger、mock FakeTransport 路径、_SummaryWriter、raw 留存、无 CAD/IR/STEP 管道）
+  - `tests/integration/test_product_language_formal_runner.py`（76 项专项测试）
+- 正常案例：10 条输入 mock 执行返回 `llm_status=answer`，input_id 顺序与冻结常量一致，CAD spy 为零，labels 未读。
+- 失败案例：test-only 批准、batch_id 不匹配、错误授权类型均 fail-closed（无 side effects）；输入 hash 错误、已有 batch 目录返回 preflight 失败；全批 error 时 `batch_status` 逻辑为 `failed`，非 `complete`；`FORMAL_EVALUATION_ALLOWED` 不变。
+- 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒中 venv 是断链）；formal live 路径（`transport=None`，真实 DeepSeek HTTP）未运行；无目标 batch `app003-product-language-20261114-01` 创建。
+- 下一步：交 Codex 中枢独立复核（固定 CAD venv 下全回归 + 新专项）；复核通过后方可真实 DeepSeek 执行。

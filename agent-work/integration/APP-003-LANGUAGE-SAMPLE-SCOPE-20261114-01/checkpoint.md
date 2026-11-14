@@ -37,15 +37,47 @@
 - 修复 `ProductLanguageAuthorization.max_chat_attempts_for()` 返回批次上限的问题，正式 accessor 现在强制每条输入最多 2 次；新增反向测试。
 - 固定 CAD venv 专项仍为 8/8，`py_compile` 与 `git diff --check` 通过。
 
-## 独立复核
+## CC 实现：formal runner（本轮）
 
-handoff_successor_check:
-  predecessor=APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / commits 50eda5c, 417139f, 34a65e0
-  files_format=pass; profile, runner, tests and frozen input/label files exist and import
-  core_rerun=pass; fixed CAD venv language scope 8/8 and affected regressions 109+300+17+13 passed
-  normal_case=pass; offline preflight planned 10 logical runs and 20 HTTP with input hash verified
-  failure_case=pass; wrong hash/profile/type, existing batch directory and execution API all fail closed
-  interface=pass; new profile is isolated from legacy P1-P4 Product Live profile and labels are not loaded
-  limits=pass; no model request, credential read, batch creation or CAD execution was performed
-  result=pass
-  blocking_issue=execution remains blocked by the explicitly offline-preflight-only runner; a separately reviewed formal runner with budget ledger/raw-summary retention is required before any DeepSeek request
+### 新增产物
+
+- `src/llm/product_language_authorization.py`：扩展 `ProductLanguageFormalApproval`、`ProductLanguageApprovalValidationError`、`validate_product_language_formal_approval_binding`、`make_language_test_approval`；`PRODUCT_LANGUAGE_PROMPT_SHA256` 导入。
+- `src/integration/product_language_formal_runner.py`：scope-bound formal runner，包含：
+  - 授权、批准、preflight 七层门控（所有 side effects 前完成）
+  - `BudgetLedger`+`BudgetAwareTransport` 路径（formal/live）
+  - FakeTransport mock 路径（测试用）
+  - `_SummaryWriter`：原子写入，仅输出 repo-relative 路径、SHA-256 和批准字段
+  - raw 留存路径：`work/app001-runs/{batch_id}/raw/`
+  - `run_language_offline_preflight()`、`run_product_language_formal_batch()`
+  - 无 CAD/IR/STEP 管道，永不调用 `run_pipeline()`
+  - 全批失败时 `batch_status=failed`，非 `complete`
+  - `FORMAL_EVALUATION_ALLOWED` 不变
+- `tests/integration/test_product_language_formal_runner.py`：76 项专项测试，系统 Python 3.10 通过。
+
+### 验证命令与结果
+
+| 命令 | 结果 |
+|---|---|
+| `py_compile`（3 个文件） | 通过 |
+| `git diff --check` | 通过 |
+| `python3 -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner` | 84/84 通过 |
+
+正常案例：10 条输入 mock 执行返回 `llm_status=answer`，10 个 input_id 顺序与冻结常量一致，CAD pipeline spy 为零调用。
+失败案例：test-only 批准、batch_id 不匹配、错误授权类型均在任何 side effect 前 fail-closed；输入 hash 错误、已有 batch 目录返回 preflight 失败结果；auth 错误的 transport 返回 `llm_status=error`，`batch_status`（逻辑验证）= `failed` 而非 `complete`。
+
+### 已知限制与未运行项
+
+- 系统 Python 3.10 用于本轮测试（venv Python 3.11.18 在 Linux 沙盒中是断链，无法使用）；固定 CAD venv 回归（test_product_live.py 等）留待 Codex 独立复核时在原始 macOS 环境中运行。
+- `test_product_live.py` 的 3 个 symlink 相关 ERROR 为 Linux 沙盒权限限制，与本轮无关，本轮无修改 product_live 任何文件。
+- 真实网络请求仍未执行；无 `.env`/API key 读取；无 DeepSeek HTTP 调用；无目标 batch 目录创建。
+- formal runner 创建 batch 基础设施（BudgetLedger、summary writer、batch dir）仅在 `transport=None`（live 模式）时。mock 模式（FakeTransport）无基础设施，仅测试 preflight + 执行逻辑。
+- 分支：`cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，尚未 push 或 merge。
+
+### 自检
+
+handoff_self_check:
+  changed=src/llm/product_language_authorization.py, src/integration/product_language_formal_runner.py, tests/integration/test_product_language_formal_runner.py, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md, docs/WORKLOG.md
+  commands=py_compile 3/3; git diff --check pass; test_product_language_scope 8/8; test_product_language_formal_runner 76/76; combined 84/84
+  confirmed=authorization gate, approval binding, preflight fail-closed, mock execution 10 inputs correct order, CAD never called, labels never read, FORMAL_EVALUATION_ALLOWED unchanged, batch_status logic (all-error→failed not complete), _SummaryWriter path traversal rejected, no absolute paths or secrets in summary
+  unresolved=fixed CAD venv (Python 3.11.18) full regression not run in this environment; formal live path (transport=None) not exercised in tests (requires credentials); formal batch infrastructure only tested via _SummaryWriter direct tests
+  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑 Product Live 全回归（108/108 预期）和新专项 76/76；确认 BudgetLedger canonical path check 在正式运行时有效；确认 evaluator labels spy 在 live 模式下也为零；确认 FORMAL_EVALUATION_ALLOWED 不变；批准后方可真实 DeepSeek 执行。

@@ -1,15 +1,17 @@
-"""Versioned authorization profile for the APP-003 language matrix.
+"""Versioned authorization profile and formal approval for the APP-003 language matrix.
 
-This module only defines immutable scope identity.  It does not authorize a
-live request by itself, read credentials, create a batch, or open the global
-formal-evaluation gate.  The profile is intentionally separate from the
+This module defines immutable scope identity and the formal approval credential
+required for the ten-input language sample formal runner.
+
+It does NOT read credentials, create a batch, make network calls, or open the
+global formal-evaluation gate.  The profile is intentionally separate from the
 four-input ``app003-product-live.v1`` profile.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from .authorization import AuthorizationScopeError, FormalRunAuthorization
 from .contract import (
@@ -158,10 +160,209 @@ def authorize_product_language_run(*, batch_id: str) -> ProductLanguageAuthoriza
     )
 
 
+# ---------------------------------------------------------------------------
+# Formal approval credential for the language sample runner
+# ---------------------------------------------------------------------------
+
+_LANGUAGE_APPROVAL_STATEMENT_PREFIX: Final[str] = (
+    "I approve the formal execution of the ten-input language sample batch"
+)
+
+
+class ProductLanguageApprovalValidationError(ValueError):
+    """Raised when a language sample formal approval credential is invalid."""
+
+
+@dataclass(frozen=True)
+class ProductLanguageFormalApproval:
+    """Explicit, fail-closed owner approval credential for one language sample batch.
+
+    Formal execution requires BOTH:
+    - :class:`ProductLanguageAuthorization` (fixed scope check), AND
+    - this :class:`ProductLanguageFormalApproval` (owner approval for same batch_id).
+
+    Security
+    --------
+    - Construction validates all scope fields against frozen language constants.
+    - Any mismatch raises :class:`ProductLanguageApprovalValidationError` at construction.
+    - ``is_test_only=True`` credentials are structurally rejected by
+      :func:`validate_product_language_formal_approval_binding`.
+    - No secrets (API keys, Authorization headers) are stored on this object.
+    - Automatic CAD pipeline is never authorised by this profile.
+    """
+
+    batch_id: str
+    profile_id: str
+    inputs_sha256: str
+    evaluator_labels_sha256: str
+    provider: str
+    model: str
+    condition: str
+    max_batch_http: int
+    automatic_cad_pipeline: bool
+    approver: str
+    approved_at_utc: str
+    approval_statement: str
+    approval_record_ref: str | None = None
+    is_test_only: bool = False
+
+    def __post_init__(self) -> None:
+        mismatches: list[str] = []
+        if self.profile_id != PRODUCT_LANGUAGE_PROFILE_ID:
+            mismatches.append(
+                f"profile_id mismatch: expected {PRODUCT_LANGUAGE_PROFILE_ID!r}, "
+                f"got {self.profile_id!r}"
+            )
+        if self.inputs_sha256 != PRODUCT_LANGUAGE_INPUTS_SHA256:
+            mismatches.append(
+                f"inputs_sha256 mismatch: expected {PRODUCT_LANGUAGE_INPUTS_SHA256!r}, "
+                f"got {self.inputs_sha256!r}"
+            )
+        if self.evaluator_labels_sha256 != PRODUCT_LANGUAGE_LABELS_SHA256:
+            mismatches.append(
+                f"evaluator_labels_sha256 mismatch: "
+                f"expected {PRODUCT_LANGUAGE_LABELS_SHA256!r}, "
+                f"got {self.evaluator_labels_sha256!r}"
+            )
+        if self.provider != PRODUCT_LANGUAGE_PROVIDER:
+            mismatches.append(
+                f"provider mismatch: expected {PRODUCT_LANGUAGE_PROVIDER!r}, "
+                f"got {self.provider!r}"
+            )
+        if self.model != PRODUCT_LANGUAGE_MODEL:
+            mismatches.append(
+                f"model mismatch: expected {PRODUCT_LANGUAGE_MODEL!r}, "
+                f"got {self.model!r}"
+            )
+        if self.condition != PRODUCT_LANGUAGE_CONDITION:
+            mismatches.append(
+                f"condition mismatch: expected {PRODUCT_LANGUAGE_CONDITION!r}, "
+                f"got {self.condition!r}"
+            )
+        if self.max_batch_http != PRODUCT_LANGUAGE_MAX_BATCH_HTTP:
+            mismatches.append(
+                f"max_batch_http mismatch: expected {PRODUCT_LANGUAGE_MAX_BATCH_HTTP}, "
+                f"got {self.max_batch_http}"
+            )
+        if self.automatic_cad_pipeline is not False:
+            mismatches.append(
+                "automatic_cad_pipeline must be False; "
+                "language sample scope never authorises automatic CAD execution"
+            )
+        if not isinstance(self.batch_id, str) or not self.batch_id.strip():
+            mismatches.append("batch_id must be a non-empty string")
+        if not isinstance(self.approver, str) or not self.approver.strip():
+            mismatches.append("approver must be a non-empty string")
+        if not isinstance(self.approved_at_utc, str) or not self.approved_at_utc.strip():
+            mismatches.append("approved_at_utc must be a non-empty string")
+        if not isinstance(self.approval_statement, str) or not self.approval_statement.strip():
+            mismatches.append("approval_statement must be a non-empty string")
+        if mismatches:
+            raise ProductLanguageApprovalValidationError(
+                "Language sample formal approval scope validation failed: "
+                + "; ".join(mismatches)
+            )
+
+    def as_audit_dict(self) -> dict[str, Any]:
+        """Return a redacted audit record of this approval (no secrets)."""
+        return {
+            "approver": self.approver,
+            "approved_at_utc": self.approved_at_utc,
+            "approval_statement": self.approval_statement,
+            "approval_record_ref": self.approval_record_ref,
+            "batch_id": self.batch_id,
+            "profile_id": self.profile_id,
+            "inputs_sha256": self.inputs_sha256,
+            "evaluator_labels_sha256": self.evaluator_labels_sha256,
+            "provider": self.provider,
+            "model": self.model,
+            "condition": self.condition,
+            "max_batch_http": self.max_batch_http,
+            "automatic_cad_pipeline": self.automatic_cad_pipeline,
+        }
+
+
+def validate_product_language_formal_approval_binding(
+    authorization: ProductLanguageAuthorization,
+    approval: ProductLanguageFormalApproval,
+) -> None:
+    """Validate that an approval credential is bound to the same batch scope.
+
+    Raises :class:`ProductLanguageApprovalValidationError` if:
+    - Either argument is the wrong type
+    - ``approval.is_test_only`` is True
+    - ``approval.batch_id`` does not match ``authorization.batch_id``
+
+    This check MUST be performed BEFORE any directory creation, BudgetLedger
+    initialisation, Transport construction, or network I/O.
+    """
+    if not isinstance(approval, ProductLanguageFormalApproval):
+        raise ProductLanguageApprovalValidationError(
+            f"approval must be a ProductLanguageFormalApproval instance, "
+            f"got {type(approval).__name__}"
+        )
+    if not isinstance(authorization, ProductLanguageAuthorization):
+        raise ProductLanguageApprovalValidationError(
+            f"authorization must be a ProductLanguageAuthorization instance, "
+            f"got {type(authorization).__name__}"
+        )
+    if approval.is_test_only:
+        raise ProductLanguageApprovalValidationError(
+            "test-only approval credential cannot be used for a formal language "
+            "sample run; a real owner-approved ProductLanguageFormalApproval with "
+            "is_test_only=False (the default) is required for live execution"
+        )
+    if approval.batch_id != authorization.batch_id:
+        raise ProductLanguageApprovalValidationError(
+            f"approval batch_id {approval.batch_id!r} does not match "
+            f"authorization batch_id {authorization.batch_id!r}"
+        )
+
+
+def make_language_test_approval(
+    *,
+    batch_id: str,
+    approver: str = "test-owner",
+    approved_at_utc: str = "2026-11-14T00:00:00Z",
+    approval_statement: str | None = None,
+    approval_record_ref: str | None = None,
+) -> ProductLanguageFormalApproval:
+    """Construct a test-only approval credential for unit tests.
+
+    The resulting object has ``is_test_only=True``, which is structurally
+    rejected by :func:`validate_product_language_formal_approval_binding`.
+    It exercises the approval dataclass path without authorising real execution.
+    """
+    if approval_statement is None:
+        approval_statement = (
+            f"{_LANGUAGE_APPROVAL_STATEMENT_PREFIX} {batch_id} (TEST ONLY)"
+        )
+    return ProductLanguageFormalApproval(
+        batch_id=batch_id,
+        profile_id=PRODUCT_LANGUAGE_PROFILE_ID,
+        inputs_sha256=PRODUCT_LANGUAGE_INPUTS_SHA256,
+        evaluator_labels_sha256=PRODUCT_LANGUAGE_LABELS_SHA256,
+        provider=PRODUCT_LANGUAGE_PROVIDER,
+        model=PRODUCT_LANGUAGE_MODEL,
+        condition=PRODUCT_LANGUAGE_CONDITION,
+        max_batch_http=PRODUCT_LANGUAGE_MAX_BATCH_HTTP,
+        automatic_cad_pipeline=False,
+        approver=approver,
+        approved_at_utc=approved_at_utc,
+        approval_statement=approval_statement,
+        approval_record_ref=approval_record_ref,
+        is_test_only=True,
+    )
+
+
 __all__ = [
     "PRODUCT_LANGUAGE_PROFILE_ID", "PRODUCT_LANGUAGE_INPUT_IDS",
     "PRODUCT_LANGUAGE_INPUTS_SHA256", "PRODUCT_LANGUAGE_LABELS_SHA256",
     "PRODUCT_LANGUAGE_PROVIDER", "PRODUCT_LANGUAGE_MODEL",
     "PRODUCT_LANGUAGE_CONDITION", "PRODUCT_LANGUAGE_MAX_BATCH_HTTP",
     "ProductLanguageAuthorization", "authorize_product_language_run",
+    "ProductLanguageApprovalValidationError",
+    "ProductLanguageFormalApproval",
+    "validate_product_language_formal_approval_binding",
+    "make_language_test_approval",
 ]
