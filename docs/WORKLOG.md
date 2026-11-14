@@ -3034,3 +3034,8 @@ commit=待提交
 
 - 动作：提交后接口复核发现 per-input retry accessor 会继承批次 20 上限；窄修 `417139f` 强制 `max_chat_attempts_for()` 返回 2，并增加反向测试。
 - 验证：固定 CAD venv 专项 8/8、`py_compile`、`git diff --check` 通过；未触网、未读凭据、未创建 batch。
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：完成新十条语言样本 scope 的独立复核，记录见 `agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-codex-review.md`。
+- 结果：新 profile、输入/labels hash 隔离、20 HTTP 预算和 fail-closed preflight 通过；固定 CAD venv 下专项 8/8、旧 Product Live 109/109、C1/C2/C3/Integration 300/300、Schema 17/17、CAD 13/13 通过。
+- 边界：旧 P1–P4 profile 与历史 batch 未修改；本轮未调用 DeepSeek、未读取凭据、未创建 batch、未执行 CAD。结论只允许进入新 batch 准备，不等同于真实执行授权。

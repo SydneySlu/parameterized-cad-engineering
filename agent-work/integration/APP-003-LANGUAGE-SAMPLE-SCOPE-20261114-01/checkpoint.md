@@ -34,3 +34,16 @@
 
 - 修复 `ProductLanguageAuthorization.max_chat_attempts_for()` 返回批次上限的问题，正式 accessor 现在强制每条输入最多 2 次；新增反向测试。
 - 固定 CAD venv 专项仍为 8/8，`py_compile` 与 `git diff --check` 通过。
+
+## 独立复核
+
+handoff_successor_check:
+  predecessor=APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / commits 50eda5c, 417139f, 34a65e0
+  files_format=pass; profile, runner, tests and frozen input/label files exist and import
+  core_rerun=pass; fixed CAD venv language scope 8/8 and affected regressions 109+300+17+13 passed
+  normal_case=pass; offline preflight planned 10 logical runs and 20 HTTP with input hash verified
+  failure_case=pass; wrong hash/profile/type, existing batch directory and execution API all fail closed
+  interface=pass; new profile is isolated from legacy P1-P4 Product Live profile and labels are not loaded
+  limits=pass; no model request, credential read, batch creation or CAD execution was performed
+  result=pass
+  blocking_issue=none; live execution still requires a new batch, formal preflight and separate owner approval
