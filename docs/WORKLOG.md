@@ -3152,4 +3152,27 @@ commit=待提交
 - 动作：对真实 batch `app003-product-language-20261114-01` 做只读独立复核；未重跑、未追加 HTTP、未修改批次、未语义读取 raw 正文。
 - 证据结果：approval binding 通过；summary=`partial`、10 runs（answer=1/refuse=1/error=8）；ledger=2/20；2 个 raw 文件 SHA-256 与 summary 匹配；无 pipeline/STEP；summary/ledger/report 未发现凭据、绝对路径或 evaluator label 内容。
 - 验证：固定 CAD venv 下 `py_compile` 和 `git diff --check` 通过。语言 scope + formal runner 98 项重跑有 7 项失败，全部因测试固定正式 batch ID，而真实 batch 目录已存在并触发 `batch_directory_already_exists`。
-- 结论：批次证据一致性通过，但整体保持 `review`，不能将当前专项重跑称为全绿。真实 batch 只读保留；需要测试隔离窄修后重新验收。
+- 结论：批次证据一致性通过，但整体保持 `review`，不能将当前专项重跑称为全绿。真实 batch 只读保留；需要测试隔离窄修后重新验收。### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / CC / 2026-11-14 / 测试隔离窄修
+
+- 动作：对 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`（基线 `6e74487`）修复测试 batch ID 碰撞。
+- 背景：真实 batch `app003-product-language-20261114-01` 已合法创建，专项测试默认使用该 ID 导致 `batch_directory_already_exists` 失败。
+- 修复：
+  1. 测试默认 `BATCH_ID` → `"lang-formal-runner-test-offline-20261114-01"`（唯一测试专用 ID）。
+  2. 新增 `REAL_BATCH_ID` 常量，仅用于反向回归测试。
+  3. 新增 `test_real_batch_directory_already_exists_regression`：使用 `REAL_BATCH_ID` 断言正式目录已存在时 preflight 返回 `batch_directory_already_exists`；不创建/删除/读取真实 batch。
+- 命令与结果：
+  - `py_compile`：通过
+  - `git diff --check`：通过
+  - `test_product_language_scope + test_product_language_formal_runner`：99/99 通过
+  - `test_product_live`：109/109 通过
+  - `tests/schema`：17/17 通过
+- 未运行项：固定 CAD venv (Python 3.11.18) 全量回归（Linux 沙盒 venv 断链）；真实 DeepSeek HTTP；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：提交窄修 commit，交 Codex 中枢复核。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01 / Codex 中枢 / review / 2026-11-15
+
+- 动作：复核 CC 测试隔离窄修 `fbe1f58`，并补正 checkpoint 中“即将提交”的过时记录。
+- 核验：固定 CAD venv Python 3.11.18 下 language scope + formal runner 99/99、Product Live 109/109、Schema 17/17；目标测试 `py_compile` 通过；`git diff --check 6e74487..fbe1f58` 通过。
+- 正常案例：FakeTransport all-answer 返回 10 条结果；失败案例：真实 batch ID 的 preflight 返回 `batch_directory_already_exists`。
+- 范围：仅测试默认 batch ID 与反向回归测试变更；formal runner、授权/profile、输入 hash、预算、transport 和全局 gate 未改。真实 batch 目录未修改，未读取其文件内容、raw 正文、凭据或 evaluator labels，未触网或重跑。
+- 结论：本窄修独立复核 `pass`；分支仍为 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，尚未 push/merge，合入 main 后仍需复验。

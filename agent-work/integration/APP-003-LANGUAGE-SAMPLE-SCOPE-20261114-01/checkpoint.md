@@ -2,7 +2,7 @@
 
 - 日期：2026-11-14
 - 状态：review
-- 目的：形成失败路径修复复核后可供负责人审阅的语言样本 scope，并在负责人批准后完成新 batch 的离线 formal preflight；不调用模型、不建 batch、不执行 live 请求。
+- 目的：记录 APP-003 十条语言样本从 scope/preflight、获批 live 执行到测试隔离修复的交付证据。当前状态为 review：真实批次因 transport failure 为 partial；测试隔离窄修已在固定 CAD venv 复验通过并合入 main。
 
 ## 产物
 
@@ -15,9 +15,9 @@
 
 现有 Product Live profile 只绑定 P1–P4，不能直接运行十条新输入。新的版本化 authorization profile、输入/labels 隔离和离线 formal preflight 已完成并通过复核；不能扩写旧批次、旧授权或把评测标签输入模型。本 checkpoint 记录的是已批准的准备 scope，不代表正式 runner 已可发送请求。
 
-## 下一步
+## 当前下一步
 
-离线 formal preflight 已通过并写入 `formal-preflight.json`。真实执行仍被 runner gate 阻断：`run_product_language_batch()` 明确抛出 `offline-preflight-only`，尚无经过独立复核的 formal runner、BudgetLedger、raw/summary 留存与执行报告链路。下一步应先由 CC 实现独立 formal runner，再做固定环境离线测试和独立复核；在该 gate 关闭前不得发送 DeepSeek 请求。
+测试 batch ID 碰撞已通过窄修关闭，真实批次仍只读且状态为 `partial`（2/20 HTTP；8 条 `TRANSPORT_ERROR`），无 CAD/STEP。下一步应分析脱敏 transport 错误分类并判断 provider/网络可用性；在定位原因并形成新的明确 scope/授权前，不重跑旧 batch、不追加请求，也不把本批次当作广泛语言效果结论。
 
 ## 本轮实现与验证
 
@@ -198,6 +198,54 @@ handoff_successor_check:
 ### 独立复核（2026-11-15）
 
 - 批次证据一致性通过：approval binding、summary/ledger（2/20）、10 条 run 状态、2 个 raw 文件哈希、无 pipeline/STEP、脱敏边界均通过；复核未语义读取 raw 正文。
-- 结论保持 `review`：合入后重跑语言专项时 98 项有 7 项失败，根因是测试固定使用已经合法创建的正式 batch ID，触发 `batch_directory_already_exists`。真实 batch 不删除、不重跑。
+- 结论当时保持 `review`：合入后重跑语言专项时 98 项有 7 项失败，根因是测试固定使用已经合法创建的正式 batch ID，触发 `batch_directory_already_exists`。真实 batch 不删除、不重跑。
 - 独立审查记录：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-independent-review.md`。
-- 下一步：由 CC 做测试隔离窄修（唯一临时 batch ID 或隔离 canonical run root），并保留真实目录已存在时 fail-closed 的反向测试；修复后再复验并更新结论。
+- 下一步（当时）：由 CC 做测试隔离窄修，并保留真实目录已存在时 fail-closed 的反向测试。
+
+### CC 测试隔离窄修（真实 batch 已创建后专项测试 batch ID 碰撞修复）
+
+- 背景：真实 batch `app003-product-language-20261114-01` 已合法创建于 `work/app001-runs/`。专项测试默认使用该正式 batch ID 作为 `_auth()` / `_real_approval()` / `_test_approval()` 的默认值，导致 preflight 检查 `batch_directory_already_exists` 失败。
+- 修复范围：
+  1. 将测试默认 `BATCH_ID` 从 `"app003-product-language-20261114-01"` 改为 `"lang-formal-runner-test-offline-20261114-01"`（唯一测试专用 ID）。
+  2. 新增 `REAL_BATCH_ID` 常量保留正式 batch ID，仅用于反向回归测试。
+  3. 新增 `test_real_batch_directory_already_exists_regression`：使用 `REAL_BATCH_ID` 调用 `run_language_offline_preflight`，断言返回 `batch_directory_already_exists`；该测试不创建、删除、移动、重命名或读取真实 batch 的任何内容。
+  4. 不修改 formal runner 生产逻辑、授权门、预算、profile、输入 hash 或 transport 行为。
+- 验证命令与结果（系统 Python 3.10 / Linux 沙盒）：
+  - `py_compile`：通过
+  - `git diff --check`：通过
+  - `test_product_language_scope + test_product_language_formal_runner`：99/99 通过（含新增 1 项反向回归）
+  - `test_product_live`：109/109 通过
+  - `tests/schema`：17/17 通过
+- 正常案例：`test_mock_all_answer_returns_ten_results` — FakeTransport all-answer 返回 10 条 answer runs，pass。
+- 失败案例：`test_real_batch_directory_already_exists_regression` — 正式目录已存在时 preflight 返回 `batch_directory_already_exists`，pass。
+- 限制：固定 CAD venv (Python 3.11.18) 全量回归留待 Codex 复核；真实 batch 未修改/删除/读取 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 提交：`fbe1f58`（`fix: isolate test batch ID from real batch directory [APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01]`）；分支 `cc/APP-003-LANGUAGE-SAMPLE-FORMAL-RUNNER`，任务状态 `review`，尚未 push/merge。
+
+### 自检（测试隔离窄修）
+
+handoff_self_check:
+  changed=tests/integration/test_product_language_formal_runner.py, agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/checkpoint.md, docs/WORKLOG.md
+  commands=py_compile 1/1; git diff --check pass; test_product_language_scope+formal_runner 99/99; test_product_live 109/109; schema 17/17
+  confirmed=真实 batch ID 不再作为测试默认值; 反向回归测试验证正式目录 batch_directory_already_exists; 正常 mock 案例通过; FORMAL_EVALUATION_ALLOWED 不变
+  unresolved=固定 CAD venv (Python 3.11.18) 全量回归未在此环境运行
+  next_agent_focus=Codex 独立复核：在 macOS 固定 CAD venv 下重跑全回归；确认真实 batch 未修改；确认 batch ID 隔离有效
+
+### Codex 中枢独立复核（测试隔离窄修）
+
+handoff_successor_check:
+  predecessor=APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01; CC fix fbe1f58
+  files_format=pass; 测试默认 batch ID、REAL_BATCH_ID 反向回归、checkpoint 和 WORKLOG 均存在；工作区在复核前干净
+  core_rerun=pass; 固定 CAD venv Python 3.11.18：language scope + formal runner 99/99；Product Live 109/109；Schema 17/17；目标测试 py_compile 通过；git diff --check 6e74487..fbe1f58 通过
+  normal_case=pass; FakeTransport all-answer 场景返回 10 条结果
+  failure_case=pass; 使用真实 batch ID 的 preflight 返回 batch_directory_already_exists
+  interface=pass; 仅修改测试隔离和反向回归，formal runner、授权/profile、输入 hash、预算和 transport 未改
+  limits=pass; 未读取真实 batch 文件内容、raw 正文、凭据或 evaluator labels；未触网、未重跑 batch；FORMAL_EVALUATION_ALLOWED=False 保持不变
+  result=pass
+  blocking_issue=none for this narrow fix; pending merge and post-merge verification at the time of review
+
+### 合并收束（2026-11-15）
+
+- 测试隔离窄修 `fbe1f58` 与中枢复核记录已合入并推送 `main`；合并提交和远端同步状态以当前 Git 历史为准。
+- 合入后固定 CAD venv Python 3.11.18：language scope + formal runner 99/99、Product Live 109/109、Schema 17/17；目标测试 `py_compile` 与合并差异 `git diff --check` 通过。
+- 本次合入解决专项测试与已存在真实 batch 的 ID 碰撞；不改变生产 runner、授权、预算、profile、输入 hash 或 `FORMAL_EVALUATION_ALLOWED=False`。
+- 最终状态：测试隔离窄修验收 pass；语言样本 live 批次仍为 partial/review，transport failure 原因待诊断。真实 batch 保持只读，不读取 raw 正文、不追加请求。

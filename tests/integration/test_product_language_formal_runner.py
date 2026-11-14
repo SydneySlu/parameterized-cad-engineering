@@ -75,7 +75,8 @@ from llm.transport import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-BATCH_ID = "app003-product-language-20261114-01"
+BATCH_ID = "lang-formal-runner-test-offline-20261114-01"
+REAL_BATCH_ID = "app003-product-language-20261114-01"
 BATCH_ID_ALT = "app003-product-language-test-alt"
 
 
@@ -821,6 +822,18 @@ class TestExistingBatchDirectory(unittest.TestCase):
         self.assertTrue(any("batch_directory_already_exists" in e
                             for e in result.preflight_errors))
         self.assertEqual(result.results, [])
+
+    def test_real_batch_directory_already_exists_regression(self) -> None:
+        """Reverse regression: the real batch app003-product-language-20261114-01
+        now exists in the canonical run root.  Offline preflight using that
+        batch_id must return batch_directory_already_exists — proving the
+        guard fires against the real directory, not just synthetic temp dirs.
+        The real batch is never modified, deleted, or read beyond the
+        existence check performed by preflight.
+        """
+        result = run_language_offline_preflight(_auth(REAL_BATCH_ID))
+        self.assertFalse(result["ok"])
+        self.assertIn("batch_directory_already_exists", result["errors"])
 
 
 # ---------------------------------------------------------------------------
