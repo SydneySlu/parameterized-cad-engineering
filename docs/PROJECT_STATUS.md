@@ -104,7 +104,7 @@
 5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
 6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 和 `...-20261114-01` 只读保留；`app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP并经独立复核 `pass`。负责人已单独确认 P1 `bore_d=24`，隔离 confirmation run 生成并回读 STEP；P2 ask、P3/P4 refuse 仍阻断。原 batch 只读，P1 证据不代表广泛语言质量结论。
 7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
-8. 当前工作单元 `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 保持 `review`：formal runner 已在本地 `main=6e74487` 合入并完成合入后复验。负责人随后批准并执行新 batch `app003-product-language-20261114-01`：10 条逻辑输入、2/20 HTTP，L01=`answer`、L02=`refuse`、L03–L10=`TRANSPORT_ERROR`，summary=`partial`，无 CAD/STEP。当前等待独立只读复核；不得将该小批次扩大为完整语言效果结论。
+8. 当前工作单元 `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 保持 `review`：formal runner 已合入并完成合入后复验。负责人批准并执行新 batch `app003-product-language-20261114-01`：10 条逻辑输入、2/20 HTTP，L01=`answer`、L02=`refuse`、L03–L10=`TRANSPORT_ERROR`，summary=`partial`，无 CAD/STEP。独立复核确认批次证据一致，但语言专项重跑有 7 项因固定正式 batch 目录已存在而失败；需先做测试隔离窄修，不得删除真实 batch，也不得将该小批次扩大为完整语言效果结论。
 
 ## APP-003 语言样本 scope 当前状态
 

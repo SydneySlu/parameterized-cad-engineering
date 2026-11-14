@@ -194,3 +194,10 @@ handoff_successor_check:
 - 固定 CAD venv formal runner 实际处理 10 条逻辑输入，使用 2 次 HTTP：L01=`answer`，L02=`refuse`，L03–L10=`TRANSPORT_ERROR`；批次 summary=`partial`，ledger `2/20`。
 - 只读证据核对：raw 文件 2 个并有哈希元数据；无 pipeline 文件、无 STEP 文件；没有调用 CAD；summary 未读取 raw 正文，不含 raw 正文、绝对路径或 evaluator labels。历史批次未修改。
 - 脱敏执行报告：`execution-report.json`。当前状态为 `review`，等待独立复核；不得把本批次结果扩大为十条语言样本的完整模型效果结论。
+
+### 独立复核（2026-11-15）
+
+- 批次证据一致性通过：approval binding、summary/ledger（2/20）、10 条 run 状态、2 个 raw 文件哈希、无 pipeline/STEP、脱敏边界均通过；复核未语义读取 raw 正文。
+- 结论保持 `review`：合入后重跑语言专项时 98 项有 7 项失败，根因是测试固定使用已经合法创建的正式 batch ID，触发 `batch_directory_already_exists`。真实 batch 不删除、不重跑。
+- 独立审查记录：`agent-work/reviews/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-independent-review.md`。
+- 下一步：由 CC 做测试隔离窄修（唯一临时 batch ID 或隔离 canonical run root），并保留真实目录已存在时 fail-closed 的反向测试；修复后再复验并更新结论。

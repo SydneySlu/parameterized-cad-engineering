@@ -3146,3 +3146,10 @@ commit=待提交
 - 证据：raw 文件 2 个，summary/ledger 和 raw 哈希元数据已存在；pipeline 文件=0、STEP 文件=0、CAD 调用=0。没有读取 raw 正文、evaluator labels 或输出凭据；历史批次保持只读。
 - 边界：该批次提供受控输入响应和失败收束证据，不构成广泛语言效果、CAD 整链或制造可用性结论。脱敏报告见 `agent-work/integration/APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01/execution-report.json`。
 - 下一步：独立只读复核 summary、ledger、预算、raw/hash 留存和错误分类；复核前不重跑、不追加请求、不读取 raw 正文。
+
+### APP-003-LANGUAGE-SAMPLE-FORMAL-INDEPENDENT-REVIEW / Codex 中枢 / review / 2026-11-15
+
+- 动作：对真实 batch `app003-product-language-20261114-01` 做只读独立复核；未重跑、未追加 HTTP、未修改批次、未语义读取 raw 正文。
+- 证据结果：approval binding 通过；summary=`partial`、10 runs（answer=1/refuse=1/error=8）；ledger=2/20；2 个 raw 文件 SHA-256 与 summary 匹配；无 pipeline/STEP；summary/ledger/report 未发现凭据、绝对路径或 evaluator label 内容。
+- 验证：固定 CAD venv 下 `py_compile` 和 `git diff --check` 通过。语言 scope + formal runner 98 项重跑有 7 项失败，全部因测试固定正式 batch ID，而真实 batch 目录已存在并触发 `batch_directory_already_exists`。
+- 结论：批次证据一致性通过，但整体保持 `review`，不能将当前专项重跑称为全绿。真实 batch 只读保留；需要测试隔离窄修后重新验收。
