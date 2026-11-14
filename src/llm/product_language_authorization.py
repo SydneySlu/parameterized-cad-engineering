@@ -102,6 +102,11 @@ class ProductLanguageAuthorization(FormalRunAuthorization):
             raise AuthorizationScopeError(f"provider {provider!r} is outside scope")
         return PRODUCT_LANGUAGE_MAX_BATCH_HTTP
 
+    def max_chat_attempts_for(self, provider: str) -> int:
+        if provider != PRODUCT_LANGUAGE_PROVIDER:
+            raise AuthorizationScopeError(f"provider {provider!r} is outside scope")
+        return PRODUCT_LANGUAGE_MAX_ATTEMPTS_PER_RUN
+
     def expected_logical_run_id(
         self, input_id: str, condition: str = PRODUCT_LANGUAGE_CONDITION,
         provider: str = PRODUCT_LANGUAGE_PROVIDER,

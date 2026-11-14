@@ -34,6 +34,7 @@ class TestProductLanguageAuthorization(unittest.TestCase):
         self.assertEqual(summary["evaluator_labels_sha256"], PRODUCT_LANGUAGE_LABELS_SHA256)
         self.assertEqual(summary["max_batch_http"], 20)
         self.assertTrue(auth.provider_model_is_allowed(summary["provider"], summary["model"]))
+        self.assertEqual(auth.max_chat_attempts_for(summary["provider"]), 2)
 
     def test_wrong_profile_or_hash_is_rejected(self) -> None:
         with self.assertRaises(AuthorizationScopeError):
