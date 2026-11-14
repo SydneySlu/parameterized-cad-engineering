@@ -3009,3 +3009,9 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下定向回归 1/1、Product Live 专项 108/108 通过；输出有既有 HTTP socket `ResourceWarning`，无失败。本轮补丁后的 UI/C1/C2/C3 跨模块回归尚未重跑。
 - 设计产物：新增 `agent-work/integration/APP-003-FAILURE-PATHS-LANGUAGE-MATRIX/failure-paths-and-language-matrix.md`，盘点抽取/解析、ask/refuse、Schema/patch、pipeline/STEP、路径/hash、跨 run 与泄漏路径，并草拟 L01–L10。标签与输入分离原则、DeepSeek/C0/no-retrieval 候选范围和 10×最多 2 次预算仅为草案。
 - 边界：未改变 v5 prompt/Schema/IR、单族范围、授权 profile 或 `FORMAL_EVALUATION_ALLOWED=False`；历史 batch 只读。下一步是补跑 UI/全回归、HTTP 重复 create E2E，并交独立 Codex 复核；通过后再讨论新 live scope。
+
+### APP-003-FAILURE-PATHS-LANGUAGE-MATRIX-REVIEW / Codex 中枢 / review / 2026-11-14
+
+- 动作：对 `3958ed5` 做独立复核，重点检查重复 input 的 run identity、HTTP confirm/get/download 一致性和语言矩阵范围边界。
+- 结果：旧实现的跨 run 旧 STEP 暴露已由离线复现确认，UUID run identity 修复和 unit/HTTP 回归均通过；Product Live 109、组合 UI/C1/C2/C3/Integration 300、Schema 17、CAD 13 以及目标 diff check 通过。
+- 结论：修复可在离线 ProductLiveService 边界内继续推进，记录为 `review`；语言矩阵仍是未冻结草案，失败路径补强项不冒充已完成证据，不启动新的 live batch。
