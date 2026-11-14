@@ -29,3 +29,8 @@
 ## 下一步
 
 独立复核新 profile、输入 hash/labels 隔离和离线 preflight；通过后再准备具体 batch ID 和 formal preflight。真实模型执行仍需要单独明确执行授权。
+
+### 窄修：417139f
+
+- 修复 `ProductLanguageAuthorization.max_chat_attempts_for()` 返回批次上限的问题，正式 accessor 现在强制每条输入最多 2 次；新增反向测试。
+- 固定 CAD venv 专项仍为 8/8，`py_compile` 与 `git diff --check` 通过。

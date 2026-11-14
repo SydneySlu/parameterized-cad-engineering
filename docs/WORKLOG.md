@@ -3029,3 +3029,8 @@ commit=待提交
 - 产物：`src/llm/product_language_authorization.py`、`src/integration/product_language_runner.py`、`tests/integration/test_product_language_scope.py`、ADR-0024 及本 scope checkpoint。
 - 验证：固定 CAD venv Python 3.11.18 下专项 8/8 通过；`py_compile`、`git diff --check` 通过。输入 hash、十条 ID、20 HTTP 预算和已有目录拒绝均核验；labels、凭据和网络 spy 均为 0 次。
 - 边界：本轮没有实现真实执行路径；没有读取 `.env`/API key、发送 DeepSeek 请求、创建 batch、读取 evaluator labels 或运行 CAD。下一步交独立 Codex 复核，之后才可准备 formal preflight。
+
+### APP-003-LANGUAGE-SAMPLE-SCOPE-20261114-01-R1 / Codex 中枢 / review / 2026-11-14
+
+- 动作：提交后接口复核发现 per-input retry accessor 会继承批次 20 上限；窄修 `417139f` 强制 `max_chat_attempts_for()` 返回 2，并增加反向测试。
+- 验证：固定 CAD venv 专项 8/8、`py_compile`、`git diff --check` 通过；未触网、未读凭据、未创建 batch。
