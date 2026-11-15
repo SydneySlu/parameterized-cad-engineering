@@ -76,6 +76,8 @@
 | APP-003-LIVE-PREFLIGHT-20261114-01 | 新产品 live smoke scope 与正式运行 | Codex 中枢 + 项目负责人 | review | APP-003-LIVE-PREFLIGHT-20261113-01 | batch `app003-product-live-20261114-01` 已执行 4/12 HTTP；P1–P4 均以 `TRANSPORT_ERROR/authentication_or_permission` 在模型响应前失败，summary=`failed`，无确认/CAD/STEP，raw/pipeline 文件均为 0。只读核查发现 `.env` key 非空但 formal runner 未加载 `.env`，transport 只读取进程环境；`5bf82ce`/`df3f7b4` fail-closed 加载修复已通过独立复核（固定 CAD venv 凭据专项 9/9、Product Live 107/107、diff check 通过）。不能据旧结果判 provider 权限问题；修复尚未验证 provider 是否接受账户/key；旧 batch 只读，任何重试均需全新 scope/batch/approval/preflight 与明确执行授权。 |
 | APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 原 batch `app003-product-live-20261114-02` 完成 4/12 次真实 DeepSeek HTTP，独立复核 `pass`；P1 answer→needs_confirmation、P2 ask、P3/P4 refuse→blocked，原 batch raw 4/4 哈希匹配且无 CAD/STEP。负责人单独确认 P1 `bore_d=24`，隔离 run 生成并回读 STEP，后经 FreeCAD 目视检查通过；原 batch 继续只读。详见同目录 independent-review.md 与 checkpoint.md。 |
 
+| APP-004 | 单族轻量版技术验收与交付记录 | Codex 中枢 | done | 固定 CAD venv Python 3.11.18 下 LLM 933 通过、8 skip（共 941 项），Integration 527、Demo 219、Schema 17、CAD 13；合计 1,709 通过、8 skip（共 1,717 项）。验收报告：`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`；结论限于单族演示和已批准范围，不代表生产就绪、广泛语言覆盖或制造认证。 |
+
 ## 当前缺口与限制
 
 - A1 的语言层到后端连接已完成并合入 `main`；A2 `...-04` 已独立复核，取得两条真实模型→STEP 成功证据和一条 ask 阻断证据。`...-03` 的两条 answer 因调用解释器缺 `jsonschema` 在 IR 校验前 fail closed，旧批次只读保留。A2 formal preflight 现会在模型请求前检查所需依赖；固定 CAD venv 是目标运行环境，旧评测 runner 不自动获得 CAD 权限。
@@ -97,14 +99,8 @@
 
 ## 下一步
 
-1. A1 已完成：固定环境独立验收和合并后回归均通过，证据保存在 A1 checkpoint。
-2. **A2 scope 准备已完成并合入 `main`**：`9b9395c` 包含冻结输入、授权 profile、受控入口、正式批准门、summary/raw 证据链及文档收束。
-3. 两次 live attempt 均在首个 HTTP 前停止：`...-01` 因构造器参数错误；`...-02` 因 Adapter 的 `FORMAL_EVALUATION_ALLOWED=False`。两批均 HTTP=0，失败目录只读保留。
-4. `...-03` live 执行证明 Adapter gate 可到达模型，但原调用 Python 缺少 `jsonschema`，两条 answer 未生成 STEP；历史批次只读保留。
-5. `...-04` 首批真实整链结果已完成并独立复核：3 条输入、3 次 HTTP/9 上限；24 mm 与 80 mm STEP 成功，缺参 ask 无 CAD 构造。里程碑 B 的单位换算、显式冲突和 CAD/STEP 导出失败验收也已通过；下一步进入里程碑 C 的最小可用演示。是否扩大 live 样本另行决策；现有批次不可重跑。
-6. `APP-003-C1`、`C2`、`C3`、`LIVE-SCOPE` 与 `LIVE-UI` 均已完成。旧 batch `app003-product-live-20261113-01` 和 `...-20261114-01` 只读保留；`app003-product-live-20261114-02` 已完成 4/12 次真实 HTTP并经独立复核 `pass`。负责人已单独确认 P1 `bore_d=24`，隔离 confirmation run 生成并回读 STEP；P2 ask、P3/P4 refuse 仍阻断。原 batch 只读，P1 证据不代表广泛语言质量结论。
-7. 12-run 检索研究 `deferred`：主闭环完成或出现明确研究假设后再恢复、重验并独立授权；不列为上述步骤前置条件。证据见 [本轮 preflight](../agent-work/reviews/APP-001-V5-INTEGRATION-BASELINE-preflight.md)。
-8. `APP-003-FAILURE-PATHS-LANGUAGE-MATRIX` 的测试隔离修复已合入并同步至 `main`（`fbe1f58`，merge `86bb2fe`，收束 `5617e29`/`7e92073`），固定 CAD venv 语言专项 99/99、Product Live 109/109、Schema 17/17 通过。真实 batch `app003-product-language-20261114-01` 仍为 `partial` 且只读：summary 记录 L01 answer、L02 refuse、L03–L10 transport error；ledger 仅有 L01、L02 两条预算预留。只读诊断发现当前授权 accessor 把 provider 级 chat 总上限误设为每条输入的 2 次；离线修正回归确认该错误可复现“前两条有预算预留、后续被本地预算门拒绝”的模式。因历史批次没有 source revision 证据，不能绝对认定其实际运行了相同代码；不得将旧错误归因于 provider 响应。修复 `2fc9613` 与复核记录 `1fa522f` 已随 merge `f728729` 进入 `main`；合入后固定 CAD venv scope + formal runner 100/100、预算模块 18 通过/6 既有 skip。历史 batch 不重跑、不追加请求；本地预算门缺陷已收束，不需要新 live batch 来验证它。`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- APP-004 技术验收与交付记录已完成：固定 CAD venv 下相关套件共 1,717 项，1,709 通过、8 项既有 skip；验收报告已整理。A/B/C 主链与单族轻量演示在限定范围内完成。
+- 下一工作方向尚未选定。负责人可在三类目标中择一：产品稳定性/部署要求；新的真实语言效果证据（需单独 live 入口、scope、preflight 和执行授权）；跨族扩展（需独立数据/许可、Schema、IR 与几何验证）。RET-004 和 held-out 检索研究继续 deferred，不自动成为主线前置项。
 
 ## APP-003 语言样本 scope 当前状态
 
@@ -113,4 +109,4 @@
 - `run_product_language_formal_batch()` 已合入 `main`：包含七层授权门控、预算原子预留、canonical raw 路径、脱敏 summary、异常脱敏及 summary 写入失败收束；测试隔离窄修 `fbe1f58` 将默认 batch ID 改为测试专用值，并保留真实目录存在时 fail-closed 的反向测试。固定 CAD venv Python 3.11.18 下 scope + formal runner 99/99、Product Live 109/109、Schema 17/17 通过，`py_compile` 和 `git diff --check` 通过。
 - live batch `app003-product-language-20261114-01` 已按单独授权执行，结果为 10 条输入、2/20 HTTP、summary=`partial`；无 CAD/STEP，批次证据独立复核通过且只读保留。formal runner 测试隔离修复已合入并完成固定 CAD venv 复验。transport 诊断工作单 `APP-003-LANGUAGE-TRANSPORT-DIAG-20261115-01` 已完成：`2fc9613` 修正 `max_chat_attempts_for()` 为 provider/batch 上限 20，每条 2 次仍由 `max_attempts_per_run` 限制；`1fa522f` 复核记录已随 `f728729` 合入。历史 batch 的 source revision 缺失仍保留为证据限制，不影响主线推进；不读取 raw 正文、不自动重跑。若要获得新的语言覆盖证据，须另立 scope、batch、preflight 和授权；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - `APP-003-LANGUAGE-MATRIX-20261115-01` 已由负责人接受并完成离线实现。10 条输入 hash=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`，evaluator-only labels hash=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`；N01/N02/N04/N10 的 v5 质量预期为 answer，N05–N07 的 unsupported 识别标为部分强制，N08/N09 的当前策略能力未定义但仍要求 CAD 前阻断，N04 排除被更正的 10 mm。对应离线 profile/runner 工作单元 `APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 已完成并合入；不创建 batch、不读凭据、不触网、不运行 CAD，旧 profile/batch 只读，`FORMAL_EVALUATION_ALLOWED=False` 保持。
-- `APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 已完成并合入、推送至 `main`：快进合并后的 HEAD=`334723b`，与 `origin/main` 一致。Gate 3 使用精确类型检查（`type(transport) is FakeTransport`），拒绝 `None`、非 `FakeTransport` 和其子类；真实执行分支已删除。固定 CAD venv（Python 3.11.18）复核通过：新 profile/runner 130/130、旧 language scope/runner 100/100、Product Live 109/109、Schema 17/17；`py_compile`、`git diff --check`、`git show --check` 通过。任务状态为 `done`。本工作单元只提供离线 profile/runner 与 mock 测试，不创建 batch、不读取凭据、不调用模型/网络/CAD；任何真实执行仍需新的独立 scope、preflight 和负责人授权，`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- `APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 已完成并合入、推送至 `main`：功能合并提交=`334723b`；文档收束提交=`6b90c19`，均已推送至 `origin/main`。Gate 3 使用精确类型检查（`type(transport) is FakeTransport`），拒绝 `None`、非 `FakeTransport` 和其子类；真实执行分支已删除。固定 CAD venv（Python 3.11.18）复核通过：新 profile/runner 130/130、旧 language scope/runner 100/100、Product Live 109/109、Schema 17/17；`py_compile`、`git diff --check`、`git show --check` 通过。任务状态为 `done`。本工作单元只提供离线 profile/runner 与 mock 测试，不创建 batch、不读取凭据、不调用模型/网络/CAD；任何真实执行仍需新的独立 scope、preflight 和负责人授权，`FORMAL_EVALUATION_ALLOWED=False` 保持。

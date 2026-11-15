@@ -3327,3 +3327,13 @@ commit=待提交
 - 结果：`APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 按项目完成定义标记 `done`；PROJECT_STATUS、PROJECT_PLAN 和任务 checkpoint 已同步。
 - 边界：没有创建 batch、读取凭据或 evaluator labels 内容，也没有调用模型、网络、CAD 或 STEP；`FORMAL_EVALUATION_ALLOWED=False` 未改变。真实执行仍需新的独立 scope、preflight 和负责人明确授权。
 - 下一步：若继续获取真实语言效果证据，先提出并复核新的实验假设与 scope，再单独进行 preflight 和授权；本次合入不构成执行许可。
+
+### APP-004 / Codex 中枢 / technical acceptance / 2026-11-15
+
+- 动作：基于 A2 里程碑 B、C1/C2/C3、APP-003 Product Live 和语言样本的既有独立验收证据，完成单族轻量产品技术验收与交付记录；更新 PROJECT_STATUS/PROJECT_PLAN 并新建 checkpoint。
+- 基线：本地 `main=origin/main=6b90c19`，工作区干净；固定 CAD venv Python 3.11.18。
+- 验证：固定环境重跑：`tests/llm` 933 通过、8 skip（共 941 项），`tests/integration` 527、`tests/demo` 219、`tests/schema` 17、`tests/cad_compilation` 13；合计 1,709 通过、8 skip（共 1,717 项），无失败。8 个 skip 为既有环境/外部 Ollama 条件测试。`git diff --check` 通过。
+- 结论：APP-004 在单族轻量演示和已批准受控运行范围内通过。成功路径、关键 fail-closed 路径、确认门、STEP 下载隔离均有已归档证据。正式验收报告为 `agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`。
+- 限制：不代表广泛语言覆盖、统计显著性、跨族能力、生产部署就绪、长期稳定或制造认证。新语言矩阵 profile 是 FakeTransport offline-only；任何新真实模型请求仍需可执行 live 入口、独立 scope/preflight 与负责人明确授权。`FORMAL_EVALUATION_ALLOWED=False`。
+- 下一步：主线没有已选定的新工作单元；负责人需在稳定性/部署、真实语言效果证据、跨族扩展之间确定优先级，避免混为一个任务。
+- 提交：待本轮提交后补记短哈希。
