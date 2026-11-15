@@ -3336,4 +3336,4 @@ commit=待提交
 - 结论：APP-004 在单族轻量演示和已批准受控运行范围内通过。成功路径、关键 fail-closed 路径、确认门、STEP 下载隔离均有已归档证据。正式验收报告为 `agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`。
 - 限制：不代表广泛语言覆盖、统计显著性、跨族能力、生产部署就绪、长期稳定或制造认证。新语言矩阵 profile 是 FakeTransport offline-only；任何新真实模型请求仍需可执行 live 入口、独立 scope/preflight 与负责人明确授权。`FORMAL_EVALUATION_ALLOWED=False`。
 - 下一步：主线没有已选定的新工作单元；负责人需在稳定性/部署、真实语言效果证据、跨族扩展之间确定优先级，避免混为一个任务。
-- 提交：待本轮提交后补记短哈希。
+- 提交：`6a367eb`（`docs: record APP-004 technical acceptance [APP-004]`），已提交到本地 `main`；未 push，远端同步由负责人按需处理。

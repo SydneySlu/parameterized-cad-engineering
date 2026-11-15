@@ -37,5 +37,6 @@ total                  1709 passed, 8 skipped (1717 run)
 
 ## 提交
 
-- 初次记录：待提交。
-- 下一步：核对提交与远端状态；远端未同步时由负责人按需推送。任何新的真实模型运行需新的可执行 live 入口、scope、preflight 和负责人明确授权。
+- 技术验收记录提交：`6a367eb`（`docs: record APP-004 technical acceptance [APP-004]`），已提交到本地 `main`。
+- 远端状态：未 push；`origin/main` 仍是验收基线 `6b90c19`，本地 `main` 超前 1 个提交。遵循项目约定，本轮不自动 push。
+- 结论：报告、状态页、计划页、checkpoint 和 WORKLOG 已收束；APP-004 在限定范围内完成。未来真实模型运行需新的可执行 live 入口、scope、preflight 和负责人明确授权。
