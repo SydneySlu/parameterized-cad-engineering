@@ -748,9 +748,11 @@ class TestBudgetConstants(unittest.TestCase):
     def test_max_batch_http_is_twenty(self) -> None:
         self.assertEqual(PRODUCT_LANGUAGE_MAX_BATCH_HTTP, 20)
 
-    def test_auth_max_chat_attempts_returns_two(self) -> None:
+    def test_auth_max_chat_attempts_returns_batch_provider_cap(self) -> None:
         auth = _auth()
-        self.assertEqual(auth.max_chat_attempts_for(PRODUCT_LANGUAGE_PROVIDER), 2)
+        # BudgetLedger applies this as a provider-wide cap. Per-run retries
+        # remain bounded independently by max_attempts_per_run.
+        self.assertEqual(auth.max_chat_attempts_for(PRODUCT_LANGUAGE_PROVIDER), 20)
 
     def test_auth_max_batch_attempts_is_twenty(self) -> None:
         auth = _auth()
@@ -1060,6 +1062,51 @@ class TestFormalEvaluationGate(unittest.TestCase):
 
 # ---------------------------------------------------------------------------
 # 16. Summary update failure → best-effort finalize as "aborted"
+# ---------------------------------------------------------------------------
+
+class TestFormalNonRetryableFailuresReservePerInput(unittest.TestCase):
+    """A batch-wide chat cap must not be confused with the per-input cap."""
+
+    def test_all_ten_nonretryable_transport_errors_have_ledger_attempts(self) -> None:
+        batch_id = "lang-formal-transport-errors-test-001"
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(runner, "_CANONICAL_RUN_ROOT", Path(tmp)), \
+                 patch("llm.env_loader.load_deepseek_environment"), \
+                 patch("llm.budget.BudgetLedger._verify_canonical_batch_path"), \
+                 patch(
+                     "llm.real_transport.DeepSeekTransport.send",
+                     side_effect=TransportError(
+                         condition="other_non_retryable",
+                         http_status=None,
+                         message="synthetic offline failure",
+                     ),
+                 ) as send_mock:
+                result = run_product_language_formal_batch(
+                    authorization=_auth(batch_id),
+                    approval=_real_approval(batch_id),
+                    transport=None,
+                )
+
+            batch_dir = Path(tmp) / batch_id
+            ledger = json.loads((batch_dir / "budget_ledger.json").read_text())
+            summary = json.loads((batch_dir / "batch_summary.json").read_text())
+
+        self.assertEqual(send_mock.call_count, 10)
+        self.assertEqual(len(result.results), 10)
+        self.assertTrue(all(r.llm_status == LANGUAGE_STATUS_ERROR for r in result.results))
+        self.assertEqual(ledger["total_attempts_used"], 10)
+        self.assertEqual(len(ledger["attempts"]), 10)
+        self.assertTrue(all(a["outcome"] == "non_retryable" for a in ledger["attempts"]))
+        self.assertEqual(summary["batch_status"], "failed")
+        self.assertEqual(len(summary["runs"]), 10)
+        self.assertTrue(all(
+            errors and errors[0]["cause_code"] == "other_non_retryable"
+            for run in summary["runs"].values()
+            for errors in [run.get("errors", [])]
+        ))
+
+# ---------------------------------------------------------------------------
+# 17. Summary update failure → best-effort finalize as "aborted"
 # ---------------------------------------------------------------------------
 
 class TestSummaryUpdateFailureFinalize(unittest.TestCase):

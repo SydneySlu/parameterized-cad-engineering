@@ -3200,3 +3200,11 @@ commit=待提交
 - 结论：历史证据不足以确定八条错误的根因，也不足以确认它们是否曾发出 HTTP；summary 错误映射与 ledger 预留事实需要进一步解释。不得将它们概括成 provider 权限/网络故障。
 - 边界：旧 batch 保持只读，不检查 raw body，不追加/重跑请求，不读取密钥，不调用 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 状态与下一步：工作单元 `review`。后续可先对照批次生成时的代码版本、执行日志和脱敏 run metadata（若存在且不含 raw/凭据）寻找账本与 summary 差异；若仍无法定位，需要另建严格限额的新 diagnostic scope/batch、离线 preflight，并在任何 live 请求前取得负责人明确授权。
+
+### APP-003-LANGUAGE-TRANSPORT-DIAG-20261115-01 / Codex 中枢 / offline budget-gate correction / 2026-11-15
+
+- 动作：在 `codex/APP-003-LANGUAGE-TRANSPORT-BUDGET-FIX` 接管 checkout 中已有的三文件未提交候选，核对 `BudgetLedger` accessor 语义，补齐回归测试与任务/状态文档。
+- 根因复现：`BudgetLedger` 用 `max_attempts_per_run` 控制单条输入重试数，并用 `max_chat_attempts_for(provider)` 控制 provider 级 chat 总量。产品语言授权把后者错误返回为 2；离线 formal-path 失败注入复现了十条逻辑输入仅能产生两次预算预留的情形。修正为 provider cap=20 后，每条仍受 per-run cap=2 限制，十条模拟非重试失败均有独立 ledger reservation。
+- 验证：固定 CAD venv Python 3.11.18，`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q`，100/100 通过；目标 3 文件 `py_compile` 通过；`git diff --check` 通过。
+- 范围与限制：没有调用模型/网络/provider，没有创建 batch，没有运行 CAD；旧 batch 只读且未读取其 raw 正文；没有读取 `.env`、API key 或 evaluator labels。`FORMAL_EVALUATION_ALLOWED=False` 保持。历史批次未记录 source commit/runtime revision，因此该当前代码缺陷与旧 summary/ledger 模式高度吻合，但不能作为绝对历史执行版本归因。
+- 状态：候选待独立审查，尚未提交/合入。当前不需要新 live batch 验证本地预算门；若另行调查真实 provider/网络行为，须新的 scope、batch、preflight 和明确授权。
