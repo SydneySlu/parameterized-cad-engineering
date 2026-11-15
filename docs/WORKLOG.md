@@ -3345,3 +3345,22 @@ commit=待提交
 - Scope proposal：profile=`app004-live-web-demo.v1`，batch ID proposal=`app004-live-web-demo-20261116-01`；DeepSeek `deepseek-flash`、C0、两条固定输入（合法 bore24；bore24+阳极氧化）、每条最多 2 次、全批最多 4 HTTP。仅 D01 可在完整校验与逐 run 人工确认后进 CAD；D02 无条件禁 CAD。
 - 边界：本轮不实现 source entry、不创建 batch/ledger/preflight、不读凭据或 evaluator labels、不调用模型/网络/CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。scope 与 ADR-0026 仍为 proposed，等待负责人审阅和接受。
 - 下一步：负责人接受/修改 scope 后，实施独立 approval-bound web runner/UI 并完成离线、固定环境和浏览器复核；实现和独立审查通过后，再进行 exact-batch formal preflight 与负责人单独 live 执行授权。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / implementation checkpoint / 2026-11-16
+
+- 动作：负责人接受并冻结 ADR-0026 scope 后，完成本机真实抽取演示入口的首轮实现：独立 APP-004 profile/approval-bound service、`/app004-live` UI 与 HTTP 路由、offline FakeTransport E2E 测试。
+- 范围：D01 bore24、D02 阳极氧化；DeepSeek `deepseek-flash` / C0；最多 2 个 logical inputs、每条 2 次、全批 4 HTTP。浏览器只传 input ID；D01 需人工确认后 CAD；D02 硬门禁止 CAD。全局 gate、旧 profile、prompt、Schema、IR 未改。
+- 中枢检查中修正：正式执行前 approval binding 现在逐项核验冻结 scope 字段；下载路径按 formal/offline service root 做 canonical containment、拒绝 symlink leaf 并校验 STEP hash；服务关闭时未跑完两条输入的批次记为 partial。
+- 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项在最后两项 shutdown tests 加入前 19/19；此前 Product Live + Product Live UI 145/145；目标 `py_compile` 和 `git diff --check` 通过。补充测试后目标专项复跑待完成。
+- 浏览器 FakeTransport 烟测：D01 answer→needs_confirmation→人工确认→succeeded，STEP hash=`4e60bf23d765e6db991ea0c70e5308a8091c29ab3d4d9bfb2dec2c45eeb2035f`，下载 HTTP 200；D02 answer 强制改为 blocked/SCOPE_CAD_DENIED，页面不显示确认按钮。测试生成的 STEP 位于被忽略的 `work/` 输出目录。
+- 边界：没有 formal preflight、batch/ledger 创建、凭据读取、DeepSeek/网络请求或读取 evaluator labels；`FORMAL_EVALUATION_ALLOWED=False` 不变。scope 接受不等于 live 执行授权。
+- 状态：`in_progress`，实现待目标测试复跑及独立复核；工作区尚未提交。下一步完成回归和最终 diff 检查，再形成独立审查包。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / verification follow-up / 2026-11-16
+
+- 追加复核并收紧：执行入口重验 App004 authorization 自身及 approval 全部 scope 字段，篡改 profile/hash/provider/model/condition/budget/CAD 许可字段均在 preflight 与 credential loader 前失败；下载仅允许当前 service 根内的 hash 匹配 STEP，外部路径和 symlink leaf 被拒；仅执行过一条输入后正常关闭记为 `partial`。
+- 固定 CAD venv Python 3.11.18：`py_compile` 目标 4 文件通过；`tests.integration.test_app004_live_web` **22/22**；`tests.integration.test_product_live tests.demo.test_product_live_ui` **145/145**；`git diff --check` 通过。旧兼容套件有 socket ResourceWarning，无测试失败。
+- localhost 浏览器 FakeTransport：D01 `needs_confirmation`→确认→`succeeded`，STEP SHA-256 `4e60bf23d765e6db991ea0c70e5308a8091c29ab3d4d9bfb2dec2c45eeb2035f`，下载 GET 200；D02 为 `blocked / SCOPE_CAD_DENIED` 且无确认控件。
+- 未运行 formal preflight、未建正式 batch/ledger、未读取 `.env`/密钥或 evaluator labels、未调用 DeepSeek/外网。CAD/STEP 仅由本机 FakeTransport 演示路径构造，`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 状态：实现候选待独立复核；工作区未提交。下一步将 diff 与 checkpoint 交由独立复核，修复其发现后再讨论 exact-batch preflight/真实请求授权。
+- 扩展回归（固定 Python 3.11.18）：C1/C2/C3 demo `tests.demo.test_demo_handler tests.demo.test_product_flow tests.demo.test_product_ui` **183/183**；核心 integration/schema `tests.integration.test_pipeline tests.integration.test_schema_to_ir tests.schema` **81/81**。输出有既有文件/socket ResourceWarning，无失败。

@@ -83,7 +83,7 @@
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
 - [x] `APP-003-LIVE-PREFLIGHT-20261114-02`：冻结 scope 已获批，formal preflight 与单独 live execution approval 均有记录；4/12 次真实请求完成，独立复核 `pass`，batch 只读；报告见 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`
 - [x] 完成技术验收与交付记录（APP-004）：固定 CAD venv 下 LLM 933 通过、8 项既有 skip（共运行 941 项），Integration 527、Demo 219、Schema 17、CAD compilation 13；合计 1,709 通过、8 skip（共 1,717 项）。正式结论限于单族轻量技术演示和已批准的受控运行范围，详见 [`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`](../agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md)。后续稳定性/部署、真实语言效果或跨族扩展需分别确定目标与范围。
-- [ ] APP-004-LIVE-WEB-DEMO：为汇报准备本机真实 LLM 抽取演示。当前仅有 proposal：`app004-live-web-demo.v1`，两条冻结输入、DeepSeek `deepseek-flash`/C0、最多 4 HTTP；待负责人接受 scope，再实现独立 approval-bound runner/UI、固定环境验证和独立复核。未获精确 batch 授权前不运行 preflight、读取凭据或发送请求；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- [ ] APP-004-LIVE-WEB-DEMO：负责人已接受冻结 `app004-live-web-demo.v1`（D01 合法 bore24、D02 阳极氧化边界；DeepSeek `deepseek-flash`/C0；最多 4 HTTP）。独立 approval-bound runner/UI 已实现并完成固定 CAD venv 专项验证及 localhost FakeTransport 浏览器成功/失败烟测；实现候选提交后待独立代码复核及必要窄修。之后再由负责人决定是否批准精确 batch formal preflight/真实请求；当前未创建 batch、未读凭据、未触网，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 
 ## APP-001 v5 收束与独立研究
 

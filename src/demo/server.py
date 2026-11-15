@@ -967,6 +967,65 @@ PRODUCT_LIVE_HTML_CONTENT = _build_product_live_html()
 PRODUCT_LIVE_HTML_BYTES = PRODUCT_LIVE_HTML_CONTENT.encode("utf-8")
 
 
+def _build_app004_live_html() -> str:
+    """Minimal APP-004 presentation page; sends only frozen IDs to the server."""
+    return """<!DOCTYPE html>
+<html lang="zh"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APP-004 本机真实抽取演示</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,'PingFang SC',sans-serif;background:#f4f6f8;color:#20242a;margin:0;padding:24px}
+.wrap{max-width:860px;margin:auto}.banner,.card{background:#fff;border:1px solid #dce2e8;border-radius:10px;padding:18px;margin-bottom:14px}
+.banner{background:#fff8df;border-color:#ecd47b;font-size:.9rem}.muted{color:#65717c;font-size:.9rem}button{border:0;border-radius:6px;background:#1769aa;color:#fff;padding:10px 16px;margin:8px 8px 0 0;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}.green{background:#27823b}.red{color:#a12622}.kv{margin:8px 0;padding:8px;background:#f5f7f9;border-radius:5px}pre{white-space:pre-wrap;word-break:break-word}
+</style></head><body><div class="wrap">
+  <div class="banner"><b>受控本机演示</b>：冻结的两条输入 / DeepSeek v5 / C0 无检索。页面会显示服务端运行模式；D01 仅在你确认后进入 CAD；D02 无条件禁止 CAD。STEP 通过不代表制造认证。</div>
+<div class="card"><h2>选择冻结示例</h2><p class="muted">页面只发送输入 ID；需求原文由服务端从哈希锁定文件读取。</p>
+<button onclick="createRun('D01-collar-bore24')">运行成功候选：24 mm 轴孔轴环</button>
+<button onclick="createRun('D02-collar-anodizing')">运行边界案例：阳极氧化</button>
+<button onclick="resetDemo()">重置演示页面</button></div>
+<div class="card" id="extract" style="display:none"><h2>结构化抽取与规则校验</h2><div id="extractBody"></div><div id="confirmArea"></div></div>
+<div class="card" id="result" style="display:none"><h2>CAD / STEP 结果</h2><div id="resultBody"></div></div>
+<script>
+let activeRunId=null;
+function esc(s){return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+async function createRun(input_id){
+  resetDemo(false);
+  try{const r=await fetch('/api/app004-live/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input_id})});const d=await r.json();
+    if(!r.ok){showError(d);return} activeRunId=d.logical_run_id; renderExtraction(d);
+  }catch(e){showError({error:{code:'REQUEST_FAILED',message:'本机请求失败'}})}
+}
+function renderExtraction(d){
+  document.getElementById('extract').style.display='block';
+  let h='<div class="kv"><b>输入 ID：</b>'+esc(d.input_id)+'</div>';
+  h+='<div class="kv"><b>原始需求：</b><br>'+esc(d.request_text)+'</div>';
+  h+='<div class="kv"><b>状态 / 决策：</b>'+esc(d.product_status)+' / '+esc(d.decision)+'</div>';
+  h+='<div class="kv"><b>运行模式：</b>'+esc(d.execution_mode||'unknown')+'</div>';
+  h+='<div class="kv"><b>抽取参数：</b><pre>'+esc(JSON.stringify(d.extracted_parameters||{},null,2))+'</pre></div>';
+  if(d.questions?.length)h+='<div class="kv"><b>追问：</b>'+d.questions.map(esc).join('<br>')+'</div>';
+  if(d.unsupported_requests?.length)h+='<div class="kv red"><b>不支持：</b>'+d.unsupported_requests.map(esc).join('<br>')+'</div>';
+  if(d.errors?.length)h+='<div class="kv red"><b>诊断：</b>'+d.errors.map(e=>esc(e.code)+': '+esc(e.message)).join('<br>')+'</div>';
+  document.getElementById('extractBody').innerHTML=h;
+  const c=document.getElementById('confirmArea'); c.innerHTML='';
+  if(d.input_id==='D01-collar-bore24'&&d.product_status==='needs_confirmation')c.innerHTML='<p>确认上方抽取参数后，才会调用 CAD 生成 STEP。</p><button class="green" onclick="confirmRun()">确认并生成 STEP</button>';
+  else if(d.input_id==='D02-collar-anodizing')c.innerHTML='<p class="red"><b>D02 安全门：该输入禁止进入 CAD 构造。</b></p>';
+  document.getElementById('result').style.display='none'; document.getElementById('resultBody').innerHTML='';
+}
+async function confirmRun(){if(!activeRunId)return;try{const r=await fetch('/api/app004-live/confirm/'+encodeURIComponent(activeRunId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmed:true})});const d=await r.json();
+  const box=document.getElementById('result');box.style.display='block';let h='<div class="kv"><b>结果：</b>'+esc(d.product_status)+' / '+esc(d.pipeline_status||'')+'</div>';
+  if(d.ir_index?.step_sha256)h+='<div class="kv"><b>STEP SHA-256：</b><code>'+esc(d.ir_index.step_sha256)+'</code></div>';
+  if(d.errors?.length)h+='<div class="kv red">'+d.errors.map(e=>esc(e.code)+': '+esc(e.message)).join('<br>')+'</div>';
+  if(d.product_status==='succeeded')h+='<a href="/app004-live-download/'+encodeURIComponent(activeRunId)+'">下载 STEP 文件</a>';
+  document.getElementById('resultBody').innerHTML=h;
+}catch(e){showError({error:{code:'CONFIRM_FAILED',message:'确认请求失败'}})}}
+function showError(d){document.getElementById('extract').style.display='block';document.getElementById('extractBody').innerHTML='<div class="red">'+esc(d.error?.code||'ERROR')+': '+esc(d.error?.message||'请求失败')+'</div>';document.getElementById('confirmArea').innerHTML=''}
+function resetDemo(clear=true){activeRunId=null;document.getElementById('extract').style.display='none';document.getElementById('result').style.display='none';document.getElementById('extractBody').innerHTML='';document.getElementById('confirmArea').innerHTML='';document.getElementById('resultBody').innerHTML=''}
+</script></div></body></html>"""
+
+
+APP004_LIVE_HTML_CONTENT = _build_app004_live_html()
+APP004_LIVE_HTML_BYTES = APP004_LIVE_HTML_CONTENT.encode("utf-8")
+
+
 def _get_product_live_step_bytes_secure(state: "Any") -> bytes | None:
     """6-layer security check for product live STEP download.
 
@@ -1054,6 +1113,7 @@ def make_handler_class(
     product_handler: ProductFlowHandler | None = None,
     product_live_handler: dict | None = None,
     product_live_service: "Any | None" = None,
+    app004_live_service: "Any | None" = None,
 ):
     """Return a request handler class bound to the given handler instances.
 
@@ -1069,6 +1129,7 @@ def make_handler_class(
     _product = product_handler
     _product_live = product_live_handler  # dict with 'runs' and 'output_root' (legacy)
     _pl_service = product_live_service    # ProductLiveService instance (preferred)
+    _app004_live = app004_live_service
 
     class _Handler(BaseHTTPRequestHandler):
         _demo = demo_handler
@@ -1109,6 +1170,14 @@ def make_handler_class(
                 self._handle_product_live_ui()
                 return
 
+            if path == "/app004-live" or path == "/app004-live/":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(APP004_LIVE_HTML_BYTES)))
+                self.end_headers()
+                self.wfile.write(APP004_LIVE_HTML_BYTES)
+                return
+
             # C3: fixture allowlist
             if path == "/api/product/fixtures":
                 self._handle_product_fixtures()
@@ -1133,6 +1202,20 @@ def make_handler_class(
             # Product live routes (GET)
             if path == "/api/product-live/inputs":
                 self._handle_product_live_inputs()
+                return
+
+            if path == "/api/app004-live/inputs":
+                self._handle_app004_inputs()
+                return
+
+            if path.startswith("/api/app004-live/"):
+                run_id = path[len("/api/app004-live/"):]
+                if run_id:
+                    self._handle_app004_get(run_id)
+                    return
+
+            if path.startswith("/app004-live-download/"):
+                self._handle_app004_download(path[len("/app004-live-download/"):])
                 return
 
             if path.startswith("/api/product-live/"):
@@ -1172,6 +1255,14 @@ def make_handler_class(
             if path.startswith("/api/product-live/confirm/"):
                 run_id = path[len("/api/product-live/confirm/"):]
                 self._handle_product_live_confirm(run_id)
+                return
+
+            if path == "/api/app004-live/create":
+                self._handle_app004_create()
+                return
+
+            if path.startswith("/api/app004-live/confirm/"):
+                self._handle_app004_confirm(path[len("/api/app004-live/confirm/"):])
                 return
 
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
@@ -1422,6 +1513,80 @@ def make_handler_class(
             self.end_headers()
             self.wfile.write(PRODUCT_LIVE_HTML_BYTES)
 
+        def _handle_app004_inputs(self) -> None:
+            if _app004_live is None:
+                self._send_error_json(503, "APP004_LIVE_DISABLED", "APP-004 live service not configured")
+                return
+            from llm.app004_live_web_authorization import APP004_INPUT_IDS
+            self._send_json(200, {"inputs": [{"input_id": i} for i in APP004_INPUT_IDS]})
+
+        def _handle_app004_create(self) -> None:
+            if _app004_live is None:
+                self._send_error_json(503, "APP004_LIVE_DISABLED", "APP-004 live service not configured")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            if set(body) != {"input_id"} or not isinstance(body.get("input_id"), str):
+                self._send_error_json(400, "INVALID_APP004_REQUEST", "body must contain only input_id")
+                return
+            try:
+                state = _app004_live.extract(body["input_id"])
+            except Exception as exc:
+                code = str(exc).split(":", 1)[0]
+                if not code.startswith("APP004_"):
+                    code = "APP004_REQUEST_FAILED"
+                self._send_error_json(400, code, "受控输入未能执行；请检查状态或联系运行者。")
+                return
+            response = _sanitize_state_for_http(state)
+            response["execution_mode"] = getattr(_app004_live, "mode", "unknown")
+            self._send_json(200, response)
+
+        def _handle_app004_confirm(self, run_id: str) -> None:
+            if _app004_live is None:
+                self._send_error_json(503, "APP004_LIVE_DISABLED", "APP-004 live service not configured")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            if set(body) != {"confirmed"} or not isinstance(body.get("confirmed"), bool):
+                self._send_error_json(400, "INVALID_APP004_CONFIRM", "body must contain only boolean confirmed")
+                return
+            state = _app004_live.confirm(run_id, body["confirmed"])
+            if state is None:
+                self._send_error_json(403, "APP004_CAD_CONFIRM_DENIED", "此输入不具备 CAD 确认资格。")
+                return
+            self._send_json(200, _sanitize_state_for_http(state))
+
+        def _handle_app004_get(self, run_id: str) -> None:
+            if _app004_live is None:
+                self._send_error_json(503, "APP004_LIVE_DISABLED", "APP-004 live service not configured")
+                return
+            state = _app004_live.get(run_id)
+            if state is None:
+                self._send_error_json(404, "APP004_RUN_NOT_FOUND", "run not found")
+                return
+            self._send_json(200, _sanitize_state_for_http(state))
+
+        def _handle_app004_download(self, run_id: str) -> None:
+            if _app004_live is None:
+                self._send_error_json(503, "APP004_LIVE_DISABLED", "APP-004 live service not configured")
+                return
+            state = _app004_live.get(run_id)
+            step_bytes = _app004_live.get_step_bytes_secure(run_id) if state is not None else None
+            if state is None:
+                self._send_error_json(404, "APP004_RUN_NOT_FOUND", "run not found")
+                return
+            if step_bytes is None:
+                self._send_error_json(403, "APP004_STEP_UNAVAILABLE", "STEP 不存在或完整性校验失败。")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="app004-{run_id[:16]}.step"')
+            self.send_header("Content-Length", str(len(step_bytes)))
+            self.end_headers()
+            self.wfile.write(step_bytes)
+
         def _handle_product_live_inputs(self) -> None:
             """GET /api/product-live/inputs — available input IDs (allowlist only).
 
@@ -1623,7 +1788,8 @@ def make_handler_class(
 # Server entry point
 # ---------------------------------------------------------------------------
 
-def run_server(port: int = 8080, output_root: Path | None = None) -> None:
+def run_server(port: int = 8080, output_root: Path | None = None,
+               app004_live_service: Any | None = None) -> None:
     """Start the demo HTTP server on 127.0.0.1:<port>.
 
     Parameters
@@ -1632,10 +1798,15 @@ def run_server(port: int = 8080, output_root: Path | None = None) -> None:
         TCP port to listen on (default 8080).
     output_root:
         Override for the demo runs output directory.
+    app004_live_service:
+        Optional pre-authorized APP-004 service. The default server has no
+        live service and never reads credentials or creates a formal batch.
     """
     demo_handler = DemoHandler(output_root=output_root)
     product_handler = ProductFlowHandler(output_root=output_root)
-    handler_class = make_handler_class(demo_handler, product_handler)
+    handler_class = make_handler_class(
+        demo_handler, product_handler, app004_live_service=app004_live_service
+    )
     server = HTTPServer(("127.0.0.1", port), handler_class)
     print(f"[demo] Server started at http://127.0.0.1:{port}/", file=sys.stderr)
     print(f"[demo] Output root: {demo_handler._output_root}", file=sys.stderr)
@@ -1644,3 +1815,9 @@ def run_server(port: int = 8080, output_root: Path | None = None) -> None:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n[demo] Stopped.", file=sys.stderr)
+    finally:
+        server.server_close()
+        if app004_live_service is not None:
+            close = getattr(app004_live_service, "close", None)
+            if callable(close):
+                close(batch_status="complete")

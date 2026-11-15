@@ -1,6 +1,6 @@
-# APP-004-LIVE-WEB-DEMO scope proposal
+# APP-004-LIVE-WEB-DEMO frozen scope
 
-- 状态：`review`（scope proposal only；未接受、未冻结、未授权执行）
+- 状态：`accepted`（scope 已接受并冻结；不代表 formal preflight 或真实请求授权）
 - 日期：2026-11-16
 - 任务：`APP-004-LIVE-WEB-DEMO`
 - profile：`app004-live-web-demo.v1`
@@ -27,7 +27,7 @@ The web UI must not accept arbitrary request text in this profile. It sends only
 - At most 2 logical inputs and 2 HTTP attempts per input; batch cap is **4 HTTP requests** total.
 - One provider, one model, one condition (C0); no retrieval, image input, second family, prompt change, or automatic CAD.
 - Browser-to-server requests carry only an allowlisted input ID and later an explicit confirmation for an eligible run. Browser code never receives provider credentials.
-- Credential loading occurs server-side only after approval binding and offline preflight pass.
+- Credential loading occurs server-side only after approval binding and offline preflight pass. Scope acceptance alone is not execution authorization.
 - D01 can enter the existing CAD pipeline only after the live extraction result passes parsing, envelope checks, Schema/rule validation, and a fresh per-run human confirmation.
 - D02 is hard-denied from CAD before any confirmation is considered, even if the model returns a plausible `answer`.
 - Raw response content, if retained under the reviewed runner policy, remains only in the ignored run directory; HTTP/UI and summaries expose only sanitized fields and hashes. Evaluator labels are physically separate and must never be opened by the runner or UI.
@@ -41,7 +41,7 @@ The web UI must not accept arbitrary request text in this profile. It sends only
 4. Tests proving normal extraction, refusal/ask handling, invalid JSON/transport failure, D02 hard CAD denial, D01 confirmation-only CAD, output isolation, and zero network/CAD/credential side effects before the formal gate.
 5. Fixed-CAD-environment and browser smoke review before any real request.
 
-This proposal does not create the batch directory, read credentials, run preflight, call the model/network, or execute CAD. The proposed batch ID remains unconsumed. After implementation and independent review, the owner must separately accept/freeze this scope and explicitly authorize that exact batch and budget before any formal preflight or real request. A separate per-run confirmation is still required before D01 CAD construction.
+Scope acceptance freezes this profile but does not create the batch directory, read credentials, run preflight, call the model/network, or execute CAD. The proposed batch ID remains unconsumed. After implementation and independent review, the owner must separately authorize this exact batch and budget before any formal preflight or real request. A separate per-run confirmation is still required before D01 CAD construction.
 
 ## Hashes
 

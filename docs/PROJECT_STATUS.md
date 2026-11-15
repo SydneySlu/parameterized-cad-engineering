@@ -77,7 +77,7 @@
 | APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 原 batch `app003-product-live-20261114-02` 完成 4/12 次真实 DeepSeek HTTP，独立复核 `pass`；P1 answer→needs_confirmation、P2 ask、P3/P4 refuse→blocked，原 batch raw 4/4 哈希匹配且无 CAD/STEP。负责人单独确认 P1 `bore_d=24`，隔离 run 生成并回读 STEP，后经 FreeCAD 目视检查通过；原 batch 继续只读。详见同目录 independent-review.md 与 checkpoint.md。 |
 
 | APP-004 | 单族轻量版技术验收与交付记录 | Codex 中枢 | done | 固定 CAD venv Python 3.11.18 下 LLM 933 通过、8 skip（共 941 项），Integration 527、Demo 219、Schema 17、CAD 13；合计 1,709 通过、8 skip（共 1,717 项）。验收报告：`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`；结论限于单族演示和已批准范围，不代表生产就绪、广泛语言覆盖或制造认证。 |
-| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | in_progress | Scope proposal `app004-live-web-demo.v1` 已起草：DeepSeek `deepseek-flash`/C0、2 条固定输入、最多 4 HTTP；待负责人接受 scope。当前 `/product` 仍为 synthetic fixture 页面；没有调用模型、跑 formal preflight 或创建 batch。 |
+| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | in_progress | 负责人已接受并冻结 `app004-live-web-demo.v1`：DeepSeek `deepseek-flash`/C0、2 条固定输入、最多 4 HTTP。独立 approval-bound service 与 `/app004-live` 页面已实现并通过固定环境专项/浏览器 FakeTransport 烟测；D01 确认后产 STEP，D02 硬阻断。代码仍待独立复核；未跑 formal preflight、未读凭据、未联网；真实请求须另行授权。 |
 
 ## 当前缺口与限制
 
