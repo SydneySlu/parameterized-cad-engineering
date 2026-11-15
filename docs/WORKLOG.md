@@ -3309,3 +3309,13 @@ commit=待提交
 - 边界：`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；真实执行仍需新独立 scope/preflight/负责人授权。
 - 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）。
 - 下一步：交 Codex 中枢在固定环境独立复核 130 条专项测试和子类 Gate 3 拒绝边界；不要自行 push/merge。
+
+
+### APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / Codex 中枢 / independent review / 2026-11-15
+
+- 动作：独立复核窄修提交 `f279bc8`；仓库根正确，分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`，基线 `main=b791f526bedf7bf93c235929611d9873151ad639`，工作区干净。
+- 代码结论：Gate 3 使用精确类型检查 `type(transport) is FakeTransport`；`None`、普通非 FakeTransport 和覆写 `send()` 的 FakeTransport 子类均在执行前拒绝。新增子类回归断言 `LanguageNextOfflineOnlyError` 且 `send_call_count=0`；真实 formal 分支仍已删除。ADR-0025 的离线范围得到落实。
+- 验证（固定 CAD venv Python 3.11.18）：新 profile/runner **130/130**；旧 language scope/formal runner **100/100**；Product Live **109/109**；Schema **17/17**。目标文件 `py_compile`、`git diff --check main..HEAD` 和 `git show --check HEAD` 均通过。Product Live 测试输出既有未关闭 socket `ResourceWarning`，不影响退出结果。
+- 冻结文件核验：inputs SHA-256=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels SHA-256=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`，均匹配冻结值。
+- 边界：未调用模型、网络或 CAD；未读取凭据、未创建 batch、未运行正式 preflight、未读取 evaluator labels 内容；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 结论与下一步：窄修独立复核通过，任务仍为 `review`，须按项目合并流程进入 main 后再标记 done。真实请求仍需新的独立 scope、preflight 和负责人授权。

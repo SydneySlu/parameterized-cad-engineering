@@ -166,3 +166,13 @@ confirmed=FakeTransport 子类 send() 零调用断言通过；transport=None 和
 unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实执行仍需新独立 scope/preflight/负责人授权
 next_agent_focus=Codex 中枢：固定 CAD venv 下运行 130 条专项测试，重点验证 Gate 3 子类拒绝、zero send call count、evaluator-labels 隔离；通过后可讨论状态改为 done
 ```
+
+
+## Codex 中枢独立复核（f279bc8）
+
+- 日期：2026-11-15；基线分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`，HEAD=`f279bc80dd95fa9c02bc10493122ca3d306cdfef`；main=`b791f526bedf7bf93c235929611d9873151ad639`；工作区干净。
+- 复核结论：窄修独立复核通过；任务保持 `review`，等待按流程合入。Gate 3 精确拒绝 FakeTransport 子类，覆写 `send()` 的子类被拒绝且零调用；`transport=None` 和普通非 FakeTransport 也被拒绝。
+- 固定 CAD venv Python 3.11.18 实测：`tests.integration.test_product_language_next_scope tests.integration.test_product_language_next_formal_runner` 130/130；旧 `tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner` 100/100；`tests.integration.test_product_live` 109/109；Schema 17/17。修改文件 `py_compile`、`git diff --check main..HEAD`、`git show --check HEAD` 均通过。
+- hash：inputs=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
+- 边界：未读取凭据或 labels 内容；未创建 batch、未运行正式 preflight、未调用模型/网络/CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。Product Live 回归有既存 socket `ResourceWarning`，测试通过。
+- 下一步：等待合入；合入后在 main 基线复验必要专项。真实执行仍需新的独立 scope、preflight 与负责人授权。
