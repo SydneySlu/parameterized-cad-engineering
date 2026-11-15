@@ -3238,3 +3238,8 @@ commit=待提交
 - 复核：正向样本优先 answer、允许安全 ask；冲突/unsupported 样本首选 ask，ask/refuse 均必须 CAD 前阻断。N04 只有明确采用最终 12 mm 并经负责人确认后允许构造。与已有 L01–L10、P1–P4 对照，没有逐字重复输入。
 - 当前 labels SHA-256 更新为 `f812a3fb9c83bcc23785083f8bfd89ba968de94a3bc9ea92f991722760001b48`；inputs hash 不变。此项仍为同一 Codex 对候选稿的复核精炼，不替代独立复核或负责人接受。
 - 下一步：独立复核草案及标签语义；确认后才开展新版本化 profile/离线 runner 工作。未建 batch、未执行 preflight、未调用模型/网络/CAD，历史 batch 继续只读。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / commit closeout / 2026-11-15
+
+- 提交记录：初稿 `f92449e`；本轮标签口径精炼 `37d7ebb`。均位于 `codex/APP-003-LANGUAGE-MATRIX-NEXT-DRAFT`，尚未 push 或合入。
+- 状态仍为 `review`；当前样本矩阵和标签 hash 以 checkpoint/scope 的最新记录为准。后续独立复核前不冻结、不创建 batch、不调用 provider。
