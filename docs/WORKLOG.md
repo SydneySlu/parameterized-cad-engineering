@@ -3283,3 +3283,15 @@ commit=待提交
 - 边界：evaluator-labels.json 从未被读取（guard 断言覆盖）；`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；N08/N09 无 policy_ok 字段，N04 bore_d=12/10 断言通过，N05–N07 unsupported blocking 断言通过。
 - 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）；真实网络/formal preflight/CAD 执行。
 - 下一步：交给 Codex 中枢在固定环境独立复核 113 条专项测试、evaluator-labels 隔离、预算常量、fail-closed 边界；复核通过后由负责人决定是否进入下一阶段。
+
+### APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / fix / review / 2026-11-15
+
+- 动作：依据 Codex 中枢验收意见做窄修，封堵 runner 中可执行真实请求的 formal 路径，落实 ADR-0025 离线阶段边界。
+- 基线：分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`，提交 `aa1490b`。
+- 修复：
+  - `src/integration/product_language_next_formal_runner.py`：重写 `run_product_language_next_formal_batch`，新增 Gate 3 对 `transport=None` 和任何非 `FakeTransport` 抛出 `LanguageNextOfflineOnlyError`，拒绝发生在任何凭据读取/目录创建/ledger 初始化/网络 I/O 之前。完全删除真实 formal 执行路径（凭据加载、DeepSeekTransport、BudgetAwareTransport、BudgetLedger、batch/raw 目录创建、RetentionPolicy、Adapter 实例化）。模块文档改为 offline-mock-only。
+  - `tests/integration/test_product_language_next_formal_runner.py`：新增 `TestADR0025OfflineGate` 13 条测试，覆盖 `transport=None`、非 FakeTransport、凭据 loader / BudgetLedger / DeepSeekTransport / mkdir / urlopen 零调用断言、错误消息含 offline+ADR-0025、Gate 1/2 先于 Gate 3、FakeTransport 仍正常接受。
+- 验证：沙箱 Python 3.10.12；`py_compile` 两文件 PASS；`PYTHONPATH=src:. python3 -m unittest` 专项测试 **126/126 OK**；旧+新联合 **226/226 OK**；`git diff --check` PASS；inputs/labels SHA-256 常量验证未变。
+- 边界：`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；真实执行仍需新独立 scope/preflight/负责人授权。
+- 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）。
+- 下一步：交 Codex 中枢在固定环境独立复核 126 条专项测试和 Gate 3 拒绝边界；复核通过后可讨论状态改为 done。不要自行 push/merge。

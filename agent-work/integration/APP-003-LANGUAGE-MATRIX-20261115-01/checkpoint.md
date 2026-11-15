@@ -94,3 +94,44 @@ confirmed=新 profile 与旧 profile 隔离；evaluator-labels.json 未被读取
 unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实网络/preflight/CAD 执行未运行
 next_agent_focus=Codex 中枢：在固定 CAD venv 下运行 113 条专项测试，验证 evaluator-labels 隔离、budget 常量、fail-closed 边界；复核通过后状态可改为 done
 ```
+
+## ADR-0025 offline-gate fix (narrow patch)
+
+- 日期：2026-11-15；分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`；基线提交 `aa1490b`；状态：review。
+- 修复原因：Codex 中枢验收意见 — 原 runner 包含可执行真实请求的 formal 路径（`transport=None` → 凭据加载 → batch/ledger 创建 → DeepSeek 调用），该入口违反 ADR-0025 的离线阶段边界。
+
+### 修改内容（窄修）
+
+- `src/integration/product_language_next_formal_runner.py`：
+  - 重写 `run_product_language_next_formal_batch`，在 Gate 3 对 `transport=None` 和任何非 `FakeTransport` 均抛出 `LanguageNextOfflineOnlyError`，拒绝发生在任何凭据读取、目录创建、BudgetLedger 初始化和网络 I/O 之前。
+  - 完全删除真实 formal 执行路径：凭据加载（`load_deepseek_environment`）、`DeepSeekTransport` 构造、`BudgetAwareTransport`、`BudgetLedger` 初始化、正式 batch/raw 目录创建、`RetentionPolicy`、Adapter 实例化及其全部 I/O 路径。
+  - 删除 `LanguageNextConfigurationError`（无 live 路径后不再需要）。
+  - 文档字符串更新为明确的 "offline-mock-only" 语言，模块标题移除 "formal runner"。
+  - 保留：FakeTransport mock 路径、preflight、`_SummaryWriter`、状态常量、所有已有的 fail-closed 行为。
+- `tests/integration/test_product_language_next_formal_runner.py`：
+  - 新增 `TestADR0025OfflineGate`（13 个测试）：`transport=None` 抛出 `LanguageNextOfflineOnlyError`；非 FakeTransport 也抛出；`transport=None` 时 `load_deepseek_environment`、`BudgetLedger`、`DeepSeekTransport`、`Path.mkdir`、`urlopen` 均未被调用；`LanguageNextOfflineOnlyError` 消息包含 "offline" 和 "ADR-0025"；Gate 1/Gate 2 在 Gate 3 之前触发；FakeTransport 仍正常接受。
+
+### 验证
+
+- `py_compile` 两个修改文件 PASS。
+- `PYTHONPATH=src:. python3 -m unittest` 新版 scope+runner 专项测试 **126/126 OK**（+13 ADR-0025 gate 测试）。
+- 旧 scope + formal runner 回归 **226/226 OK**（含新版）。
+- inputs SHA-256 `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed` 和 labels SHA-256 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14` 均未改变。
+- `git diff --check` PASS。
+- 沙箱 Python 3.10.12（非固定 CAD venv Python 3.11.18）；固定 CAD venv 全量验证留给 Codex 中枢。
+
+### 未运行
+
+- 真实 DeepSeek HTTP 请求（入口已封闭）。
+- 正式 preflight（无 batch 目录创建，无 BudgetLedger 初始化）。
+- CAD/STEP/IR pipeline。
+
+### handoff_self_check
+
+```text
+changed=src/integration/product_language_next_formal_runner.py（formal 路径删除，Gate 3 新增 LanguageNextOfflineOnlyError 拒绝）；tests/integration/test_product_language_next_formal_runner.py（新增 TestADR0025OfflineGate 13 条测试）；checkpoint.md（追加本段）；docs/WORKLOG.md（追加记录）
+commands=py_compile 2 changed files PASS; PYTHONPATH=src:. python3 -m unittest scope+runner 126/126 OK; old+new combined 226/226 OK; git diff --check PASS; SHA-256 constants verified unchanged
+confirmed=transport=None 和非 FakeTransport 均被 Gate 3 拒绝；凭据/BudgetLedger/DeepSeekTransport/mkdir/urlopen 零调用断言通过；FakeTransport 正常案例（answer 10/10）和失败案例（error/blocked）均通过；旧实现未被修改
+unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实执行仍需新独立 scope/preflight/负责人授权
+next_agent_focus=Codex 中枢：固定 CAD venv 下运行 126 条专项测试，验证 Gate 3 拒绝、evaluator-labels 隔离、budget 常量、fail-closed 边界；通过后可讨论状态改为 done
+```

@@ -1,5 +1,20 @@
-"""Offline formal runner for the APP-003 *next* ten-input language sample scope
-(``app003-product-language-next.v1``).
+"""Offline-only mock runner for the APP-003 *next* ten-input language sample
+scope (``app003-product-language-next.v1``).
+
+ADR-0025 PHASE BOUNDARY
+-----------------------
+This runner is **offline-mock-only** under ADR-0025.  The public entry point
+:func:`run_product_language_next_formal_batch` accepts ONLY a
+:class:`~llm.transport.FakeTransport` as ``transport``.
+
+``transport=None`` and any non-FakeTransport are rejected at Gate 3 by
+raising :class:`LanguageNextOfflineOnlyError` BEFORE any credential read,
+directory creation, BudgetLedger initialisation, transport construction, or
+network I/O.  No live DeepSeek execution path exists in this module.
+
+Real execution (live DeepSeek requests) is not implemented in this phase.
+It requires a new independent scope, batch, preflight, and owner approval
+under a future ADR.
 
 SAFETY GUARANTEES
 -----------------
@@ -7,19 +22,13 @@ SAFETY GUARANTEES
 - Evaluator labels (``evaluator-labels.json``) are NEVER loaded, read, opened,
   or referenced in any code path: preflight, execution, raw retention, summary,
   or logs.
-- Formal runs require a
-  :class:`~llm.product_language_next_authorization.ProductLanguageNextAuthorization`
-  AND a matching non-test-only
-  :class:`~llm.product_language_next_authorization.ProductLanguageNextFormalApproval`.
 - Authorization type, test-only flag, batch ID, profile, frozen inputs + hash,
-  provider/model/condition, approval binding, budget feasibility, and formal
-  preflight results are ALL validated BEFORE any directory creation, ledger
-  initialisation, transport construction, credential loading, or network I/O.
-- Frozen inputs SHA-256 is verified twice: once at preflight and again just
-  before the first request.
-- Every HTTP request reserves a budget slot atomically BEFORE the network call
-  via :class:`~llm.budget.BudgetLedger`.  Concurrent, exception, and retry
-  paths cannot exceed the per-run cap of 2 or the batch cap of 20.
+  provider/model/condition, and approval binding are ALL validated BEFORE
+  the transport gate.  The transport gate (Gate 3) rejects non-FakeTransport
+  before any credential read, directory creation, ledger initialisation,
+  transport construction, or network I/O.
+- No credentials are loaded, no batch directory is created, no BudgetLedger
+  is initialised, and no real transport is constructed in any path.
 - Only transient transport failures are retried (connection/read timeout,
   connection interruption, HTTP 429, HTTP 5xx).  Authentication/permission
   errors, malformed requests, invalid JSON, and contract failures are not
@@ -27,17 +36,6 @@ SAFETY GUARANTEES
 - No IR / CAD / geometry / STEP pipeline is ever called.  ``answer`` results
   are recorded for language extraction and evaluation only; they never trigger
   product confirmation or the CAD pipeline.
-- Raw responses are written to ``work/app003-language-next-runs/{batch_id}/raw/``.
-  Each file records the response body, its length in bytes, and its SHA-256.
-- The batch summary (``batch_summary.json``) contains only approved fields,
-  repo-relative paths, and hashes.  It never contains raw response bodies,
-  API keys, Authorization header values, absolute filesystem paths, or
-  evaluator label content.
-- A batch that has all runs with transport/parse errors must NOT be reported
-  as ``complete``; it is reported as ``failed``.
-- Batch init, lock, ledger, raw write, and finalize failures all fail closed
-  and produce auditable state.  A failed run never reads or returns artefacts
-  from other runs or batches.
 - No new generic live switch or global gate is opened.  The caller cannot
   override inputs, provider, model, condition, budget, or batch scope.
 - N08 (bore-shaft-fit-conflict) and N09 (approximate-fit-clearance) are
@@ -50,9 +48,8 @@ Offline mock testing
 --------------------
 Tests inject a :class:`~llm.transport.FakeTransport` via the ``transport``
 parameter of :func:`run_product_language_next_formal_batch`.  The mock path
-exercises the full preflight → budget → Adapter → raw-retention → summary
-path without network I/O, credential reads, or batch directory creation
-in the canonical run root.
+exercises the full preflight → send → parse → gate path without network I/O,
+credential reads, or batch directory creation.
 """
 
 from __future__ import annotations
@@ -61,19 +58,16 @@ import hashlib
 import json
 import os
 import re as _re
-import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from llm.authorization import AuthorizationScopeError
 from llm.contract import (
-    ADAPTER_VERSION,
     CONTRACT_VERSION,
     FORMAL_EVALUATION_ALLOWED,
     PROMPT_VERSION,
 )
-from llm.env_loader import EnvironmentConfigurationError, load_deepseek_environment
 from llm.product_language_next_authorization import (
     PRODUCT_LANGUAGE_NEXT_CONDITION,
     PRODUCT_LANGUAGE_NEXT_INPUT_IDS,
@@ -344,8 +338,16 @@ class LanguageNextBatchResult:
         }
 
 
-class LanguageNextConfigurationError(RuntimeError):
-    """Raised when formal next language sample credentials are not configured."""
+class LanguageNextOfflineOnlyError(RuntimeError):
+    """Raised when a non-FakeTransport (including transport=None) is passed to
+    :func:`run_product_language_next_formal_batch`.
+
+    Under ADR-0025, this runner is offline-mock-only.  ``transport=None``
+    (which would enter live formal mode) and any non-FakeTransport are rejected
+    at Gate 3 BEFORE any credential read, directory creation, BudgetLedger
+    initialisation, or network I/O.  Real execution requires a new independent
+    scope, batch, preflight, and owner approval under a future ADR.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -561,51 +563,6 @@ class _SummaryWriter:
         self._data["batch_status"] = batch_status
         self._data["batch_finished_utc"] = _utc_now_iso()
         _atomic_write_json(self._summary_path, self._data, self._batch_dir)
-
-
-def _build_initial_summary(
-    authorization: ProductLanguageNextAuthorization,
-    approval: ProductLanguageNextFormalApproval,
-    planned: list[LanguageNextLogicalRunPlan],
-    prompt: Any,
-    started_utc: str,
-) -> dict[str, Any]:
-    """Build initial batch_summary.json content (before any HTTP requests).
-
-    Never includes raw response bodies, API keys, Authorization headers,
-    absolute paths, or evaluator label content.
-    """
-    return {
-        "schema_version": _SUMMARY_SCHEMA_VERSION,
-        "batch_id": authorization.batch_id,
-        "profile_id": PRODUCT_LANGUAGE_NEXT_PROFILE_ID,
-        "batch_started_utc": started_utc,
-        "batch_status": "running",
-        "scope": {
-            "protocol_versions": sorted(authorization.protocol_versions),
-            "sample_set": authorization.sample_set,
-            "condition": PRODUCT_LANGUAGE_NEXT_CONDITION,
-            "provider": PRODUCT_LANGUAGE_NEXT_PROVIDER,
-            "model": PRODUCT_LANGUAGE_NEXT_MODEL,
-            "max_batch_http": PRODUCT_LANGUAGE_NEXT_MAX_BATCH_HTTP,
-            "max_logical_runs": PRODUCT_LANGUAGE_NEXT_MAX_LOGICAL_RUNS,
-            "max_attempts_per_run": PRODUCT_LANGUAGE_NEXT_MAX_ATTEMPTS_PER_RUN,
-            "automatic_cad_pipeline": False,
-        },
-        "artifact_hashes": {
-            "inputs_sha256": PRODUCT_LANGUAGE_NEXT_INPUTS_SHA256,
-            "evaluator_labels_sha256": PRODUCT_LANGUAGE_NEXT_LABELS_SHA256,
-            "prompt_version": PROMPT_VERSION,
-            "prompt_file_sha256": FROZEN_PROMPT_FILE_SHA256,
-            "contract_version": CONTRACT_VERSION,
-        },
-        "approval": approval.as_audit_dict(),
-        "planned_runs": [p.logical_run_id for p in planned],
-        "runs": {
-            p.logical_run_id: {"llm_status": "pending"}
-            for p in planned
-        },
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -879,89 +836,6 @@ def _build_state_from_envelope(
     )
 
 
-# ---------------------------------------------------------------------------
-# Adapter result mapper (formal path)
-# ---------------------------------------------------------------------------
-
-def _build_state_from_adapter_result(
-    *,
-    plan: LanguageNextLogicalRunPlan,
-    adapter_result: Any,
-    llm_meta: dict[str, Any],
-    request_text: str,
-) -> LanguageNextRunState:
-    """Map Adapter outcomes to LanguageNextRunState.
-
-    Only stable codes, fields, and status values are copied into evidence.
-    Provider error bodies and parser diagnostic text may contain untrusted
-    response content and are deliberately omitted from the state.
-    """
-    record = adapter_result.record
-    parse_result = adapter_result.parse_result
-    raw_meta = dict(record.raw_response_retention or {})
-    raw_path = raw_meta.get("path") if raw_meta.get("retained") else None
-
-    if parse_result is not None and parse_result.envelope is not None:
-        return _build_state_from_envelope(
-            plan=plan,
-            envelope=parse_result.envelope,
-            llm_meta=llm_meta,
-            request_text=request_text,
-            raw_retention_meta=raw_meta,
-            raw_retention_path=raw_path,
-        )
-
-    # Transport or parse failure
-    if parse_result is None:
-        attempts = list(getattr(record, "attempts", ()) or ())
-        last_attempt = attempts[-1] if attempts else None
-        cause_code = (
-            getattr(last_attempt, "error_code", None)
-            or "NO_RESPONSE"
-        )
-        error: dict[str, Any] = {
-            "code": "TRANSPORT_ERROR",
-            "cause_code": str(cause_code),
-            "message": "model call did not produce a response",
-            "attempt_count": len(attempts),
-        }
-        http_status = getattr(last_attempt, "http_status", None)
-        outcome = getattr(last_attempt, "outcome", None)
-        if http_status is not None:
-            error["http_status"] = http_status
-        if outcome:
-            error["attempt_outcome"] = str(outcome)
-    else:
-        causes = _safe_parse_error_causes(parse_result)
-        parse_stage = getattr(parse_result, "stage", None)
-        error = {
-            "code": (
-                "RESPONSE_PARSE_ERROR"
-                if parse_stage == "parse"
-                else "ENVELOPE_VALIDATION_ERROR"
-            ),
-            "message": "response failed strict parsing or envelope validation",
-            "causes": causes,
-        }
-
-    return LanguageNextRunState(
-        logical_run_id=plan.logical_run_id,
-        input_id=plan.input_id,
-        condition_id=plan.condition_id,
-        provider=plan.provider, model=plan.model,
-        llm_status=LANGUAGE_NEXT_STATUS_ERROR,
-        decision="",
-        extracted_parameters={},
-        missing_fields=[],
-        unsupported_requests=[],
-        questions=[],
-        errors=[error],
-        raw_retention_path=raw_path,
-        raw_retention_meta=raw_meta or None,
-        llm_meta=llm_meta,
-        request_text=request_text,
-    )
-
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -973,7 +847,15 @@ def run_product_language_next_formal_batch(
     approval: ProductLanguageNextFormalApproval,
     transport: Any = None,
 ) -> LanguageNextBatchResult:
-    """Run the next language sample extraction batch.
+    """Run the next language sample extraction batch (offline mock only).
+
+    This runner is **offline-mock-only** under ADR-0025.  ``transport`` MUST
+    be a :class:`~llm.transport.FakeTransport` instance.
+
+    ``transport=None`` and any non-:class:`~llm.transport.FakeTransport` are
+    rejected at Gate 3 by raising :class:`LanguageNextOfflineOnlyError` BEFORE
+    any credential read, directory creation, BudgetLedger initialisation,
+    transport construction, or network I/O.
 
     Parameters
     ----------
@@ -981,24 +863,21 @@ def run_product_language_next_formal_batch(
         A validated :class:`ProductLanguageNextAuthorization` instance.
     approval:
         A non-test-only :class:`ProductLanguageNextFormalApproval` whose
-        ``batch_id`` matches ``authorization.batch_id``.  Required for
-        all execution modes.  Validated BEFORE any directory creation,
-        BudgetLedger initialisation, Transport construction, or network I/O.
+        ``batch_id`` matches ``authorization.batch_id``.  Validated BEFORE
+        the transport gate and before any side effects.
     transport:
-        Injectable :class:`~llm.transport.FakeTransport` for offline mock
-        testing.  For formal live execution, pass ``None``.
+        MUST be a :class:`~llm.transport.FakeTransport` instance.  Passing
+        ``None`` or any other value raises :class:`LanguageNextOfflineOnlyError`
+        at Gate 3, before any credential read, directory creation, ledger
+        initialisation, or network I/O.
 
     Notes
     -----
     - Evaluator labels are NEVER opened in any path.
     - CAD / IR / geometry / STEP pipeline is NEVER called.
     - ``FORMAL_EVALUATION_ALLOWED`` remains ``False``.
-    - The formal path reads credentials from ``.env`` only after all
-      gate checks pass and only once per batch.
-    - Budget is enforced atomically via BudgetLedger before each HTTP call.
-    - Raw retention for formal runs is always written to the canonical path
-      ``work/app003-language-next-runs/{batch_id}/raw/``; callers cannot
-      redirect this.
+    - No credentials are loaded, no batch directory is created, no BudgetLedger
+      is initialised, and no real transport is constructed.
     """
     ts = _utc_now_iso()
 
@@ -1018,9 +897,24 @@ def run_product_language_next_formal_batch(
     validate_product_language_next_formal_approval_binding(authorization, approval)
 
     # ----------------------------------------------------------------
-    # Gate 3: offline preflight (inputs hash, budget, batch dir)
+    # Gate 3: ADR-0025 phase boundary — offline-mock-only.
+    # Must be a FakeTransport.  transport=None (which would enter live
+    # formal mode) is not permitted in this phase.  Raised BEFORE any
+    # credential read, directory creation, BudgetLedger init, or network I/O.
     # ----------------------------------------------------------------
-    is_formal = transport is None
+    if not isinstance(transport, FakeTransport):
+        raise LanguageNextOfflineOnlyError(
+            "run_product_language_next_formal_batch is offline-mock-only under "
+            "ADR-0025: a FakeTransport instance is required as 'transport'.  "
+            "transport=None (live formal mode) is not permitted in this phase.  "
+            "No credentials have been read, no directories created, and no "
+            "network calls have been made.  Real execution requires a new "
+            "independent scope, batch, preflight, and owner approval."
+        )
+
+    # ----------------------------------------------------------------
+    # Gate 4: offline preflight (inputs hash, budget, batch dir check)
+    # ----------------------------------------------------------------
     planned = _plan_combinations(authorization)
     budget_plan = {
         "max_logical_runs": PRODUCT_LANGUAGE_NEXT_MAX_LOGICAL_RUNS,
@@ -1038,7 +932,7 @@ def run_product_language_next_formal_batch(
             batch_id=authorization.batch_id,
             profile_id=PRODUCT_LANGUAGE_NEXT_PROFILE_ID,
             timestamp_utc=ts,
-            mode="formal" if is_formal else "mock",
+            mode="mock",
             preflight_ok=False,
             preflight_errors=pf["errors"],
             planned_runs=planned,
@@ -1046,266 +940,34 @@ def run_product_language_next_formal_batch(
             budget_plan=budget_plan,
         )
 
-    # ----------------------------------------------------------------
-    # Gate 4: credential loading (formal only, after all gate checks)
-    # ----------------------------------------------------------------
-    if is_formal:
-        try:
-            load_deepseek_environment(repo_root=_REPO_ROOT)
-        except EnvironmentConfigurationError as exc:
-            raise LanguageNextConfigurationError(str(exc)) from exc
-
-    # Load frozen inputs (re-verify SHA-256 after credential gate)
+    # Load frozen inputs (verify SHA-256)
     inputs = _load_next_inputs(verify_sha256=True)
     input_map = {row["input_id"]: row["request_text"] for row in inputs}
 
     prompt = load_frozen_prompt()
 
-    safe_batch_id = _safe_component(authorization.batch_id)
-
-    # ----------------------------------------------------------------
-    # Formal infrastructure (batch dir, ledger, summary writer)
-    # ----------------------------------------------------------------
-    if is_formal:
-        from llm.budget import BudgetAwareTransport, BudgetLedger
-        from llm.adapter import Adapter, AdapterInput, RetentionPolicy
-        from llm.real_transport import DeepSeekTransport
-
-        batch_dir = _CANONICAL_RUN_ROOT / safe_batch_id
-        try:
-            batch_dir.mkdir(parents=False, exist_ok=False)
-        except FileExistsError:
-            raise _SummaryWriteError(
-                f"batch directory already exists: {batch_dir}; "
-                "each batch must use a unique batch_id"
-            )
-
-        initial_data = _build_initial_summary(
-            authorization, approval, planned, prompt, ts
-        )
-        writer = _SummaryWriter(batch_dir, initial_data)
-        try:
-            writer.write_initial()
-        except _SummaryWriteError:
-            try:
-                batch_dir.rmdir()
-            except OSError:
-                pass
-            raise
-
-        ledger: Any = None
-        try:
-            ledger = BudgetLedger(batch_dir, authorization)
-            ledger.acquire_lock()
-        except Exception:
-            try:
-                writer.finalize(batch_status="aborted")
-            except Exception:
-                pass
-            raise
-
-        raw_retention_policy = RetentionPolicy(
-            retain_raw=True,
-            base_dir=f"work/app003-language-next-runs/{safe_batch_id}/raw",
-        )
-        summary_path: str | None = str(writer.summary_path)
-
-    else:
-        # Mock mode: temporary infrastructure only, no canonical batch dir
-        ledger = None
-        raw_retention_policy = None
-        writer = None
-        summary_path = None
-
-        if not isinstance(transport, FakeTransport):
-            return LanguageNextBatchResult(
-                batch_id=authorization.batch_id,
-                profile_id=PRODUCT_LANGUAGE_NEXT_PROFILE_ID,
-                timestamp_utc=ts,
-                mode="mock",
-                preflight_ok=True,
-                preflight_errors=[],
-                planned_runs=planned,
-                results=[LanguageNextRunState(
-                    logical_run_id=p.logical_run_id,
-                    input_id=p.input_id,
-                    condition_id=p.condition_id,
-                    provider=p.provider, model=p.model,
-                    llm_status=LANGUAGE_NEXT_STATUS_ERROR,
-                    decision="",
-                    extracted_parameters={},
-                    missing_fields=[],
-                    unsupported_requests=[],
-                    questions=[],
-                    errors=[{"code": "INVALID_MOCK_TRANSPORT",
-                             "message": "mock transport must be FakeTransport"}],
-                    raw_retention_path=None,
-                    raw_retention_meta=None,
-                    llm_meta={},
-                    request_text="",
-                ) for p in planned],
-                budget_plan=budget_plan,
-            )
-
     results: list[LanguageNextRunState] = []
-    mode = "formal" if is_formal else "mock"
-    summary_write_failed = False
-
-    try:
-        for plan in planned:
-            request_text = input_map[plan.input_id]
-
-            if is_formal:
-                from llm.budget import BudgetAwareTransport
-                from llm.adapter import Adapter, AdapterInput, RetentionPolicy
-                from llm.real_transport import DeepSeekTransport
-
-                run_transport = BudgetAwareTransport(
-                    DeepSeekTransport(authorization=authorization),
-                    ledger=ledger,
-                    authorization=authorization,
-                    logical_run_id=plan.logical_run_id,
-                    provider=plan.provider,
-                    model=plan.model,
-                    adapter_run_id=plan.logical_run_id,
-                    query_id=plan.input_id,
-                    condition_id=plan.condition_id,
-                )
-                run_adapter = Adapter(
-                    provider=plan.provider,
-                    transport=run_transport,
-                    retention_policy=raw_retention_policy,
-                )
-                adapter_input = AdapterInput(
-                    query_id=plan.input_id,
-                    natural_language_input=request_text,
-                    reference_context=None,
-                    system_prompt=prompt.system_prompt,
-                    user_prompt_template=prompt.user_template,
-                    condition_id=plan.condition_id,
-                )
-
-                llm_meta: dict[str, Any] = {
-                    "query_id": plan.input_id,
-                    "condition_id": plan.condition_id,
-                    "configured_provider": plan.provider,
-                    "configured_model_name": plan.model,
-                    "prompt_version": PROMPT_VERSION,
-                    "contract_version": CONTRACT_VERSION,
-                    "attempt_count": None,
-                    "total_elapsed_ms": None,
-                }
-
-                try:
-                    adapter_result = run_adapter.run(
-                        adapter_input,
-                        run_id=plan.logical_run_id,
-                        formal_authorization=authorization,
-                    )
-                except Exception as exc:
-                    exc_type = type(exc).__name__
-                    result = LanguageNextRunState(
-                        logical_run_id=plan.logical_run_id,
-                        input_id=plan.input_id,
-                        condition_id=plan.condition_id,
-                        provider=plan.provider, model=plan.model,
-                        llm_status=LANGUAGE_NEXT_STATUS_ERROR,
-                        decision="",
-                        extracted_parameters={},
-                        missing_fields=[],
-                        unsupported_requests=[],
-                        questions=[],
-                        errors=[{"code": "ADAPTER_EXCEPTION",
-                                 "exception_type": exc_type,
-                                 "message": "adapter raised an unexpected exception"}],
-                        raw_retention_path=None,
-                        raw_retention_meta=None,
-                        llm_meta=llm_meta,
-                        request_text=request_text,
-                    )
-                    results.append(result)
-                    if writer is not None:
-                        try:
-                            writer.update_run(result)
-                        except _SummaryWriteError:
-                            summary_write_failed = True
-                            break
-                    continue
-
-                record = adapter_result.record
-                llm_meta["attempt_count"] = record.attempt_count
-                llm_meta["total_elapsed_ms"] = record.total_elapsed_ms
-
-                result = _build_state_from_adapter_result(
-                    plan=plan,
-                    adapter_result=adapter_result,
-                    llm_meta=llm_meta,
-                    request_text=request_text,
-                )
-                results.append(result)
-                if writer is not None:
-                    try:
-                        writer.update_run(result)
-                    except _SummaryWriteError:
-                        summary_write_failed = True
-                        break
-
-            else:
-                # Mock mode: FakeTransport, no ledger
-                result = _run_one_logical_mock(
-                    plan=plan,
-                    request_text=request_text,
-                    prompt=prompt,
-                    transport=transport,
-                )
-                results.append(result)
-
-    finally:
-        if ledger is not None:
-            try:
-                ledger.release_lock()
-            except Exception:
-                pass
-        if is_formal and writer is not None:
-            if summary_write_failed:
-                try:
-                    writer.finalize(batch_status="aborted")
-                except _SummaryWriteError:
-                    finalize_error = "summary_write_failed_and_finalize_failed"
-                else:
-                    finalize_error = "summary_write_failed_finalized_aborted"
-            else:
-                error_statuses = {LANGUAGE_NEXT_STATUS_ERROR}
-                statuses = [r.llm_status for r in results]
-                if len(results) < len(planned):
-                    final_batch_status = "aborted"
-                elif statuses and all(s in error_statuses for s in statuses):
-                    final_batch_status = "failed"
-                elif any(s in error_statuses for s in statuses):
-                    final_batch_status = "partial"
-                else:
-                    final_batch_status = "complete"
-                try:
-                    writer.finalize(batch_status=final_batch_status)
-                except _SummaryWriteError:
-                    finalize_error = "summary_finalize_failed"
-                else:
-                    finalize_error = None
-        else:
-            finalize_error = None
+    for plan in planned:
+        result = _run_one_logical_mock(
+            plan=plan,
+            request_text=input_map[plan.input_id],
+            prompt=prompt,
+            transport=transport,
+        )
+        results.append(result)
 
     return LanguageNextBatchResult(
         batch_id=authorization.batch_id,
         profile_id=PRODUCT_LANGUAGE_NEXT_PROFILE_ID,
         timestamp_utc=ts,
-        mode=mode,
+        mode="mock",
         preflight_ok=True,
         preflight_errors=[],
         planned_runs=planned,
         results=results,
         budget_plan=budget_plan,
-        summary_path=summary_path,
-        summary_finalize_error=finalize_error,
+        summary_path=None,
+        summary_finalize_error=None,
     )
 
 
@@ -1313,7 +975,7 @@ __all__ = [
     "LANGUAGE_NEXT_STATUS_ANSWER", "LANGUAGE_NEXT_STATUS_BLOCKED",
     "LANGUAGE_NEXT_STATUS_ERROR",
     "LanguageNextLogicalRunPlan", "LanguageNextRunState",
-    "LanguageNextBatchResult", "LanguageNextConfigurationError",
+    "LanguageNextBatchResult", "LanguageNextOfflineOnlyError",
     "run_language_next_offline_preflight",
     "run_product_language_next_formal_batch",
 ]

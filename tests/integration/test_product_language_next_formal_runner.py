@@ -1113,5 +1113,208 @@ class TestNextProfileIsolationFromOldScope(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# 13. ADR-0025 offline gate — transport=None and non-FakeTransport rejection
+# ---------------------------------------------------------------------------
+
+class TestADR0025OfflineGate(unittest.TestCase):
+    """Gate 3: transport=None and non-FakeTransport are rejected before any
+    credential read, directory creation, BudgetLedger init, or network I/O.
+
+    ADR-0025 permits only FakeTransport in this phase.  The gate fires AFTER
+    the authorization type check (Gate 1) and approval binding check (Gate 2),
+    but BEFORE any side effects.
+    """
+
+    def test_transport_none_raises_offline_only_error(self) -> None:
+        """transport=None must raise LanguageNextOfflineOnlyError."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with self.assertRaises(LanguageNextOfflineOnlyError):
+            run_product_language_next_formal_batch(
+                authorization=_auth(),
+                approval=_real_approval(),
+                transport=None,
+            )
+
+    def test_non_fake_transport_raises_offline_only_error(self) -> None:
+        """Any non-FakeTransport must raise LanguageNextOfflineOnlyError."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _RealTransportSpy:
+            def send(self, request):
+                raise AssertionError("send must never be called")
+
+        with self.assertRaises(LanguageNextOfflineOnlyError):
+            run_product_language_next_formal_batch(
+                authorization=_auth(),
+                approval=_real_approval(),
+                transport=_RealTransportSpy(),
+            )
+
+    def test_transport_none_no_credentials_loaded(self) -> None:
+        """transport=None must not load any credentials."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with patch("llm.env_loader.load_deepseek_environment") as load_env:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        load_env.assert_not_called()
+
+    def test_transport_none_no_budget_ledger_init(self) -> None:
+        """transport=None must not initialise BudgetLedger."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with patch("llm.budget.BudgetLedger") as mock_ledger:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        mock_ledger.assert_not_called()
+
+    def test_transport_none_no_deepseek_transport_constructed(self) -> None:
+        """transport=None must not construct DeepSeekTransport."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with patch("llm.real_transport.DeepSeekTransport") as mock_dt:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        mock_dt.assert_not_called()
+
+    def test_transport_none_no_canonical_batch_mkdir(self) -> None:
+        """transport=None must not create any batch directory."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with patch("pathlib.Path.mkdir") as mock_mkdir:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        mock_mkdir.assert_not_called()
+
+    def test_transport_none_no_urlopen(self) -> None:
+        """transport=None must not make any network calls."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with patch("urllib.request.urlopen") as urlopen:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        urlopen.assert_not_called()
+
+    def test_offline_only_error_message_mentions_offline_and_adr(self) -> None:
+        """LanguageNextOfflineOnlyError message must mention offline and ADR-0025."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+        with self.assertRaises(LanguageNextOfflineOnlyError) as ctx:
+            run_product_language_next_formal_batch(
+                authorization=_auth(),
+                approval=_real_approval(),
+                transport=None,
+            )
+        msg = str(ctx.exception)
+        self.assertIn("offline", msg.lower())
+        self.assertIn("ADR-0025", msg)
+
+    def test_wrong_auth_type_raises_before_transport_check(self) -> None:
+        """Gate 1 (auth type) fires before Gate 3 (transport).
+        Wrong auth + transport=None → AuthorizationScopeError, not LanguageNextOfflineOnlyError.
+        """
+        with patch("llm.env_loader.load_deepseek_environment") as load_env:
+            with self.assertRaises(AuthorizationScopeError):
+                run_product_language_next_formal_batch(
+                    authorization=object(),  # type: ignore
+                    approval=_real_approval(),
+                    transport=None,
+                )
+        load_env.assert_not_called()
+
+    def test_test_only_approval_raises_before_transport_check(self) -> None:
+        """Gate 2 (approval binding) fires before Gate 3 (transport).
+        Test-only approval + transport=None → ProductLanguageNextApprovalValidationError.
+        """
+        with patch("llm.env_loader.load_deepseek_environment") as load_env:
+            with self.assertRaises(ProductLanguageNextApprovalValidationError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_test_approval(),
+                    transport=None,
+                )
+        load_env.assert_not_called()
+
+    def test_fake_transport_still_accepted(self) -> None:
+        """FakeTransport is accepted by Gate 3 and execution proceeds normally."""
+        result = run_product_language_next_formal_batch(
+            authorization=_auth(),
+            approval=_real_approval(),
+            transport=_fake_transport_all_answer(),
+        )
+        self.assertTrue(result.preflight_ok)
+        self.assertEqual(len(result.results), 10)
+        self.assertEqual(result.mode, "mock")
+
+    def test_non_fake_transport_no_credentials_loaded(self) -> None:
+        """Non-FakeTransport must not load credentials."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _Stub:
+            def send(self, request):
+                raise AssertionError("unreachable")
+
+        with patch("llm.env_loader.load_deepseek_environment") as load_env:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=_Stub(),
+                )
+        load_env.assert_not_called()
+
+    def test_non_fake_transport_no_mkdir(self) -> None:
+        """Non-FakeTransport must not create any directory."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _Stub:
+            def send(self, request):
+                raise AssertionError("unreachable")
+
+        with patch("pathlib.Path.mkdir") as mock_mkdir:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=_Stub(),
+                )
+        mock_mkdir.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
