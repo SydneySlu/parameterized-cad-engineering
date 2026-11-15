@@ -28,7 +28,7 @@
 
 ## 下一步
 
-1. 对授权 accessor 修正及其 10-input ledger 回归进行独立代码复核；确认通过后合并，并在合并基线上复跑专项测试。
+1. 独立复核已于 2026-11-15 对候选提交 `2fc9613` 完成并通过；代码已具备合入条件。合入后仍需在 main 基线上复跑专项测试。
 2. 保持历史 batch 只读。当前缺陷可由离线预算门测试验证，不为重复证明本地逻辑而创建 live batch。
 3. 若之后需要单独判断 provider/网络行为，再准备新的窄 scope、新 batch ID 和 offline formal preflight，并在任何 live 请求前取得该 batch 的明确执行授权。
 
@@ -39,4 +39,5 @@
 - 定向复核：`BudgetLedger.reserve_attempt()` 对 per-run 与 provider/chat 总额度的检查顺序；授权 profile accessor；formal runner 预算异常映射。
 - 固定 CAD venv：`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q`，100/100 通过。该套件包括 10 条模拟非重试失败均产生 ledger reservation 的回归，也包括 FakeTransport 正常/拒绝路径；未调用网络/provider。
 - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m py_compile src/llm/product_language_authorization.py tests/integration/test_product_language_formal_runner.py tests/integration/test_product_language_scope.py`：通过；`git diff --check`：通过。
+- Codex 中枢独立复核（固定 CAD venv）：scope + formal runner 100/100；`tests.llm.test_budget` 18 项通过、6 项既有 skip；`git diff --check main...HEAD` 通过。检查确认 per-input cap 仍由 `max_attempts_per_run=2` 强制，provider/chat cap=20 与批准全批预算一致；无需再发起 live 请求来验证本地预算门。结论：candidate `2fc9613` 独立复核 `pass`，无代码阻塞项。
 - 未读取历史 raw 正文、`.env`、API key 或 evaluator labels；未读取或修改历史 batch 文件；未运行 CAD；`FORMAL_EVALUATION_ALLOWED=False` 未改变。

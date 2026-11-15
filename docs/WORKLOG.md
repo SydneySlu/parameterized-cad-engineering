@@ -3208,3 +3208,11 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18，`PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_scope tests.integration.test_product_language_formal_runner -q`，100/100 通过；目标 3 文件 `py_compile` 通过；`git diff --check` 通过。
 - 范围与限制：没有调用模型/网络/provider，没有创建 batch，没有运行 CAD；旧 batch 只读且未读取其 raw 正文；没有读取 `.env`、API key 或 evaluator labels。`FORMAL_EVALUATION_ALLOWED=False` 保持。历史批次未记录 source commit/runtime revision，因此该当前代码缺陷与旧 summary/ledger 模式高度吻合，但不能作为绝对历史执行版本归因。
 - 状态：候选待独立审查，尚未提交/合入。当前不需要新 live batch 验证本地预算门；若另行调查真实 provider/网络行为，须新的 scope、batch、preflight 和明确授权。
+
+### APP-003-LANGUAGE-TRANSPORT-DIAG-20261115-01 / Codex 中枢 / independent review / 2026-11-15
+
+- 动作：独立审查分支 `codex/APP-003-LANGUAGE-TRANSPORT-BUDGET-FIX` 的实现提交 `2fc9613`；仓库根正确、工作区干净，候选基于 `main=0e4a4c4`。
+- 代码审查：核对 `BudgetLedger.reserve_attempt()` 与授权 accessor 的调用关系、 per-run/provider/batch 三层上限、scope 接口和回归断言；provider chat cap=20 与冻结 batch/provider cap 一致，per-run cap=2 仍由独立计数检查强制。新增失败回归使用临时目录并 mock `DeepSeekTransport.send()`，验证十条模拟 non-retryable failure 均到达 transport stub 并各自记入 ledger；真实网络调用数为 0。
+- 验证：固定 CAD venv Python 3.11.18，scope + formal runner 100/100；`tests.llm.test_budget` 18 项通过、6 项既有 skip；目标文件 `py_compile` 和 `git diff --check main...HEAD` 通过。
+- 结论：候选 commit `2fc9613` 独立复核 `pass`，未发现代码阻塞；修复可进入合入流程，合入后仍需在 main 基线上复跑专项。该结论不追认旧 batch 的确切执行代码，也不代表 provider/网络行为已测试。
+- 边界：未改代码，只有审查记录追加；未触网、未读取密钥/raw 正文/evaluator labels、未读取或操作旧 batch、未运行 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
