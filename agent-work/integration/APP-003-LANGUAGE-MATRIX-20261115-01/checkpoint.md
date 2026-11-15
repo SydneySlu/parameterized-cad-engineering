@@ -41,3 +41,13 @@ next_agent_focus=逐条检查标签是否符合现行 v5 contract 和 CAD-003规
 - 对草案做了第二轮口径检查，将 evaluator 标签拆为 `preferred_decision` 与 `acceptable_decisions`，避免把安全 `ask` 和最佳抽取混为一谈；负向样本仍必须在 CAD 前阻断。
 - 自我更正样本允许 answer 或保守 ask；只有明确采用最终 12 mm 并经负责人确认时才允许构造。N08/N09 的轴径属于上下文事实，不伪装成 Schema 参数字段；N10 的宽度下限属于请求约束，解析出的 `width` 仍为目录派生。
 - 本轮审查仅为同一 Codex 的复核精炼，不声称是独立审查。labels hash 已更新；其它范围和禁止项不变。
+
+## Independent review refinement
+
+- 日期：2026-11-15；状态继续为 `review`，本轮只修候选 scope/labels 口径，不冻结矩阵、不授权 preflight 或 live 请求。
+- 输入：独立复核结论 `review`，要求修正 scope 中过期的 labels SHA、明确 evaluator 字段映射、分开安全可接受与当前 v5 策略通过，并特别核验 N04 的更正值和 N08/N09 的策略覆盖边界。
+- 修改：`scope.md` 更新为 labels SHA-256 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`；`evaluator-labels.json` 声明单位化标签到 v5/Schema 字段的映射，并为每条输入分列安全决策/门与 v5 策略评估。N01/N02/N04/N10 的 `ask/refuse` 标为安全可阻断但属于 P1-1 over-refusal；N05–N07 标为部分强制（checker 只拒绝已识别 unsupported 后仍 answer，不保证识别本身）；N08/N09 明确标为当前策略未定义、不计策略分，同时仍要求 CAD 前安全阻断。N04 增加最终构造参数必须 `bore_d=12` 且排除 superseded `10` 的断言。
+- 范围：没有修改输入、prompt、Schema、IR、provider、runner、profile、授权或历史批次；没有创建 batch、运行 preflight、调用模型/网络/CAD，也没有读取凭据或历史 raw 正文。`FORMAL_EVALUATION_ALLOWED=False` 未改变。
+- 验证：JSON 解析、ID 顺序/数量、输入与 evaluator labels 文本隔离、v5 策略分类、字段映射、N04 正反值断言、scope hash 与文件 hash 一致性检查通过；`git diff --check` 通过。未运行测试套件或任何执行路径。
+- 未解决：矩阵仍待独立复核和负责人接受；N08/N09 暴露的策略能力缺口不在本轮修补，需未来单独决策是否修改 v5 策略或将安全识别放在另一层。
+- 下一步：独立复核更新后的 labels/scope 口径；复核通过且负责人接受后，才讨论新版本化 profile 与离线测试。

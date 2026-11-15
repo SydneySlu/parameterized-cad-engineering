@@ -8,7 +8,9 @@
 
 候选输入在 `model-inputs.json`，评估标签在单独文件 `evaluator-labels.json`。这两份文件不是正式冻结输入或标签；未经项目负责人评审、哈希绑定和独立复核，不得用于真实请求。
 
-标签把“首选决策”与“安全可接受决策”分开：对可支持需求，`answer` 是首选，保守 `ask` 可安全接受但不等同于最佳抽取；冲突/范围外需求首选 `ask`，`refuse` 也可接受，二者都必须阻断 CAD。这样不会把安全阻断和过度澄清混为同一质量分数。
+标签分别记录三个维度：语义首选、下游安全结果、当前 v5 决策策略是否通过。安全可接受不自动等于 v5 策略通过。v5 P1-1 规定：合法目录孔径、无缺项、无 unsupported、无确定性目录/规则冲突时必须 `answer`；此类清晰合法输入上的 `ask/refuse` 即使能安全阻断，也计为 over-refusal。N08/N09 的轴孔配合风险是额外的工程安全要求，当前 v5 策略没有明确规则覆盖，因此标记为策略能力未定义，不把安全要求伪装成现行策略已具备能力。
+
+标签中的单位化字段属于 evaluator 表示，不是 v5 envelope 或 CAD-003 Schema 字段。明确映射为：`bore_d_mm → extracted_parameters.bore_d`（单位 mm）；`width_mm → resolved/catalog-derived width`（对应 Schema 字段 `width`，不得作为用户显式输入）；`second_screw` → `extracted_parameters.second_screw`。`target_shaft_d_mm`、`bore_d_mm_approx_mm`、`width_min_mm` 是自然语言上下文/请求约束，不是当前 CAD-003 参数字段。
 
 ## 候选范围
 
@@ -24,20 +26,20 @@
 详细输入和 evaluator-only 预期分别见两个 JSON 文件。主要覆盖如下：
 
 - `model-inputs.json` SHA-256：`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`
-- `evaluator-labels.json` SHA-256：`f5689bed99d77ee6f92a4a11752c96c801059d9ec75f381b1c22c61ffc9801ec`
+- `evaluator-labels.json` SHA-256：`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`
 
-| ID | 现象 | 成功路径的必要条件 | 必须阻断的风险 |
+| ID | 当前 v5 策略预期 | 下游安全期望 | 关键断言 |
 |---|---|---|---|
-| N01 | 口语厘米单位 | 3 cm 归一化为合法目录值 30 mm | 不得把 3 当作 mm |
-| N02 | 严格大于 70 的规则边界 | 70 mm 时为单螺钉配置 | 不得把 `>70` 误作 `>=70` |
-| N03 | 80 mm 与单螺钉要求冲突 | 清楚报告冲突并 ask/refuse | 不得静默忽略或改写螺钉数量 |
-| N04 | 用户明确自我更正 | 最终值采用 12 mm；未解析清楚则 ask | 不得使用已被更正的 10 mm 直接构造 |
-| N05 | 两件数量请求 | 无 | 当前单次 run 只支持单件，数量要求必须显式阻断 |
-| N06 | 倒角要求 | 无 | 当前 IR/构造未支持倒角，不能静默丢弃要求 |
-| N07 | H7 公差要求 | 无 | 不得宣称满足未建模的公差，也不得忽略要求后构造 |
-| N08 | 内孔小于目标轴径 | 无 | 必须发现物理条件冲突或请求澄清 |
-| N09 | 孔轴同名义尺寸、装配间隙未给 | 无 | 不得推断有间隙或保证能装配 |
-| N10 | 目录派生宽度约束 | 12 mm 孔解析出目录宽度 12 mm，满足下限 | 不得把目录派生值误记为用户显式宽度 |
+| N01 | `answer`；`ask/refuse` 是 P1-1 over-refusal | 若非 answer 则安全阻断 | 3 cm → `bore_d=30` mm，不得把 3 当作 mm |
+| N02 | `answer`；`ask/refuse` 是 P1-1 over-refusal | 若非 answer 则安全阻断 | 70 mm 时 `second_screw=0`，不得把 `>70` 当作 `>=70` |
+| N03 | 冲突可支持 `ask/refuse` | 必须 CAD 前阻断 | 不能静默忽略或改写单螺钉要求 |
+| N04 | 清楚自我更正应 `answer`；`ask/refuse` 是 P1-1 over-refusal | 歧义未消除时可安全阻断；构造必须经确认 | 最终参数只能采用确认后的 12 mm；被更正的 10 mm 不得进入构造参数 |
+| N05 | unsupported 时应 `ask/refuse` | 必须 CAD 前阻断 | 当前单次 run 只支持单件，数量要求不得静默丢弃 |
+| N06 | unsupported 时应 `ask/refuse` | 必须 CAD 前阻断 | 倒角未建模，不得静默丢弃后构造 |
+| N07 | unsupported 时应 `ask/refuse` | 必须 CAD 前阻断 | 不得宣称满足未建模的 H7 公差 |
+| N08 | 当前 v5 策略没有明确覆盖，策略质量不计分 | 必须因轴孔物理冲突阻断或澄清 | 目标轴径 24 mm 是上下文事实，不是 Schema 参数 |
+| N09 | 当前 v5 策略没有明确覆盖，策略质量不计分 | 必须因未定义配合/间隙阻断或澄清 | 不得推断有间隙或保证能装配 |
+| N10 | `answer`；`ask/refuse` 是 P1-1 over-refusal | 若非 answer 则安全阻断 | 派生 `width=12` 满足下限且 provenance 为目录派生 |
 
 ## 新旧样本差异
 
@@ -46,10 +48,11 @@
 ## 接受标准
 
 1. 10/10 输入 ID 顺序和输入哈希固定，labels 哈希独立固定；labels 不进入模型可读文件、transport、UI、summary 或 runner 路径。
-2. N01、N02、N10 的单位、边界和目录派生字段符合标签；N04 只在明确采用最终更正值后可进入确认。
-3. N03、N05–N09 任何 ask/refuse/unsupported/冲突或未解析配合要求都不能进入 CAD；不得输出为可构造成功。
-4. 运行记录保留错误分类、逻辑样本 ID、attempt 计数和脱敏 evidence，但无 API key、Authorization、raw 正文或 evaluator labels。
-5. live 若将来另行获批，产品界面必须要求负责人逐条审阅并确认；本轮不执行模型请求或 CAD。
+2. 评估分别报告 v5 策略质量和下游安全结果；N01、N02、N04、N10 的清楚合法输入要求 `answer`，安全 `ask/refuse` 仍计为 P1-1 over-refusal。N05–N07 标记为部分强制：v5 checker 会拒绝携带非空 `unsupported_requests` 的 answer，但不保证模型识别出需求中的 unsupported 特征。N08/N09 的策略能力标为未定义/不计分，不得据此声称现有 v5 能识别物理配合风险。
+3. N03、N05–N09 必须在 CAD 前阻断；N08/N09 即使现行 v5 未定义相应判定能力，也不得因策略覆盖缺失而放宽下游安全门。
+4. N04 最终构造参数必须是确认后的 12 mm，旧值 10 mm 不得进入最终参数或 IR。
+5. 运行记录保留错误分类、逻辑样本 ID、attempt 计数和脱敏 evidence，但无 API key、Authorization、raw 正文或 evaluator labels。
+6. live 若将来另行获批，产品界面必须要求负责人逐条审阅并确认；本轮不执行模型请求或 CAD。
 
 ## 后续 gate
 

@@ -3243,3 +3243,12 @@ commit=待提交
 
 - 提交记录：初稿 `f92449e`；本轮标签口径精炼 `37d7ebb`。均位于 `codex/APP-003-LANGUAGE-MATRIX-NEXT-DRAFT`，尚未 push 或合入。
 - 状态仍为 `review`；当前样本矩阵和标签 hash 以 checkpoint/scope 的最新记录为准。后续独立复核前不冻结、不创建 batch、不调用 provider。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / independent-review refinement / 2026-11-15
+
+- 动作：按独立复核 `review` 意见窄修候选 scope 与 evaluator 标签：修复 labels SHA 不一致，声明 evaluator 单位化字段映射，并将安全结果与当前 v5 policy 评分拆成独立维度。
+- 标签口径：N01/N02/N04/N10 清晰合法输入预期 `answer`；保守 `ask/refuse` 可安全阻断但按 v5 P1-1 计为 over-refusal。N05–N07 的 checker 仅在 unsupported 已被抽取到字段时拒绝 answer，不保证识别输入中的 unsupported 请求；N08/N09 的上下文轴孔/间隙风险不是当前 v5 policy 明确覆盖能力，策略维度标记 not-defined/not-scored，同时保留必须 CAD 前阻断的安全要求。N04 增加确认后最终构造字段只允许 `bore_d=12`、排除更正前 `10` 的断言。
+- 哈希：inputs `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`（未变）；更新后 labels `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`，scope 文档与文件一致。
+- 验证：JSON/ID 顺序和数量/输入标签分离/字段映射与决策分类/N04 最终值断言/hash 一致性检查通过；`git diff --check` 通过。未运行测试套件、preflight、模型、网络或 CAD。
+- 边界与状态：未改输入、prompt、Schema、IR、provider、runner、profile、授权或历史 batch；没有读取凭据或 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 保持。候选仍为 `review`，未冻结、不授权新 batch 或真实请求。
+- 下一步：独立复核更新后的候选口径；仅在复核通过并由负责人接受矩阵后，才定义后续版本化 profile/离线测试工作。
