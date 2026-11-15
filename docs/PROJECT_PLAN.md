@@ -100,7 +100,7 @@
 
 - 首期单族确定性覆盖：复用 15 行目录、Schema/IR/CAD 回归，A1 只补连接层及隔离/失败语义，避免重复堆测试。
 - 语言覆盖：主闭环后按真实用语与失败假设增加输入；不将条件/模型重复次数当独立需求，不以无限 prompt 对照代替集成。
-- [x] APP-003 新一轮语言样本矩阵（`APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`）：离线 profile/runner 窄修已实现，含精确 Gate 3 类型检查（拒绝 `transport=None`、非 FakeTransport 和 FakeTransport 子类），130 条专项测试。**当前状态：review，等待 Codex 中枢固定 CAD venv 独立复核。** 真实执行仍须新的独立 scope、preflight 和负责人授权；不改旧 profile/batch/prompt/Schema/IR/provider/全局 gate；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- [x] APP-003 新一轮语言样本矩阵（`APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`）：离线 profile/runner 已合入并推送至 `main`（HEAD=`334723b`），状态 `done`。固定 CAD venv 下新专项 130/130、旧 language scope/runner 100/100、Product Live 109/109、Schema 17/17 通过。Gate 3 精确拒绝 `transport=None`、非 FakeTransport 和 FakeTransport 子类；真实执行分支已删除。真实执行仍须新的独立 scope、preflight 和负责人授权；旧 profile/batch/prompt/Schema/IR/provider/全局 gate 未改变，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 稳定性：单独规划重复生成、并发、长时运行、输出隔离和失败恢复；当前固定环境回归不证明生产规模稳定。
 - 跨族扩展：独立数据/许可证、Schema、IR 和几何契约验证，首期 deferred。
 - 交付阻断：错误几何、关键参数丢失、错误放行、假成功；非关键措辞、额外语言、新对照设想及小幅指标波动留 backlog。冻结接口/策略变更仍须版本化与 ADR。

@@ -176,3 +176,12 @@ next_agent_focus=Codex 中枢：固定 CAD venv 下运行 130 条专项测试，
 - hash：inputs=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
 - 边界：未读取凭据或 labels 内容；未创建 batch、未运行正式 preflight、未调用模型/网络/CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。Product Live 回归有既存 socket `ResourceWarning`，测试通过。
 - 下一步：等待合入；合入后在 main 基线复验必要专项。真实执行仍需新的独立 scope、preflight 与负责人授权。
+
+## Merge and closeout
+
+- 日期：2026-11-15；任务状态：`done`。
+- 合并：负责人将 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 快进合入 `main`；最终 HEAD=`334723bcdcc083d0efdebb9c0464390ce18b0a89`，并推送至 `origin/main`。合入后 `main` 与 `origin/main` 一致，工作区干净。
+- 合入后复验：固定 CAD venv Python 3.11.18 执行 `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_next_scope tests.integration.test_product_language_next_formal_runner -q`，130/130 通过。
+- 独立复核既有定向回归：新 profile/runner 130/130、旧 language scope/runner 100/100、Product Live 109/109、Schema 17/17；`py_compile`、`git diff --check main..HEAD`、`git show --check` 均通过。Product Live 存在既有 socket `ResourceWarning`，不影响测试通过。
+- 收束边界：离线 profile/runner 工作单元完成；未创建 batch、未读取凭据或 evaluator labels 内容、未调用模型/网络/CAD/STEP；`FORMAL_EVALUATION_ALLOWED=False` 保持。未来真实请求须新建独立 scope 和 batch，完成适用 preflight 并取得负责人明确授权。
+- 下一步：如负责人继续扩展语言样本的真实效果证据，先提出独立假设与新 scope；本实现本身不授权创建 batch 或发起请求。

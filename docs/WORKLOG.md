@@ -3319,3 +3319,11 @@ commit=待提交
 - 冻结文件核验：inputs SHA-256=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels SHA-256=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`，均匹配冻结值。
 - 边界：未调用模型、网络或 CAD；未读取凭据、未创建 batch、未运行正式 preflight、未读取 evaluator labels 内容；`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 结论与下一步：窄修独立复核通过，任务仍为 `review`，须按项目合并流程进入 main 后再标记 done。真实请求仍需新的独立 scope、preflight 和负责人授权。
+
+### APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / Codex 中枢 / merge closeout / 2026-11-15
+
+- 动作：核对负责人提供的合并、回归和 push 输出，并检查本地 Git 状态；`cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 已快进合入 `main`，最终提交 `334723bcdcc083d0efdebb9c0464390ce18b0a89`，远端 `origin/main` 与本地 `main` 一致，工作区干净。
+- 验证：固定 CAD venv Python 3.11.18 合入后运行 `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_language_next_scope tests.integration.test_product_language_next_formal_runner -q`，130/130 通过。独立复核在同一固定 venv 下已验证新 profile/runner 130/130、旧 language scope/runner 100/100、Product Live 109/109、Schema 17/17，`py_compile`、`git diff --check`、`git show --check` 均通过。
+- 结果：`APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` 按项目完成定义标记 `done`；PROJECT_STATUS、PROJECT_PLAN 和任务 checkpoint 已同步。
+- 边界：没有创建 batch、读取凭据或 evaluator labels 内容，也没有调用模型、网络、CAD 或 STEP；`FORMAL_EVALUATION_ALLOWED=False` 未改变。真实执行仍需新的独立 scope、preflight 和负责人明确授权。
+- 下一步：若继续获取真实语言效果证据，先提出并复核新的实验假设与 scope，再单独进行 preflight 和授权；本次合入不构成执行许可。
