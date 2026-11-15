@@ -703,3 +703,23 @@ CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、�
 2. 输入文件与 evaluator-only labels 物理分离，输入 hash 与 labels hash 固定绑定。labels 不得进入 prompt、transport、UI、summary 或 runner 执行路径。
 3. 本轮先实现独立授权对象和离线 preflight。preflight 只检查输入 hash、十条 ID 顺序、预算（10×最多 2 次=20 HTTP）、profile/provider/model/condition 和目录可用性；不读密钥、不触网、不创建 batch。
 4. 真实执行需要另一个明确的 runner、正式 batch ID、formal preflight 和负责人单独批准；在此之前执行入口保持 fail-closed。`FORMAL_EVALUATION_ALLOWED=False` 不变。
+
+## ADR-0025：接受 APP-003 下一轮语言矩阵，进入离线实现阶段
+
+- 日期：2026-11-15
+- 状态：accepted（负责人接受矩阵；不等同于 profile、preflight 或真实请求批准）
+- 关联：ADR-0024、APP-003-LANGUAGE-MATRIX-20261115-01
+
+### 决策
+
+1. 接受 `app003-product-language-next.v1` 作为下一轮语言覆盖的候选冻结输入集：10 条中文输入，输入 SHA-256 为 `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`。
+2. 接受与输入物理分离的 evaluator-only labels，SHA-256 为 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。labels 只能用于离线评估和审计，不得进入模型输入、transport、UI、summary 或 runner 执行路径。
+3. 保持范围不变：DeepSeek `deepseek-flash`、C0、无检索、`set_screw_shaft_collar` 单族；不修改 v5 prompt、Schema、IR、provider、全局 formal gate 或旧 profile/batch。
+4. N01/N02/N04/N10 的 v5 质量预期为 `answer`；安全可接受的 `ask/refuse` 与 v5 policy pass 分开计分。N05–N07 的 unsupported 识别标为部分强制；N08/N09 的物理配合能力在当前 v5 policy 中未定义、不计策略分，但下游仍必须 CAD 前阻断。N04 确认后的最终构造值只能为 `bore_d=12`，不得使用被更正的 `10`。
+5. 下一阶段只实现新的版本化 profile、离线 preflight/runner 接口和回归测试；不得创建正式 batch、读取凭据、运行 preflight、调用模型、访问网络或运行 CAD。真实执行仍需独立 batch、正式 preflight 和负责人单独授权。
+
+### 影响
+
+- 旧 `product_language.v1` profile、旧输入 hash 和历史 batch 保持只读，不得扩写或复用。
+- 新 profile 必须绑定本 ADR 的输入/labels hash、10 条 ID、预算上限和当前 provider/model/condition；实现完成后需固定 CAD venv 回归和 Codex 独立复核。
+- `FORMAL_EVALUATION_ALLOWED=False` 保持不变；本接受记录不构成真实 DeepSeek 请求授权。

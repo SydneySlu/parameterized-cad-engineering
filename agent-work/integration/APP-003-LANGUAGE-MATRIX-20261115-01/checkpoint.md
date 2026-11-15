@@ -51,3 +51,11 @@ next_agent_focus=逐条检查标签是否符合现行 v5 contract 和 CAD-003规
 - 验证：JSON 解析、ID 顺序/数量、输入与 evaluator labels 文本隔离、v5 策略分类、字段映射、N04 正反值断言、scope hash 与文件 hash 一致性检查通过；`git diff --check` 通过。未运行测试套件或任何执行路径。
 - 未解决：矩阵仍待独立复核和负责人接受；N08/N09 暴露的策略能力缺口不在本轮修补，需未来单独决策是否修改 v5 策略或将安全识别放在另一层。
 - 下一步：独立复核更新后的 labels/scope 口径；复核通过且负责人接受后，才讨论新版本化 profile 与离线测试。
+
+## Owner acceptance
+
+- 日期：2026-11-15；项目负责人已接受本矩阵进入离线实现阶段。
+- 接受对象：scope `app003-product-language-next.v1`；inputs SHA-256 `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；evaluator labels SHA-256 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
+- 允许范围：实现新的版本化 profile、离线 preflight/runner 接口和测试；保持 DeepSeek `deepseek-flash` / C0 / 无检索 / 单族范围，不改旧 profile、旧 batch、prompt、Schema、IR、provider 或全局 formal gate。
+- 禁止事项：本阶段不创建 batch、不读取凭据、不运行 formal preflight、不调用模型/网络/CAD，不改变 `FORMAL_EVALUATION_ALLOWED=False`。真实执行需要另行 batch、preflight 和负责人授权。
+- 下一步：交给实现 Agent 开始离线 profile/runner 工作；完成后由 Codex 中枢独立复核固定环境测试、标签隔离、预算与 fail-closed 边界。

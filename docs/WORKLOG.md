@@ -3265,3 +3265,11 @@ commit=待提交
 - 收束：checkpoint hash 更正已提交，commit=`b30eb72`（`docs: sync language matrix checkpoint hash [APP-003-LANGUAGE-MATRIX-20261115-01]`）。
 - 状态：工作区在提交后保持干净；候选仍为 `review`，未冻结、未被负责人接受、未创建 batch、未运行 preflight、未调用模型/网络/CAD/STEP。
 - 下一步：由负责人决定是否接受矩阵；接受后另行实现新版本化 profile 和离线测试，仍需新的独立复核与适用 preflight，不能由本次文档复核直接授权真实请求。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / owner acceptance / 2026-11-15
+
+- 动作：项目负责人接受下一轮语言矩阵，允许进入离线实现阶段。
+- 冻结事实：scope=`app003-product-language-next.v1`；inputs SHA-256=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；evaluator-only labels SHA-256=`9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
+- 实现边界：下一工作单元仅实现新版本化 profile、离线 preflight/runner 接口与回归测试；保持 DeepSeek `deepseek-flash` / C0 / 无检索 / 单族范围。旧 profile、旧 batch、prompt、Schema、IR、provider 和全局 formal gate 不变。
+- 禁止事项：不创建 batch、不读取凭据、不运行 formal preflight、不调用模型/网络/CAD/STEP；`FORMAL_EVALUATION_ALLOWED=False` 保持。真实执行仍需另行 batch、preflight 和负责人授权。
+- 下一步：交给实现 Agent；完成后由 Codex 中枢在固定环境复核标签隔离、hash 绑定、预算、正常/失败路径和 fail-closed 边界。
