@@ -49,3 +49,11 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Secure download tests cover in-root bytes/hash success, outside-root rejection, and symlink-leaf rejection. Shutdown tests prove an unrun input finalizes as `partial` while both input IDs permit `complete`.
 - Browser FakeTransport smoke confirmed D01 STEP response/download and D02 blocked UI. Local test server was stopped after verification.
 - Broader fixed-environment regression after final changes: `tests.demo.test_demo_handler tests.demo.test_product_flow tests.demo.test_product_ui` **183/183 PASS**; `tests.integration.test_pipeline tests.integration.test_schema_to_ir tests.schema` **81/81 PASS**. Existing ResourceWarnings concern file/socket handles in legacy tests and did not cause failures.
+
+### Candidate handoff — 2026-11-16
+
+- Commit: `173636b` (`feat: add scoped live web demo [APP-004-LIVE-WEB-DEMO]`); branch `codex/APP-004-LIVE-WEB-DEMO`; implementation candidate is committed.
+- Documentation reconciliation: scope file reflects accepted/frozen state and separates scope acceptance from execution authorization; checkpoint and project plan identify independent review as the next gate.
+- Central review: target suite rerun in fixed CAD venv **22/22 PASS**; `py_compile` on the four changed Python files PASS; `git diff --check` and staged diff check PASS; frozen input/label hashes match scope.
+- Current status: `review`; no formal preflight, batch/ledger creation, credential read, model/network call, or live CAD run. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged.
+- Next: independent read-only review of commit `173636b` against base `ff3a00d7d65e05197767bfc1766629a7471809f0`; only after a pass may the owner consider separate exact-batch execution authorization.

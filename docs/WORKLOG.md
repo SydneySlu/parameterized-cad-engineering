@@ -3364,3 +3364,11 @@ commit=待提交
 - 未运行 formal preflight、未建正式 batch/ledger、未读取 `.env`/密钥或 evaluator labels、未调用 DeepSeek/外网。CAD/STEP 仅由本机 FakeTransport 演示路径构造，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 状态：实现候选待独立复核；工作区未提交。下一步将 diff 与 checkpoint 交由独立复核，修复其发现后再讨论 exact-batch preflight/真实请求授权。
 - 扩展回归（固定 Python 3.11.18）：C1/C2/C3 demo `tests.demo.test_demo_handler tests.demo.test_product_flow tests.demo.test_product_ui` **183/183**；核心 integration/schema `tests.integration.test_pipeline tests.integration.test_schema_to_ir tests.schema` **81/81**。输出有既有文件/socket ResourceWarning，无失败。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / candidate handoff / 2026-11-16
+
+- 动作：复核冻结 scope 与当前实现差异，修正 scope/checkpoint 中残留的 proposal 状态描述；提交实现候选 `173636b`。
+- 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项 22/22；四个目标 Python 文件 `py_compile` 通过；`git diff --check` 和 staged diff check 通过；inputs/labels SHA-256 与冻结 scope 一致。既有兼容回归记录为 Product Live/UI 145/145、C1/C2/C3 183/183、integration/schema 81/81。
+- 结果：候选提交 `173636b`，分支 `codex/APP-004-LIVE-WEB-DEMO`；状态 `review`。
+- 边界：没有创建正式 batch/ledger、运行 preflight、读取 `.env`/凭据、调用 DeepSeek/网络、读取 evaluator-label 内容或执行真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 下一步：由独立 reviewer 只读复核 `ff3a00d..173636b`；通过后再由负责人决定是否对精确 batch 单独授权。
