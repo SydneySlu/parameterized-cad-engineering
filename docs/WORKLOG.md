@@ -3190,3 +3190,12 @@ commit=待提交
 - 同步状态：负责人报告已 push。尝试 `git ls-remote origin refs/heads/main` 独立核验时远端连接长时间无响应并终止；因此只记录负责人确认，不声称 Codex 已观察到最新远端 ref。当前本地 `origin/main` 跟踪引用仍为旧值，不能据此判断推送失败。
 - 收束：测试隔离代码修复、独立复核、合入及固定 CAD venv 合入后复验已完成；复验为 scope/formal runner 99/99、Product Live 109/109、Schema 17/17。详见该 scope checkpoint。
 - 后续边界：真实 batch `app003-product-language-20261114-01` 仍只读、`partial`（2/20 HTTP；1 answer、1 refuse、8 transport errors），无 CAD/STEP。批次证据复核通过；transport failure 原因诊断另立工作项，不重跑、不追加旧 batch。`FORMAL_EVALUATION_ALLOWED=False` 保持。
+
+### APP-003-LANGUAGE-TRANSPORT-DIAG-20261115-01 / Codex 中枢 / read-only diagnosis / 2026-11-15
+
+- 动作：依据已确认的计划，为语言样本 transport 失败建立独立只读诊断工作单元；工作区基线 `main=7e92073`，开始时干净且与 `origin/main` 同步。
+- 读取范围：仅读取脱敏 `execution-report.json`、真实 batch 的 `batch_summary.json`/`budget_ledger.json` 中的状态、错误码、attempt 元数据，以及当前 formal runner、`BudgetAwareTransport`、DeepSeek transport 和 retry 源码；未读取 raw 正文、`.env`、凭据或 evaluator labels，未访问网络。
+- 已确认：batch summary 对 L03–L10 记录 `TRANSPORT_ERROR`、`cause_code=other_non_retryable`、`attempt_outcome=non_retryable`，没有 HTTP 状态；budget ledger 仅有 L01、L02 两条 `is_model_call=true`、`outcome=success` 的预算预留，L03–L10 无预留记录。当前实现由 `BudgetAwareTransport.send()` 先 `reserve_attempt()`，再向 `DeepSeekTransport.send()` 传递预算 token；因此 ledger 不支持“L03–L10 各自到达 provider 并收到拒绝响应”的结论。summary artifact hashes 不含 source commit/runtime revision，也未保存后八条的 `llm_meta.attempt_count`，无法仅靠现存 summary 还原执行版本和逐次 transport 状态。
+- 结论：历史证据不足以确定八条错误的根因，也不足以确认它们是否曾发出 HTTP；summary 错误映射与 ledger 预留事实需要进一步解释。不得将它们概括成 provider 权限/网络故障。
+- 边界：旧 batch 保持只读，不检查 raw body，不追加/重跑请求，不读取密钥，不调用 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 状态与下一步：工作单元 `review`。后续可先对照批次生成时的代码版本、执行日志和脱敏 run metadata（若存在且不含 raw/凭据）寻找账本与 summary 差异；若仍无法定位，需要另建严格限额的新 diagnostic scope/batch、离线 preflight，并在任何 live 请求前取得负责人明确授权。
