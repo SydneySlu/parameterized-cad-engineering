@@ -59,3 +59,38 @@ next_agent_focus=逐条检查标签是否符合现行 v5 contract 和 CAD-003规
 - 允许范围：实现新的版本化 profile、离线 preflight/runner 接口和测试；保持 DeepSeek `deepseek-flash` / C0 / 无检索 / 单族范围，不改旧 profile、旧 batch、prompt、Schema、IR、provider 或全局 formal gate。
 - 禁止事项：本阶段不创建 batch、不读取凭据、不运行 formal preflight、不调用模型/网络/CAD，不改变 `FORMAL_EVALUATION_ALLOWED=False`。真实执行需要另行 batch、preflight 和负责人授权。
 - 下一步：交给实现 Agent 开始离线 profile/runner 工作；完成后由 Codex 中枢独立复核固定环境测试、标签隔离、预算与 fail-closed 边界。
+
+## APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE implementation
+
+- 日期：2026-11-15；分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`；状态：review（等待 Codex 中枢独立复核）。
+- 任务 ID：APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE；基线 HEAD `5b64cfb`（codex/APP-003-LANGUAGE-MATRIX-NEXT-DRAFT）；已接受决策 ADR-0025。
+
+### 新增文件
+
+- `src/llm/product_language_next_authorization.py`：独立版本化 profile，绑定 scope `app003-product-language-next.v1`、N01–N10 10 条输入、inputs/labels 双 hash、provider/model/condition、budget 20×2；与旧 `product_language_authorization.py` 完全隔离，不共享常量或类。
+- `src/integration/product_language_next_formal_runner.py`：离线 formal runner；读取 `agent-work/integration/APP-003-LANGUAGE-MATRIX-20261115-01/model-inputs.json`（新 JSON 结构：`{scope_id, inputs: [{input_id, condition, request_text}]}`）；从不打开 `evaluator-labels.json`；离线 preflight + FakeTransport mock runner；`FORMAL_EVALUATION_ALLOWED=False` 保持不变；无新通用 live 开关。
+- `tests/integration/test_product_language_next_scope.py`：39 条 profile/authorization/binding/preflight 测试；evaluator-labels.json 隔离验证；budget 常量和 N 前缀 ID 断言。
+- `tests/integration/test_product_language_next_formal_runner.py`：74 条 runner 测试；覆盖：approval gate / preflight fail-closed / FakeTransport answer/ask/refuse/unsupported/invalid JSON/transport error / retry 分类 / budget 常量 / summary 路径 hash 隔离 / N04 self-correction bore_d=12/10 断言 / N08/N09 无 policy_ok 字段 / N05–N07 unsupported blocking / 旧 profile 类型被 runner 拒绝。
+
+### 验证
+
+- `python3 -m py_compile` 四个新文件全部通过。
+- `PYTHONPATH=src:. python3 -m unittest tests.integration.test_product_language_next_scope tests.integration.test_product_language_next_formal_runner`：**113/113 OK**，0 failures，0 errors。
+- `git diff --check`：通过，无 trailing whitespace。
+- 沙箱 Python 3.10.12（非固定 CAD venv Python 3.11.18）；固定 CAD venv 全量验证留给 Codex 中枢复核。
+
+### 未运行
+
+- 真实 DeepSeek HTTP 请求（`FORMAL_EVALUATION_ALLOWED=False`，无凭据加载）。
+- 正式 preflight（无 batch 目录创建，无 BudgetLedger 初始化）。
+- CAD/STEP/IR pipeline（runner 中明确禁止）。
+
+### handoff_self_check
+
+```text
+changed=src/llm/product_language_next_authorization.py（新）；src/integration/product_language_next_formal_runner.py（新）；tests/integration/test_product_language_next_scope.py（新）；tests/integration/test_product_language_next_formal_runner.py（新）；checkpoint.md（追加本段）；docs/WORKLOG.md（追加记录）
+commands=py_compile 4 files PASS; PYTHONPATH=src:. python3 -m unittest scope+runner tests 113/113 OK; git diff --check PASS
+confirmed=新 profile 与旧 profile 隔离；evaluator-labels.json 未被读取；FORMAL_EVALUATION_ALLOWED=False 保持不变；未创建 batch/preflight/CAD/网络调用；N04 bore_d=12 断言通过；N08/N09 无 policy_ok 字段断言通过；N05-N07 unsupported blocking 断言通过
+unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实网络/preflight/CAD 执行未运行
+next_agent_focus=Codex 中枢：在固定 CAD venv 下运行 113 条专项测试，验证 evaluator-labels 隔离、budget 常量、fail-closed 边界；复核通过后状态可改为 done
+```

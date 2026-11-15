@@ -3273,3 +3273,13 @@ commit=待提交
 - 实现边界：下一工作单元仅实现新版本化 profile、离线 preflight/runner 接口与回归测试；保持 DeepSeek `deepseek-flash` / C0 / 无检索 / 单族范围。旧 profile、旧 batch、prompt、Schema、IR、provider 和全局 formal gate 不变。
 - 禁止事项：不创建 batch、不读取凭据、不运行 formal preflight、不调用模型/网络/CAD/STEP；`FORMAL_EVALUATION_ALLOWED=False` 保持。真实执行仍需另行 batch、preflight 和负责人授权。
 - 下一步：交给实现 Agent；完成后由 Codex 中枢在固定环境复核标签隔离、hash 绑定、预算、正常/失败路径和 fail-closed 边界。
+
+### APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / review / 2026-11-15
+
+- 动作：在分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`（基线 `codex/APP-003-LANGUAGE-MATRIX-NEXT-DRAFT` HEAD `5b64cfb`，已接受决策 ADR-0025）实现新版本化语言样本 profile 和离线 formal runner。
+- 新增文件：`src/llm/product_language_next_authorization.py`、`src/integration/product_language_next_formal_runner.py`、`tests/integration/test_product_language_next_scope.py`、`tests/integration/test_product_language_next_formal_runner.py`；更新 `agent-work/integration/APP-003-LANGUAGE-MATRIX-20261115-01/checkpoint.md`。
+- scope 绑定：profile `app003-product-language-next.v1`；N01–N10（10 条输入，新 JSON 结构 `{scope_id, inputs: [{input_id, condition, request_text}]}`）；inputs SHA-256 `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；evaluator labels SHA-256 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`；provider DeepSeek / model deepseek-flash / condition C0 / 预算 10×2=20。
+- 离线验证：沙箱 Python 3.10.12；`py_compile` 四个新文件全部 PASS；`PYTHONPATH=src:. python3 -m unittest` 运行专项测试 **113/113 OK**，0 failures；`git diff --check` PASS。
+- 边界：evaluator-labels.json 从未被读取（guard 断言覆盖）；`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；N08/N09 无 policy_ok 字段，N04 bore_d=12/10 断言通过，N05–N07 unsupported blocking 断言通过。
+- 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）；真实网络/formal preflight/CAD 执行。
+- 下一步：交给 Codex 中枢在固定环境独立复核 113 条专项测试、evaluator-labels 隔离、预算常量、fail-closed 边界；复核通过后由负责人决定是否进入下一阶段。
