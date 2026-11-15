@@ -3259,3 +3259,9 @@ commit=待提交
 - 验证：重新计算 evaluator-labels.json SHA-256，并与 checkpoint 顶部、checkpoint 修订记录及 scope.md 一致性比对；`git diff --check` 通过。输入文件及其 SHA 未变化。
 - 边界：仅文档 hash 更正；未运行测试、preflight、模型/网络、CAD 或 STEP；未创建 batch、未读取凭据或历史 raw 正文。矩阵仍为 review、未冻结、未接受、未授权执行。
 - 下一步：将此一行文档更正提交，再由负责人决定是否接受矩阵；任何 profile/preflight/live 均属于后续独立 gate。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / checkpoint hash correction closeout / 2026-11-15
+
+- 收束：checkpoint hash 更正已提交，commit=`b30eb72`（`docs: sync language matrix checkpoint hash [APP-003-LANGUAGE-MATRIX-20261115-01]`）。
+- 状态：工作区在提交后保持干净；候选仍为 `review`，未冻结、未被负责人接受、未创建 batch、未运行 preflight、未调用模型/网络/CAD/STEP。
+- 下一步：由负责人决定是否接受矩阵；接受后另行实现新版本化 profile 和离线测试，仍需新的独立复核与适用 preflight，不能由本次文档复核直接授权真实请求。
