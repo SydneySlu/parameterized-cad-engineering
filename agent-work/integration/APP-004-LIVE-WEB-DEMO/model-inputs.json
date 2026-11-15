@@ -1,0 +1,15 @@
+{
+  "scope_id": "app004-live-web-demo.v1",
+  "inputs": [
+    {
+      "input_id": "D01-collar-bore24",
+      "condition": "C0",
+      "request_text": "请按 GN 705 设计一个带轴孔轴环，轴孔孔径为 24 mm。"
+    },
+    {
+      "input_id": "D02-collar-anodizing",
+      "condition": "C0",
+      "request_text": "请按 GN 705 设计一个带轴孔轴环，轴孔孔径为 24 mm，并做阳极氧化表面处理。"
+    }
+  ]
+}

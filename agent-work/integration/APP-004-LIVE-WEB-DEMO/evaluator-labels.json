@@ -1,0 +1,23 @@
+{
+  "scope_id": "app004-live-web-demo.v1",
+  "labels": [
+    {
+      "input_id": "D01-collar-bore24",
+      "expected_decision": "answer",
+      "expected_parameters": {
+        "bore_d": 24
+      },
+      "cad_allowed_after_user_confirmation": true,
+      "notes": "合法目录值；只用于离线验收，不进入 prompt、HTTP 请求、网页或运行摘要。"
+    },
+    {
+      "input_id": "D02-collar-anodizing",
+      "expected_decision": "refuse_or_ask",
+      "expected_parameters": {
+        "bore_d": 24
+      },
+      "cad_allowed_after_user_confirmation": false,
+      "notes": "阳极氧化超出当前零件族能力；无论模型实际输出为何，D02 永不允许 CAD。标签只用于离线评估。"
+    }
+  ]
+}

@@ -3337,3 +3337,11 @@ commit=待提交
 - 限制：不代表广泛语言覆盖、统计显著性、跨族能力、生产部署就绪、长期稳定或制造认证。新语言矩阵 profile 是 FakeTransport offline-only；任何新真实模型请求仍需可执行 live 入口、独立 scope/preflight 与负责人明确授权。`FORMAL_EVALUATION_ALLOWED=False`。
 - 下一步：主线没有已选定的新工作单元；负责人需在稳定性/部署、真实语言效果证据、跨族扩展之间确定优先级，避免混为一个任务。
 - 提交：`6a367eb`（`docs: record APP-004 technical acceptance [APP-004]`），已提交到本地 `main`；未 push，远端同步由负责人按需处理。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / in_progress / 2026-11-16
+
+- 动作：为导师汇报准备一条真正调用 LLM 的 localhost 产品演示；先将 scope 提案和失败安全边界整理为可审阅工作单元。
+- 调查：本地 `/product` 页面基于 synthetic fixtures，需求文本只作记录；`ProductLiveService` 仅接受 FakeTransport；旧 `run_product_batch()` 有独立 formal live approval 路径，但绑定 APP-003 P1–P4。APP-003 下一轮语言 runner 在 ADR-0025 下明确 offline-only。历史 APP-003 P1 真实抽取→逐 run 确认→STEP 证据仍只读保留，FreeCAD 检查已由负责人完成。
+- Scope proposal：profile=`app004-live-web-demo.v1`，batch ID proposal=`app004-live-web-demo-20261116-01`；DeepSeek `deepseek-flash`、C0、两条固定输入（合法 bore24；bore24+阳极氧化）、每条最多 2 次、全批最多 4 HTTP。仅 D01 可在完整校验与逐 run 人工确认后进 CAD；D02 无条件禁 CAD。
+- 边界：本轮不实现 source entry、不创建 batch/ledger/preflight、不读凭据或 evaluator labels、不调用模型/网络/CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。scope 与 ADR-0026 仍为 proposed，等待负责人审阅和接受。
+- 下一步：负责人接受/修改 scope 后，实施独立 approval-bound web runner/UI 并完成离线、固定环境和浏览器复核；实现和独立审查通过后，再进行 exact-batch formal preflight 与负责人单独 live 执行授权。
