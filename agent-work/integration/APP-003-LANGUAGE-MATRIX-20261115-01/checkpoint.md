@@ -10,7 +10,7 @@
 - `model-inputs.json`：10 条新候选输入，scope id `app003-product-language-next.v1`。
 - `evaluator-labels.json`：独立 evaluator-only 标签；只供后续评审，不得进入模型侧流程。
 - `scope.md`：目标、边界、接受标准、预算建议和后续 gate。
-- 当前草案 SHA-256：inputs `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels `f5689bed99d77ee6f92a4a11752c96c801059d9ec75f381b1c22c61ffc9801ec`。
+- 当前草案 SHA-256：inputs `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels `f812a3fb9c83bcc23785083f8bfd89ba968de94a3bc9ea92f991722760001b48`。
 
 ## 已核对
 
@@ -35,3 +35,9 @@ confirmed=候选 10 条输入与独立标签已形成；不复用旧授权 profi
 unresolved=输入和标签仍待负责人/独立复核；尚未实现新 profile/runner
 next_agent_focus=逐条检查标签是否符合现行 v5 contract 和 CAD-003规则；确认 N08/N09 物理配合口径；验证标签不进入任何模型可读路径；不执行 live
 ```
+
+## Codex review pass
+
+- 对草案做了第二轮口径检查，将 evaluator 标签拆为 `preferred_decision` 与 `acceptable_decisions`，避免把安全 `ask` 和最佳抽取混为一谈；负向样本仍必须在 CAD 前阻断。
+- 自我更正样本允许 answer 或保守 ask；只有明确采用最终 12 mm 并经负责人确认时才允许构造。N08/N09 的轴径属于上下文事实，不伪装成 Schema 参数字段；N10 的宽度下限属于请求约束，解析出的 `width` 仍为目录派生。
+- 本轮审查仅为同一 Codex 的复核精炼，不声称是独立审查。labels hash 已更新；其它范围和禁止项不变。

@@ -3231,3 +3231,10 @@ commit=待提交
 - 验证：`PYTHONPATH=src:. python3` 下 JSON 解析、10 条 input/label ID 顺序和 scope 一致性、输入与 labels 文本分离检查通过；Schema 定向核对 N01=30 mm、N02=70 mm/单螺钉合法、N03=80 mm/单螺钉冲突拒绝、N10 派生 width=12 mm 均通过。SHA-256 inputs=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`，labels=`f5689bed99d77ee6f92a4a11752c96c801059d9ec75f381b1c22c61ffc9801ec`；`git diff --check` 通过。
 - 边界：这是 review 草案，未冻结、未创建 batch、未运行 offline/formal preflight、未调用模型/网络/CAD，未读取凭据或历史 raw 正文；未复用旧 profile/batch；`FORMAL_EVALUATION_ALLOWED=False`。历史 scope/hash 不变。
 - 下一步：独立复核每条标签，特别是自我更正、轴/孔配合与宽度约束口径；负责人接受矩阵后，再实现新的版本化授权 profile 和离线测试。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / review refinement / 2026-11-15
+
+- 动作：对候选 evaluator 标签做口径复核，将 `expected_decision` 调整为 `preferred_decision` + `acceptable_decisions`，单独度量理想抽取与安全保守澄清；明确 N08/N09 轴径为上下文事实，N10 宽度下限为请求约束，不把它们伪装成当前 Schema 参数字段。
+- 复核：正向样本优先 answer、允许安全 ask；冲突/unsupported 样本首选 ask，ask/refuse 均必须 CAD 前阻断。N04 只有明确采用最终 12 mm 并经负责人确认后允许构造。与已有 L01–L10、P1–P4 对照，没有逐字重复输入。
+- 当前 labels SHA-256 更新为 `f812a3fb9c83bcc23785083f8bfd89ba968de94a3bc9ea92f991722760001b48`；inputs hash 不变。此项仍为同一 Codex 对候选稿的复核精炼，不替代独立复核或负责人接受。
+- 下一步：独立复核草案及标签语义；确认后才开展新版本化 profile/离线 runner 工作。未建 batch、未执行 preflight、未调用模型/网络/CAD，历史 batch 继续只读。
