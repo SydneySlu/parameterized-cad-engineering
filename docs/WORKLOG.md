@@ -3252,3 +3252,10 @@ commit=待提交
 - 验证：JSON/ID 顺序和数量/输入标签分离/字段映射与决策分类/N04 最终值断言/hash 一致性检查通过；`git diff --check` 通过。未运行测试套件、preflight、模型、网络或 CAD。
 - 边界与状态：未改输入、prompt、Schema、IR、provider、runner、profile、授权或历史 batch；没有读取凭据或 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 保持。候选仍为 `review`，未冻结、不授权新 batch 或真实请求。
 - 下一步：独立复核更新后的候选口径；仅在复核通过并由负责人接受矩阵后，才定义后续版本化 profile/离线测试工作。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / checkpoint hash correction / 2026-11-15
+
+- 动作：按独立只读复核意见，将 checkpoint 顶部的 labels SHA-256 从过期值更正为当前文件值 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
+- 验证：重新计算 evaluator-labels.json SHA-256，并与 checkpoint 顶部、checkpoint 修订记录及 scope.md 一致性比对；`git diff --check` 通过。输入文件及其 SHA 未变化。
+- 边界：仅文档 hash 更正；未运行测试、preflight、模型/网络、CAD 或 STEP；未创建 batch、未读取凭据或历史 raw 正文。矩阵仍为 review、未冻结、未接受、未授权执行。
+- 下一步：将此一行文档更正提交，再由负责人决定是否接受矩阵；任何 profile/preflight/live 均属于后续独立 gate。

@@ -10,7 +10,7 @@
 - `model-inputs.json`：10 条新候选输入，scope id `app003-product-language-next.v1`。
 - `evaluator-labels.json`：独立 evaluator-only 标签；只供后续评审，不得进入模型侧流程。
 - `scope.md`：目标、边界、接受标准、预算建议和后续 gate。
-- 当前草案 SHA-256：inputs `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels `f812a3fb9c83bcc23785083f8bfd89ba968de94a3bc9ea92f991722760001b48`。
+- 当前草案 SHA-256：inputs `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`；labels `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14`。
 
 ## 已核对
 
