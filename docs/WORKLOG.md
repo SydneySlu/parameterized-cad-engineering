@@ -3196,6 +3196,7 @@ commit=待提交
 - 动作：依据已确认的计划，为语言样本 transport 失败建立独立只读诊断工作单元；工作区基线 `main=7e92073`，开始时干净且与 `origin/main` 同步。
 - 读取范围：仅读取脱敏 `execution-report.json`、真实 batch 的 `batch_summary.json`/`budget_ledger.json` 中的状态、错误码、attempt 元数据，以及当前 formal runner、`BudgetAwareTransport`、DeepSeek transport 和 retry 源码；未读取 raw 正文、`.env`、凭据或 evaluator labels，未访问网络。
 - 已确认：batch summary 对 L03–L10 记录 `TRANSPORT_ERROR`、`cause_code=other_non_retryable`、`attempt_outcome=non_retryable`，没有 HTTP 状态；budget ledger 仅有 L01、L02 两条 `is_model_call=true`、`outcome=success` 的预算预留，L03–L10 无预留记录。当前实现由 `BudgetAwareTransport.send()` 先 `reserve_attempt()`，再向 `DeepSeekTransport.send()` 传递预算 token；因此 ledger 不支持“L03–L10 各自到达 provider 并收到拒绝响应”的结论。summary artifact hashes 不含 source commit/runtime revision，也未保存后八条的 `llm_meta.attempt_count`，无法仅靠现存 summary 还原执行版本和逐次 transport 状态。
+- 清单检查：batch 非 raw 文件只有 `batch_summary.json`、`budget_ledger.json`；对应任务目录没有独立终端日志或脱敏 Adapter attempt dump。未打开 evaluator labels 文件。
 - 结论：历史证据不足以确定八条错误的根因，也不足以确认它们是否曾发出 HTTP；summary 错误映射与 ledger 预留事实需要进一步解释。不得将它们概括成 provider 权限/网络故障。
 - 边界：旧 batch 保持只读，不检查 raw body，不追加/重跑请求，不读取密钥，不调用 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 状态与下一步：工作单元 `review`。后续可先对照批次生成时的代码版本、执行日志和脱敏 run metadata（若存在且不含 raw/凭据）寻找账本与 summary 差异；若仍无法定位，需要另建严格限额的新 diagnostic scope/batch、离线 preflight，并在任何 live 请求前取得负责人明确授权。
