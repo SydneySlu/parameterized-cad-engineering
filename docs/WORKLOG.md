@@ -3216,3 +3216,10 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18，scope + formal runner 100/100；`tests.llm.test_budget` 18 项通过、6 项既有 skip；目标文件 `py_compile` 和 `git diff --check main...HEAD` 通过。
 - 结论：候选 commit `2fc9613` 独立复核 `pass`，未发现代码阻塞；修复可进入合入流程，合入后仍需在 main 基线上复跑专项。该结论不追认旧 batch 的确切执行代码，也不代表 provider/网络行为已测试。
 - 边界：未改代码，只有审查记录追加；未触网、未读取密钥/raw 正文/evaluator labels、未读取或操作旧 batch、未运行 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+
+### APP-003-LANGUAGE-TRANSPORT-DIAG-20261115-01 / Codex 中枢 / merge closeout / 2026-11-15
+
+- 动作：负责人已将修复分支合入 `main`，合并提交 `f728729`；本地 `main` 与 `origin/main` 同步，工作区干净。
+- 合入后复验：固定 CAD venv Python 3.11.18 下语言 scope + formal runner 100/100；`tests.llm.test_budget` 18 项通过、6 项既有 skip；目标文件 `py_compile` 和 `git diff --check` 通过。
+- 收束：`max_chat_attempts_for()` 的 provider/chat cap 修正已进入主线；每条输入最多 2 次与全批最多 20 次的预算边界保持不变。历史 batch `app003-product-language-20261114-01` 继续只读，source revision 缺失仍作为证据限制保留，但不阻塞项目推进，也不需要为验证本地预算门而新建 live batch。
+- 下一步：若项目需要新的语言覆盖/质量证据，再单独设计新的样本 scope、预算和 batch，执行 offline preflight 并取得明确授权；不得复用旧 batch。
