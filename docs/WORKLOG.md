@@ -3223,3 +3223,11 @@ commit=待提交
 - 合入后复验：固定 CAD venv Python 3.11.18 下语言 scope + formal runner 100/100；`tests.llm.test_budget` 18 项通过、6 项既有 skip；目标文件 `py_compile` 和 `git diff --check` 通过。
 - 收束：`max_chat_attempts_for()` 的 provider/chat cap 修正已进入主线；每条输入最多 2 次与全批最多 20 次的预算边界保持不变。历史 batch `app003-product-language-20261114-01` 继续只读，source revision 缺失仍作为证据限制保留，但不阻塞项目推进，也不需要为验证本地预算门而新建 live batch。
 - 下一步：若项目需要新的语言覆盖/质量证据，再单独设计新的样本 scope、预算和 batch，执行 offline preflight 并取得明确授权；不得复用旧 batch。
+
+### APP-003-LANGUAGE-MATRIX-20261115-01 / Codex 中枢 / offline sample design / 2026-11-15
+
+- 动作：基于既有覆盖与项目计划，起草十条新语言输入及物理分离的 evaluator-only labels，scope id `app003-product-language-next.v1`；配置仍建议 DeepSeek `deepseek-flash` / C0 / 无检索，不改 prompt、Schema、IR 或零件族。
+- 覆盖：厘米口语表达、bore_d=70 的严格阈值、自我更正、单次多件请求、倒角与 H7 公差 unsupported、孔/轴配合冲突、间隙不明确及目录派生宽度约束。范围在 `agent-work/integration/APP-003-LANGUAGE-MATRIX-20261115-01/`。
+- 验证：`PYTHONPATH=src:. python3` 下 JSON 解析、10 条 input/label ID 顺序和 scope 一致性、输入与 labels 文本分离检查通过；Schema 定向核对 N01=30 mm、N02=70 mm/单螺钉合法、N03=80 mm/单螺钉冲突拒绝、N10 派生 width=12 mm 均通过。SHA-256 inputs=`66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed`，labels=`f5689bed99d77ee6f92a4a11752c96c801059d9ec75f381b1c22c61ffc9801ec`；`git diff --check` 通过。
+- 边界：这是 review 草案，未冻结、未创建 batch、未运行 offline/formal preflight、未调用模型/网络/CAD，未读取凭据或历史 raw 正文；未复用旧 profile/batch；`FORMAL_EVALUATION_ALLOWED=False`。历史 scope/hash 不变。
+- 下一步：独立复核每条标签，特别是自我更正、轴/孔配合与宽度约束口径；负责人接受矩阵后，再实现新的版本化授权 profile 和离线测试。

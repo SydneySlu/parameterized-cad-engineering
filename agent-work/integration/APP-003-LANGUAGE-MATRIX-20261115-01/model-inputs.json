@@ -1,0 +1,55 @@
+{
+  "scope_id": "app003-product-language-next.v1",
+  "inputs": [
+    {
+      "input_id": "N01-centimeter-catalog-value",
+      "condition": "C0",
+      "request_text": "孔做成三厘米，其他尺寸按这个轴环的标准规格配。"
+    },
+    {
+      "input_id": "N02-bore70-single-screw",
+      "condition": "C0",
+      "request_text": "按标准轴环做，内孔70毫米，只装一个紧定螺钉。"
+    },
+    {
+      "input_id": "N03-bore80-single-screw-conflict",
+      "condition": "C0",
+      "request_text": "内孔要80毫米，但结构上只留一个紧定螺钉。"
+    },
+    {
+      "input_id": "N04-explicit-self-correction",
+      "condition": "C0",
+      "request_text": "我刚才说内孔10毫米，改一下，最终按12毫米做。"
+    },
+    {
+      "input_id": "N05-multiple-pieces",
+      "condition": "C0",
+      "request_text": "做两个相同的轴环，孔径都用16毫米。"
+    },
+    {
+      "input_id": "N06-unsupported-chamfer",
+      "condition": "C0",
+      "request_text": "做一个孔径20毫米的轴环，内孔两端都加1毫米倒角。"
+    },
+    {
+      "input_id": "N07-unsupported-tolerance",
+      "condition": "C0",
+      "request_text": "轴环孔径选24毫米，内孔公差按H7，其他按标准规格。"
+    },
+    {
+      "input_id": "N08-bore-shaft-fit-conflict",
+      "condition": "C0",
+      "request_text": "轴环内孔做16毫米，但要直接套在直径24毫米的轴上。"
+    },
+    {
+      "input_id": "N09-approximate-fit-clearance",
+      "condition": "C0",
+      "request_text": "我要套直径24毫米的轴，孔径大概24毫米就行，能装上就好。"
+    },
+    {
+      "input_id": "N10-derived-width-minimum",
+      "condition": "C0",
+      "request_text": "内孔选12毫米；宽度至少12毫米，其余尺寸用对应标准值。"
+    }
+  ]
+}

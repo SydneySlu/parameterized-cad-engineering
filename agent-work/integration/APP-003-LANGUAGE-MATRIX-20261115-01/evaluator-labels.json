@@ -1,0 +1,100 @@
+{
+  "scope_id": "app003-product-language-next.v1",
+  "evaluator_labels": [
+    {
+      "input_id": "N01-centimeter-catalog-value",
+      "expected_explicit": {"bore_d_mm": 30},
+      "expected_decision": ["answer"],
+      "expected_gate": "needs_confirmation",
+      "cad_after_confirmation": true,
+      "expected_unsupported": [],
+      "notes": "三厘米应归一化为30 mm；不得将数值3当作mm。"
+    },
+    {
+      "input_id": "N02-bore70-single-screw",
+      "expected_explicit": {"bore_d_mm": 70, "second_screw": 0},
+      "expected_decision": ["answer"],
+      "expected_gate": "needs_confirmation",
+      "cad_after_confirmation": true,
+      "expected_unsupported": [],
+      "notes": "规则是bore_d > 70时second_screw为1；70本身仍为0。"
+    },
+    {
+      "input_id": "N03-bore80-single-screw-conflict",
+      "expected_explicit": {"bore_d_mm": 80, "second_screw": 0},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": [],
+      "notes": "冲突必须可见并阻断；不得忽略单螺钉要求或静默改为两个。"
+    },
+    {
+      "input_id": "N04-explicit-self-correction",
+      "expected_explicit": {"bore_d_mm": 12},
+      "superseded_values": {"bore_d_mm": 10},
+      "expected_decision": ["answer", "ask"],
+      "expected_gate": "needs_confirmation_or_blocked",
+      "cad_allowed_if_resolved_answer": true,
+      "expected_unsupported": [],
+      "notes": "清楚标记的最终更正应以12 mm为当前值；若仍有歧义则ask且不得构造。"
+    },
+    {
+      "input_id": "N05-multiple-pieces",
+      "expected_explicit": {"bore_d_mm": 16},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": ["quantity_or_multiple_parts"],
+      "notes": "当前单次run只构造一个零件；不得把数量请求静默丢弃后生成单件。"
+    },
+    {
+      "input_id": "N06-unsupported-chamfer",
+      "expected_explicit": {"bore_d_mm": 20},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": ["chamfer"],
+      "notes": "倒角不在当前零件IR/构造接口内；不能只抽取合法孔径后构造。"
+    },
+    {
+      "input_id": "N07-unsupported-tolerance",
+      "expected_explicit": {"bore_d_mm": 24},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": ["tolerance_H7"],
+      "notes": "不得声称已满足H7，也不得将公差要求作为无关文字忽略。"
+    },
+    {
+      "input_id": "N08-bore-shaft-fit-conflict",
+      "expected_explicit": {"bore_d_mm": 16},
+      "contextual_facts": {"target_shaft_d_mm": 24},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": [],
+      "notes": "内孔小于目标轴径，物理配合条件不成立；不得只按内孔值放行。"
+    },
+    {
+      "input_id": "N09-approximate-fit-clearance",
+      "request_constraints": {"bore_d_mm_approx_mm": 24},
+      "contextual_facts": {"target_shaft_d_mm": 24},
+      "expected_decision": ["ask", "refuse"],
+      "expected_gate": "blocked_before_cad",
+      "cad_after_confirmation": false,
+      "expected_unsupported": ["fit_or_clearance_unspecified"],
+      "notes": "名义孔径等于轴径且用户要求能装配，但未给间隙/公差；不能推断可装配。"
+    },
+    {
+      "input_id": "N10-derived-width-minimum",
+      "expected_explicit": {"bore_d_mm": 12},
+      "request_constraints": {"width_min_mm": 12},
+      "expected_resolved": {"width_mm": 12},
+      "expected_decision": ["answer"],
+      "expected_gate": "needs_confirmation",
+      "cad_after_confirmation": true,
+      "expected_unsupported": [],
+      "notes": "12 mm孔对应目录宽度12 mm，满足至少12 mm；衍生宽度应标记为目录派生。"
+    }
+  ]
+}
