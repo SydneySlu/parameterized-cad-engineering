@@ -3295,3 +3295,17 @@ commit=待提交
 - 边界：`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；真实执行仍需新独立 scope/preflight/负责人授权。
 - 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）。
 - 下一步：交 Codex 中枢在固定环境独立复核 126 条专项测试和 Gate 3 拒绝边界；复核通过后可讨论状态改为 done。不要自行 push/merge。
+
+### APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE / subclass-gate-fix / review / 2026-11-15
+
+- 动作：依据 Codex 中枢复核意见做最小窄修，将 Gate 3 由 `isinstance` 改为精确类型检查，封堵 FakeTransport 子类绕过离线门控的漏洞；同步项目状态文档。
+- 基线：分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`，提交 `fcdd538`。
+- 修复：
+  - `src/integration/product_language_next_formal_runner.py`：Gate 3 由 `not isinstance(transport, FakeTransport)` 改为 `type(transport) is not FakeTransport`，拒绝 `None`、非 FakeTransport 和 FakeTransport 子类。
+  - `tests/integration/test_product_language_next_formal_runner.py`：`TestADR0025OfflineGate` 新增 4 条子类回归测试：`test_fake_transport_subclass_raises_offline_only_error`（断言抛出 `LanguageNextOfflineOnlyError` 且 `send_call_count=0`）；`test_fake_transport_subclass_no_credentials_loaded`；`test_fake_transport_subclass_no_mkdir`；`test_offline_error_mentions_subclass`。
+  - `docs/PROJECT_STATUS.md`：追加 `APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE` review 状态条目。
+  - `docs/PROJECT_PLAN.md`：矩阵任务行改为 `[x]`，标注 review 状态。
+- 验证：沙箱 Python 3.10.12；`py_compile` 两修改文件 PASS；`PYTHONPATH=src:. python3 -m unittest` 新版专项测试 **130/130 OK**；旧 scope + formal runner + product live + schema 合计 **209/209 OK**；`git diff --check` PASS；inputs/labels SHA-256 常量验证未变。
+- 边界：`FORMAL_EVALUATION_ALLOWED=False` 不变；未创建 batch/preflight/ledger；未调用 DeepSeek/网络/CAD/STEP；未修改旧 profile、旧 runner、旧 batch、v5 prompt、Schema、IR 或全局 gate；真实执行仍需新独立 scope/preflight/负责人授权。
+- 未运行：固定 CAD venv Python 3.11.18 全量验证（待 Codex 中枢复核）。
+- 下一步：交 Codex 中枢在固定环境独立复核 130 条专项测试和子类 Gate 3 拒绝边界；不要自行 push/merge。

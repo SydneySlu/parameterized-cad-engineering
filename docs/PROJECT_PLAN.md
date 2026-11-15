@@ -100,7 +100,7 @@
 
 - 首期单族确定性覆盖：复用 15 行目录、Schema/IR/CAD 回归，A1 只补连接层及隔离/失败语义，避免重复堆测试。
 - 语言覆盖：主闭环后按真实用语与失败假设增加输入；不将条件/模型重复次数当独立需求，不以无限 prompt 对照代替集成。
-- [ ] APP-003 新一轮语言样本矩阵（`APP-003-LANGUAGE-MATRIX-20261115-01`）：负责人已接受矩阵，进入离线实现阶段。下一工作单元实现新版本化 profile、离线 preflight/runner 接口和测试；保持 10 条输入/labels hash、DeepSeek `deepseek-flash`/C0/无检索/单族范围，不改旧 profile、prompt、Schema、IR、provider 或全局 gate。当前不建 batch、不读凭据、不运行 preflight、不发请求、不运行 CAD；完成后需固定环境回归和 Codex 独立复核。
+- [x] APP-003 新一轮语言样本矩阵（`APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`）：离线 profile/runner 窄修已实现，含精确 Gate 3 类型检查（拒绝 `transport=None`、非 FakeTransport 和 FakeTransport 子类），130 条专项测试。**当前状态：review，等待 Codex 中枢固定 CAD venv 独立复核。** 真实执行仍须新的独立 scope、preflight 和负责人授权；不改旧 profile/batch/prompt/Schema/IR/provider/全局 gate；`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 稳定性：单独规划重复生成、并发、长时运行、输出隔离和失败恢复；当前固定环境回归不证明生产规模稳定。
 - 跨族扩展：独立数据/许可证、Schema、IR 和几何契约验证，首期 deferred。
 - 交付阻断：错误几何、关键参数丢失、错误放行、假成功；非关键措辞、额外语言、新对照设想及小幅指标波动留 backlog。冻结接口/策略变更仍须版本化与 ADR。

@@ -898,17 +898,19 @@ def run_product_language_next_formal_batch(
 
     # ----------------------------------------------------------------
     # Gate 3: ADR-0025 phase boundary — offline-mock-only.
-    # Must be a FakeTransport.  transport=None (which would enter live
-    # formal mode) is not permitted in this phase.  Raised BEFORE any
-    # credential read, directory creation, BudgetLedger init, or network I/O.
+    # Exact type check: type(transport) is FakeTransport.
+    # transport=None, any non-FakeTransport, and FakeTransport *subclasses*
+    # (which could override send()) are all rejected BEFORE any credential
+    # read, directory creation, BudgetLedger init, or network I/O.
+    # Subclass rejection matches the existing Adapter security convention.
     # ----------------------------------------------------------------
-    if not isinstance(transport, FakeTransport):
+    if type(transport) is not FakeTransport:
         raise LanguageNextOfflineOnlyError(
             "run_product_language_next_formal_batch is offline-mock-only under "
-            "ADR-0025: a FakeTransport instance is required as 'transport'.  "
-            "transport=None (live formal mode) is not permitted in this phase.  "
-            "No credentials have been read, no directories created, and no "
-            "network calls have been made.  Real execution requires a new "
+            "ADR-0025: transport must be exactly FakeTransport (not a subclass).  "
+            "transport=None, non-FakeTransport, and FakeTransport subclasses are "
+            "all rejected.  No credentials have been read, no directories created, "
+            "and no network calls have been made.  Real execution requires a new "
             "independent scope, batch, preflight, and owner approval."
         )
 

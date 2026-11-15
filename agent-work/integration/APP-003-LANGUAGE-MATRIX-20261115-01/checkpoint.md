@@ -135,3 +135,34 @@ confirmed=transport=None 和非 FakeTransport 均被 Gate 3 拒绝；凭据/Budg
 unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实执行仍需新独立 scope/preflight/负责人授权
 next_agent_focus=Codex 中枢：固定 CAD venv 下运行 126 条专项测试，验证 Gate 3 拒绝、evaluator-labels 隔离、budget 常量、fail-closed 边界；通过后可讨论状态改为 done
 ```
+
+## FakeTransport subclass gate fix (narrow patch)
+
+- 日期：2026-11-15；分支 `cc/APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE`；基线提交 `fcdd538`；状态：review。
+- 修复原因：Codex 中枢复核发现 Gate 3 使用 `isinstance` 允许 FakeTransport 子类绕过离线门控并执行自定义 `send()` 10 次。
+
+### 修改内容
+
+- `src/integration/product_language_next_formal_runner.py`：Gate 3 由 `not isinstance(transport, FakeTransport)` 改为 `type(transport) is not FakeTransport`，拒绝 `None`、非 FakeTransport 和 FakeTransport 子类。
+- `tests/integration/test_product_language_next_formal_runner.py`：新增 4 条子类回归测试（`TestADR0025OfflineGate` 新增 `test_fake_transport_subclass_raises_offline_only_error`，断言 send_call_count=0；`test_fake_transport_subclass_no_credentials_loaded`；`test_fake_transport_subclass_no_mkdir`；`test_offline_error_mentions_subclass`）。
+- `docs/PROJECT_STATUS.md`：追加 APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE 条目，状态 review，说明真实执行仍须独立 scope/preflight/负责人授权。
+- `docs/PROJECT_PLAN.md`：将矩阵任务行改为已完成 `[x]`，标注当前 review 状态。
+
+### 验证
+
+- `py_compile` 两个修改文件 PASS。
+- `PYTHONPATH=src:. python3 -m unittest` 新版专项测试 **130/130 OK**（+4 子类 gate 测试）。
+- 旧 scope + formal runner + product live + schema 合计 **209/209 OK**。
+- inputs SHA-256 `66b61a476b16d79030bced380f1afbc4d907c05ec2aae984e4e1777dda5d26ed` 和 labels SHA-256 `9ca60bd3b91a260a8ad71bfd9c1433f8f0150260a0baf3935d51c8036726ee14` 未改变。
+- `git diff --check` PASS。
+- 沙箱 Python 3.10.12（非固定 CAD venv Python 3.11.18）；固定 CAD venv 全量验证留给 Codex 中枢。
+
+### handoff_self_check
+
+```text
+changed=src/integration/product_language_next_formal_runner.py（isinstance → type(...) is 精确检查）；tests/integration/test_product_language_next_formal_runner.py（+4 子类 gate 测试）；docs/PROJECT_STATUS.md（追加 APP-003-LANGUAGE-SAMPLE-NEXT-PROFILE review 状态条目）；docs/PROJECT_PLAN.md（矩阵任务行改为 [x] review）；checkpoint.md（追加本段）；docs/WORKLOG.md（追加记录）
+commands=py_compile 2 changed files PASS; PYTHONPATH=src:. python3 -m unittest next scope+runner 130/130 OK; old+live+schema combined 209/209 OK; git diff --check PASS; SHA-256 constants verified unchanged
+confirmed=FakeTransport 子类 send() 零调用断言通过；transport=None 和非 FakeTransport 仍被正确拒绝；FakeTransport 正常案例 10/10 answer 通过；旧实现未被修改
+unresolved=固定 CAD venv Python 3.11.18 全量验证待 Codex 中枢复核；真实执行仍需新独立 scope/preflight/负责人授权
+next_agent_focus=Codex 中枢：固定 CAD venv 下运行 130 条专项测试，重点验证 Gate 3 子类拒绝、zero send call count、evaluator-labels 隔离；通过后可讨论状态改为 done
+```

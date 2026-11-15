@@ -1118,11 +1118,15 @@ class TestNextProfileIsolationFromOldScope(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestADR0025OfflineGate(unittest.TestCase):
-    """Gate 3: transport=None and non-FakeTransport are rejected before any
-    credential read, directory creation, BudgetLedger init, or network I/O.
+    """Gate 3: transport=None, non-FakeTransport, and FakeTransport subclasses
+    are all rejected before any credential read, directory creation,
+    BudgetLedger init, or network I/O.
 
-    ADR-0025 permits only FakeTransport in this phase.  The gate fires AFTER
-    the authorization type check (Gate 1) and approval binding check (Gate 2),
+    Gate 3 uses an exact type check (type(transport) is FakeTransport) so that
+    subclasses that override send() cannot bypass the offline boundary.
+
+    ADR-0025 permits only an exact FakeTransport instance in this phase.
+    The gate fires AFTER Gate 1 (auth type) and Gate 2 (approval binding),
     but BEFORE any side effects.
     """
 
@@ -1314,6 +1318,100 @@ class TestADR0025OfflineGate(unittest.TestCase):
                     transport=_Stub(),
                 )
         mock_mkdir.assert_not_called()
+
+    def test_fake_transport_subclass_raises_offline_only_error(self) -> None:
+        """A FakeTransport subclass that overrides send() must be rejected.
+
+        Gate 3 uses an exact type check (type(transport) is FakeTransport)
+        so a subclass cannot bypass the offline boundary.
+        The subclass send() must not be called even once.
+        """
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _SubclassSpy(FakeTransport):
+            def __init__(self):
+                super().__init__()
+                self.send_call_count = 0
+
+            def send(self, request):
+                self.send_call_count += 1
+                raise AssertionError(
+                    "FakeTransport subclass send() must never be called; "
+                    "Gate 3 should have rejected this transport before execution"
+                )
+
+        spy = _SubclassSpy()
+        with self.assertRaises(LanguageNextOfflineOnlyError):
+            run_product_language_next_formal_batch(
+                authorization=_auth(),
+                approval=_real_approval(),
+                transport=spy,
+            )
+        self.assertEqual(
+            spy.send_call_count, 0,
+            "FakeTransport subclass send() must not be called; Gate 3 must "
+            "reject the subclass before any execution"
+        )
+
+    def test_fake_transport_subclass_no_credentials_loaded(self) -> None:
+        """FakeTransport subclass must not trigger credential loading."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _Sub(FakeTransport):
+            def send(self, request):
+                raise AssertionError("unreachable")
+
+        with patch("llm.env_loader.load_deepseek_environment") as load_env:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=_Sub(),
+                )
+        load_env.assert_not_called()
+
+    def test_fake_transport_subclass_no_mkdir(self) -> None:
+        """FakeTransport subclass must not trigger any directory creation."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _Sub(FakeTransport):
+            def send(self, request):
+                raise AssertionError("unreachable")
+
+        with patch("pathlib.Path.mkdir") as mock_mkdir:
+            with self.assertRaises(LanguageNextOfflineOnlyError):
+                run_product_language_next_formal_batch(
+                    authorization=_auth(),
+                    approval=_real_approval(),
+                    transport=_Sub(),
+                )
+        mock_mkdir.assert_not_called()
+
+    def test_offline_error_mentions_subclass(self) -> None:
+        """LanguageNextOfflineOnlyError message must mention subclass rejection."""
+        from integration.product_language_next_formal_runner import (
+            LanguageNextOfflineOnlyError,
+        )
+
+        class _Sub(FakeTransport):
+            def send(self, request):
+                raise AssertionError("unreachable")
+
+        with self.assertRaises(LanguageNextOfflineOnlyError) as ctx:
+            run_product_language_next_formal_batch(
+                authorization=_auth(),
+                approval=_real_approval(),
+                transport=_Sub(),
+            )
+        msg = str(ctx.exception)
+        self.assertIn("ADR-0025", msg)
+        self.assertIn("offline", msg.lower())
 
 
 if __name__ == "__main__":
