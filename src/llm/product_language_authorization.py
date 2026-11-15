@@ -107,7 +107,9 @@ class ProductLanguageAuthorization(FormalRunAuthorization):
     def max_chat_attempts_for(self, provider: str) -> int:
         if provider != PRODUCT_LANGUAGE_PROVIDER:
             raise AuthorizationScopeError(f"provider {provider!r} is outside scope")
-        return PRODUCT_LANGUAGE_MAX_ATTEMPTS_PER_RUN
+        # BudgetLedger interprets this accessor as a provider-wide chat cap.
+        # The per-logical-run cap is enforced separately by max_attempts_per_run.
+        return PRODUCT_LANGUAGE_MAX_BATCH_HTTP
 
     def expected_logical_run_id(
         self, input_id: str, condition: str = PRODUCT_LANGUAGE_CONDITION,
