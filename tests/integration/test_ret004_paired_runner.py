@@ -135,12 +135,31 @@ class TestRET004FakeTransportWiring(unittest.TestCase):
         service, _ = self._service([_envelope(), _envelope(), refusal, refusal])
         service.extract_all()
         self.assertEqual(service._summary["batch_status"], "awaiting_confirmation")
+        c0_id = authorize_ret004().expected_logical_run_id("R01-collar-bore24", "C0")
+        c1_id = authorize_ret004().expected_logical_run_id("R01-collar-bore24", "C1")
+        r02_id = authorize_ret004().expected_logical_run_id("R02-collar-bore24-anodizing", "C0")
+        self.assertEqual(service._summary["runs"][c0_id]["confirmation_status"], "pending")
+        self.assertEqual(service._summary["runs"][c1_id]["confirmation_status"], "pending")
+        self.assertEqual(service._summary["runs"][r02_id]["confirmation_status"], "denied_by_scope")
         service.approval = _approval(test_only=False)
         service.formal = True
         service.confirm_r01("C0", False)
         self.assertEqual(service._summary["batch_status"], "awaiting_confirmation")
+        self.assertEqual(service._summary["runs"][c0_id]["confirmation_status"], "declined")
         service.confirm_r01("C1", False)
         self.assertEqual(service._summary["batch_status"], "complete")
+        self.assertEqual(service._summary["runs"][c1_id]["confirmation_status"], "declined")
+
+    def test_summary_marks_confirmed_r01_run_after_successful_confirmation(self):
+        service, _ = self._service([_envelope()] * 4)
+        service.extract_all()
+        service.approval = _approval(test_only=False)
+        service.formal = True
+        c0_id = authorize_ret004().expected_logical_run_id("R01-collar-bore24", "C0")
+        with patch("integration.ret004_paired_runner.confirm_product_live_run") as confirm:
+            confirm.return_value = service.runs[c0_id]
+            service.confirm_r01("C0", True)
+        self.assertEqual(service._summary["runs"][c0_id]["confirmation_status"], "confirmed")
 
     def test_summary_rejects_absolute_raw_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:

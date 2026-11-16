@@ -65,3 +65,11 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - Validation in fixed CAD venv Python 3.11.18: `py_compile` passed; RET-004 + conditions/retry/retrieval **82/82** passed; full LLM suite **945 passed, 8 existing skips**; Product Live/APP-004/UI/pipeline/schema integration **253/253** passed. `git diff --check` and commit check passed.
 - State remains `review`; candidate batch absent and unconsumed. No formal preflight, credential/`.env` read, network/model request, live runner, or RET-004 CAD/STEP execution. Offline results remain preparation evidence only, not retrieval-effect evidence.
 - Fix commit: `36926de` (`fix: close RET-004 review findings [RET-004-PAIRED-LIVE-20261116-01]`), parent `a87734c`; branch has not been pushed or merged.
+
+## Summary confirmation-status narrow fix
+
+- Scope: make per-run `confirmation_status` truthful after an R01 confirmation. Initial planned rows are `not_started`; extracted R01 rows are `pending`; confirmed/declined R01 rows are recorded as `confirmed`/`declined`; R02 remains `denied_by_scope`.
+- Changes: `_planned_run_records()` now includes the initial confirmation state; `_record_state()` checks the service confirmation registry before the extraction status, so a successful CAD result or an explicit decline cannot be overwritten as `pending`.
+- Regression coverage: added assertions for pending, denied-by-scope, declined, and confirmed states in `tests/integration/test_ret004_paired_runner.py`.
+- Validation (fixed CAD venv Python 3.11.18): targeted RET-004 suite **24/24**, conditions/retry/retrieval **59/59**, affected Product Live/APP-004/UI/pipeline/schema-to-IR **253/253**; `py_compile` and `git diff --check` pass. Initial test run exposed and fixed the status-precedence case before commit.
+- Boundary: no scope/hash/input changes; no preflight, batch/ledger, credential read, network/model request, or CAD/STEP execution. `FORMAL_EVALUATION_ALLOWED=False` unchanged. Candidate remains `review` pending independent read-only review.

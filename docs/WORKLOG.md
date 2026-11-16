@@ -3473,3 +3473,10 @@ commit=待提交
 - 边界：仅离线 FakeTransport/既有本地集成测试；没有 formal preflight、batch/ledger 创建、凭据读取、网络/model 调用或 RET-004 CAD/STEP。候选 scope 仍 proposed；离线结果不证明检索收益，`FORMAL_EVALUATION_ALLOWED=False`。
 - 下一步：修复提交完成 diff check 后，交由独立 Codex 复核本 follow-up，再由负责人接受精确 scope/hash；之后 formal preflight，并单独请求真实 batch 执行授权。
 - 提交：修复 commit `36926de`（父提交 `a87734c`）；工作区本轮已提交，尚未 push/merge。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / summary confirmation-status narrow fix / 2026-11-16
+
+- 动作：修复 RET-004 summary 在 R01 确认后仍显示 `pending`/`not_required` 的状态记录缺口。计划 run 预填 `not_started`；R01 抽取后为 `pending`，确认成功/明确拒绝分别记录 `confirmed`/`declined`，R02 保持 `denied_by_scope`。
+- 回归：新增 R01 C0/C1 pending、R02 scope deny、两次拒绝和确认成功的 summary 断言；第一次测试发现 mock CAD 返回仍为 `needs_confirmation` 时的优先级问题，已调整为以 confirmation registry 优先。
+- 验证（固定 CAD venv Python 3.11.18）：RET-004 **24/24**；conditions/retry/retrieval **59/59**；受影响 Product Live/APP-004/UI/pipeline/schema-to-IR **253/253**；`py_compile` 与 `git diff --check` 通过。
+- 边界：未改 scope、输入、labels、hash、prompt、预算或授权；未运行 formal preflight，未创建 batch/ledger，未读凭据或 raw/labels，未调用网络、模型或 RET-004 CAD/STEP。`FORMAL_EVALUATION_ALLOWED=False` 保持。下一步是提交窄修并交独立 Codex 只读复核。

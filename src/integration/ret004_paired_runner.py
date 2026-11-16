@@ -143,6 +143,7 @@ def _planned_run_records(auth: RET004Authorization) -> dict[str, dict[str, Any]]
         auth.expected_logical_run_id(input_id, condition): {
             "input_id": input_id, "condition_id": condition,
             "run_status": "not_started", "attempted": False,
+            "confirmation_status": "not_started",
         }
         for input_id in RET004_INPUT_IDS for condition in RET004_CONDITIONS
     }
@@ -206,6 +207,17 @@ class RET004PairedService:
         errors = [{"code": e.get("code", "ERROR")} for e in state.errors]
         if raw_path_invalid:
             errors.append({"code": "RAW_RETENTION_PATH_INVALID"})
+        error_codes = {error.get("code") for error in errors}
+        if state.input_id == RET004_INPUT_IDS[1]:
+            confirmation_status = "denied_by_scope"
+        elif state.logical_run_id in self._confirmed:
+            confirmation_status = (
+                "declined" if "CONFIRMATION_REJECTED" in error_codes else "confirmed"
+            )
+        elif state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION:
+            confirmation_status = "pending"
+        else:
+            confirmation_status = "not_required"
         self._summary["runs"][state.logical_run_id] = {
             "input_id": state.input_id, "condition_id": state.condition_id,
             "run_status": state.product_status, "attempted": True,
@@ -214,7 +226,7 @@ class RET004PairedService:
             "unsupported_requests": state.unsupported_requests,
             "llm_meta": state.llm_meta,
             "schema_status": "pass" if state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION else "blocked_or_not_applicable",
-            "confirmation_status": "pending" if state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION and state.input_id == RET004_INPUT_IDS[0] else ("denied_by_scope" if state.input_id == RET004_INPUT_IDS[1] else "not_required"),
+            "confirmation_status": confirmation_status,
             "raw_retained": raw_claimed_retained and raw_path is not None,
             "raw_path": raw_path, "raw_path_invalid": raw_path_invalid,
             "raw_sha256": raw.get("body_sha256"),
