@@ -1,9 +1,9 @@
 # RET-004 配对真实 C0/C1 描述性结果
 
-日期：2026-11-16  
-批次：`ret004-paired-live-20261116-01`  
-Profile：`ret004-paired-live.v1`  
-Provider/model：DeepSeek `deepseek-flash`  
+日期：2026-11-16
+批次：`ret004-paired-live-20261116-01`
+Profile：`ret004-paired-live.v1`
+Provider/model：DeepSeek `deepseek-flash`
 条件：C0 无检索；C1 注入 RET-002 top-k=3 的 `retrieval_source` 不可信参考
 
 ## 结果
@@ -30,4 +30,3 @@ R01 C0 与 C1 的抽取参数相同，均为 `bore_d=24`；两个条件的确定
 ## 解释边界
 
 这是两个输入上的配对描述性结果，不是统计实验结论。样本量不足以判断检索是否普遍改善真实语言抽取、Schema 通过率、CAD 成功率或用户效用，也不能证明跨族泛化、生产就绪或制造认证。后续若扩大样本，必须另建版本化 scope、预算、preflight、batch 和负责人授权；不得复用本批次。
-
