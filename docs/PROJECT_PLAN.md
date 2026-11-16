@@ -68,7 +68,7 @@
 - [x] 实现按零件类型、特征、孔位/接口和归一化尺寸的检索（RET-002；单族确定性参数距离基线已验收，split 仍为 provisional_small_n）
 - [x] 完成 C1 检索级诊断（RET-003；固定环境运行、上游回归、结果/报告交叉核对和中枢验收均通过；公平 C2 尚未定义，端到端收益仍需等 APP-001）
 - [x] RET-004：exact batch `ret004-paired-live-20261116-01` 已完成 4/4 次真实 DeepSeek `deepseek-flash` 请求。R01 C0/C1 均抽取 `bore_d=24`，负责人分别确认后各自完成 CAD/STEP 导出与回读；R02 C0/C1 拒绝阳极氧化并保持 CAD-deny，无 CAD/STEP。summary=`complete`，ledger 4/8 次 HTTP。独立复核 `pass`，已合入本地 `main`；四 run 的检索效果仅作描述性报告，不外推为统计结论。
-- [ ] RET-005：单族受控参考池 Web 闭环。先冻结参考池格式、共享 C1 上下文组装函数、用户参数优先规则和 CAD 进入条件；用户从 3–5 个 RET-001 已验证样本中选择参考池，系统在池内按 RET-002 排序展示 top-k。第一阶段只做离线/FakeTransport 和 Web 流程，覆盖候选展示、上下文隔离、冲突/缺参/unsupported 阻断、确认后独立 STEP 与 run 隔离；不创建 batch、不读取凭据、不调用真实模型。产品接口通过独立复核后，再准备新的 held-out C0/C1 scope。
+- [x] RET-005：单族受控参考池 Web 闭环已实现并 fast-forward 合入本地 `main=c24a42b`；固定 CAD venv 专项 159 项通过（1 个既有 skip），中枢独立复核 `pass`。用户可从 retrieval_source 样本选 3–5 个参考，服务在池内按 RET-002 检索并安全展示 top-k；C0/C1 共用上下文组装，显式参数优先和歧义 fail-closed，确认前阻断、确认后按 run 隔离。仅离线/FakeTransport 验证，不证明检索收益或真实 LLM 能力；无 batch、凭据读取或真实请求。下一步另建 held-out C0/C1 scope，冻结输入、标签、模型、prompt、检索配置和预算后独立复核与申请正式授权。
 
 ## 阶段 4：轻量版交付
 

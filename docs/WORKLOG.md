@@ -3634,3 +3634,10 @@ commit=待提交
 - 验证（固定 CAD venv Python 3.11.18）：RET-005 pool/runner/server 159 通过、1 个既有 skip；RET-004/retrieval/Schema/Product Live UI/LLM runner 178 通过、1 个既有 skip；pipeline + CAD compilation/handoff 52 通过。`py_compile`、`git diff --check`、`git show --check` 通过。manifest 和 RET-002 config hash 与冻结值相同；formal gate 仍 False。
 - 结论：本轮 parser boundary fix `pass`。解析错误/矛盾均 fail-closed，普通“单螺钉”“螺钉长度”不再误报 screw_d 缺值，等价重复值仍通过。候选任务状态继续为 `review`，待负责人合入后才能 done。
 - 边界：未调用模型、外网、凭据、CAD/STEP；未创建 batch/preflight，未读 labels/raw 正文或更改历史证据。真实模型效果与检索收益未测试。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / local main merge closeout / 2026-11-17
+
+- 动作：核对负责人提供的 fast-forward 合入结果；本机 checkout 确认 `HEAD=main=c24a42b640e012c7a20a97386cd827845ebf1e6b`，`cc/RET-005-POOL-FIXES` 已合入，工作区干净。
+- 验证：负责人提供的合入后固定 CAD venv RET-005 专项为 159 项通过、1 个既有 skip；中枢复核已在该 HEAD 上完成 RET-005 专项 159/1 skip、相关回归 178/1 skip、pipeline/CAD 52 项；本轮 `git diff --check origin/main..HEAD` 通过。
+- 收束：RET-005 在本地 `main` 标记为 `done`。本地 `main` 比 `origin/main=4ec86f2` 超前 11 个提交；用户的 push 发生在此次 merge 之前，因此本轮不声称远端已包含 RET-005，也未代为 push。
+- 边界：没有新增真实模型/网络/CAD 请求、batch、preflight 或凭据读取；`FORMAL_EVALUATION_ALLOWED=False` 不变。后续检索收益实验需新建 held-out scope 并通过独立复核、preflight 和单独执行授权。
