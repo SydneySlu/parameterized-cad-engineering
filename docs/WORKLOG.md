@@ -3464,3 +3464,11 @@ commit=待提交
 - 结果边界：这些结果只证明离线组装、授权/预算/隔离/失败门和既有本地后续链路准备正确，不证明检索改善真实模型抽取。未运行正式 scope preflight，未创建 batch/ledger，未读取 `.env`/凭据/labels/raw 正文，未调用模型、网络或 CAD；`FORMAL_EVALUATION_ALLOWED=False`。
 - 提交：实现候选 `da8e6de`（基于 RET-004 协议提交 `98f28c5`，后者基于本地 `main=b5f5d45`）；本轮仅提交本地分支，未 push/merge。
 - 状态：实现候选待独立只读复核；scope 仍为 proposed。下一步先完成独立复核，再请负责人接受精确 scope/hash；随后 formal preflight，并另行申请唯一 batch 的真实 DeepSeek 执行授权。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / independent review findings fix / 2026-11-16
+
+- 动作：按独立只读复核指出的两项 P1、两项 P2 收紧 RET-004 runner。R01 抽取值与用户显式 bore 不同或无法解析时，确认前阻断；初始 summary 预列四个计划 run；batch 只在四个 run 全部达到 scope 可接受终态时 complete，错误/异常/意外 R02 answer 记 failed；C1 专用入口拒绝结构化 reference 兜底；summary raw path 经 canonical repo containment 清洗，非法值省略并标记。
+- 回归：新增模型 bore=20 mismatch、summary 计划分母/失败状态/成功收束、结构化 query 来源拒绝及绝对 raw path 脱敏测试。
+- 验证（固定 CAD venv Python 3.11.18）：RET-004 + conditions/retry/retrieval **82/82**；受影响 Product Live、APP-004、UI、pipeline/schema-to-IR **253/253**。目标 `py_compile` 通过；LLM 全量此前为 945 pass、8 个既有 skip。
+- 边界：仅离线 FakeTransport/既有本地集成测试；没有 formal preflight、batch/ledger 创建、凭据读取、网络/model 调用或 RET-004 CAD/STEP。候选 scope 仍 proposed；离线结果不证明检索收益，`FORMAL_EVALUATION_ALLOWED=False`。
+- 下一步：修复提交完成 diff check 后，交由独立 Codex 复核本 follow-up，再由负责人接受精确 scope/hash；之后 formal preflight，并单独请求真实 batch 执行授权。

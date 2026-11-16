@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
 from llm.adapter import Adapter, AdapterInput, RetentionPolicy
 from llm.budget import BudgetAwareTransport, BudgetLedger
-from llm.conditions import assemble_c0, assemble_c1
+from llm.conditions import assemble_c0, assemble_c1, extract_bore_d_mm
 from llm.contract import CONTRACT_VERSION, DEEPSEEK_MODEL, DEEPSEEK_PROVIDER, FORMAL_EVALUATION_ALLOWED, PROMPT_VERSION
 from llm.env_loader import EnvironmentConfigurationError, load_deepseek_environment
 from llm.prompt_loader import FROZEN_PROMPT_PATH, load_frozen_prompt
@@ -31,7 +32,7 @@ from llm.ret004_authorization import (
 from integration.product_live_runner import (
     ProductLiveLogicalRunPlan, ProductLiveRunState, PRODUCT_LIVE_STATUS_BLOCKED,
     PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION, _build_state_from_adapter_result,
-    confirm_product_live_run, _REPO_ROOT, _utc_now_iso,
+    confirm_product_live_run, _REPO_ROOT, _to_repo_relative_path, _utc_now_iso,
 )
 
 _SCOPE_DIR = _REPO_ROOT / "agent-work/integration/RET-004-PAIRED-LIVE-20261116-01"
@@ -137,6 +138,23 @@ def _plan(input_id: str, condition: str, auth: RET004Authorization) -> ProductLi
     )
 
 
+def _planned_run_records(auth: RET004Authorization) -> dict[str, dict[str, Any]]:
+    return {
+        auth.expected_logical_run_id(input_id, condition): {
+            "input_id": input_id, "condition_id": condition,
+            "run_status": "not_started", "attempted": False,
+        }
+        for input_id in RET004_INPUT_IDS for condition in RET004_CONDITIONS
+    }
+
+
+def _assemble_c1_from_user_text(case: ProjectedCase, retrieval_index: Any):
+    """RET-004 permits only request-text query extraction, never structural fallback."""
+    if case.reference_context_structural is not None:
+        raise RET004PreflightError("RET004_STRUCTURED_QUERY_SOURCE_FORBIDDEN")
+    return assemble_c1(case, retrieval_index)
+
+
 class RET004PairedService:
     """In-memory run registry with formal ledger and explicit R01 confirmations."""
     def __init__(self, *, auth: RET004Authorization, approval: RET004Approval,
@@ -167,7 +185,7 @@ class RET004PairedService:
                          "approver": approval.approver,
                          "approved_at_utc": approval.approved_at_utc,
                          "approval_statement_sha256": hashlib.sha256(approval.approval_statement.encode("utf-8")).hexdigest()},
-            "runs": {},
+            "runs": _planned_run_records(auth),
         }
         self._flush_summary()
 
@@ -181,22 +199,78 @@ class RET004PairedService:
 
     def _record_state(self, state: ProductLiveRunState) -> None:
         raw = state.raw_retention_meta or {}
-        raw_path = raw.get("path") if raw.get("retained") else None
+        raw_claimed_retained = raw.get("retained") is True
+        raw_path_candidate = raw.get("path") if raw_claimed_retained else None
+        raw_path = _to_repo_relative_path(raw_path_candidate)
+        raw_path_invalid = raw_claimed_retained and raw_path is None
+        errors = [{"code": e.get("code", "ERROR")} for e in state.errors]
+        if raw_path_invalid:
+            errors.append({"code": "RAW_RETENTION_PATH_INVALID"})
         self._summary["runs"][state.logical_run_id] = {
             "input_id": state.input_id, "condition_id": state.condition_id,
+            "run_status": state.product_status, "attempted": True,
             "product_status": state.product_status, "decision": state.decision,
             "extracted_parameters": state.extracted_parameters,
             "unsupported_requests": state.unsupported_requests,
             "llm_meta": state.llm_meta,
             "schema_status": "pass" if state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION else "blocked_or_not_applicable",
             "confirmation_status": "pending" if state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION and state.input_id == RET004_INPUT_IDS[0] else ("denied_by_scope" if state.input_id == RET004_INPUT_IDS[1] else "not_required"),
-            "raw_retained": bool(raw.get("retained")), "raw_path": raw_path,
+            "raw_retained": raw_claimed_retained and raw_path is not None,
+            "raw_path": raw_path, "raw_path_invalid": raw_path_invalid,
             "raw_sha256": raw.get("body_sha256"),
-            "errors": [{"code": e.get("code", "ERROR")} for e in state.errors],
+            "errors": errors,
             "pipeline_status": state.pipeline_status,
             "step_sha256": (state.ir_index or {}).get("step_sha256"),
         }
         self._flush_summary()
+
+    def _refresh_batch_status(self) -> str:
+        expected_ids = {
+            self.auth.expected_logical_run_id(input_id, condition)
+            for input_id in RET004_INPUT_IDS for condition in RET004_CONDITIONS
+        }
+        if set(self.runs) != expected_ids:
+            status = "incomplete"
+        else:
+            failed = False
+            for input_id in RET004_INPUT_IDS:
+                for condition in RET004_CONDITIONS:
+                    state = self.runs[self.auth.expected_logical_run_id(input_id, condition)]
+                    error_codes = {e.get("code") for e in state.errors}
+                    expected_codes = {"SCOPE_CAD_DENIED"}
+                    if input_id == RET004_INPUT_IDS[1] and state.decision == "refuse" and state.unsupported_requests:
+                        expected_codes.add("GATE_DECISION_REFUSE")
+                    if input_id == RET004_INPUT_IDS[0] and "CONFIRMATION_REJECTED" in error_codes:
+                        expected_codes.add("CONFIRMATION_REJECTED")
+                    if error_codes - expected_codes or state.product_status in {"error", "failed"}:
+                        failed = True
+                    if state.raw_retention_meta and state.raw_retention_meta.get("retained") is True:
+                        if _to_repo_relative_path(state.raw_retention_meta.get("path")) is None:
+                            failed = True
+                    if input_id == RET004_INPUT_IDS[0]:
+                        if state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION:
+                            continue
+                        if any(e.get("code") == "CONFIRMATION_REJECTED" for e in state.errors):
+                            continue
+                        if state.product_status == "succeeded":
+                            continue
+                        failed = True
+                    else:
+                        if state.decision != "refuse" or not state.unsupported_requests:
+                            failed = True
+            if failed:
+                status = "failed"
+            elif any(
+                self.runs[self.auth.expected_logical_run_id(RET004_INPUT_IDS[0], c)].product_status
+                == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION
+                for c in RET004_CONDITIONS
+            ):
+                status = "awaiting_confirmation"
+            else:
+                status = "complete"
+        self._summary["batch_status"] = status
+        self._flush_summary()
+        return status
 
     @staticmethod
     def _state_fingerprint(state: ProductLiveRunState) -> str:
@@ -213,7 +287,9 @@ class RET004PairedService:
                 if condition == "C0":
                     assembled = assemble_c0(ProjectedCase(input_id, text, None, ("bore_d",)))
                 else:
-                    assembled = assemble_c1(ProjectedCase(input_id, text, None, ("bore_d",)), self.index)
+                    assembled = _assemble_c1_from_user_text(
+                        ProjectedCase(input_id, text, None, ("bore_d",)), self.index
+                    )
                 if assembled.blocked_reason:
                     state = ProductLiveRunState(
                         logical_run_id=plan.logical_run_id, input_id=input_id, condition_id=condition,
@@ -271,9 +347,26 @@ class RET004PairedService:
                         errors=[{"code": "ADAPTER_EXCEPTION", "exception_type": type(exc).__name__,
                                  "message": "抽取失败；不会进入 CAD。"}], request_text=text,
                     )
+                if input_id == RET004_INPUT_IDS[0] and state.product_status == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION:
+                    explicit_bore = extract_bore_d_mm(text)
+                    extracted_bore = state.extracted_parameters.get("bore_d")
+                    valid_extracted_bore = (
+                        type(extracted_bore) in (int, float)
+                        and math.isfinite(float(extracted_bore))
+                    )
+                    if explicit_bore is None:
+                        state.product_status = PRODUCT_LIVE_STATUS_BLOCKED
+                        state.errors.append({"code": "EXPLICIT_BORE_NOT_PARSEABLE"})
+                    elif not valid_extracted_bore or not math.isclose(
+                        float(extracted_bore), explicit_bore, rel_tol=0.0, abs_tol=1e-9
+                    ):
+                        state.product_status = PRODUCT_LIVE_STATUS_BLOCKED
+                        state.errors.append({"code": "EXPLICIT_BORE_MISMATCH"})
                 # R02 is an unconditional CAD deny, independent of model output.
                 if input_id == RET004_INPUT_IDS[1]:
                     state.product_status = PRODUCT_LIVE_STATUS_BLOCKED
+                    if state.decision != "refuse" or not state.unsupported_requests:
+                        state.errors.append({"code": "UNSUPPORTED_REQUEST_NOT_REFUSED_OR_REPRESENTED"})
                     if not any(e.get("code") == "SCOPE_CAD_DENIED" for e in state.errors):
                         state.errors.append({"code": "SCOPE_CAD_DENIED"})
                 self.runs[plan.logical_run_id] = state
@@ -285,6 +378,7 @@ class RET004PairedService:
                         "blocked" if state.product_status == PRODUCT_LIVE_STATUS_BLOCKED else "non_retryable_error"
                     )
                     self.ledger.record_run_result(logical_run_id=plan.logical_run_id, result=outcome)
+        self._refresh_batch_status()
         return [self.runs[self.auth.expected_logical_run_id(i, c)] for i in RET004_INPUT_IDS for c in RET004_CONDITIONS]
 
     def confirm_r01(self, condition: str, confirmed: bool) -> ProductLiveRunState:
@@ -313,13 +407,7 @@ class RET004PairedService:
         result.raw_retention_path = state.raw_retention_path
         self.runs[logical_id] = result
         self._record_state(result)
-        if all(
-            self.runs[self.auth.expected_logical_run_id(RET004_INPUT_IDS[0], c)].product_status
-            != PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION
-            for c in RET004_CONDITIONS
-        ):
-            self._summary["batch_status"] = "complete"
-            self._flush_summary()
+        self._refresh_batch_status()
         return result
 
 
@@ -350,7 +438,8 @@ def run_ret004_paired_batch(*, authorization: RET004Authorization | None = None,
             "planned_runs": 4, "max_batch_http": RET004_MAX_HTTP,
             "approval": {"approver": approval.approver, "approved_at_utc": approval.approved_at_utc,
                          "approval_statement_sha256": hashlib.sha256(approval.approval_statement.encode("utf-8")).hexdigest(),
-                         "is_test_only": approval.is_test_only}, "runs": {},
+                         "is_test_only": approval.is_test_only},
+            "runs": _planned_run_records(auth),
         }
         summary_path = batch_dir / "batch_summary.json"
         summary_path.write_text(json.dumps(initial_summary, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -374,14 +463,6 @@ def run_ret004_paired_batch(*, authorization: RET004Authorization | None = None,
                                       formal=False)
     try:
         runs = service.extract_all()
-        if service._summary_path is not None:
-            has_pending = any(
-                service.runs[auth.expected_logical_run_id(RET004_INPUT_IDS[0], c)].product_status
-                == PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION
-                for c in RET004_CONDITIONS
-            )
-            service._summary["batch_status"] = "awaiting_confirmation" if has_pending else "complete"
-            service._flush_summary()
     except Exception:
         service._summary["batch_status"] = "aborted"
         try: service._flush_summary()

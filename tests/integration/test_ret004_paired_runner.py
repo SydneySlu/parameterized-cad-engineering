@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from llm.contract import CONTRACT_VERSION, PROMPT_VERSION
@@ -15,8 +17,8 @@ from llm.transport import FakeTransport, TransportResponse
 from llm.conditions import assemble_c1
 from llm.input_projection import ProjectedCase
 from integration.ret004_paired_runner import (
-    RET004PairedService, _load_index, _load_inputs, run_ret004_offline_preflight,
-    run_ret004_paired_batch,
+    RET004PairedService, _assemble_c1_from_user_text, _load_index, _load_inputs,
+    run_ret004_offline_preflight, run_ret004_paired_batch,
 )
 
 
@@ -33,10 +35,10 @@ def _approval(*, test_only: bool = True) -> RET004Approval:
     )
 
 
-def _envelope(*, unsupported=None):
+def _envelope(*, unsupported=None, bore=24, decision="answer"):
     data = {
         "contract_version": CONTRACT_VERSION, "prompt_version": PROMPT_VERSION,
-        "decision": "answer", "extracted_parameters": {"bore_d": 24},
+        "decision": decision, "extracted_parameters": {"bore_d": bore},
         "unsupported_requests": unsupported or [],
         "evidence": [{"field": "bore_d", "quote": "24 mm", "source": "user_input"}],
         "missing_fields": [], "questions": [], "confidence": None,
@@ -62,6 +64,14 @@ class TestRET004AuthorizationAndPreflight(unittest.TestCase):
         from dataclasses import replace
         with self.assertRaises(Exception):
             replace(authorize_ret004(), inputs_sha256="0" * 64)
+
+    def test_ret004_c1_rejects_structural_reference_as_query_source(self):
+        case = ProjectedCase(
+            "R01-collar-bore24", "未写孔径", {"example": {"parameters": {"bore_d": 24}}},
+            ("bore_d",),
+        )
+        with self.assertRaisesRegex(Exception, "STRUCTURED_QUERY_SOURCE_FORBIDDEN"):
+            _assemble_c1_from_user_text(case, _load_index())
 
 
 class TestRET004FakeTransportWiring(unittest.TestCase):
@@ -92,6 +102,64 @@ class TestRET004FakeTransportWiring(unittest.TestCase):
             self.assertEqual(len(c1.llm_meta.get("candidate_source_ids", [])), 3)
             self.assertIsNone(c0.llm_meta.get("reference_context_sha256"))
             self.assertRegex(c1.llm_meta.get("reference_context_sha256", ""), r"^[0-9a-f]{64}$")
+
+    def test_explicit_bore_mismatch_is_blocked_before_confirmation(self):
+        service, _ = self._service([_envelope(bore=20)] + [_envelope()] * 3)
+        states = service.extract_all()
+        first = states[0]
+        self.assertEqual(first.product_status, "blocked")
+        self.assertEqual(first.extracted_parameters["bore_d"], 20)
+        self.assertIn("EXPLICIT_BORE_MISMATCH", [error["code"] for error in first.errors])
+        self.assertEqual(service._summary["batch_status"], "failed")
+
+    def test_initial_summary_prepopulates_all_planned_runs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = RET004PairedService(
+                auth=authorize_ret004(), approval=_approval(),
+                transport=FakeTransport(), formal=False, batch_dir=Path(temp_dir),
+            )
+            summary = json.loads((Path(temp_dir) / "batch_summary.json").read_text())
+            self.assertEqual(len(summary["runs"]), 4)
+            self.assertTrue(all(not row["attempted"] for row in summary["runs"].values()))
+            self.assertEqual({row["run_status"] for row in summary["runs"].values()}, {"not_started"})
+            self.assertEqual(summary["batch_status"], "running")
+
+    def test_failed_semantic_run_never_marks_batch_complete(self):
+        service, _ = self._service([_envelope()] * 4)
+        service.extract_all()
+        self.assertEqual(service._summary["batch_status"], "failed")
+        self.assertTrue(all(row["attempted"] for row in service._summary["runs"].values()))
+
+    def test_valid_pair_waits_then_completes_only_after_both_confirmations_resolve(self):
+        refusal = _envelope(decision="refuse", unsupported=["anodizing"])
+        service, _ = self._service([_envelope(), _envelope(), refusal, refusal])
+        service.extract_all()
+        self.assertEqual(service._summary["batch_status"], "awaiting_confirmation")
+        service.approval = _approval(test_only=False)
+        service.formal = True
+        service.confirm_r01("C0", False)
+        self.assertEqual(service._summary["batch_status"], "awaiting_confirmation")
+        service.confirm_r01("C1", False)
+        self.assertEqual(service._summary["batch_status"], "complete")
+
+    def test_summary_rejects_absolute_raw_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service, _ = self._service([_envelope()] * 4)
+            service._summary_path = Path(temp_dir) / "batch_summary.json"
+            service.extract_all()
+            state = service.runs[authorize_ret004().expected_logical_run_id("R01-collar-bore24", "C0")]
+            state.raw_retention_meta = {
+                "retained": True, "path": "/tmp/secret/response.json", "body_sha256": "a" * 64,
+            }
+            service._record_state(state)
+            summary_text = service._summary_path.read_text()
+            summary = json.loads(summary_text)
+            run = summary["runs"][state.logical_run_id]
+            self.assertIsNone(run["raw_path"])
+            self.assertFalse(run["raw_retained"])
+            self.assertTrue(run["raw_path_invalid"])
+            self.assertNotIn("/tmp/secret/response.json", summary_text)
+            self.assertIn("RAW_RETENTION_PATH_INVALID", [error["code"] for error in run["errors"]])
 
     def test_c0_reference_context_is_null_and_c1_contains_untrusted_role(self):
         service, transport = self._service([_envelope()] * 4)
@@ -164,7 +232,7 @@ class TestRET004FakeTransportWiring(unittest.TestCase):
         for condition in RET004_CONDITIONS:
             state = service.runs[authorize_ret004().expected_logical_run_id("R02-collar-bore24-anodizing", condition)]
             self.assertEqual(state.product_status, "blocked")
-            self.assertEqual(state.errors[0]["code"], "SCOPE_CAD_DENIED")
+            self.assertIn("SCOPE_CAD_DENIED", [error["code"] for error in state.errors])
         with patch("integration.ret004_paired_runner.confirm_product_live_run") as confirm:
             r02 = authorize_ret004().expected_logical_run_id("R02-collar-bore24-anodizing", "C1")
             with self.assertRaises(ValueError): service.confirm_run(r02, True)
