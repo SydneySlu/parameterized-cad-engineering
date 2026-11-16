@@ -49,6 +49,7 @@
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | deferred | C1 检索级诊断已验收；12-run 下游收益研究离线关口已通过，真实执行暂缓（ADR-0020），不阻塞 CAD 集成；收益仍 not_measured，不预设正收益 |
 | RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | done | exact batch 已完成 4/4 次真实 DeepSeek 请求。R01 C0/C1 均抽取 `bore_d=24`，负责人分别确认后各自完成 CAD/STEP 导出与回读；两份 STEP 哈希与 batch summary/index 一致。R02 C0/C1 均拒绝阳极氧化并保持 CAD-deny，无 pipeline/STEP。summary=`complete`，budget ledger 为 4/8 次 HTTP，4 个 raw 路径/hash 保留；未读取 raw 正文。独立只读复核结论 `pass`，已合入本地 `main`；检索效果仅作两输入描述性报告，不外推为统计结论。 |
+| RET-005-SINGLE-FAMILY-REFERENCE-POOL | 单族受控参考池 Web 闭环 | Codex + CC | planned | ADR-0028 提案：用户选择 3–5 个 RET-001 已验证样本，系统在参考池内按 RET-002 排序并通过共享上下文组装函数接入 C1；先做离线/FakeTransport 与 Web 流程，不创建 batch、不调用真实模型。 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |

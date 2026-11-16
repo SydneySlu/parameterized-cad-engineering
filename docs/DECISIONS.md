@@ -763,3 +763,26 @@ CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、�
 - 现有 C1 query parser 不识别 APP-004 输入中的“轴孔孔径为 24 mm”。RET-004 仅提出窄兼容扩展并要求正反测试；不修改 prompt、Schema 或 LLM 抽取语义。未能确定唯一正值时 C1 必须在模型请求前 fail closed。
 - 候选 scope、输入、标签、预算和实现需先独立复核；负责人接受精确 scope 后，才进入正式 preflight 准备。真实请求仍要求独立的 formal preflight 和负责人对唯一新 batch/预算的明确执行批准。scope 接受不授权读取凭据或调用模型。
 - `FORMAL_EVALUATION_ALLOWED=False` 保持；不得复用 APP-004 授权或历史 batch。
+
+## ADR-0028：RET-005 单族受控参考池与共享 C1 上下文接口
+
+- 日期：2026-11-16
+- 状态：proposed（路线提案；实现前需负责人确认精确接口，未冻结 held-out scope，不授权真实请求）
+- 关联：ADR-0020、ADR-0023、ADR-0027、RET-001、RET-002、RET-004；`RET-005-SINGLE-FAMILY-REFERENCE-POOL`
+
+### 决策提案
+
+1. 第一阶段只支持单族 `set_screw_shaft_collar` 的受控参考池。用户从 RET-001 中已验证的样本 ID 选择 3–5 个参考样本；不支持任意外部 CAD 上传、自动 CAD 解析或图片精确尺寸识别。
+2. 产品模式允许用户选择参考池；系统在该池内按当前冻结 RET-002 距离策略排序，选出固定上限的 top-k 候选并展示样本 ID、零件族、允许展示的参数摘要、验证状态和来源元数据。候选池不改变几何规则，也不直接成为构造输入。
+3. 产品模式与 C1 实验模式共用同一个上下文组装函数。产品模式的参考池来自用户选择；实验模式冻结参考池、排序策略和 top-k，不能把用户选择的参考池作为实验变量。C1 上下文只允许 `retrieval_source` 候选，并明确标为不可信参考。
+4. 用户当前输入优先于参考样本。模型抽取出的显式参数必须与用户文本中的显式值保持一致；参考样本不得覆盖、补写或修改用户意图。无法解析、发生冲突、存在缺参或 unsupported 时，在 CAD 前 fail closed。
+5. evaluator-only labels、held-out 真值、IR、STEP 正文、源 CAD 文件和密钥不得进入模型上下文。样本展示只读取已登记的安全元数据；raw 正文和私有凭据继续遵守既有隔离规则。
+6. 第一阶段只验收产品流程和安全门：参考池选择、候选排序/展示、上下文隔离、用户参数优先、阻断、确认、独立 STEP 和 run 隔离。该阶段不宣称检索收益，不创建正式 batch，不读取凭据，不调用真实模型。
+7. 产品接口稳定后，另建新的 held-out C0/C1 scope（建议 6–10 条输入）。C0/C1 唯一变量是 `reference_context`；输入、模型、prompt 主体、契约、后处理和 CAD 链路均冻结。真实执行仍须独立 scope、固定环境测试、独立复核、formal preflight 和负责人对具体 batch 的单独批准。
+8. 跨进程确认恢复暂不作为 RET-005 前置条件；若进入长期服务，再作为独立工作单元设计持久化 pending run、revision/fingerprint、原子写入和恢复回归。
+
+### 影响与不变量
+
+- 不修改当前 v5 prompt 主体、Schema、IR、provider、全局 formal gate、RET-001 manifest、RET-002 距离策略或 RET-004 历史 batch。
+- `FORMAL_EVALUATION_ALLOWED=False` 保持；本提案不冻结新的实验输入、预算或 batch ID。
+- 第二零件族、图片输入和任意外部 CAD 上传继续后置，必须分别完成来源/许可、Schema、IR、确定性 CAD 和检索闭环。

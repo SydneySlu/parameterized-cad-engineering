@@ -3521,3 +3521,10 @@ commit=待提交
 - 动作：基于已核验的 batch summary、budget ledger、pipeline summary/index 和 STEP 哈希，整理两输入 C0/C1 配对结果记录；未读取 raw 正文、凭据或 evaluator labels，未发送新请求。
 - 结果：R01 C0/C1 均抽取 `bore_d=24`，确认后均完成 CAD/STEP；R02 C0/C1 均拒绝阳极氧化并保持 CAD-deny。两个条件在这两条输入上没有观察到抽取或后续 CAD/STEP 结果差异。
 - 边界：结果仅为两输入描述性观察，不支持统计检索收益、广泛语言泛化、生产就绪或制造认证结论。报告写入 `agent-work/reviews/RET-004-PAIRED-LIVE-20261116-01-descriptive-results.md`。后续扩大样本或实现持久化恢复接口需新工作单元和新授权。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / proposed work unit / 2026-11-16
+
+- 动作：根据 RET-004 收束结果，提出单族受控参考池 Web 闭环。产品模式由用户选择 3–5 个 RET-001 已验证样本，系统在该池内按 RET-002 排序；产品模式与未来 C1 实验模式共用同一个上下文组装函数，但实验侧冻结参考池和 top-k。
+- 边界：第一阶段不支持任意 CAD 上传、自动 CAD 解析、图片精确尺寸识别或第二零件族；不修改 v5 prompt、Schema、IR、provider、全局 formal gate 或历史 batch。只做接口冻结、离线/FakeTransport、Web 流程和安全门测试，不创建 batch、不读取凭据、不调用真实模型。
+- 验收重点：参考样本元数据可追溯；参考上下文明确为不可信 `retrieval_source`；用户显式参数优先且冲突/缺参/unsupported 在 CAD 前阻断；确认前零 CAD；确认后独立 STEP；不得返回其他 run 文件。
+- 下一步：负责人确认 ADR-0028 的最小接口后，交给 CC 实现 `RET-005-SINGLE-FAMILY-REFERENCE-POOL`；实现通过固定环境测试和独立复核后，再另行准备 6–10 条 held-out C0/C1 scope。
