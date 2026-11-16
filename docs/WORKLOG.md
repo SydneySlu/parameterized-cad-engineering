@@ -3606,3 +3606,11 @@ commit=待提交
 - 发现：P1 参数优先仍未 fail closed。重复的不同显式值只取第一个；格式不完整的显式字段被省略，模型值可能无冲突进入确认。细节和复现文本已记录于 RET-005 checkpoint。其他本轮修复路径测试通过。
 - 结论：`review`，不建议合入。同步更新 PROJECT_STATUS 与 checkpoint；需再做窄修并由中枢复验。
 - 边界：未调用模型、外网、凭据、CAD/STEP，未创建 batch/preflight，未读 labels/raw 正文，未修改生产代码；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / parser fix independent re-review / 2026-11-17
+
+- 动作：固定 CAD venv 独立复验 `520fb5e` 的 `ExplicitParamResult`、歧义/malformed 处理、服务阻断与下游兼容性。
+- 验证：RET-005 专项 143 通过、1 个既有 skip；RET-004/retrieval/Schema/Product Live UI/LLM runner 178 通过、1 个既有 skip；pipeline + CAD compilation 52 通过。额外运行 parser probes，检查有效值+malformed 声明、螺钉语句别名和 second_screw 与中文提示组合。
+- 发现：P1 `width=14 mm，width= mm` 仍无错误，只返回首个值；P2 `_SCREW_D_KW_RE` 把“螺钉”泛词当作 screw_d 关键词，使“单螺钉”和“螺钉长度”误报 parse error；`second_screw=0，双螺钉` 的显式数字覆盖了互相矛盾的中文提示。详细证据见 RET-005 checkpoint。
+- 结论：`review`，不建议合入；再做解析器窄修后复验。PROJECT_STATUS 已同步。
+- 边界：未调用真实模型、外网、凭据或 CAD/STEP；未创建 batch/preflight，未读 labels/raw 正文，未修改生产代码；`FORMAL_EVALUATION_ALLOWED=False` 保持。

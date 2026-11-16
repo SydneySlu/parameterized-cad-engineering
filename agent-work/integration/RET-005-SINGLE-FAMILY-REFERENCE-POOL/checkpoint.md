@@ -217,6 +217,22 @@ tests.demo.test_product_live_ui              36/36  OK
 
 **边界**：未调用真实模型、外网、凭据、CAD/STEP；未创建 batch/preflight，未读 evaluator labels 或 raw 正文；未更改实现、manifest、检索配置或历史运行。`FORMAL_EVALUATION_ALLOWED=False` 保持。当前不接受合入，不进入 held-out scope。
 
+## Codex 中枢独立复验 / 2026-11-17 / `520fb5e`
+
+**验收对象**：`520fb5e799907b223f9fb8575011d84d31e43da0`，父提交 `94dbbdbef713c4f9e1cbcf88502038f399958a99`，分支 `cc/RET-005-POOL-FIXES`，基线 `main=daf8cc10a965b1a3a7d3a57378f93a7b51dcb6f1`；复核开始时工作区干净。
+
+**验证（固定 CAD venv Python 3.11.18）**：RET-005 pool/runner/server **143 passed, 1 existing skip**；RET-004 paired/retrieval baseline/Schema/Product Live UI/LLM runner **178 passed, 1 existing skip**；pipeline integration + CAD compilation/handoff **52 passed**。`git diff --check 46f1043..HEAD` 通过；解析器探针直接调用 `extract_explicit_parameters()`。
+
+**结论：verdict=review，仍有 P1 解析缺口及 P2 误阻断风险。**
+
+1. **P1：同一字段有合法值和 malformed 重复声明时未报错。** 输入 `width=14 mm，width= mm` 返回 `values={'width': 14.0}`、`errors=[]`；`outer_d=40mm，外径= mm` 同样遗漏第二个格式错误声明。原因是解析逻辑只在“没有任何 value match”时将 keyword-only match 判 malformed，没有将每个关键词 occurrence 与对应可解析值绑定。因此用户后续的无效/未完成更正可能被忽略，模型若取首个有效值仍能进入确认流程。
+2. **P2：screw_d keyword pattern 过宽，产生正常语言误报。** `螺钉` 被 `_SCREW_D_KW_RE` 当成 screw_d 字段关键词；`螺钉长度=12 mm`、`单螺钉` 都会被解析为 `EXPLICIT_PARAM_PARSE_ERROR_SCREW_D`，即使用户并未声明螺钉直径。应把直径参数关键词收窄到 `screw_d`/`螺钉直径` 等明确别名，不能把“螺钉”单独认作直径字段。
+3. **额外确认：** `second_screw=0，双螺钉` 的明确字段值优先于中文提示，没有报告该字段矛盾；即使修正 screw_d 的误识别，也需检查显式值与单双螺钉提示之间的互相矛盾，按 ADR-0028 作为歧义阻断。
+
+需修复上述解析边界并增加完整 `Ret005PoolService.extract()` 回归：malformed duplicate 必须 `blocked` 且 pipeline=0；“螺钉长度”与“单螺钉”不应触发 screw_d parse error；`second_screw=0` 与“双螺钉”冲突必须阻断。纯等价重复值与清晰一致请求应维持既有行为。
+
+**边界**：本次未调用模型、网络、凭据、CAD/STEP；未创建 batch/preflight，未读取 labels/raw 正文，未修改生产代码或历史证据。`FORMAL_EVALUATION_ALLOWED=False` 保持。当前不接受合入或进入 held-out scope。
+
 ---
 
 ## CC 窄修轮 2 / cc/RET-005-POOL-FIXES / 2026-11-17
