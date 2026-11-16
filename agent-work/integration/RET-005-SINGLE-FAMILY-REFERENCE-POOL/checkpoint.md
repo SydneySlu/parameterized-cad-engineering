@@ -201,6 +201,22 @@ tests.demo.test_product_live_ui              36/36  OK
 
 **边界**：未调用模型或外网，未读取凭据、labels 正文或历史 raw，未创建 batch，未运行 RET-005 CAD/STEP；未修改代码和实验产物。`FORMAL_EVALUATION_ALLOWED=False`、v5 prompt、Schema/IR、RET-001 manifest 与 RET-002 配置保持不变。需 CC 对以上事项做最小修复后重新固定环境验收；当前不接受合入，不批准 held-out 实验或真实请求。
 
+## Codex 中枢独立复验 / 2026-11-17 / `46f1043`
+
+**验收对象**：`46f10435cbda307dc48d16f154bb438cffee4e21`，父提交 `c3525be10f5a8ffa5a45a4c162bde3b1dea78fb5`，分支 `cc/RET-005-POOL-FIXES`，基线 `main=daf8cc10a965b1a3a7d3a57378f93a7b51dcb6f1`。复核开始时工作区干净。
+
+**验证**（固定 CAD venv Python 3.11.18）：
+
+- RET-005 pool/runner/server：135 项通过、1 个既有 skip。
+- RET-004 paired、retrieval baseline、Schema、Product Live UI、LLM runner：178 项通过、1 个既有 skip。
+- pipeline integration + CAD compilation/handoff：52 项通过。
+- 六个修改源/测试文件 `py_compile` 通过；`git diff --check c3525be..HEAD` 与 `git show --check HEAD` 通过。
+- 检查 `run_server()` wiring，确认默认实例为 FakeTransport 且传入 handler；检查 pool result state/sanitizer/UI 字段；显式参数判别探针覆盖 width 冲突、重复值和格式不完整文本。
+
+**结论：verdict=review。** Web service 接线、六字段提取、候选 top-k 状态/API 展示均已按代码路径实现；对外摘要只保留允许展示字段。发现仍有一个 P1 参数优先缺口：`extract_explicit_parameters()` 对每个字段用 regex `.search()` 只取首次匹配；例如 `width=14 mm，width=99 mm` 返回首值而不标记输入歧义，模型返回首值时可无冲突进入确认；格式不完整的 `width= mm` 返回空字典，模型的 width 也不受约束。函数 docstring 明确说明无法解析时“字段被省略”，与 ADR-0028 的歧义/无法可靠解析时 CAD 前 fail-closed 要求冲突。需为显式字段解析错误/歧义提供可传递的阻断结果，并在 C0/C1 服务流程确认前阻断；增加重复冲突、malformed 值及各自 pipeline 调用数为零的测试。
+
+**边界**：未调用真实模型、外网、凭据、CAD/STEP；未创建 batch/preflight，未读 evaluator labels 或 raw 正文；未更改实现、manifest、检索配置或历史运行。`FORMAL_EVALUATION_ALLOWED=False` 保持。当前不接受合入，不进入 held-out scope。
+
 ---
 
 ## CC 窄修轮 2 / cc/RET-005-POOL-FIXES / 2026-11-17

@@ -3584,3 +3584,11 @@ commit=待提交
 - 验证：固定 CAD venv RET-005 pool/runner/server 专项 112 项通过、1 个既有 skip。运行显式参数探针 `bore_d=24 mm，width=99 mm`，确认当前只抽取 bore_d，model width=14 没有被优先规则拦截；核对 `run_server()` 无 pool_service 参数且没有传给 `make_handler_class()`。
 - 结论：`review`。P1：标准 Web server 入口未装配 pool service；用户显式参数优先目前只覆盖 bore_d。P2：候选 top-k 参数/距离/来源未在 run 状态和页面展示；此前 PROJECT_STATUS 对 `ff030db` 的描述过时，已同步。详细证据和修复要求见 RET-005 checkpoint。
 - 边界：未运行真实模型、网络、凭据、CAD/STEP 或 batch；未读取 labels/raw 正文，未修改生产代码。`FORMAL_EVALUATION_ALLOWED=False` 保持。下一步请 CC 窄修并增加 run_server 集成与非 bore_d 参数回归，再由中枢固定环境复验。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / narrow-fix independent re-review / 2026-11-17
+
+- 动作：对 `46f1043` 独立复验标准 server 装配、六字段优先校验、top-k 展示和相关回归。
+- 验证（固定 CAD venv Python 3.11.18）：RET-005 专项 135 通过、1 个既有 skip；RET-004/retrieval/Schema/Product Live UI/LLM runner 178 通过、1 个既有 skip；pipeline + CAD compilation 52 通过。`py_compile`、`git diff --check c3525be..HEAD`、`git show --check HEAD` 通过。
+- 发现：P1 参数优先仍未 fail closed。重复的不同显式值只取第一个；格式不完整的显式字段被省略，模型值可能无冲突进入确认。细节和复现文本已记录于 RET-005 checkpoint。其他本轮修复路径测试通过。
+- 结论：`review`，不建议合入。同步更新 PROJECT_STATUS 与 checkpoint；需再做窄修并由中枢复验。
+- 边界：未调用模型、外网、凭据、CAD/STEP，未创建 batch/preflight，未读 labels/raw 正文，未修改生产代码；`FORMAL_EVALUATION_ALLOWED=False` 保持。
