@@ -3438,3 +3438,12 @@ commit=待提交
 - 历史边界：batch/raw 未改写；D01 的历史 summary raw path/hash 缺口不回填，raw 正文未读取。没有新模型、网络、CAD 或 preflight；`FORMAL_EVALUATION_ALLOWED=False`。
 - 同步状态：本地 `main` 比 `origin/main` 超前 13 个提交；本轮未 push。
 - 下一步：与负责人单独商定项目后续方向；APP-004 的两样本证据不外推为跨族能力或生产就绪。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / in_progress / 2026-11-16
+
+- 动作：从本地 `main=b5f5d45` 建立 `codex/RET-004-PAIRED-LIVE-PROTOCOL`，将后续路线收敛为短期离线协议/接口消歧，然后尽快准备小规模真实 C0/C1 配对实验。
+- 候选协议：2 条物理分离输入 × C0/C1，共 4 个逻辑 run；DeepSeek `deepseek-flash`、冻结 v5/contract、RET-002 top-k 3；最多 2 次/run、全批 8 次 HTTP。R01 每个条件需单独确认后才允许 CAD；R02 阳极氧化挑战永久 CAD-deny。失败保留在分母中，离线验证不作为检索有效证据。
+- 接口发现与修复：`conditions.py` 的 C1 bore 提取不识别已用真实演示措辞“轴孔孔径为 24 mm”，会造成 C1 请求前阻断。窄扩展正则并添加两项真实 RET-002 组装回归；`tests.llm.test_conditions` 12/12 通过，R01/R02 均由文本提取 24 mm，候选只来自 retrieval_source，并含原冻结的 untrusted-reference 声明。`git diff --check` 通过。
+- 产物：候选 `scope.md`、`model-inputs.json`、隔离的 `evaluator-labels.json`、checkpoint；新增 ADR-0027 proposed。输入 hash=`6f2faf8d83aa013c860db4e17593788bc906757660ed8c985f374b6bbe21a457`；标签 hash=`fc1691317dfc6452a956bad36fff8e5e6cd3a4d4dbf459d096632e6e4850091e`；RET-002 config hash=`424322f51da78df2a154043d284d307ae285c7d2a2cb659f5517a6ecb847cfc5`；RET-001 manifest hash=`b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297`。
+- 边界：当前只做了系统 Python 3.10.12 的确定性离线模块测试；未运行 fixed CAD venv 全量测试，未构造正式 profile/runner，未执行 formal preflight，未创建 batch/ledger，未读凭据或 `.env`，未触网/调用模型/运行 CAD，未读历史 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
+- 下一步：完成版本化、fail-closed C0/C1 formal runner 和确定性 FakeTransport 验证；提交前补齐状态/计划/checkpoint 与适用测试。随后固定环境独立复核，再请求负责人接受精确 scope；真实运行仍需 formal preflight 和单独 batch 执行授权。

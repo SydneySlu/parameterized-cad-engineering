@@ -743,3 +743,23 @@ CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、�
 - 只增加独立 APP-004 演示 profile/runner/UI；不修改旧 Product Live profile、APP-003 language profile、v5 prompt、Schema、IR、provider、全局 gate 或历史 batch。
 - 图像输入、检索示例/小样本模式、第二零件族不在本演示范围；不可通过这条窄演示宣称这些能力已集成。
 - 冻结输入文件与 hash 见 `agent-work/integration/APP-004-LIVE-WEB-DEMO/scope.md`。在实现及独立复核完成、并取得精确 batch 执行授权之前，禁止 formal preflight 和任何 live request。
+
+## ADR-0027：RET-004 配对真实 C0/C1 小样本实验候选
+
+- 日期：2026-11-16
+- 状态：proposed（仅候选协议；待负责人接受精确样本与预算，不构成 scope 冻结、formal preflight 或 live 请求授权）
+- 关联：ADR-0018、ADR-0019、ADR-0020、ADR-0026、RET-002、RET-003；`RET-004-PAIRED-LIVE-20261116-01`
+
+### 问题与实验范围
+
+1. 实验问题是：对同一冻结自然语言输入，在固定 v5 prompt、DeepSeek `deepseek-flash`、同一输出契约和后续确定性链路下，加入 RET-002 检索候选作为明确标注的不可信参考，是否改变参数抽取、Schema/规则结果或经单独确认后的 CAD/STEP 结果。不得同时换模型、改 prompt 主体、换检索策略或扩展零件族。
+2. 候选矩阵为两条固定输入 × C0/C1，共 4 个逻辑 run：合法 `bore_d=24 mm`；同一需求增加 unsupported 的阳极氧化要求。每对逐字使用相同用户文本，唯一处理差异为 `reference_context=null` 与 RET-002 C1 上下文。
+3. C1 只能由用户文本确定性提取明确 bore 值，查询冻结 RET-002 policy/config，仅允许 `retrieval_source` 角色，top-k≤3。C1 context 必须保留 untrusted-reference 标签；held-out/development/evaluator labels、IR/CAD/STEP/源资产不得进入查询或模型上下文。标签物理分离，runner 和 prompt 组装路径不读标签。
+4. R01 的 C0、C1 各自只有在真实抽取及 Schema/规则检查通过后，经负责人逐 run 新鲜确认才可调用现有 CAD/STEP pipeline。R02 对 CAD 永久 deny，无论模型回答、Schema 结果或用户操作如何。所有失败/阻断保留在计划运行分母，不得只报告成功案例。
+5. 最大 2 次 HTTP/逻辑 run，全批最多 8 次 HTTP。逐例报告四个 run 和两个输入内配对结果；不作显著性、统计泛化、生产就绪或普遍检索有效性结论。离线测试只验证链路准备、隔离、预算和门控。
+
+### 接口修正与执行门
+
+- 现有 C1 query parser 不识别 APP-004 输入中的“轴孔孔径为 24 mm”。RET-004 仅提出窄兼容扩展并要求正反测试；不修改 prompt、Schema 或 LLM 抽取语义。未能确定唯一正值时 C1 必须在模型请求前 fail closed。
+- 候选 scope、输入、标签、预算和实现需先独立复核；负责人接受精确 scope 后，才进入正式 preflight 准备。真实请求仍要求独立的 formal preflight 和负责人对唯一新 batch/预算的明确执行批准。scope 接受不授权读取凭据或调用模型。
+- `FORMAL_EVALUATION_ALLOWED=False` 保持；不得复用 APP-004 授权或历史 batch。

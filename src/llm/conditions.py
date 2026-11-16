@@ -57,7 +57,7 @@ _BORE_D_RE = re.compile(
     r"(?:"
     r"bore_d\s*[=是：:]\s*"
     r"|bore_d\s+"
-    r"|轴孔直径\s*"
+    r"|轴孔(?:直径|孔径)\s*(?:为\s*)?"
     r"|轴孔\s+bore_d\s*[=是：:]\s*"
     r")"
     r"(\d+(?:\.\d+)?)"

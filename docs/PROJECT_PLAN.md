@@ -67,7 +67,7 @@
 - [x] 定义样本 manifest：参数 JSON、IR、STEP、验证结果和来源（RET-001；单族 15 行，split 仍为 provisional_small_n）
 - [x] 实现按零件类型、特征、孔位/接口和归一化尺寸的检索（RET-002；单族确定性参数距离基线已验收，split 仍为 provisional_small_n）
 - [x] 完成 C1 检索级诊断（RET-003；固定环境运行、上游回归、结果/报告交叉核对和中枢验收均通过；公平 C2 尚未定义，端到端收益仍需等 APP-001）
-- [ ] 规定检索示例如何进入 Prompt，并防止把示例直接当作真值（RET-004）
+- [ ] RET-004：短期冻结真实 C0/C1 配对实验协议，完成真实请求链路的离线准备与独立复核；随后以 2 条固定输入 × C0/C1（4 个逻辑 run、最多 8 次 HTTP）准备小规模真实 DeepSeek `deepseek-flash` 对照。离线结果不是检索收益证据；真实请求需负责人单独授权，R01 每个条件的 CAD 仍需分别确认，R02 永久 CAD-deny。
 
 ## 阶段 4：轻量版交付
 
@@ -83,7 +83,7 @@
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
 - [x] `APP-003-LIVE-PREFLIGHT-20261114-02`：冻结 scope 已获批，formal preflight 与单独 live execution approval 均有记录；4/12 次真实请求完成，独立复核 `pass`，batch 只读；报告见 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`
 - [x] 完成技术验收与交付记录（APP-004）：固定 CAD venv 下 LLM 933 通过、8 项既有 skip（共运行 941 项），Integration 527、Demo 219、Schema 17、CAD compilation 13；合计 1,709 通过、8 skip（共 1,717 项）。正式结论限于单族轻量技术演示和已批准的受控运行范围，详见 [`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`](../agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md)。后续稳定性/部署、真实语言效果或跨族扩展需分别确定目标与范围。
-- [x] APP-004-LIVE-WEB-DEMO：获批 batch `app004-live-web-demo-20261116-01` 已完成；D01 `bore_d=24` 经确认后生成并回读 STEP、FreeCAD 打开通过，D02 的 `anodizing` 被拒绝且未进入 CAD，账本 2/4 HTTP。D01 raw summary 元数据缺陷已修复并经独立复核 `pass`，专项 27/27；修复和记录已合入本地 `main`（HEAD=`f8e6bb6`）。历史 summary 保持原样，D01 raw path/hash 字段仍缺失，不回填。`main` 超前 `origin/main` 13 个提交，尚未 push。该窄批次不证明跨族能力或生产就绪，`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- [x] APP-004-LIVE-WEB-DEMO：获批 batch `app004-live-web-demo-20261116-01` 已完成；D01 `bore_d=24` 经确认后生成并回读 STEP、FreeCAD 打开通过，D02 的 `anodizing` 被拒绝且未进入 CAD，账本 2/4 HTTP。D01 raw summary 元数据缺陷已修复并经独立复核 `pass`，专项 27/27；修复和记录已合入本地 `main=b5f5d45`。历史 summary 保持原样，D01 raw path/hash 字段仍缺失，不回填。`main` 超前 `origin/main` 14 个提交，尚未 push。该窄批次不证明跨族能力或生产就绪，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 
 ## APP-001 v5 收束与独立研究
 

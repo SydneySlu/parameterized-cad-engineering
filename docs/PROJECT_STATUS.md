@@ -9,7 +9,7 @@
 - v5 保持当前 prompt/契约/hash 作为首个集成基线；一般优化不启动 v6。首个真实闭环优先沿用已审查 DeepSeek `deepseek-flash` 配置，Qwen 后续兼容。
 - 监督微调和强化学习不作为首期交付依赖；如后续需要，只做独立实验。
 - 根据导师建议，当前数据方向优先利用 BenchCAD 2.0 社区参数化零件族；首期范围已由 ADR-0007 冻结为 `set_screw_shaft_collar`，使用固定 source commit 和项目侧适配/验证，不扩展第二族作为首期交付依赖。
-- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。本轮开始时本地基线为 `a7fe414`，比 `origin/main` 超前 10 个提交；本地变更只提交，不自动 push。
+- GitHub 远程仓库已配置：`https://github.com/SydneySlu/parameterized-cad-engineering.git`；本机 `main` 跟踪 `origin/main`。RET-004 工作分支从本地 `main=b5f5d45` 建立；当时 `main` 比 `origin/main=d0355c0` 超前 14 个提交；本地变更只提交，不自动 push。
 - 数据集选型、许可核查、处理计划与后续讨论统一维护在 [`database/README.md`](../database/README.md) 及其索引文件中。
 - `profile-pack` 暂定为可选的 Agent 上下文与决策辅助层，Git 文档和提交历史仍是进度事实源。
 - 当前主机的共享项目基座已迁移到 `/Users/syd/Desktop/参数化 cad 工程辅助设计`；Agent 工作区为 `agent-work/`，旧路径不再作为项目副本使用。
@@ -48,6 +48,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | deferred | C1 检索级诊断已验收；12-run 下游收益研究离线关口已通过，真实执行暂缓（ADR-0020），不阻塞 CAD 集成；收益仍 not_measured，不预设正收益 |
+| RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | in_progress | 已形成 2×2 配对候选协议和物理分离输入/标签；C1 对 APP-004 “轴孔孔径为”措辞的窄兼容修复及 12 项条件测试通过。尚需版本化授权 profile/runner、固定 CAD venv 回归、独立复核、负责人 scope 接受、正式 preflight 和单独 batch 执行授权；当前未创建 batch/ledger、未读凭据或触网。 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
@@ -77,7 +78,7 @@
 | APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 原 batch `app003-product-live-20261114-02` 完成 4/12 次真实 DeepSeek HTTP，独立复核 `pass`；P1 answer→needs_confirmation、P2 ask、P3/P4 refuse→blocked，原 batch raw 4/4 哈希匹配且无 CAD/STEP。负责人单独确认 P1 `bore_d=24`，隔离 run 生成并回读 STEP，后经 FreeCAD 目视检查通过；原 batch 继续只读。详见同目录 independent-review.md 与 checkpoint.md。 |
 
 | APP-004 | 单族轻量版技术验收与交付记录 | Codex 中枢 | done | 固定 CAD venv Python 3.11.18 下 LLM 933 通过、8 skip（共 941 项），Integration 527、Demo 219、Schema 17、CAD 13；合计 1,709 通过、8 skip（共 1,717 项）。验收报告：`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`；结论限于单族演示和已批准范围，不代表生产就绪、广泛语言覆盖或制造认证。 |
-| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | done | 已合入本地 `main`，HEAD=`f8e6bb6`；独立复核通过。获批 batch `app004-live-web-demo-20261116-01` 完成 2 条真实 DeepSeek 抽取：D01 `bore_d=24` 经确认后 CAD/STEP 成功并在 FreeCAD 打开；D02 阳极氧化被拒绝且未进 CAD，账本 2/4 HTTP。未来运行的 D01 raw summary 元数据缺陷已修复，固定环境专项 27/27；历史 summary 保持原样，D01 raw path/hash 字段仍缺失，不回填。`main` 比 `origin/main` 超前 13 个提交，本轮未 push。证据仅覆盖冻结单族双样本，不代表生产就绪或跨族泛化。详见 APP-004 checkpoint。 |
+| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | done | 已合入本地 `main`，HEAD=`b5f5d45`；独立复核通过。获批 batch `app004-live-web-demo-20261116-01` 完成 2 条真实 DeepSeek 抽取：D01 `bore_d=24` 经确认后 CAD/STEP 成功并在 FreeCAD 打开；D02 阳极氧化被拒绝且未进 CAD，账本 2/4 HTTP。未来运行的 D01 raw summary 元数据缺陷已修复，固定环境专项 27/27；历史 summary 保持原样，D01 raw path/hash 字段仍缺失，不回填。当前本地 `main` 比 `origin/main` 超前 14 个提交。证据仅覆盖冻结单族双样本，不代表生产就绪或跨族泛化。详见 APP-004 checkpoint。 |
 
 ## 当前缺口与限制
 
@@ -101,7 +102,7 @@
 ## 下一步
 
 - APP-004 技术验收与交付记录已完成：固定 CAD venv 下相关套件共 1,717 项，1,709 通过、8 项既有 skip；验收报告已整理。A/B/C 主链与单族轻量演示在限定范围内完成。
-- 下一工作方向尚未选定。负责人可在三类目标中择一：产品稳定性/部署要求；新的真实语言效果证据（需单独 live 入口、scope、preflight 和执行授权）；跨族扩展（需独立数据/许可、Schema、IR 与几何验证）。RET-004 和 held-out 检索研究继续 deferred，不自动成为主线前置项。
+- 当前下一步为 RET-004：先完成短期离线协议与接口准备，随后尽快准备新的小规模真实 C0/C1 配对请求。离线验证只证明输入组装、隔离、预算和失败门准备正确，不证明检索有效；真实执行仍需要 scope 接受、独立复核、formal preflight 和负责人对精确 batch 的单独授权。
 
 ## APP-003 语言样本 scope 当前状态
 

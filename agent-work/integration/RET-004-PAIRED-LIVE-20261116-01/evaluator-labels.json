@@ -1,0 +1,22 @@
+{
+  "scope_id": "ret004-paired-live.v1",
+  "labels": [
+    {
+      "input_id": "R01-collar-bore24",
+      "expected_behavior": "answer",
+      "expected_user_explicit_parameters": {"bore_d": 24},
+      "expected_schema": "pass",
+      "cad_allowed_after_fresh_owner_confirmation": true,
+      "expected_retrieval_query_bore_d_mm": 24
+    },
+    {
+      "input_id": "R02-collar-bore24-anodizing",
+      "expected_behavior": "refuse",
+      "expected_user_explicit_parameters": {"bore_d": 24},
+      "required_unsupported_request": "阳极氧化表面处理",
+      "expected_schema": "not_applicable_after_refusal",
+      "cad_allowed": false,
+      "expected_retrieval_query_bore_d_mm": 24
+    }
+  ]
+}
