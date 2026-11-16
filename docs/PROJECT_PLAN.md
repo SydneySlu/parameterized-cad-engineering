@@ -67,7 +67,7 @@
 - [x] 定义样本 manifest：参数 JSON、IR、STEP、验证结果和来源（RET-001；单族 15 行，split 仍为 provisional_small_n）
 - [x] 实现按零件类型、特征、孔位/接口和归一化尺寸的检索（RET-002；单族确定性参数距离基线已验收，split 仍为 provisional_small_n）
 - [x] 完成 C1 检索级诊断（RET-003；固定环境运行、上游回归、结果/报告交叉核对和中枢验收均通过；公平 C2 尚未定义，端到端收益仍需等 APP-001）
-- [ ] RET-004：候选协议与版本化授权 profile/formal runner 已实现；固定 CAD venv 下 RET-004 关联 76 项、全 LLM 945 项（8 个既有 skip）、受影响 product-live/app004/pipeline/schema 253 项通过，当前待独立复核。负责人接受精确 scope/hash 后做 formal preflight；随后申请 2 条固定输入 × C0/C1（4 个逻辑 run、最多 8 次 HTTP）的真实 DeepSeek `deepseek-flash` 执行授权。离线结果只证明链路准备，不是检索收益证据；R01 每个条件的 CAD 仍需分别确认，R02 永久 CAD-deny。
+- [ ] RET-004：候选协议、版本化授权 profile/formal runner 和 summary confirmation-status 窄修已完成；独立复核通过，固定 CAD venv 下 RET-004 83 项、全 LLM 945 项（8 个既有 skip）、受影响 product-live/app004/pipeline/schema 253 项通过。负责人已接受 exact scope/hash，当前执行 formal preflight；通过后再申请 2 条固定输入 × C0/C1（4 个逻辑 run、最多 8 次 HTTP）的真实 DeepSeek `deepseek-flash` 执行授权。离线结果只证明链路准备，不是检索收益证据；R01 每个条件的 CAD 仍需分别确认，R02 永久 CAD-deny。
 
 ## 阶段 4：轻量版交付
 

@@ -73,3 +73,10 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - Regression coverage: added assertions for pending, denied-by-scope, declined, and confirmed states in `tests/integration/test_ret004_paired_runner.py`.
 - Validation (fixed CAD venv Python 3.11.18): targeted RET-004 suite **24/24**, conditions/retry/retrieval **59/59**, affected Product Live/APP-004/UI/pipeline/schema-to-IR **253/253**; `py_compile` and `git diff --check` pass. Initial test run exposed and fixed the status-precedence case before commit.
 - Boundary: no scope/hash/input changes; no preflight, batch/ledger, credential read, network/model request, or CAD/STEP execution. `FORMAL_EVALUATION_ALLOWED=False` unchanged. Candidate remains `review` pending independent read-only review.
+
+## Owner scope acceptance and preflight gate
+
+- Owner acceptance: `approver=Wang sikai`; `approved_at_utc=2026-11-16T13:20:20Z`; `approval_record_ref=conversation:RET-004-PAIRED-LIVE-20261116-01-scope-acceptance`.
+- Accepted binding: profile `ret004-paired-live.v1`, batch candidate `ret004-paired-live-20261116-01`, the frozen inputs/labels/prompt/contract/RET-001 manifest/RET-002 config hashes recorded above, DeepSeek `deepseek-flash`, C0/C1, four logical runs, maximum eight HTTP attempts.
+- Review status: independent read-only review is `pass` at `c212e03`; the scope is accepted, but no formal preflight or live execution has occurred.
+- Next gate: run `run_ret004_offline_preflight()` in the fixed CAD venv. This gate must not read credentials, create a batch/ledger, call the network, or run CAD; only a passing preflight permits requesting separate exact-batch live approval.

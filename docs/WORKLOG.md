@@ -3480,3 +3480,9 @@ commit=待提交
 - 回归：新增 R01 C0/C1 pending、R02 scope deny、两次拒绝和确认成功的 summary 断言；第一次测试发现 mock CAD 返回仍为 `needs_confirmation` 时的优先级问题，已调整为以 confirmation registry 优先。
 - 验证（固定 CAD venv Python 3.11.18）：RET-004 **24/24**；conditions/retry/retrieval **59/59**；受影响 Product Live/APP-004/UI/pipeline/schema-to-IR **253/253**；`py_compile` 与 `git diff --check` 通过。
 - 边界：未改 scope、输入、labels、hash、prompt、预算或授权；未运行 formal preflight，未创建 batch/ledger，未读凭据或 raw/labels，未调用网络、模型或 RET-004 CAD/STEP。`FORMAL_EVALUATION_ALLOWED=False` 保持。下一步是提交窄修并交独立 Codex 只读复核。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / owner scope acceptance / 2026-11-16
+
+- 动作：负责人 Wang sikai 接受 RET-004 精确 scope/hash，接受时间 `2026-11-16T13:20:20Z`；接受记录引用 `conversation:RET-004-PAIRED-LIVE-20261116-01-scope-acceptance`。
+- 接受范围：profile `ret004-paired-live.v1`、候选 batch `ret004-paired-live-20261116-01`、两条冻结输入 × C0/C1、DeepSeek `deepseek-flash`、最多 8 次 HTTP，以及已绑定的 inputs/labels/prompt/contract/RET-001/RET-002 hashes。
+- 结果：独立复核 `pass`，允许进入 formal preflight；尚未创建 batch/ledger、读取凭据、调用网络/模型或运行 RET-004 CAD/STEP。`FORMAL_EVALUATION_ALLOWED=False` 保持。preflight 通过后仍需单独申请 exact-batch 真实请求授权。
