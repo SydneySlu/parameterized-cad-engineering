@@ -420,7 +420,7 @@ tests.llm.test_runner                        73/73  OK
 
 - 负责人执行 `git switch main` 与 `git merge --ff-only cc/RET-005-POOL-FIXES`，成功 fast-forward 到 `c24a42b640e012c7a20a97386cd827845ebf1e6b`；该提交与 Codex 独立复验记录一致，`cc/RET-005-POOL-FIXES` 是 `main` 的祖先。
 - 合入后固定 CAD venv 专项命令 `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.retrieval.test_ret005_pool tests.integration.test_ret005_pool_runner tests.demo.test_ret005_pool_server -q`：159 项通过、1 个既有 skip。合入后 `git diff --check origin/main..HEAD` 通过。
-- 当前本地 `main` 比 `origin/main=4ec86f2` 超前 11 个提交；负责人此前的 push 发生在 RET-005 合入前，因此该分支内容尚未随该 push 发布。未执行新的 push。
+- 合入时本地 `main` 比 `origin/main=4ec86f2` 超前 11 个提交；本次文档收束提交 `733ff50` 后，本地领先数变为 12。负责人此前的 push 发生在 RET-005 合入前，因此该分支内容尚未随该 push 发布。未执行新的 push。
 - 状态：RET-005 标记为 `done`（本地合入与必要复核完成）。此工作单元只证明限定的单族离线/FakeTransport 产品流程准备；未调用真实模型、外网、凭据、CAD/STEP，未创建 batch，也未证明检索收益。`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 下一步：如推进检索收益评估，建立新的 held-out C0/C1 scope，之后仍需固定环境复核、preflight 和负责人对具体 batch 的单独批准。
 
