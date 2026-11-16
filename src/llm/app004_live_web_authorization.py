@@ -165,13 +165,18 @@ class App004LiveWebApproval:
             "max_batch_http": APP004_MAX_BATCH_HTTP,
             "enable_cad_pipeline": True,
         }
-        mismatches = [key for key, value in expected.items() if getattr(self, key) != value]
+        mismatches = [
+            key for key, value in expected.items()
+            if type(getattr(self, key)) is not type(value) or getattr(self, key) != value
+        ]
         for key in ("approver", "approved_at_utc", "approval_statement"):
             value = getattr(self, key)
             if not isinstance(value, str) or not value.strip():
                 mismatches.append(key)
-        if self.approval_record_ref is not None and not isinstance(self.approval_record_ref, str):
+        if self.approval_record_ref is not None and type(self.approval_record_ref) is not str:
             mismatches.append("approval_record_ref")
+        if type(self.is_test_only) is not bool:
+            mismatches.append("is_test_only")
         if mismatches:
             raise App004ApprovalValidationError(
                 "APP-004 approval mismatch: " + ", ".join(mismatches)
@@ -218,7 +223,14 @@ def validate_app004_approval_binding(
         authorization.__post_init__()
     except AuthorizationScopeError as exc:
         raise App004ApprovalValidationError("APP-004 authorization binding invalid") from exc
-    if approval.is_test_only:
+    try:
+        # Approval dataclasses are frozen for normal use, but object.__setattr__
+        # can still mutate them. Re-run every constructor invariant before any
+        # preflight, credential read, directory creation, or ledger setup.
+        approval.__post_init__()
+    except App004ApprovalValidationError as exc:
+        raise App004ApprovalValidationError("APP-004 approval binding invalid") from exc
+    if type(approval.is_test_only) is not bool or approval.is_test_only is not False:
         raise App004ApprovalValidationError("test-only approval cannot authorize live execution")
     expected = {
         "batch_id": authorization.batch_id,
@@ -233,7 +245,10 @@ def validate_app004_approval_binding(
         "max_batch_http": authorization.max_batch_attempts,
         "enable_cad_pipeline": authorization.enable_cad_pipeline,
     }
-    mismatches = [key for key, value in expected.items() if getattr(approval, key) != value]
+    mismatches = [
+        key for key, value in expected.items()
+        if type(getattr(approval, key)) is not type(value) or getattr(approval, key) != value
+    ]
     for key in ("approver", "approved_at_utc", "approval_statement"):
         value = getattr(approval, key)
         if not isinstance(value, str) or not value.strip():

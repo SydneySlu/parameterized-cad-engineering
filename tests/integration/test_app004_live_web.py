@@ -68,6 +68,25 @@ def _post(port, path, data):
     return response.status, json.loads(body.decode())
 
 
+def _owner_approval():
+    return App004LiveWebApproval(
+        batch_id=APP004_BATCH_ID,
+        profile_id=APP004_PROFILE_ID,
+        inputs_sha256=APP004_INPUTS_SHA256,
+        evaluator_labels_sha256=APP004_LABELS_SHA256,
+        prompt_sha256=APP004_PROMPT_SHA256,
+        contract_sha256=APP004_CONTRACT_SHA256,
+        provider=APP004_PROVIDER,
+        model=APP004_MODEL,
+        condition=APP004_CONDITION,
+        max_batch_http=APP004_MAX_BATCH_HTTP,
+        enable_cad_pipeline=True,
+        approver="Wang sikai",
+        approved_at_utc="2026-11-16T00:00:00Z",
+        approval_statement="APP-004 test approval object",
+    )
+
+
 class TestApp004Authorization(unittest.TestCase):
     def test_profile_is_exact_and_global_gate_stays_closed(self):
         auth = authorize_app004_live_web_run()
@@ -165,6 +184,35 @@ class TestApp004Authorization(unittest.TestCase):
                 )
         preflight.assert_not_called()
         load_env.assert_not_called()
+
+    def test_mutated_approval_free_fields_rejected_before_formal_side_effects(self):
+        auth = authorize_app004_live_web_run()
+        mutations = {
+            "approval_record_ref": object(),
+            "approver": object(),
+            "approved_at_utc": object(),
+            "approval_statement": object(),
+            "is_test_only": 0,
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                approval = _owner_approval()
+                object.__setattr__(approval, field, value)
+                with patch(
+                    "integration.app004_live_web_runner.run_app004_offline_preflight"
+                ) as preflight, patch(
+                    "integration.app004_live_web_runner.load_deepseek_environment"
+                ) as load_env, patch.object(Path, "mkdir") as mkdir, patch(
+                    "integration.app004_live_web_runner.BudgetLedger"
+                ) as ledger:
+                    with self.assertRaises(App004ApprovalValidationError):
+                        App004LiveWebService.prepare_formal(
+                            authorization=auth, approval=approval
+                        )
+                preflight.assert_not_called()
+                load_env.assert_not_called()
+                mkdir.assert_not_called()
+                ledger.assert_not_called()
 
 
 class TestApp004OfflineService(unittest.TestCase):
