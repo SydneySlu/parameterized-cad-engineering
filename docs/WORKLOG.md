@@ -3500,3 +3500,11 @@ commit=待提交
 - 结果：4/4 logical runs 各 1 次 HTTP，共 4 次请求。R01 C0/C1 均 `answer`、`bore_d=24`、`needs_confirmation`；R02 C0/C1 均 `refuse`，包含 unsupported anodizing 表示，`blocked` 且 `SCOPE_CAD_DENIED`。summary=`awaiting_confirmation`。
 - 产物：批准 batch 下保留 4 个 raw 响应文件、budget ledger、脱敏 summary（repo-relative raw path/hash）；未生成 pipeline-runs 或 STEP，未读取或复制 raw 正文。
 - 下一步：R01 C0 和 R01 C1 必须分别获得负责人确认后才可进入对应 CAD；R02 永久禁止 CAD。检索效果待四 run 及后续确认结果完成后做描述性汇报。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / owner-confirmed CAD and closeout / 2026-11-16
+
+- 动作：按负责人对 R01 C0、R01 C1 分别确认的授权，完成两条既有抽取结果的 CAD/STEP 路径；本轮中枢收束只读核验 batch summary、ledger、pipeline summary/index 与 STEP 哈希，并同步状态、计划和 checkpoint。
+- 结果：batch summary=`complete`，4/4 logical runs 均有终态；预算账本为 4 次 HTTP/8 次上限。R01 C0/C1 均 `bore_d=24`、确认后 `pipeline_status=success`，到达 `step_readback`；C0 STEP SHA-256=`831a569efad97a779e7fa3abcfa962cdc54a2cebed5e9fd5e8d75ce1f7c8ad01`，C1=`2e1246ec22cfcc0b9642363eff8180ecc9d1be04c0463a6006fe3befb7ebbfee`，均与 pipeline index 和文件字节一致。R02 C0/C1 均拒绝阳极氧化并 `denied_by_scope`，无 CAD/STEP。
+- 隔离与边界：4 个 raw 文件及 hash 仍保留；本轮未读取 raw 正文/evaluator labels，未发送新 HTTP、读取凭据、改写 batch 或重新运行 CAD。`FORMAL_EVALUATION_ALLOWED=False` 未改变。该两输入结果仅作描述性对照，不主张统计检索收益或广泛泛化。
+- 验证：标准库只读审计确认 summary `complete`、planned runs=4、ledger 4 次尝试、两条 R01 `step_readback` success、STEP 哈希与 summary/index 一致、R02 无 CAD 产物；`git diff --check` 在本次文档提交前运行。
+- 状态/下一步：RET-004 保持 `review`，等待独立只读收束复核和合入；历史 batch 只读保留。

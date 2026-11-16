@@ -1,7 +1,7 @@
 # RET-004 checkpoint
 
 - Task: `RET-004-PAIRED-LIVE-20261116-01`
-- Status: `in_progress` — candidate protocol and narrow C1 wording compatibility fix; no scope acceptance or live authorization yet.
+- Current status: `review` — exact scope accepted, authorized C0/C1 extraction completed, both approved R01 runs completed CAD/STEP readback, and R02 remained CAD-denied. Awaiting independent closeout review and merge.
 - Base: `main` at `b5f5d45ef7635062afe8952b1483e2c068a90fb2` (local main was 14 commits ahead of origin at start).
 - Branch: `codex/RET-004-PAIRED-LIVE-PROTOCOL`.
 
@@ -96,3 +96,14 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - R02 C0/C1: both returned `decision=refuse`, represented the unsupported anodizing request, and were forced to `product_status=blocked` with `GATE_DECISION_REFUSE` and `SCOPE_CAD_DENIED`; both remain `confirmation_status=denied_by_scope`.
 - Retention: four raw response files and the budget ledger exist under the approved batch directory; summary contains repo-relative raw paths and hashes only. Raw response bodies were not read or copied into project records.
 - Next gate: owner must separately confirm R01 C0 and/or R01 C1 after reviewing their extracted results before either condition may enter CAD. R02 cannot enter CAD.
+
+## Owner-confirmed R01 CAD execution and closeout checkpoint
+
+- Authorization: the owner separately confirmed R01 C0 and R01 C1 for CAD after the live extraction results; the R02 CAD-deny remains in force. This closeout records the already completed runs and did not repeat model or CAD execution.
+- Batch result: `work/app001-runs/ret004-paired-live-20261116-01/batch_summary.json` reports `batch_status=complete`, four planned runs, and terminal states for all four. R01 C0/C1 each have `decision=answer`, `bore_d=24`, `confirmation_status=confirmed`, `product_status=succeeded`, and `pipeline_status=success`. R02 C0/C1 each have `decision=refuse`, unsupported `anodizing`, `product_status=blocked`, and `confirmation_status=denied_by_scope`; neither has a pipeline or STEP hash.
+- Budget and retention: the ledger records 4 claimed/completed HTTP attempts across four logical runs against the approved batch cap of 8. Four raw files remain present; their paths and SHA-256 values are recorded in the summary. This check read only summary/ledger metadata and file names, not raw response bodies.
+- CAD evidence: both R01 pipeline summaries report `status=success`, `stage=step_readback`, and no errors. For C0, summary SHA-256 `831a569efad97a779e7fa3abcfa962cdc54a2cebed5e9fd5e8d75ce1f7c8ad01` matches its pipeline index and STEP bytes. For C1, summary SHA-256 `2e1246ec22cfcc0b9642363eff8180ecc9d1be04c0463a6006fe3befb7ebbfee` matches its pipeline index and STEP bytes. Each STEP is 148,393 bytes. R02 has no pipeline directory or STEP artifact.
+- Verification: a read-only Python standard-library audit inspected the batch summary, ledger, pipeline summaries/indexes, and STEP file hashes. It confirmed four ledger attempts, `complete`, two successful `step_readback` runs, exact summary/index/file hash agreement, and no R02 CAD artifacts. `git diff --check` is to be run before the documentation closeout commit.
+- Boundaries: no new HTTP request, credential read, preflight, or batch mutation occurred during closeout. No raw body or evaluator labels were read. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged. This two-input paired result is descriptive evidence only; it does not establish statistical retrieval benefit, broad language generalization, production readiness, or manufacturing certification.
+- Result: both owner-confirmed R01 conditions completed CAD/STEP readback; R02 remained permanently denied by scope. Task remains `review` pending independent read-only closeout review and merge.
+- Next gate: independently verify the final batch/STEP evidence and documentation, then merge through the project workflow. Do not rerun or modify the historical batch.

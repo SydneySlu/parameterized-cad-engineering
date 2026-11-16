@@ -67,7 +67,7 @@
 - [x] 定义样本 manifest：参数 JSON、IR、STEP、验证结果和来源（RET-001；单族 15 行，split 仍为 provisional_small_n）
 - [x] 实现按零件类型、特征、孔位/接口和归一化尺寸的检索（RET-002；单族确定性参数距离基线已验收，split 仍为 provisional_small_n）
 - [x] 完成 C1 检索级诊断（RET-003；固定环境运行、上游回归、结果/报告交叉核对和中枢验收均通过；公平 C2 尚未定义，端到端收益仍需等 APP-001）
-- [ ] RET-004：exact batch 已完成 4/4 次真实 DeepSeek `deepseek-flash` 抽取；R01 C0/C1 为 `needs_confirmation` 且 `bore_d=24`，R02 C0/C1 为 `refuse`/`blocked`/CAD-deny，summary=`awaiting_confirmation`。下一步由负责人分别确认 R01 C0/C1 后运行对应 CAD；R02 永久 CAD-deny。四 run 的检索效果只能做描述性报告，不得外推为统计结论。
+- [ ] RET-004：exact batch `ret004-paired-live-20261116-01` 已完成 4/4 次真实 DeepSeek `deepseek-flash` 请求。R01 C0/C1 均抽取 `bore_d=24`，负责人分别确认后各自完成 CAD/STEP 导出与回读；R02 C0/C1 拒绝阳极氧化并保持 CAD-deny，无 CAD/STEP。summary=`complete`，ledger 4/8 次 HTTP。当前等待独立复核和合入；四 run 的检索效果仅作描述性报告，不外推为统计结论。
 
 ## 阶段 4：轻量版交付
 
