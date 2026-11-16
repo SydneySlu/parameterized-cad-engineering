@@ -37,6 +37,7 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Scope is bound to D01/D02 and frozen hashes, DeepSeek `deepseek-flash`/C0, max 2 logical inputs × 2 attempts = 4 HTTP. Browser submits only frozen input ID. D01 requires valid extraction plus explicit confirmation; D02 is always blocked from CAD.
 - Independent review during implementation found and corrected approval binding that only compared batch ID; execution-time validation now rechecks full profile/hash/provider/model/condition/budget/CAD fields and exact approval type before preflight or credential loading.
 - Download validation now permits only the current service's canonical output root (formal batch root or isolated offline root), rejects symlink leaf and escapes, and verifies STEP SHA-256. Clean shutdown records `partial` if a frozen input was not run.
+- Independent review identified two gaps, now addressed in the narrow fix below: prompt/contract hashes are fixed anchors carried by both authorization and approval and recomputed during preflight; free-form approval statement/reference are represented in summary only by SHA-256 fingerprints.
 - Fixed CAD venv Python 3.11.18 checks: target `py_compile` passed; `tests.integration.test_app004_live_web` 19/19 passed before final shutdown assertions were added; initial Product Live + UI compatibility run 145/145 passed. Re-run after the final two tests is pending.
 - Browser smoke at `http://127.0.0.1:8765/app004-live` with FakeTransport: D01 showed `needs_confirmation`, explicit confirmation generated STEP with SHA-256 `4e60bf23d765e6db991ea0c70e5308a8091c29ab3d4d9bfb2dec2c45eeb2035f`, download endpoint returned HTTP 200; D02 showed `blocked / answer`, `SCOPE_CAD_DENIED`, and no confirmation button. No real model request was sent.
 - Not run: formal preflight, `.env`/credential loading, DeepSeek/network, real batch creation, evaluator-label reads, or formal CAD output. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged.
@@ -57,3 +58,12 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Central review: target suite rerun in fixed CAD venv **22/22 PASS**; `py_compile` on the four changed Python files PASS; `git diff --check` and staged diff check PASS; frozen input/label hashes match scope.
 - Current status: `review`; no formal preflight, batch/ledger creation, credential read, model/network call, or live CAD run. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged.
 - Next: independent read-only review of commit `173636b` against base `ff3a00d7d65e05197767bfc1766629a7471809f0`; only after a pass may the owner consider separate exact-batch execution authorization.
+
+### Review fix — 2026-11-16
+
+- Finding: predecessor review `review` found APP004 prompt hash derived from the runtime constant rather than an independent scope anchor, no contract hash binding, and unsanitized free-form approval fields in summary.
+- Fix: bind fixed SHA-256 anchors for frozen prompt-v5 and `src/llm/contract.py` into authorization and approval validation; preflight hashes both canonical files. Summary stores only hashes of approval statement/reference, never their raw values. Scope records both anchors.
+- Verification: `tests.integration.test_app004_live_web` **25/25 PASS**; target `py_compile` PASS. Additional compatibility/full suite reruns pending.
+- Follow-up fixed-environment regression: Product Live/UI **145/145**, C1/C2/C3 demo **183/183**, pipeline/schema **81/81**; target compilation and diff checks pass. Existing ResourceWarnings are in legacy tests and did not fail.
+- Status: `review`; no formal preflight, batch creation, credentials, network, model or live CAD use. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
+- Next: commit this narrow fix and request an independent read-only re-review of the fix range.

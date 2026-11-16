@@ -8,6 +8,8 @@
 - provider/model/condition：DeepSeek `deepseek-flash` / C0 / no retrieval
 - family：`set_screw_shaft_collar` only
 - contract/prompt：当前冻结的 `app001-io.v1` / `app001-extraction.v5`
+- prompt file SHA-256：`18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9`
+- contract source SHA-256：`6e7c6022325273cedb5a0ba637c6165fd4237b16f63e362bb6844c5029a11d66`
 
 ## Goal
 
@@ -25,6 +27,7 @@ The web UI must not accept arbitrary request text in this profile. It sends only
 ## Budget and execution boundary
 
 - At most 2 logical inputs and 2 HTTP attempts per input; batch cap is **4 HTTP requests** total.
+- Approval/profile bind the frozen prompt-file and contract-source hashes; preflight recomputes both from their canonical files before credentials or batch side effects.
 - One provider, one model, one condition (C0); no retrieval, image input, second family, prompt change, or automatic CAD.
 - Browser-to-server requests carry only an allowlisted input ID and later an explicit confirmation for an eligible run. Browser code never receives provider credentials.
 - Credential loading occurs server-side only after approval binding and offline preflight pass. Scope acceptance alone is not execution authorization.
@@ -47,5 +50,7 @@ Scope acceptance freezes this profile but does not create the batch directory, r
 
 - model-inputs.json SHA-256: `4c97a043e1547831fd92f3f7a95ba65b6ea6734b073f2ce9687454143ed65841`
 - evaluator-labels.json SHA-256: `4eff6146ee2b1809a9720407eceb605257340204fbca409a2c35e94295c5e091`
+- prompt-v5.md SHA-256: `18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9`
+- src/llm/contract.py SHA-256: `6e7c6022325273cedb5a0ba637c6165fd4237b16f63e362bb6844c5029a11d66`
 
 Any content change requires updating the hash and re-reviewing the scope.

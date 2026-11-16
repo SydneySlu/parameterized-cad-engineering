@@ -20,7 +20,7 @@ from llm.authorization import AuthorizationScopeError
 from llm.budget import BudgetAwareTransport, BudgetLedger
 from llm.contract import CONTRACT_VERSION, DEEPSEEK_MODEL, DEEPSEEK_PROVIDER, FORMAL_EVALUATION_ALLOWED, PROMPT_VERSION
 from llm.env_loader import EnvironmentConfigurationError, load_deepseek_environment
-from llm.prompt_loader import FROZEN_PROMPT_FILE_SHA256, load_frozen_prompt
+from llm.prompt_loader import FROZEN_PROMPT_PATH, load_frozen_prompt
 from llm.real_transport import DeepSeekTransport
 from llm.transport import FakeTransport
 from integration.product_live_runner import (
@@ -38,6 +38,7 @@ from integration.product_live_runner import (
 from llm.adapter import RetentionPolicy, _retain_response
 from llm.app004_live_web_authorization import (
     APP004_BATCH_ID,
+    APP004_CONTRACT_SHA256,
     APP004_CONDITION,
     APP004_INPUT_IDS,
     APP004_INPUTS_SHA256,
@@ -85,6 +86,8 @@ def authorize_app004_live_web_run() -> App004LiveWebAuthorization:
         input_ids=APP004_INPUT_IDS,
         inputs_sha256=APP004_INPUTS_SHA256,
         evaluator_labels_sha256=APP004_LABELS_SHA256,
+        prompt_sha256=APP004_PROMPT_SHA256,
+        contract_sha256=APP004_CONTRACT_SHA256,
         enable_cad_pipeline=True,
     )
 
@@ -136,12 +139,24 @@ def run_app004_offline_preflight(
     try:
         prompt = load_frozen_prompt()
         details["prompt_version"] = prompt.version
-        details["prompt_ok"] = FROZEN_PROMPT_FILE_SHA256 == APP004_PROMPT_SHA256
+        prompt_digest = hashlib.sha256(FROZEN_PROMPT_PATH.read_bytes()).hexdigest()
+        details["prompt_sha256"] = prompt_digest
+        details["prompt_ok"] = prompt_digest == APP004_PROMPT_SHA256
         if not details["prompt_ok"]:
             errors.append("prompt_hash_mismatch")
     except Exception:
         details["prompt_ok"] = False
         errors.append("prompt_unavailable")
+    contract_path = Path(__file__).resolve().parents[1] / "llm" / "contract.py"
+    try:
+        contract_digest = hashlib.sha256(contract_path.read_bytes()).hexdigest()
+        details["contract_sha256"] = contract_digest
+        details["contract_ok"] = contract_digest == APP004_CONTRACT_SHA256
+        if not details["contract_ok"]:
+            errors.append("contract_hash_mismatch")
+    except OSError:
+        details["contract_ok"] = False
+        errors.append("contract_unavailable")
     if require_cad_runtime:
         try:
             from integration.product_live_runner import _check_cad_runtime
@@ -278,6 +293,7 @@ class App004LiveWebService:
                 "inputs_sha256": APP004_INPUTS_SHA256,
                 "evaluator_labels_sha256": APP004_LABELS_SHA256,
                 "prompt_file_sha256": APP004_PROMPT_SHA256,
+                "contract_file_sha256": APP004_CONTRACT_SHA256,
             },
             "runs": {},
         }

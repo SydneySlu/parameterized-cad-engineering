@@ -12,7 +12,6 @@ from typing import Final
 
 from .authorization import AuthorizationScopeError, FormalRunAuthorization
 from .contract import CONTRACT_VERSION, DEEPSEEK_MODEL, DEEPSEEK_PROVIDER, PROMPT_VERSION
-from .prompt_loader import FROZEN_PROMPT_FILE_SHA256
 
 APP004_PROFILE_ID: Final[str] = "app004-live-web-demo.v1"
 APP004_SAMPLE_SET: Final[str] = "app004-live-web-demo.v1"
@@ -27,15 +26,18 @@ APP004_INPUTS_SHA256: Final[str] = (
 APP004_LABELS_SHA256: Final[str] = (
     "4eff6146ee2b1809a9720407eceb605257340204fbca409a2c35e94295c5e091"
 )
+APP004_PROMPT_SHA256: Final[str] = (
+    "18cc180fca975da89ed01e10b750ecf023cf800a30e84f99664191ede2faafe9"
+)
+APP004_CONTRACT_SHA256: Final[str] = (
+    "6e7c6022325273cedb5a0ba637c6165fd4237b16f63e362bb6844c5029a11d66"
+)
 APP004_PROVIDER: Final[str] = DEEPSEEK_PROVIDER
 APP004_MODEL: Final[str] = DEEPSEEK_MODEL
 APP004_CONDITION: Final[str] = "C0"
 APP004_MAX_LOGICAL_RUNS: Final[int] = 2
 APP004_MAX_ATTEMPTS_PER_RUN: Final[int] = 2
 APP004_MAX_BATCH_HTTP: Final[int] = 4
-APP004_PROMPT_SHA256: Final[str] = FROZEN_PROMPT_FILE_SHA256
-
-
 @dataclass(frozen=True)
 class App004LiveWebAuthorization(FormalRunAuthorization):
     """Authorization bound to the exact two-input APP-004 demo scope."""
@@ -44,6 +46,8 @@ class App004LiveWebAuthorization(FormalRunAuthorization):
     input_ids: tuple[str, ...]
     inputs_sha256: str
     evaluator_labels_sha256: str
+    prompt_sha256: str
+    contract_sha256: str
     enable_cad_pipeline: bool
 
     def __post_init__(self) -> None:
@@ -76,6 +80,10 @@ class App004LiveWebAuthorization(FormalRunAuthorization):
             errors.append("inputs_sha256 mismatch")
         if self.evaluator_labels_sha256 != APP004_LABELS_SHA256:
             errors.append("evaluator_labels_sha256 mismatch")
+        if self.prompt_sha256 != APP004_PROMPT_SHA256:
+            errors.append("prompt_sha256 mismatch")
+        if self.contract_sha256 != APP004_CONTRACT_SHA256:
+            errors.append("contract_sha256 mismatch")
         if self.enable_cad_pipeline is not True:
             errors.append("enable_cad_pipeline must be True")
         if self.batch_id != APP004_BATCH_ID:
@@ -114,6 +122,8 @@ class App004LiveWebAuthorization(FormalRunAuthorization):
             "input_ids": list(self.input_ids),
             "inputs_sha256": self.inputs_sha256,
             "evaluator_labels_sha256": self.evaluator_labels_sha256,
+            "prompt_sha256": self.prompt_sha256,
+            "contract_sha256": self.contract_sha256,
             "enable_cad_pipeline": self.enable_cad_pipeline,
         }
 
@@ -128,6 +138,8 @@ class App004LiveWebApproval:
     profile_id: str
     inputs_sha256: str
     evaluator_labels_sha256: str
+    prompt_sha256: str
+    contract_sha256: str
     provider: str
     model: str
     condition: str
@@ -145,6 +157,8 @@ class App004LiveWebApproval:
             "profile_id": APP004_PROFILE_ID,
             "inputs_sha256": APP004_INPUTS_SHA256,
             "evaluator_labels_sha256": APP004_LABELS_SHA256,
+            "prompt_sha256": APP004_PROMPT_SHA256,
+            "contract_sha256": APP004_CONTRACT_SHA256,
             "provider": APP004_PROVIDER,
             "model": APP004_MODEL,
             "condition": APP004_CONDITION,
@@ -156,17 +170,23 @@ class App004LiveWebApproval:
             value = getattr(self, key)
             if not isinstance(value, str) or not value.strip():
                 mismatches.append(key)
+        if self.approval_record_ref is not None and not isinstance(self.approval_record_ref, str):
+            mismatches.append("approval_record_ref")
         if mismatches:
             raise App004ApprovalValidationError(
                 "APP-004 approval mismatch: " + ", ".join(mismatches)
             )
 
     def as_audit_dict(self) -> dict[str, object]:
+        import hashlib
+
         return {
             "batch_id": self.batch_id,
             "profile_id": self.profile_id,
             "inputs_sha256": self.inputs_sha256,
             "evaluator_labels_sha256": self.evaluator_labels_sha256,
+            "prompt_sha256": self.prompt_sha256,
+            "contract_sha256": self.contract_sha256,
             "provider": self.provider,
             "model": self.model,
             "condition": self.condition,
@@ -174,8 +194,13 @@ class App004LiveWebApproval:
             "enable_cad_pipeline": self.enable_cad_pipeline,
             "approver": self.approver,
             "approved_at_utc": self.approved_at_utc,
-            "approval_statement": self.approval_statement,
-            "approval_record_ref": self.approval_record_ref,
+            "approval_statement_sha256": hashlib.sha256(
+                self.approval_statement.encode("utf-8")
+            ).hexdigest(),
+            "approval_record_ref_sha256": (
+                hashlib.sha256(self.approval_record_ref.encode("utf-8")).hexdigest()
+                if self.approval_record_ref else None
+            ),
         }
 
 
@@ -200,6 +225,8 @@ def validate_app004_approval_binding(
         "profile_id": authorization.profile_id,
         "inputs_sha256": authorization.inputs_sha256,
         "evaluator_labels_sha256": authorization.evaluator_labels_sha256,
+        "prompt_sha256": authorization.prompt_sha256,
+        "contract_sha256": authorization.contract_sha256,
         "provider": APP004_PROVIDER,
         "model": APP004_MODEL,
         "condition": APP004_CONDITION,
@@ -224,6 +251,8 @@ def make_app004_test_approval() -> App004LiveWebApproval:
         profile_id=APP004_PROFILE_ID,
         inputs_sha256=APP004_INPUTS_SHA256,
         evaluator_labels_sha256=APP004_LABELS_SHA256,
+        prompt_sha256=APP004_PROMPT_SHA256,
+        contract_sha256=APP004_CONTRACT_SHA256,
         provider=APP004_PROVIDER,
         model=APP004_MODEL,
         condition=APP004_CONDITION,
@@ -239,9 +268,10 @@ def make_app004_test_approval() -> App004LiveWebApproval:
 __all__ = [
     "APP004_PROFILE_ID", "APP004_SAMPLE_SET", "APP004_BATCH_ID",
     "APP004_INPUT_IDS", "APP004_INPUTS_SHA256", "APP004_LABELS_SHA256",
+    "APP004_PROMPT_SHA256", "APP004_CONTRACT_SHA256",
     "APP004_PROVIDER", "APP004_MODEL", "APP004_CONDITION",
     "APP004_MAX_LOGICAL_RUNS", "APP004_MAX_ATTEMPTS_PER_RUN",
-    "APP004_MAX_BATCH_HTTP", "APP004_PROMPT_SHA256",
+    "APP004_MAX_BATCH_HTTP",
     "App004LiveWebAuthorization", "App004LiveWebApproval",
     "App004ApprovalValidationError", "validate_app004_approval_binding",
     "make_app004_test_approval",

@@ -18,12 +18,14 @@ sys.path.insert(0, str(_ROOT / "src"))
 from demo.handler import DemoHandler
 from demo.product_flow import ProductFlowHandler
 from demo.server import APP004_LIVE_HTML_CONTENT, make_handler_class
-from integration.app004_live_web_runner import App004LiveWebService, authorize_app004_live_web_run
+from integration.app004_live_web_runner import (
+    App004LiveWebService, authorize_app004_live_web_run, run_app004_offline_preflight,
+)
 from integration.product_live_runner import ProductLiveRunState, PRODUCT_LIVE_STATUS_NEEDS_CONFIRMATION
 from llm.app004_live_web_authorization import (
-    APP004_BATCH_ID, APP004_CONDITION, APP004_INPUT_IDS, APP004_LABELS_SHA256,
+    APP004_BATCH_ID, APP004_CONDITION, APP004_CONTRACT_SHA256, APP004_INPUT_IDS, APP004_LABELS_SHA256,
     APP004_MAX_BATCH_HTTP, APP004_MODEL, APP004_PROFILE_ID, APP004_PROVIDER,
-    APP004_INPUTS_SHA256, APP004_SAMPLE_SET, App004ApprovalValidationError,
+    APP004_INPUTS_SHA256, APP004_PROMPT_SHA256, APP004_SAMPLE_SET, App004ApprovalValidationError,
     App004LiveWebApproval, make_app004_test_approval, validate_app004_approval_binding,
 )
 from llm.contract import CONTRACT_VERSION, FORMAL_EVALUATION_ALLOWED, PROMPT_VERSION
@@ -92,6 +94,8 @@ class TestApp004Authorization(unittest.TestCase):
             "profile_id": "wrong-profile",
             "inputs_sha256": "0" * 64,
             "evaluator_labels_sha256": "1" * 64,
+            "prompt_sha256": "2" * 64,
+            "contract_sha256": "3" * 64,
             "provider": "wrong-provider",
             "model": "wrong-model",
             "condition": "C1",
@@ -105,6 +109,8 @@ class TestApp004Authorization(unittest.TestCase):
                     profile_id=APP004_PROFILE_ID,
                     inputs_sha256=APP004_INPUTS_SHA256,
                     evaluator_labels_sha256=APP004_LABELS_SHA256,
+                    prompt_sha256=APP004_PROMPT_SHA256,
+                    contract_sha256=APP004_CONTRACT_SHA256,
                     provider=APP004_PROVIDER,
                     model=APP004_MODEL,
                     condition=APP004_CONDITION,
@@ -132,6 +138,8 @@ class TestApp004Authorization(unittest.TestCase):
             profile_id=APP004_PROFILE_ID,
             inputs_sha256=APP004_INPUTS_SHA256,
             evaluator_labels_sha256=APP004_LABELS_SHA256,
+            prompt_sha256=APP004_PROMPT_SHA256,
+            contract_sha256=APP004_CONTRACT_SHA256,
             provider=APP004_PROVIDER,
             model=APP004_MODEL,
             condition=APP004_CONDITION,
@@ -160,6 +168,42 @@ class TestApp004Authorization(unittest.TestCase):
 
 
 class TestApp004OfflineService(unittest.TestCase):
+    def test_approval_audit_redacts_free_text_and_reference(self):
+        from dataclasses import replace
+
+        approval = replace(
+            make_app004_test_approval(),
+            is_test_only=False,
+            approval_statement="SECRET_MARKER /Users/private/key.txt",
+            approval_record_ref="/Users/private/approval-record.json",
+        )
+        audit = json.dumps(approval.as_audit_dict())
+        self.assertNotIn("SECRET_MARKER", audit)
+        self.assertNotIn("/Users/private", audit)
+        self.assertIn("approval_statement_sha256", audit)
+        self.assertIn("approval_record_ref_sha256", audit)
+
+    def test_prompt_and_contract_hash_are_bound_in_authorization_and_approval(self):
+        auth = authorize_app004_live_web_run()
+        approval = make_app004_test_approval()
+        self.assertEqual(auth.prompt_sha256, APP004_PROMPT_SHA256)
+        self.assertEqual(auth.contract_sha256, APP004_CONTRACT_SHA256)
+        self.assertEqual(approval.prompt_sha256, APP004_PROMPT_SHA256)
+        self.assertEqual(approval.contract_sha256, APP004_CONTRACT_SHA256)
+        self.assertIn("prompt_sha256", auth.scope_summary())
+        self.assertIn("contract_sha256", auth.scope_summary())
+
+    def test_offline_preflight_rejects_prompt_or_contract_hash_mismatch(self):
+        auth = authorize_app004_live_web_run()
+        for field in ("APP004_PROMPT_SHA256", "APP004_CONTRACT_SHA256"):
+            with self.subTest(field=field), patch(
+                f"integration.app004_live_web_runner.{field}", "0" * 64
+            ):
+                result = run_app004_offline_preflight(auth, require_cad_runtime=False)
+                self.assertFalse(result["ok"])
+                expected_error = "prompt_hash_mismatch" if "PROMPT" in field else "contract_hash_mismatch"
+                self.assertIn(expected_error, result["errors"])
+
     def test_d01_answer_waits_for_confirmation(self):
         transport = FakeTransport()
         transport.queue_response(TransportResponse(status=200, body=_envelope()))

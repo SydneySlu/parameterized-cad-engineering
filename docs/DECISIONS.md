@@ -734,7 +734,7 @@ CC 必须用固定 synthetic fixtures 覆盖：合法 answer、缺 `bore_d`、�
 
 1. 为导师汇报准备独立的本机 localhost LLM 演示，不把当前 synthetic-fixture `/product` 页面描述成真实抽取。演示固定使用 DeepSeek `deepseek-flash`、C0、无检索及当前冻结的 v5 prompt/contract，不开放任意文本输入。
 2. scope 仅含两个固定输入：合法 GN 705 `bore_d=24 mm` 成功候选；轴环加阳极氧化的范围外要求挑战。两条输入、评估标签和本提案分离版本化；标签不得进入模型、网页、runner 或 summary。
-3. 最大 2 次 HTTP/输入、2 条输入、全批 4 次 HTTP。formal approval、batch ID、输入/prompt/contract 绑定和 offline preflight 在任何密钥读取、目录创建、ledger、transport 或网络调用前验证。`FORMAL_EVALUATION_ALLOWED=False` 不变。
+3. 最大 2 次 HTTP/输入、2 条输入、全批 4 次 HTTP。formal approval、batch ID、输入/prompt/contract 绑定（prompt 与 contract 使用独立固定 SHA-256 锚点）和 offline preflight 在任何密钥读取、目录创建、ledger、transport 或网络调用前验证。`FORMAL_EVALUATION_ALLOWED=False` 不变。
 4. 浏览器仅提交固定 allowlisted input ID；服务端持有凭据。D01 仅在模型响应通过 parser/envelope/Schema/规则校验并经负责人逐 run 明确确认后可进入现有 CAD pipeline。D02 对 CAD 永久禁用，不因模型回答或用户确认而放行。
 5. 本 scope 已由负责人接受并冻结。该接受不批准执行。实现及独立复核通过后，负责人仍需针对精确 batch ID、最多 4 次 HTTP 和 D01 允许的逐 run CAD 确认另行明确授权。历史 batches 不复用、不修改。
 
