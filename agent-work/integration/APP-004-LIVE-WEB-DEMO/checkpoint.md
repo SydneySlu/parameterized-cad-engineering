@@ -66,4 +66,5 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Verification: `tests.integration.test_app004_live_web` **25/25 PASS**; target `py_compile` PASS. Additional compatibility/full suite reruns pending.
 - Follow-up fixed-environment regression: Product Live/UI **145/145**, C1/C2/C3 demo **183/183**, pipeline/schema **81/81**; target compilation and diff checks pass. Existing ResourceWarnings are in legacy tests and did not fail.
 - Status: `review`; no formal preflight, batch creation, credentials, network, model or live CAD use. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
-- Next: commit this narrow fix and request an independent read-only re-review of the fix range.
+- Narrow-fix commit: `0addfc2` (`fix: bind APP-004 artifacts and sanitize approval audit [APP-004-LIVE-WEB-DEMO]`).
+- Next: request an independent read-only re-review of `173636b..0addfc2`.

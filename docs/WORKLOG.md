@@ -3379,4 +3379,5 @@ commit=待提交
 - 修复：新增固定 prompt-v5 文件与 `contract.py` SHA-256 锚点，由 authorization 和 approval 同时绑定；offline preflight 从规范路径重新计算字节哈希。approval summary 只保存自由文本字段的 SHA-256，不保留原值；scope、ADR、checkpoint 同步哈希和状态。
 - 验证：固定 CAD venv Python 3.11.18：APP-004 专项 **25/25**、Product Live/UI **145/145**、C1/C2/C3 demo **183/183**、pipeline/schema **81/81**；目标文件 `py_compile` 和 `git diff --check` 通过。兼容套件输出既有 ResourceWarning，无失败。
 - 边界：未执行 formal preflight，未创建 batch/ledger，未读取 `.env`/密钥/evaluator-label 内容，未调用模型/网络或真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
-- 下一步：提交窄修并请求独立复核；通过后仍需负责人另行授权精确 batch 的 formal preflight/live 请求。
+- 窄修提交：`0addfc2`（`fix: bind APP-004 artifacts and sanitize approval audit [APP-004-LIVE-WEB-DEMO]`）。
+- 下一步：请求独立只读复核 `173636b..0addfc2`；通过后仍需负责人另行授权精确 batch 的 formal preflight/live 请求。
