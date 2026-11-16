@@ -171,7 +171,7 @@ class App004LiveWebApproval:
         ]
         for key in ("approver", "approved_at_utc", "approval_statement"):
             value = getattr(self, key)
-            if not isinstance(value, str) or not value.strip():
+            if type(value) is not str or not value.strip():
                 mismatches.append(key)
         if self.approval_record_ref is not None and type(self.approval_record_ref) is not str:
             mismatches.append("approval_record_ref")
@@ -251,7 +251,7 @@ def validate_app004_approval_binding(
     ]
     for key in ("approver", "approved_at_utc", "approval_statement"):
         value = getattr(approval, key)
-        if not isinstance(value, str) or not value.strip():
+        if type(value) is not str or not value.strip():
             mismatches.append(key)
     if mismatches:
         raise App004ApprovalValidationError(

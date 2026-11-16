@@ -87,6 +87,14 @@ def _owner_approval():
     )
 
 
+class _MaliciousString(str):
+    def strip(self, *args, **kwargs):
+        return "non-empty"
+
+    def encode(self, *args, **kwargs):
+        raise RuntimeError("string subclass encode must not run")
+
+
 class TestApp004Authorization(unittest.TestCase):
     def test_profile_is_exact_and_global_gate_stays_closed(self):
         auth = authorize_app004_live_web_run()
@@ -192,12 +200,18 @@ class TestApp004Authorization(unittest.TestCase):
             "approver": object(),
             "approved_at_utc": object(),
             "approval_statement": object(),
+            "approval_statement_subclass": _MaliciousString("approved"),
             "is_test_only": 0,
         }
         for field, value in mutations.items():
             with self.subTest(field=field):
                 approval = _owner_approval()
-                object.__setattr__(approval, field, value)
+                target_field = (
+                    "approval_statement"
+                    if field == "approval_statement_subclass"
+                    else field
+                )
+                object.__setattr__(approval, target_field, value)
                 with patch(
                     "integration.app004_live_web_runner.run_app004_offline_preflight"
                 ) as preflight, patch(
