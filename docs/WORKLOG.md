@@ -3627,3 +3627,10 @@ commit=待提交
 - 发现：P1 `width=14 mm，width= mm` 仍无错误，只返回首个值；P2 `_SCREW_D_KW_RE` 把“螺钉”泛词当作 screw_d 关键词，使“单螺钉”和“螺钉长度”误报 parse error；`second_screw=0，双螺钉` 的显式数字覆盖了互相矛盾的中文提示。详细证据见 RET-005 checkpoint。
 - 结论：`review`，不建议合入；再做解析器窄修后复验。PROJECT_STATUS 已同步。
 - 边界：未调用真实模型、外网、凭据或 CAD/STEP；未创建 batch/preflight，未读 labels/raw 正文，未修改生产代码；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / parser boundary fix acceptance / 2026-11-17
+
+- 动作：独立复验 `51ad8bd`，重点检查 malformed 重复参数、screw_d 误识别和 second_screw 数值/中文提示一致性。
+- 验证（固定 CAD venv Python 3.11.18）：RET-005 pool/runner/server 159 通过、1 个既有 skip；RET-004/retrieval/Schema/Product Live UI/LLM runner 178 通过、1 个既有 skip；pipeline + CAD compilation/handoff 52 通过。`py_compile`、`git diff --check`、`git show --check` 通过。manifest 和 RET-002 config hash 与冻结值相同；formal gate 仍 False。
+- 结论：本轮 parser boundary fix `pass`。解析错误/矛盾均 fail-closed，普通“单螺钉”“螺钉长度”不再误报 screw_d 缺值，等价重复值仍通过。候选任务状态继续为 `review`，待负责人合入后才能 done。
+- 边界：未调用模型、外网、凭据、CAD/STEP；未创建 batch/preflight，未读 labels/raw 正文或更改历史证据。真实模型效果与检索收益未测试。

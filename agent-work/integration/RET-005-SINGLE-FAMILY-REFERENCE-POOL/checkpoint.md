@@ -399,6 +399,23 @@ tests.llm.test_runner                        73/73  OK
 
 状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch、不申请 live 执行授权、不修改正式 gate。
 
+## Codex 中枢独立复验 / 2026-11-17 / `51ad8bd`
+
+**验收对象**：`51ad8bd44619d21c428159f872cd0eae7482cd8d`，父提交 `100c828b9557df337269964289e46df883894a15`，分支 `cc/RET-005-POOL-FIXES`，基线 `main=daf8cc10a965b1a3a7d3a57378f93a7b51dcb6f1`；复核开始时工作区干净。
+
+**验证（固定 CAD venv Python 3.11.18）**：
+
+- RET-005 pool/runner/server：159 项通过、1 个既有 skip。
+- RET-004 paired、retrieval baseline、Schema、Product Live UI、LLM runner：178 项通过、1 个既有 skip。
+- pipeline integration + CAD compilation/handoff：52 项通过。
+- 修改文件 `py_compile`、`git diff --check 100c828..HEAD`、`git show --check HEAD` 通过。
+- 正常与失败 parser probe：合法值+malformed 重复（`width=14 mm，width= mm`、`outer_d=40mm，外径= mm`）均返回解析错误；“螺钉长度=12 mm”和“单螺钉”不触发 screw_d 错误；`second_screw=0，双螺钉` 报歧义，`second_screw=1，双螺钉` 一致通过；单位等价重复保留为 width=14。
+- 冻结项：`FORMAL_EVALUATION_ALLOWED=False`；RET-001 manifest SHA-256=`b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297`；RET-002 config SHA-256=`424322f51da78df2a154043d284d307ae285c7d2a2cb659f5517a6ecb847cfc5`。
+
+**结论：verdict=pass（针对本轮 parser boundary fix）**。关键词计数的 malformed duplicate 防线、收窄后的 screw_d 识别以及 `second_screw` 数值/中文提示交叉一致性均与 ADR-0028 的 fail-closed 要求相符；阻断案例的完整服务路径回归测试断言 pipeline 调用数为零。此前 `46f1043` 的标准 server 接线及 top-k 显示仍由本分支继承，未在本轮改动。
+
+**边界**：未调用真实模型、外网、凭据、CAD/STEP；未创建 batch/preflight，未读取 labels/raw 正文，未改变历史证据。真实模型效果与检索收益未被本次离线复验覆盖。`FORMAL_EVALUATION_ALLOWED=False` 保持。候选状态仍为 `review`，待负责人合入；合入前不得标记 `done`。
+
 ---
 
 ## CC 窄修轮 4（解析边界修复）/ cc/RET-005-POOL-FIXES / 2026-11-17
