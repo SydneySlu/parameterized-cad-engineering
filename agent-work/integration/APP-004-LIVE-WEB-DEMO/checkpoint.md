@@ -122,3 +122,12 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Scope/boundary: no authorization expansion; `FORMAL_EVALUATION_ALLOWED=False`. Historical batch remains untouched and its D01 summary metadata gap remains unresolved by design.
 - Review status: `pass`; task remains `review` until branch commits are merged into `main`. Branch `codex/APP-004-LIVE-WEB-DEMO` is a fast-forward descendant of current `main` (`d0355c0`).
 - Next: fast-forward merge into `main`; preserve historical batch read-only. After merge, mark this work unit done and discuss the project's next direction separately.
+
+### Mainline closeout — 2026-11-16
+
+- Merge verification: current branch is `main`; HEAD=`f8e6bb63f8ffddc0757c0a636ab31fb9b980caa1`, which contains the reviewed APP-004 branch. `main` and `codex/APP-004-LIVE-WEB-DEMO` point to the same commit; branch is an ancestor of main. Worktree was clean before this documentation closeout.
+- Independent review: `3cda56e` change set verdict `pass`; fixed CAD venv Python 3.11.18, APP-004 27/27, py_compile and diff/show checks passed.
+- Status: APP-004-LIVE-WEB-DEMO is complete on local `main`; worktree/documentation closeout is recorded in the next commit. `origin/main` remains at `d0355c0` (local main ahead by 13 commits); no push was performed.
+- Historical batch boundary: batch and raw files remain read-only; D01 summary raw path/hash metadata remains absent and is explicitly retained as a historical audit limitation. No raw body was read or backfilled. `FORMAL_EVALUATION_ALLOWED=False` remains.
+- Evidence limit: two frozen inputs for one part family only; not evidence of broad language quality, cross-family generalization, or production readiness. No new model/CAD execution occurred during closeout.
+- Next: choose a separate project direction with the owner; do not conflate it with the completed APP-004 batch.

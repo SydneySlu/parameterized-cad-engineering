@@ -77,7 +77,7 @@
 | APP-003-LIVE-PREFLIGHT-20261114-02 | 凭据修复后的新产品 provider diagnostic scope | Codex 中枢 + 项目负责人 | done | APP-003-LIVE-CREDENTIAL-ENTRY-FIX | 原 batch `app003-product-live-20261114-02` 完成 4/12 次真实 DeepSeek HTTP，独立复核 `pass`；P1 answer→needs_confirmation、P2 ask、P3/P4 refuse→blocked，原 batch raw 4/4 哈希匹配且无 CAD/STEP。负责人单独确认 P1 `bore_d=24`，隔离 run 生成并回读 STEP，后经 FreeCAD 目视检查通过；原 batch 继续只读。详见同目录 independent-review.md 与 checkpoint.md。 |
 
 | APP-004 | 单族轻量版技术验收与交付记录 | Codex 中枢 | done | 固定 CAD venv Python 3.11.18 下 LLM 933 通过、8 skip（共 941 项），Integration 527、Demo 219、Schema 17、CAD 13；合计 1,709 通过、8 skip（共 1,717 项）。验收报告：`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`；结论限于单族演示和已批准范围，不代表生产就绪、广泛语言覆盖或制造认证。 |
-| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | review | 已按批准的 `app004-live-web-demo-20261116-01` 完成 formal preflight 与 2 条真实 DeepSeek 抽取：D01 `bore_d=24` 经确认后 CAD/STEP 成功并在 FreeCAD 打开；D02 阳极氧化被拒绝且未进 CAD。账本 2/4 HTTP，批次为 `complete`。D01 raw summary 元数据丢失根因已修复；独立复核 `3cda56e` 为 pass，固定环境 APP-004 27/27。历史 summary 保持原样，其 D01 raw path/hash 元数据仍缺失。当前分支待快进合入 `main` 后才能标记 done；详见 APP-004 checkpoint。证据仅覆盖冻结单族双样本，不代表生产就绪或跨族泛化。 |
+| APP-004-LIVE-WEB-DEMO | 汇报用本机真实 LLM 抽取入口与窄 scope | Codex 中枢 | done | 已合入本地 `main`，HEAD=`f8e6bb6`；独立复核通过。获批 batch `app004-live-web-demo-20261116-01` 完成 2 条真实 DeepSeek 抽取：D01 `bore_d=24` 经确认后 CAD/STEP 成功并在 FreeCAD 打开；D02 阳极氧化被拒绝且未进 CAD，账本 2/4 HTTP。未来运行的 D01 raw summary 元数据缺陷已修复，固定环境专项 27/27；历史 summary 保持原样，D01 raw path/hash 字段仍缺失，不回填。`main` 比 `origin/main` 超前 13 个提交，本轮未 push。证据仅覆盖冻结单族双样本，不代表生产就绪或跨族泛化。详见 APP-004 checkpoint。 |
 
 ## 当前缺口与限制
 

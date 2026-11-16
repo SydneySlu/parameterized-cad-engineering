@@ -3430,3 +3430,11 @@ commit=待提交
 - 结果：`verdict=pass`。固定 CAD venv Python 3.11.18 下 `py_compile` 通过、APP-004 专项 27/27、diff check 和 show check 通过；工作区干净。
 - 边界：未读取历史 batch/raw 正文，未运行 preflight、模型、网络或 CAD；`FORMAL_EVALUATION_ALLOWED=False`。历史 summary 的 D01 metadata 缺口保留，不回填。
 - 状态：独立复核通过，任务仍 `review`，因为提交尚未合入 `main`。当前分支是 `main=d0355c0` 的 fast-forward 后代；下一步合入后再标 `done`，然后讨论后续路线。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / local mainline closeout / 2026-11-16
+
+- 核对：当前分支为 `main`，HEAD=`f8e6bb63f8ffddc0757c0a636ab31fb9b980caa1`，已包含 `codex/APP-004-LIVE-WEB-DEMO` 的全部提交；复核通过提交 `3cda56e` 已在主线。工作区干净。
+- 收束：将 APP-004-LIVE-WEB-DEMO 标记为 `done`，并同步 PROJECT_STATUS、PROJECT_PLAN 与 checkpoint。真实批次结果与限制保持原记录：D01 成功生成 STEP，D02 被拒绝且未构造；未来 summary 元数据修复已通过独立复核。
+- 历史边界：batch/raw 未改写；D01 的历史 summary raw path/hash 缺口不回填，raw 正文未读取。没有新模型、网络、CAD 或 preflight；`FORMAL_EVALUATION_ALLOWED=False`。
+- 同步状态：本地 `main` 比 `origin/main` 超前 13 个提交；本轮未 push。
+- 下一步：与负责人单独商定项目后续方向；APP-004 的两样本证据不外推为跨族能力或生产就绪。
