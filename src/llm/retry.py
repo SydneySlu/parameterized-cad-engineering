@@ -57,6 +57,7 @@ def send_with_retry(
     *,
     clock: Clock = _real_clock,
     sleeper: Sleeper = _real_sleeper,
+    max_attempts: int = MAX_ATTEMPTS_TOTAL,
 ) -> tuple[TransportResponse | None, list[AttemptOutcome], float]:
     """Send ``request`` via ``transport`` with the frozen retry policy.
 
@@ -68,12 +69,14 @@ def send_with_retry(
       ``RunRecord.total_elapsed_ms`` and ``local_wall_time_ms`` must use.
     """
     outcomes: list[AttemptOutcome] = []
+    if type(max_attempts) is not int or not 1 <= max_attempts <= MAX_ATTEMPTS_TOTAL:
+        raise ValueError(f"max_attempts must be an int in 1..{MAX_ATTEMPTS_TOTAL}")
     backoff = list(BACKOFF_SECONDS)
 
     # Start the overall wall-clock before the first attempt.
     overall_start = clock()
 
-    for attempt in range(1, MAX_ATTEMPTS_TOTAL + 1):
+    for attempt in range(1, max_attempts + 1):
         started = clock()
         http_status: int | None = None
         error_condition: str | None = None
@@ -116,7 +119,7 @@ def send_with_retry(
                 total_elapsed_ms = (clock() - overall_start) * 1000.0
                 return None, outcomes, total_elapsed_ms
             # Retryable: record and maybe back off.
-            if attempt < MAX_ATTEMPTS_TOTAL:
+            if attempt < max_attempts:
                 outcomes.append(
                     AttemptOutcome(
                         attempt_number=attempt,

@@ -28,3 +28,30 @@
 4. Ask the owner in this conversation to accept the exact frozen scope, then complete formal preflight; request a separate explicit approval for the exact batch and real DeepSeek requests.
 
 Offline checks verify linkage and fail-closed behavior only. They are not retrieval-effect evidence. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged.
+
+## Handoff successor check — protocol/interface preparation
+
+- Predecessor: candidate protocol and C1 parser compatibility fix on `98f28c5`; follow-up top-k assertion alignment is in the working tree.
+- Files/format: `scope.md`, `model-inputs.json`, and `evaluator-labels.json` are present; JSON artifacts remain physically separate. Their hashes match the candidate hashes above.
+- Core rerun: fixed CAD venv Python 3.11.18 ran `tests.llm.test_conditions tests.retrieval.test_retrieval_baseline` — 42/42 passed.
+- Normal case: both R01 and R02 C1 assembly extract explicit `bore_d=24`, return three RET-002 `retrieval_source` candidates, and retain the same user text.
+- Failure case: C1 input with no explicit bore remains blocked with `C1_NO_SAFE_QUERY_PARAMETER`; it cannot call model transport.
+- Interface: existing `AdapterInput` has a single `reference_context` slot; C0 sets it to `None`, C1 receives `assemble_c1()` output. The frozen template/hash stays unchanged. Existing product flow exposes an extraction result in `needs_confirmation`, and `confirm_product_live_run()` is the CAD entry; RET-004 must additionally hard-deny R02 and require separate confirmation for each R01 condition.
+- Limits: no RET-004 formal runner/profile, preflight, batch/ledger, credential read, model/network request, or CAD execution has occurred. Scope remains `proposed`; `FORMAL_EVALUATION_ALLOWED=False`.
+- Result: `pass` for the narrow C1 assembly handoff; formal runner implementation and independent review remain outstanding.
+- Next gate: owner acceptance of the exact RET-004 scope/hash set. Then implement the versioned formal runner and confirm gate, validate in the fixed CAD venv, independently review, run the exact formal preflight, and request a separate explicit approval for real DeepSeek execution.
+
+## Formal runner implementation checkpoint
+
+- Status: `review`; implementation is ready for independent read-only review. Scope remains `proposed`; no batch, formal preflight, credentials, network/model request, or CAD execution occurred.
+- Files added: `src/llm/ret004_authorization.py`, `src/integration/ret004_paired_runner.py`, and `tests/integration/test_ret004_paired_runner.py`. Existing retry API gained an optional bounded attempt cap while preserving its default; tests cover the cap.
+- Frozen binding: profile `ret004-paired-live.v1`, inputs SHA-256 `6f2faf8d83aa013c860db4e17593788bc906757660ed8c985f374b6bbe21a457`, evaluator labels SHA-256 `fc1691317dfc6452a956bad36fff8e5e6cd3a4d4dbf459d096632e6e4850091e`, RET-002 config SHA-256 `424322f51da78df2a154043d284d307ae285c7d2a2cb659f5517a6ecb847cfc5`, and RET-001 manifest SHA-256 `b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297`. Prompt and contract hashes are bound in the authorization profile; labels are not opened by the runner.
+- Safety/flow: exact C0/C1 input and prompt pairing differs only at `reference_context`; C1 remains RET-002 `retrieval_source`, top-k=3, untrusted reference. Per-run attempt cap=2 and batch cap=8. R01 C0 and C1 confirmations are separate; R02 is hard-denied. Offline FakeTransport cannot enter CAD; confirmation requires an exact boolean and rejects changed in-memory result state. Formal path validates scope/approval and offline artifact/runtime preflight before credential loading and batch/ledger/transport setup. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
+- Verification in fixed CAD venv Python 3.11.18:
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m py_compile src/integration/ret004_paired_runner.py src/llm/ret004_authorization.py src/llm/adapter.py src/llm/retry.py tests/integration/test_ret004_paired_runner.py tests/llm/test_retry.py tests/llm/test_conditions.py` — pass.
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_ret004_paired_runner tests.llm.test_conditions tests.llm.test_retry tests.retrieval.test_retrieval_baseline -q` — 76/76 pass.
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest discover -s tests/llm -p 'test_*.py' -q` — 945 pass, 8 existing skips.
+  - `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.integration.test_product_live tests.integration.test_app004_live_web tests.demo.test_product_live_ui tests.integration.test_pipeline tests.integration.test_schema_to_ir -q` — 253/253 pass.
+- Normal case: FakeTransport exercised all four logical runs; C0 context is null, paired C1 adds only the three RET-002 references with untrusted role; R01 answer states reach separate pending-confirmation gates.
+- Failure cases: retry exhaustion remains within two attempts for that logical run; malformed provider body is sanitized and does not call CAD; R02 answer is still blocked; non-boolean confirmation and mutation of a confirmable result are rejected before CAD; test-only approval cannot enter formal execution/service construction.
+- Remaining gates: independent read-only review; owner acceptance of exact scope and hashes; formal preflight after acceptance; a separate exact-batch real DeepSeek authorization. Live outputs remain unmeasured; this offline work does not establish retrieval benefit. The working commit is still pending.

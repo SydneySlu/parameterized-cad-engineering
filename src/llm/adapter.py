@@ -389,6 +389,7 @@ class Adapter:
         *,
         run_id: str,
         formal_authorization: "Any | None" = None,
+        max_attempts: int | None = None,
     ) -> AdapterRunResult:
         """Run one query and return a staged :class:`AdapterRunResult`.
 
@@ -489,6 +490,7 @@ class Adapter:
             request,
             clock=self.clock or _default_clock,
             sleeper=self.sleeper or _default_sleeper,
+            **({} if max_attempts is None else {"max_attempts": max_attempts}),
         )
         record.attempts = [
             AttemptRecord(

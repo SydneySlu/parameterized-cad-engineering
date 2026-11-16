@@ -72,6 +72,26 @@ class RetrySuccessTests(unittest.TestCase):
 
 
 class RetryExhaustionTests(unittest.TestCase):
+    def test_scope_can_cap_retry_attempts_below_global_default(self):
+        transport = FakeTransport()
+        transport.queue_error(TransportError(COND_TIMEOUT, None, "timeout"))
+        transport.queue_error(TransportError(COND_TIMEOUT, None, "timeout"))
+        req = build_deepseek_request(system_prompt=SYSTEM, user_prompt=USER)
+        response, outcomes, _ = send_with_retry(
+            transport, req, max_attempts=2, sleeper=lambda _: None
+        )
+        self.assertIsNone(response)
+        self.assertEqual(len(outcomes), 2)
+        self.assertEqual(transport.call_count, 2)
+        self.assertEqual(outcomes[-1].outcome, "exhausted")
+
+    def test_invalid_attempt_cap_is_rejected_before_send(self):
+        transport = FakeTransport()
+        req = build_deepseek_request(system_prompt=SYSTEM, user_prompt=USER)
+        with self.assertRaises(ValueError):
+            send_with_retry(transport, req, max_attempts=MAX_ATTEMPTS_TOTAL + 1)
+        self.assertEqual(transport.call_count, 0)
+
     def test_exhausted_after_max_attempts(self):
         sleeps = []
         transport = FakeTransport()

@@ -143,12 +143,12 @@ class TestAssembleC1Success(unittest.TestCase):
 
         text = "请按 GN 705 设计一个带轴孔轴环，轴孔孔径为 24 mm。"
         case = _projected_case("ret004-r01", text)
-        result = assemble_c1(case, self.idx, top_k=1)
+        result = assemble_c1(case, self.idx)
 
         self.assertIsNone(result.blocked_reason, result.blocked_reason)
         self.assertEqual(result.natural_language_input, text)
         self.assertEqual(result.bore_d_used_for_query, 24.0)
-        self.assertEqual(len(result.candidate_source_ids), 1)
+        self.assertEqual(len(result.candidate_source_ids), 3)
 
     def test_c1_unsupported_request_still_queries_only_explicit_bore(self):
         """Unsupported text must not alter retrieval query or leak into labels."""
@@ -157,11 +157,11 @@ class TestAssembleC1Success(unittest.TestCase):
 
         text = "请按 GN 705 设计一个带轴孔轴环，轴孔孔径为 24 mm，并做阳极氧化表面处理。"
         case = _projected_case("ret004-r02", text)
-        result = assemble_c1(case, self.idx, top_k=1)
+        result = assemble_c1(case, self.idx)
 
         self.assertIsNone(result.blocked_reason, result.blocked_reason)
         self.assertEqual(result.bore_d_used_for_query, 24.0)
-        self.assertEqual(len(result.candidate_source_ids), 1)
+        self.assertEqual(len(result.candidate_source_ids), 3)
         self.assertNotIn("阳极氧化", result.reference_context)
 
 

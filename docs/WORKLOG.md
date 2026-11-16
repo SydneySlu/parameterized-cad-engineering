@@ -3447,3 +3447,19 @@ commit=待提交
 - 产物：候选 `scope.md`、`model-inputs.json`、隔离的 `evaluator-labels.json`、checkpoint；新增 ADR-0027 proposed。输入 hash=`6f2faf8d83aa013c860db4e17593788bc906757660ed8c985f374b6bbe21a457`；标签 hash=`fc1691317dfc6452a956bad36fff8e5e6cd3a4d4dbf459d096632e6e4850091e`；RET-002 config hash=`424322f51da78df2a154043d284d307ae285c7d2a2cb659f5517a6ecb847cfc5`；RET-001 manifest hash=`b7b6c737ec19986d005f3a2df3904929b1e05bb85d0efc35e6110112b2e7f297`。
 - 边界：当前只做了系统 Python 3.10.12 的确定性离线模块测试；未运行 fixed CAD venv 全量测试，未构造正式 profile/runner，未执行 formal preflight，未创建 batch/ledger，未读凭据或 `.env`，未触网/调用模型/运行 CAD，未读历史 raw 正文；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 下一步：完成版本化、fail-closed C0/C1 formal runner 和确定性 FakeTransport 验证；提交前补齐状态/计划/checkpoint 与适用测试。随后固定环境独立复核，再请求负责人接受精确 scope；真实运行仍需 formal preflight 和单独 batch 执行授权。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / protocol-interface checkpoint / 2026-11-16
+
+- 动作：续任中枢按 handoff protocol 核对 scope 与既有接口，并重跑冻结 C1 组装和检索核心测试；将两项 RET-004 C1 回归调整为使用冻结默认 top-k=3，避免测试和候选协议出现 top-k=1/3 歧义。
+- 验证：固定 CAD venv Python 3.11.18 执行 `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.llm.test_conditions tests.retrieval.test_retrieval_baseline -q`，42/42 通过；目标文件 `py_compile` 通过；`git diff --check` 通过。正常案例中 R01/R02 均由自然语言明确抽取 bore_d=24 且只加入 3 个 retrieval_source 样例；无 bore 的反例在请求模型前以 `C1_NO_SAFE_QUERY_PARAMETER` 阻断。
+- 接口结论：C0/C1 可以复用现有 `AdapterInput.reference_context`；C0 固定 `None`，C1 使用 `assemble_c1()` 的冻结输出。现有产品路径提供 Schema 后 `needs_confirmation` 与确认后 CAD 入口，RET-004 实现还必须对 R02 做不可绕过的 CAD deny，并对 R01 的 C0、C1 分别要求确认。
+- 边界：本 checkpoint 未创建 RET-004 profile/runner、preflight、batch 或 ledger；未读凭据、调用模型/网络/CAD 或读取 evaluator labels。候选 scope 仍为 proposed，`FORMAL_EVALUATION_ALLOWED=False`。
+- 结果：C1 接口消歧和交接定向复核通过；这只是实验链路准备证据，不证明检索效果。下一步需负责人接受 exact scope/hash，之后立即实现 formal C0/C1 runner、固定环境验证和独立复核，再进入 exact-batch preflight 及单独真实请求授权。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / formal runner implementation and offline verification / 2026-11-16
+
+- 动作：实现 RET-004 专用版本化授权 profile 与 C0/C1 配对 runner，固定两输入、四逻辑 run、DeepSeek `deepseek-flash`、冻结 v5/contract、RET-002 top-k=3、单 run 2 次/全批 8 次 HTTP；扩展 retry API 的可选上限参数，默认既有行为保持不变。
+- 安全门：Formal path 在凭据和 batch/ledger/transport 初始化前完成精确 authorization/approval 校验及只读 artifact/runtime preflight；labels 仅绑定固定 hash、不由 runner 读取。C0/C1 同对提示除 `reference_context` 外逐字一致；R01 条件分别确认，R02 hard CAD-deny。离线 FakeTransport 无 CAD 通路；confirmation 要求真实 bool、拒绝已变更运行状态；test-only approval 被 formal 路径拒绝。
+- 验证（固定 CAD venv Python 3.11.18）：RET-004 + conditions/retry/retrieval **76/76**；全 LLM **945 passed, 8 个既有 skip**；受影响 Product Live、APP-004、Product Live UI、pipeline/schema-to-IR **253/253**。目标文件 `py_compile` 与 `git diff --check` 通过；仅有依赖弃用警告及既有 socket ResourceWarning。
+- 结果边界：这些结果只证明离线组装、授权/预算/隔离/失败门和既有本地后续链路准备正确，不证明检索改善真实模型抽取。未运行正式 scope preflight，未创建 batch/ledger，未读取 `.env`/凭据/labels/raw 正文，未调用模型、网络或 CAD；`FORMAL_EVALUATION_ALLOWED=False`。
+- 状态：实现候选待独立只读复核；scope 仍为 proposed。下一步先完成独立复核，再请负责人接受精确 scope/hash；随后 formal preflight，并另行申请唯一 batch 的真实 DeepSeek 执行授权。
