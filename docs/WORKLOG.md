@@ -3545,3 +3545,10 @@ commit=待提交
 - 边界：第一阶段不支持任意 CAD 上传、自动 CAD 解析、图片精确尺寸识别或第二零件族；不修改 v5 prompt、Schema、IR、provider、全局 formal gate 或历史 batch。只做接口冻结、离线/FakeTransport、Web 流程和安全门测试，不创建 batch、不读取凭据、不调用真实模型。
 - 验收重点：参考样本元数据可追溯；参考上下文明确为不可信 `retrieval_source`；用户显式参数优先且冲突/缺参/unsupported 在 CAD 前阻断；确认前零 CAD；确认后独立 STEP；不得返回其他 run 文件。
 - 下一步：负责人确认 ADR-0028 的最小接口后，交给 CC 实现 `RET-005-SINGLE-FAMILY-REFERENCE-POOL`；实现通过固定环境测试和独立复核后，再另行准备 6–10 条 held-out C0/C1 scope。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / independent review / 2026-11-17
+
+- 复核对象：`148e62d`，基线 `3d42f20`；当前分支为 `main`，工作区在复核前干净。
+- 固定环境验证：Python 3.11.18 下 RET-005 专项 80/80；RET-004/retrieval/schema/LLM runner 142 通过、1 个既有 skip；CAD compilation 13/13；pipeline integration 39/39；`py_compile` 通过。
+- 发现：heldout_evaluation rows 未被 ReferencePool 排除，实测可将 held-out ID/参数注入模型请求；可变 PoolRunState 返回对象可在 confirm 前被修改并将冲突参数送入 pipeline；FakeTransport 子类可重写 send 并通过 `isinstance` 门；本交付未接入 Web/UI；候选 diff check 因 checkpoint 行尾空格失败。
+- 结论：`review`，不进入 held-out 实验 scope，不批准真实模型请求。修复前三项安全问题、处理 Web 范围并清理 whitespace 后再验收。`FORMAL_EVALUATION_ALLOWED=False` 保持；未读凭据、labels 正文或 raw，未创建 batch、未调用真实网络/模型。
