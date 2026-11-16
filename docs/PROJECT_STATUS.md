@@ -102,7 +102,7 @@
 ## 下一步
 
 - APP-004 技术验收与交付记录已完成：固定 CAD venv 下相关套件共 1,717 项，1,709 通过、8 项既有 skip；验收报告已整理。A/B/C 主链与单族轻量演示在限定范围内完成。
-- 当前下一步为 RET-004 R01 confirmation：真实 C0/C1 抽取已完成，需负责人分别确认 R01 C0 和 R01 C1 后才可运行对应 CAD；R02 不得进入 CAD。检索收益仍只可按四 run 的实际结果做描述性报告。
+- RET-004 已完成 R01 C0/C1 确认后的 CAD/STEP 收束和独立复核；描述性结果记录见 [`agent-work/reviews/RET-004-PAIRED-LIVE-20261116-01-descriptive-results.md`](../agent-work/reviews/RET-004-PAIRED-LIVE-20261116-01-descriptive-results.md)。当前不启动新的真实请求；若扩大样本或实现持久化确认恢复，须另建版本化 scope、preflight、batch 和负责人授权。
 
 ## APP-003 语言样本 scope 当前状态
 

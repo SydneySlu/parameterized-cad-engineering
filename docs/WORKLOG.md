@@ -3515,3 +3515,9 @@ commit=待提交
 - 动作：完成独立只读收束复核并核对合入后的本地 `main`。复核结论为 `pass`；未修改历史 batch、未重跑模型或 CAD、未读取 raw 正文或凭据。
 - 结果：复核确认 4/4 logical run 终态、ledger 4/8 HTTP、R01 C0/C1 STEP 哈希一致、R02 无 CAD/STEP，文档与实际 batch 状态一致。临时 `__new__` 恢复仅记录为未来持久化恢复能力限制，不影响本次历史 batch 证据结论。
 - 收束：RET-004 已合入本地 `main`，状态由 `review` 更新为 `done`。后续如需扩大检索样本或实现正式恢复接口，必须建立新的工作单元、scope、preflight 和授权；本历史 batch 保持只读。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / descriptive result note / 2026-11-16
+
+- 动作：基于已核验的 batch summary、budget ledger、pipeline summary/index 和 STEP 哈希，整理两输入 C0/C1 配对结果记录；未读取 raw 正文、凭据或 evaluator labels，未发送新请求。
+- 结果：R01 C0/C1 均抽取 `bore_d=24`，确认后均完成 CAD/STEP；R02 C0/C1 均拒绝阳极氧化并保持 CAD-deny。两个条件在这两条输入上没有观察到抽取或后续 CAD/STEP 结果差异。
+- 边界：结果仅为两输入描述性观察，不支持统计检索收益、广泛语言泛化、生产就绪或制造认证结论。报告写入 `agent-work/reviews/RET-004-PAIRED-LIVE-20261116-01-descriptive-results.md`。后续扩大样本或实现持久化恢复接口需新工作单元和新授权。
