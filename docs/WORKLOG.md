@@ -3407,3 +3407,12 @@ commit=待提交
 - 收尾发现：D01 raw 文件存在，SHA-256=`ea65f31d782e23be413f577c5c1a87bfc9c4d62112c3e2d59f2d9c3e25ee107f`，但最终 summary 未保留 D01 的 raw path/hash metadata；D02 raw 路径/hash 与 summary 相符。没有改写 summary/raw。此审计记录缺口保留为后续 review 项，APP-004-LIVE-WEB-DEMO 状态不提前标为 done。
 - 结论边界：本轮证明两条冻结输入上的真实 LLM 抽取，以及 D01 单族既有确定性链路生成和回读 STEP；不能据此声称广泛语言覆盖、任意零件或跨族能力、生产就绪或制造认证。
 - 下一步：只读评估 D01 raw metadata 丢失的原因和是否需要代码修复，不触碰历史 batch 文件；之后与负责人另行讨论项目后续方向。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / raw summary metadata follow-up / 2026-11-16
+
+- 动作：只读调查获批历史 batch 中 D01 raw 文件存在、但最终 summary 缺少 raw path/hash 的原因；未读取 raw 正文或改写历史 batch。
+- 根因：抽取阶段的 summary 更新带有 raw retention metadata；D01 确认由 `confirm_product_live_run()` 创建新状态，但该状态未复制原状态的 raw metadata，第二次 summary 更新遂将字段置空。D02 不经过确认阶段，因此保留了 metadata。
+- 修复：`App004LiveWebService.confirm()` 在写 summary 前将原抽取状态的 `raw_retention_meta` 和 `raw_retention_path` 复制到确认结果；新增回归测试检查确认后 summary 仍保留 retained flag、repo-relative path 和 hash。
+- 验证：固定 CAD venv 下目标文件 `py_compile` 通过；`tests.integration.test_app004_live_web -q` **27/27**；`git diff --check` 通过。没有调用模型、网络或 CAD。
+- 历史边界：batch `app004-live-web-demo-20261116-01` 的 summary 和 raw 文件均保持原样，D01 summary 字段缺口不回填；D01 raw 只核对既有哈希，不读正文。没有新 preflight、batch 或凭据读取；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 状态：`review`，等待独立只读复核与后续合入；APP-004 实际运行证据仍限于冻结单族两条样本。下一步在收束后再与负责人讨论项目方向。

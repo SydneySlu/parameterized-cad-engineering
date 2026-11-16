@@ -425,6 +425,11 @@ class App004LiveWebService:
             result = confirm_product_live_run(
                 state, confirmed=confirmed, patch=None, output_root=self._pipeline_root,
             )
+            # Confirmation returns a new ProductLiveRunState. Preserve the
+            # extraction audit metadata so the summary update cannot erase
+            # the raw-response retention record for a successfully confirmed run.
+            result.raw_retention_meta = state.raw_retention_meta
+            result.raw_retention_path = state.raw_retention_path
             self._runs[logical_run_id] = result
             try:
                 self._update_summary(result)
