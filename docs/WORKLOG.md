@@ -2,6 +2,23 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / review / 2026-11-17
+
+- 动作：在 `main=3d42f20` 基线实现 `set_screw_shaft_collar` 单族受控参考池产品闭环（RET-005），暂不创建 batch、读取凭据、调用真实模型或改变正式 gate。
+- 新增源文件（3 项）：
+  - `src/retrieval/pool.py`：`ReferencePool`（allowlist 校验、3–5 数量限制、安全展示字段、池内检索；复用 RET-002 DistancePolicy）；`PoolError`、`PoolEntry` 类型。
+  - `src/llm/pool_context.py`：产品模式与 C1 实验模式共享的 context assembler（`assemble_pool_c0`、`assemble_pool_c1`、`extract_explicit_parameters`、`check_user_param_priority`）；C1 上下文只含 `pool_retrieval_source_untrusted_reference` 角色标签和必选不可信参考声明。
+  - `src/integration/ret005_pool_runner.py`：`Ret005PoolService`（`extract`/`confirm`/`get`/`get_step_bytes_secure`）；`confirm_pool_run` 是唯一进入 `run_pipeline` 的路径；每个 confirmed run 写入独立 `<output_root>/<run_id>/` 目录；5 层安全的 `get_step_bytes_secure`；FakeTransport-only（暂不支持正式模式）。
+- 新增测试文件（2 项，80 项测试）：
+  - `tests/retrieval/test_ret005_pool.py`（32 项）：allowlist / 3–5 限制 / 禁止字段隔离 / 池内 top-k / 距离顺序 / 共享 assembler / 用户参数优先。
+  - `tests/integration/test_ret005_pool_runner.py`（48 项）：C0/C1 上下文组装 / labels 物理隔离 / allowlist / 数量限制 / top-k / 用户参数优先 / 确认前零 CAD / 确认后独立 STEP / 跨 run 文件隔离 / 所有失败路径。
+- 新增 checkpoint：`agent-work/integration/RET-005-SINGLE-FAMILY-REFERENCE-POOL/checkpoint.md`。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18 / CadQuery；固定 CAD venv 验证待 Codex 独立复核）。
+- 验证：`py_compile` 5 个新文件 → OK；`git diff --check` → clean；RET-005 专项测试 80/80 → OK；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、llm runner 73/73 → OK。`test_pipeline` 中 19 failures 为 pre-existing（需要 CadQuery venv，与 RET-005 无关）。
+- 不变量：`FORMAL_EVALUATION_ALLOWED=False` 不变；v5 prompt / contract version / RET-001 manifest sha256 / RET-002 config 均不变；evaluator-labels.json 未读取、未暴露；无真实模型请求、无凭据读取、无正式 batch 创建。
+- 参考池数据边界：allowlist = RET-001 manifest 全部 15 个 sample_id；展示 sample_id / family / 参数摘要 / validation status / source；禁止读取 evaluator labels、held-out 真值、IR 正文、STEP 正文、源 CAD、raw。
+- 状态：`review`，等待 Codex 固定 CAD venv 验证和独立只读复核；合入后再收束。
+
 ### APP-003-LIVE-UI / Codex / review / 2026-11-13
 
 - 动作：对 `cc/APP-003-LIVE-UI@0b8bd7b` 完成固定 CAD venv 与 localhost 浏览器独立复核；仅更新复核文档和项目状态，未修改实现、未 push、未合并。
