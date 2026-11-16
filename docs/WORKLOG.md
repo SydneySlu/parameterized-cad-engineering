@@ -3503,8 +3503,9 @@ commit=待提交
 
 ### RET-004-PAIRED-LIVE-20261116-01 / Codex / owner-confirmed CAD and closeout / 2026-11-16
 
-- 动作：按负责人对 R01 C0、R01 C1 分别确认的授权，完成两条既有抽取结果的 CAD/STEP 路径；本轮中枢收束只读核验 batch summary、ledger、pipeline summary/index 与 STEP 哈希，并同步状态、计划和 checkpoint。
+- 动作：记录前序执行者按负责人对 R01 C0、R01 C1 的分别确认完成的 CAD/STEP 结果；本轮中枢未重复执行 CAD，只读核验 batch summary、ledger、pipeline summary/index 与 STEP 哈希，并同步状态、计划和 checkpoint。
 - 结果：batch summary=`complete`，4/4 logical runs 均有终态；预算账本为 4 次 HTTP/8 次上限。R01 C0/C1 均 `bore_d=24`、确认后 `pipeline_status=success`，到达 `step_readback`；C0 STEP SHA-256=`831a569efad97a779e7fa3abcfa962cdc54a2cebed5e9fd5e8d75ce1f7c8ad01`，C1=`2e1246ec22cfcc0b9642363eff8180ecc9d1be04c0463a6006fe3befb7ebbfee`，均与 pipeline index 和文件字节一致。R02 C0/C1 均拒绝阳极氧化并 `denied_by_scope`，无 CAD/STEP。
 - 隔离与边界：4 个 raw 文件及 hash 仍保留；本轮未读取 raw 正文/evaluator labels，未发送新 HTTP、读取凭据、改写 batch 或重新运行 CAD。`FORMAL_EVALUATION_ALLOWED=False` 未改变。该两输入结果仅作描述性对照，不主张统计检索收益或广泛泛化。
-- 验证：标准库只读审计确认 summary `complete`、planned runs=4、ledger 4 次尝试、两条 R01 `step_readback` success、STEP 哈希与 summary/index 一致、R02 无 CAD 产物；`git diff --check` 在本次文档提交前运行。
+- 验证：标准库只读审计确认 summary `complete`、planned runs=4、ledger 4 次尝试、两条 R01 `step_readback` success、STEP 哈希与 summary/index 一致、R02 无 CAD 产物；`git diff --check` 在本次文档提交前通过。
+- 复核关注：runner 没有跨进程恢复待确认对象的正式接口；前序执行者通过 `RET004PairedService.__new__` 从 summary 重建临时服务对象后确认。该执行恢复路径需要独立复核，不应视为已实现的持久化恢复接口。
 - 状态/下一步：RET-004 保持 `review`，等待独立只读收束复核和合入；历史 batch 只读保留。
