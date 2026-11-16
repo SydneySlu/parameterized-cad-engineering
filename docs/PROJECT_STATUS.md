@@ -48,7 +48,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | deferred | C1 检索级诊断已验收；12-run 下游收益研究离线关口已通过，真实执行暂缓（ADR-0020），不阻塞 CAD 集成；收益仍 not_measured，不预设正收益 |
-| RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | review | 独立复核与 summary confirmation-status 窄修均已通过；负责人已接受 exact scope/hash，formal preflight 已通过：冻结 hash 全部匹配、CadQuery 2.3.0/OCP 7.9.3.0 可用、4 logical runs/最多 8 HTTP、batch 目录未占用。尚未读取凭据、创建 batch/ledger 或触网；下一步需单独批准 exact batch 的真实 DeepSeek 请求。 |
+| RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | review | exact batch 已获批并完成 4/4 次真实 DeepSeek 请求；R01 C0/C1 均为 `bore_d=24`、`needs_confirmation`，R02 C0/C1 均正确拒绝并 CAD-deny。summary=`awaiting_confirmation`，保留 4 个 raw 哈希/相对路径和 budget ledger，未生成 CAD/STEP。当前等待 R01 C0/C1 各自的负责人确认；R02 永久 CAD-deny。 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
@@ -102,7 +102,7 @@
 ## 下一步
 
 - APP-004 技术验收与交付记录已完成：固定 CAD venv 下相关套件共 1,717 项，1,709 通过、8 项既有 skip；验收报告已整理。A/B/C 主链与单族轻量演示在限定范围内完成。
-- 当前下一步为 RET-004 exact-batch live approval：formal preflight 已通过，等待负责人单独批准 `ret004-paired-live-20261116-01` 的真实 DeepSeek `deepseek-flash` 请求（4 logical runs、最多 8 次 HTTP）。离线/preflight 结果只证明链路准备，不证明检索有效。
+- 当前下一步为 RET-004 R01 confirmation：真实 C0/C1 抽取已完成，需负责人分别确认 R01 C0 和 R01 C1 后才可运行对应 CAD；R02 不得进入 CAD。检索收益仍只可按四 run 的实际结果做描述性报告。
 
 ## APP-003 语言样本 scope 当前状态
 

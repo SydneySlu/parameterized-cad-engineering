@@ -3493,3 +3493,10 @@ commit=待提交
 - 结果：`ok=true`；inputs、prompt、contract、RET-001 manifest、RET-002 config hash 全部匹配；batch `ret004-paired-live-20261116-01` 目录不存在；4 logical runs、每 run 最多 2 次、全批最多 8 次 HTTP；labels 未读取；`FORMAL_EVALUATION_ALLOWED=False`。
 - 运行时：固定 CAD venv 检测通过，CadQuery 2.3.0、OCP 7.9.3.0、jsonschema 4.26.0，draft 2020-12 支持。
 - 边界：未读取凭据、`.env` 或 raw 正文，未创建 batch/ledger/raw 目录，未调用网络/模型或运行 CAD/STEP。下一步等待负责人对该 exact batch 的真实 DeepSeek 请求单独授权。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / authorized paired live extraction / 2026-11-16
+
+- 动作：按负责人对 exact batch 的批准执行 `ret004-paired-live-20261116-01`，DeepSeek `deepseek-flash`、C0/C1、两条冻结输入、最多 8 次 HTTP。
+- 结果：4/4 logical runs 各 1 次 HTTP，共 4 次请求。R01 C0/C1 均 `answer`、`bore_d=24`、`needs_confirmation`；R02 C0/C1 均 `refuse`，包含 unsupported anodizing 表示，`blocked` 且 `SCOPE_CAD_DENIED`。summary=`awaiting_confirmation`。
+- 产物：批准 batch 下保留 4 个 raw 响应文件、budget ledger、脱敏 summary（repo-relative raw path/hash）；未生成 pipeline-runs 或 STEP，未读取或复制 raw 正文。
+- 下一步：R01 C0 和 R01 C1 必须分别获得负责人确认后才可进入对应 CAD；R02 永久禁止 CAD。检索效果待四 run 及后续确认结果完成后做描述性汇报。

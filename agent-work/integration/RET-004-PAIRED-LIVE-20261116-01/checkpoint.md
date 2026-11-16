@@ -87,3 +87,12 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - Result: `ok=true`; all bound artifact hashes match; `batch_dir_exists=false`; planned runs `4`; max attempts per run `2`; max batch HTTP `8`; `evaluator_labels_read=false`; `evaluator_labels_sha256_bound=true`; `formal_evaluation_allowed=false`.
 - CAD runtime: `cadquery=2.3.0`, `ocp=7.9.3.0`, `jsonschema=4.26.0`, draft 2020-12 supported.
 - Boundary: preflight did not load credentials, create batch/ledger/raw directories, call network/model, or run CAD/STEP. Exact-batch live execution remains separately unauthorized until the owner approves it.
+
+## Authorized live extraction result
+
+- Authorization: owner approved the exact batch in this conversation at `2026-11-16T13:25:00Z`; approval bound to `ret004-paired-live-20261116-01`, DeepSeek `deepseek-flash`, C0/C1, 4 logical runs, and max 8 HTTP attempts.
+- Execution: formal runner completed 4 physical HTTP requests (one attempt per logical run). The batch summary is `awaiting_confirmation`; no `pipeline-runs` or STEP files were created.
+- R01 C0/C1: both returned `decision=answer`, `bore_d=24`, no errors, and `product_status=needs_confirmation`; each remains independently `confirmation_status=pending`. C1 recorded the same retrieval context hash and three retrieval-source candidate IDs.
+- R02 C0/C1: both returned `decision=refuse`, represented the unsupported anodizing request, and were forced to `product_status=blocked` with `GATE_DECISION_REFUSE` and `SCOPE_CAD_DENIED`; both remain `confirmation_status=denied_by_scope`.
+- Retention: four raw response files and the budget ledger exist under the approved batch directory; summary contains repo-relative raw paths and hashes only. Raw response bodies were not read or copied into project records.
+- Next gate: owner must separately confirm R01 C0 and/or R01 C1 after reviewing their extracted results before either condition may enter CAD. R02 cannot enter CAD.
