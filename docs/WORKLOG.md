@@ -3564,3 +3564,10 @@ commit=待提交
 - 执行环境：sandbox Python 3.10.12（非固定 3.11.18，固定 CAD venv 验证待 Codex 独立复核）。
 - 验证：`py_compile` 7 个新/改文件全部通过；`git diff --check` clean；RET-005 专项（pool + runner + server）**112/112 → OK**（1 个既有 skip）；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、product_live_ui 36/36 → OK；`FORMAL_EVALUATION_ALLOWED=False` 不变；未读凭据/labels 正文/raw，未创建 batch，未调用真实模型。
 - 状态：`review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / Codex / independent acceptance / 2026-11-17
+
+- 动作：在 `cc/RET-005-POOL-FIXES` 的 `ff030db` 上按交接协议进行独立验收，核对状态文档、ADR-0028、pool/runner/Web 接口和测试。
+- 验证：固定 CAD venv RET-005 pool/runner/server 专项 112 项通过、1 个既有 skip。运行显式参数探针 `bore_d=24 mm，width=99 mm`，确认当前只抽取 bore_d，model width=14 没有被优先规则拦截；核对 `run_server()` 无 pool_service 参数且没有传给 `make_handler_class()`。
+- 结论：`review`。P1：标准 Web server 入口未装配 pool service；用户显式参数优先目前只覆盖 bore_d。P2：候选 top-k 参数/距离/来源未在 run 状态和页面展示；此前 PROJECT_STATUS 对 `ff030db` 的描述过时，已同步。详细证据和修复要求见 RET-005 checkpoint。
+- 边界：未运行真实模型、网络、凭据、CAD/STEP 或 batch；未读取 labels/raw 正文，未修改生产代码。`FORMAL_EVALUATION_ALLOWED=False` 保持。下一步请 CC 窄修并增加 run_server 集成与非 bore_d 参数回归，再由中枢固定环境复验。

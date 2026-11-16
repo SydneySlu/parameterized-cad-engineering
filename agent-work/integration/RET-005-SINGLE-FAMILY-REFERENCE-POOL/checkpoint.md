@@ -185,3 +185,18 @@ tests.demo.test_product_live_ui              36/36  OK
 ### 下一步
 
 状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
+## Codex 中枢独立验收 / 2026-11-17
+
+**验收对象**：`ff030db6d4cc98dbe792f932612fed39ab3a7172`，分支 `cc/RET-005-POOL-FIXES`，基线 `daf8cc10a965b1a3a7d3a57378f93a7b51dcb6f1`。开始时工作区干净；未 push/merge。
+
+**验证**：固定 CAD venv Python 3.11.18 重跑 `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -m unittest tests.retrieval.test_ret005_pool tests.integration.test_ret005_pool_runner tests.demo.test_ret005_pool_server -q`，112 项通过、1 个既有 skip。复核 `run_server()` 签名与 handler wiring，并运行用户参数优先最小探针：`bore_d=24 mm，width=99 mm` 只提取 `bore_d=24`，模型 `width=14` 未被判冲突。
+
+**发现，verdict=review**：
+
+1. **P1，正常 Web 服务入口未接通 pool service。** `make_handler_class()` 支持 `pool_service`，但 `run_server()` 不接受该参数，也没有实例化/传递 pool service；通过项目常规启动入口访问 `/api/pool/*` 会因 service 未配置而不可用。现有 server 测试直接构造 handler，未覆盖 `run_server()` 装配路径。
+2. **P2，检索结果展示不满足已确认的产品验收项。** `ReferencePool.query()` 返回参数、距离和来源；但 `PoolRunState` 只持有候选 ID，HTML 抽取结果也只显示候选 ID 与 context hash，未展示所选 top-k 每个样本的参数、距离和来源元数据。
+3. **P1，显式参数优先保护范围过窄。** `extract_explicit_parameters()` 当前复用 bore_d parser，只抽取 `bore_d`。上面的判别探针证明用户显式写出的 `width=99 mm` 没有进入优先校验，因此模型返回 `width=14` 仍无冲突；ADR-0028 的规则适用于用户显式参数整体。应扩展可靠解析与比较，或对无法可靠处理的显式参数 fail closed，并增加至少一个非 bore_d 反例。
+4. **P2，项目状态文档过时。** `docs/PROJECT_STATUS.md` 仍描述 `148e62d` 待窄修且尚无 Web/UI，与 `ff030db` 事实不符；本次已同步为当前 review 和未解决事项。
+
+**边界**：未调用模型或外网，未读取凭据、labels 正文或历史 raw，未创建 batch，未运行 RET-005 CAD/STEP；未修改代码和实验产物。`FORMAL_EVALUATION_ALLOWED=False`、v5 prompt、Schema/IR、RET-001 manifest 与 RET-002 配置保持不变。需 CC 对以上事项做最小修复后重新固定环境验收；当前不接受合入，不批准 held-out 实验或真实请求。
