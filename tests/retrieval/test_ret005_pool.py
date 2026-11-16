@@ -893,5 +893,240 @@ class TestExplicitParamFailClosedViaService(unittest.TestCase):
         self.assertIn("USER_PARAM_CONFLICT", codes)
 
 
+# ---------------------------------------------------------------------------
+# 10. Parser boundary fixes (narrow-fix round 4)
+# ---------------------------------------------------------------------------
+
+
+class TestParserBoundaryFixes(unittest.TestCase):
+    """Tests for the three parser boundary bugs fixed in round 4:
+
+    1. Legitimate value + same-field malformed duplicate must block.
+    2. Narrowed screw_d keyword avoids false positives on bare "螺钉".
+    3. second_screw numeric value vs Chinese hints cross-check.
+    """
+
+    # --- Bug 1: legitimate + malformed duplicate ---
+
+    def test_width_valid_plus_malformed_blocks(self):
+        """width=14 mm，width= mm must block — cannot silently take 14."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("width=14 mm，width= mm")
+        self.assertFalse(r.ok)
+        codes = [e["code"] for e in r.errors]
+        self.assertIn("EXPLICIT_PARAM_PARSE_ERROR_WIDTH", codes)
+
+    def test_outer_d_valid_plus_malformed_blocks(self):
+        """outer_d=40mm，外径= mm must block — cannot silently take 40."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("outer_d=40mm，外径= mm")
+        self.assertFalse(r.ok)
+        codes = [e["code"] for e in r.errors]
+        self.assertIn("EXPLICIT_PARAM_PARSE_ERROR_OUTER_D", codes)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_width_valid_plus_malformed_blocks_via_service(self):
+        """Full service path: width=14 mm，width= mm -> blocked, pipeline=0."""
+        from integration.ret005_pool_runner import (
+            Ret005PoolService, POOL_STATUS_BLOCKED,
+        )
+        from llm.contract import CONTRACT_VERSION
+        env = json.dumps({
+            "contract_version": CONTRACT_VERSION, "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 20.0, "width": 14.0},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "20 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(status=200, body=env))
+        service = Ret005PoolService(transport=transport)
+        with patch("integration.pipeline.run_pipeline") as cad:
+            state = service.extract(
+                "bore_d=20 mm，width=14 mm，width= mm",
+                pool_sample_ids=_pool_ids(3),
+                condition_id="C0",
+            )
+            cad.assert_not_called()
+        self.assertEqual(state.product_status, POOL_STATUS_BLOCKED)
+        codes = [e["code"] for e in state.errors]
+        self.assertIn("EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR", codes)
+
+    # --- Bug 2: narrowed screw_d keyword ---
+
+    def test_screw_len_not_mistaken_for_screw_d(self):
+        """螺钉长度=12 mm should not trigger screw_d parse error."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("螺钉长度=12 mm")
+        self.assertTrue(r.ok)
+        self.assertIn("screw_len", r.values)
+        self.assertAlmostEqual(r.values["screw_len"], 12.0)
+        # No screw_d error should be present
+        codes = [e["code"] for e in r.errors]
+        self.assertNotIn("EXPLICIT_PARAM_PARSE_ERROR_SCREW_D", codes)
+
+    def test_single_screw_not_mistaken_for_screw_d(self):
+        """单螺钉 should not trigger screw_d parse error."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("单螺钉")
+        # second_screw=0 should be extracted; no screw_d error
+        self.assertNotIn("EXPLICIT_PARAM_PARSE_ERROR_SCREW_D",
+                         [e["code"] for e in r.errors])
+
+    def test_screw_d_explicit_still_works(self):
+        """screw_d=5 mm should still parse correctly."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("screw_d=5 mm")
+        self.assertTrue(r.ok)
+        self.assertAlmostEqual(r.values["screw_d"], 5.0)
+
+    def test_screw_d_alias_still_works(self):
+        """螺钉直径=5 mm should still parse correctly."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("螺钉直径=5 mm")
+        self.assertTrue(r.ok)
+        self.assertAlmostEqual(r.values["screw_d"], 5.0)
+
+    def test_screw_d_keyword_without_value_still_blocks(self):
+        """screw_d= mm (keyword present, no value) must still fail-closed."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("screw_d= mm")
+        self.assertFalse(r.ok)
+        codes = [e["code"] for e in r.errors]
+        self.assertIn("EXPLICIT_PARAM_PARSE_ERROR_SCREW_D", codes)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_screw_len_no_screw_d_error_via_service(self):
+        """Full service path: 螺钉长度=12 mm -> no screw_d parse error."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        from llm.contract import CONTRACT_VERSION
+        env = json.dumps({
+            "contract_version": CONTRACT_VERSION, "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 20.0, "width": 14.0,
+                                      "screw_len": 12.0},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "20 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(status=200, body=env))
+        service = Ret005PoolService(transport=transport)
+        with patch("integration.pipeline.run_pipeline") as cad:
+            state = service.extract(
+                "bore_d=20 mm，width=14 mm，螺钉长度=12 mm",
+                pool_sample_ids=_pool_ids(3),
+                condition_id="C0",
+            )
+            cad.assert_not_called()
+        # Should not have EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR
+        codes = [e["code"] for e in state.errors]
+        self.assertNotIn("EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR", codes)
+
+    # --- Bug 3: second_screw numeric vs Chinese hints cross-check ---
+
+    def test_second_screw_zero_vs_double_screw_ambiguous(self):
+        """second_screw=0，双螺钉 must be ambiguous — fail-closed."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("second_screw=0，双螺钉")
+        self.assertFalse(r.ok)
+        codes = [e["code"] for e in r.errors]
+        self.assertIn("EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW", codes)
+
+    def test_second_screw_one_vs_double_screw_consistent(self):
+        """second_screw=1，双螺钉 must be consistent — no error."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("second_screw=1，双螺钉")
+        self.assertTrue(r.ok)
+        self.assertEqual(r.values["second_screw"], 1)
+
+    def test_second_screw_zero_vs_single_screw_consistent(self):
+        """second_screw=0，单螺钉 must be consistent — no error."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("second_screw=0，单螺钉")
+        self.assertTrue(r.ok)
+        self.assertEqual(r.values["second_screw"], 0)
+
+    def test_second_screw_one_vs_single_screw_ambiguous(self):
+        """second_screw=1，单螺钉 must be ambiguous — fail-closed."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("second_screw=1，单螺钉")
+        self.assertFalse(r.ok)
+        codes = [e["code"] for e in r.errors]
+        self.assertIn("EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW", codes)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_second_screw_zero_vs_double_screw_blocks_via_service(self):
+        """Full service: second_screw=0，双螺钉 -> blocked, pipeline=0."""
+        from integration.ret005_pool_runner import (
+            Ret005PoolService, POOL_STATUS_BLOCKED,
+        )
+        from llm.contract import CONTRACT_VERSION
+        env = json.dumps({
+            "contract_version": CONTRACT_VERSION, "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 20.0, "width": 14.0,
+                                     "second_screw": 0},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "20 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(status=200, body=env))
+        service = Ret005PoolService(transport=transport)
+        with patch("integration.pipeline.run_pipeline") as cad:
+            state = service.extract(
+                "bore_d=20 mm，width=14 mm，second_screw=0，双螺钉",
+                pool_sample_ids=_pool_ids(3),
+                condition_id="C0",
+            )
+            cad.assert_not_called()
+        self.assertEqual(state.product_status, POOL_STATUS_BLOCKED)
+        codes = [e["code"] for e in state.errors]
+        self.assertIn("EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR", codes)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_second_screw_one_vs_double_screw_needs_confirmation(self):
+        """Full service: second_screw=1，双螺钉 -> needs_confirmation.
+
+        Note: Schema only allows second_screw=1 when bore_d>=80, so we use
+        bore_d=80 (catalog row: 80,110,12,20,22) with width=22.
+        """
+        from integration.ret005_pool_runner import (
+            POOL_STATUS_NEEDS_CONFIRMATION, Ret005PoolService,
+        )
+        from llm.contract import CONTRACT_VERSION
+        env = json.dumps({
+            "contract_version": CONTRACT_VERSION, "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 80.0, "width": 22.0,
+                                     "second_screw": 1},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "80 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(status=200, body=env))
+        service = Ret005PoolService(transport=transport)
+        with patch("integration.pipeline.run_pipeline") as cad:
+            state = service.extract(
+                "bore_d=80 mm，width=22 mm，second_screw=1，双螺钉",
+                pool_sample_ids=_pool_ids(3),
+                condition_id="C0",
+            )
+            cad.assert_not_called()
+        self.assertEqual(state.product_status, POOL_STATUS_NEEDS_CONFIRMATION)
+
+    # --- Existing preserved behaviors ---
+
+    def test_equivalent_units_width_still_passes(self):
+        """width=1.4 cm，width=14 mm (equivalent) still passes."""
+        from llm.pool_context import extract_explicit_parameters
+        r = extract_explicit_parameters("width=1.4 cm，width=14 mm")
+        self.assertTrue(r.ok)
+        self.assertAlmostEqual(r.values["width"], 14.0)
+
+
 if __name__ == "__main__":
     unittest.main()

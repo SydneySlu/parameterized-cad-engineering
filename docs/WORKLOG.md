@@ -2,6 +2,19 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / 窄修轮 4（解析边界修复）/ review / 2026-11-17
+
+- 基线：`100c828`（Codex 复核记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `520fb5e`。
+- 修复 1（合法值+malformed 重复声明）：`_extract_mm_field_multi()` 新增 `len(keyword_matches) > len(value_matches)` 检查；存在无对应值的关键词声明时立即返回 `EXPLICIT_PARAM_PARSE_ERROR_*`，不静默采用首个合法值。`width=14 mm，width= mm` 和 `outer_d=40mm，外径= mm` 现均返回错误并阻断。
+- 修复 2（收窄 screw_d 关键词）：`_SCREW_D_RE` 和 `_SCREW_D_KW_RE` 中 `螺钉(?:直径)?` 改为 `螺钉直径`，"螺钉"单独出现不再识别为直径字段。`螺钉长度=12 mm` 和 `单螺钉` 不再产生 `EXPLICIT_PARAM_PARSE_ERROR_SCREW_D`；`screw_d=5 mm`/`螺钉直径=5 mm` 仍正常解析。
+- 修复 3（second_screw 数字与中文提示矛盾）：`_extract_second_screw_multi()` 新增数字值与 `双螺钉`/`单螺钉` 提示一致性交叉检查；矛盾时返回 `EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW`；一致时正常通过。`second_screw=0，双螺钉` 现阻断；`second_screw=1，双螺钉` 一致通过。
+- 新增测试 16 项（`TestParserBoundaryFixes`）：所有阻断案例均通过 `Ret005PoolService.extract()` 验证并断言 pipeline 调用数为 0；保留既有等价重复值通过、一致清晰参数通过、清晰冲突阻断的行为。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18，固定 CAD venv 验证待 Codex 独立复核）。
+- 验证：`py_compile` 2 个改文件 → OK；`git diff --check` → clean；RET-005 专项 pool+runner+server **159/159 → OK**（1 个既有 skip）；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、product_live_ui 36/36、llm runner 73/73 → OK；`FORMAL_EVALUATION_ALLOWED=False` 不变；manifest sha256 `b7b6c737…` 不变；config sha256 `424322f5…` 不变；未读凭据/labels/raw，未创建 batch，未调用真实模型。
+- 判别性断言：（1）`width=14 mm，width= mm` → `blocked`，`EXPLICIT_PARAM_PARSE_ERROR_WIDTH`，pipeline=0；（2）`螺钉长度=12 mm` → `ok`，`screw_len=12`，无 screw_d 错误；（3）`second_screw=0，双螺钉` → `blocked`，`EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW`，pipeline=0；（4）`second_screw=1，双螺钉` → `needs_confirmation`，pipeline=0。
+- 限制：sandbox Python 3.10.12 非 3.11.18；`second_screw=1` 一致性测试使用 `bore_d=80`（Schema 限制）；固定 CAD venv 验证待 Codex 中枢独立复核。
+- 状态：`review`，等待 Codex 固定 CAD venv 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
 ### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / 窄修轮 3（显式参数歧义 fail-closed）/ review / 2026-11-17
 
 - 基线：`94dbbdb`（Codex 复核记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `46f1043`。

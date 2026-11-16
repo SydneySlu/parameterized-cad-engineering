@@ -398,3 +398,98 @@ tests.llm.test_runner                        73/73  OK
 ### 下一步
 
 状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch、不申请 live 执行授权、不修改正式 gate。
+
+---
+
+## CC 窄修轮 4（解析边界修复）/ cc/RET-005-POOL-FIXES / 2026-11-17
+
+**基线**：`100c828`（Codex 复核记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `520fb5e`
+
+### 修复内容
+
+**Bug 1：合法值与 malformed 重复声明同时出现时必须阻断**
+
+- `_extract_mm_field_multi()` 新增关键词计数 vs 值计数检查：当 `len(keyword_matches) > len(value_matches)` 时返回 `EXPLICIT_PARAM_PARSE_ERROR_*`，即使部分值可解析也不取首个值。
+- 验证：`width=14 mm，width= mm` → blocked（原来返回 `width=14` 无错误）
+- 验证：`outer_d=40mm，外径= mm` → blocked（原来返回 `outer_d=40` 无错误）
+
+**Bug 2：收窄 `screw_d` 关键词，避免误阻断**
+
+- `_SCREW_D_RE` 和 `_SCREW_D_KW_RE` 中 `螺钉(?:直径)?` 改为 `螺钉直径`（直径不再可选）
+- "螺钉"单独出现不再被识别为 screw_d 字段关键词
+- 验证：`螺钉长度=12 mm` → 不再产生 `EXPLICIT_PARAM_PARSE_ERROR_SCREW_D`
+- 验证：`单螺钉` → 不再产生 `EXPLICIT_PARAM_PARSE_ERROR_SCREW_D`
+- 验证：`screw_d=5 mm` 和 `螺钉直径=5 mm` 仍然正常解析
+
+**Bug 3：`second_screw` 数字与自然语言提示的矛盾检查**
+
+- `_extract_second_screw_multi()` 新增显式数值与中文提示（`双螺钉`/`单螺钉`）的一致性交叉检查
+- 矛盾时返回 `EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW`
+- 验证：`second_screw=0，双螺钉` → blocked（原来静默返回 0）
+- 验证：`second_screw=1，双螺钉` → consistent（一致，不误阻断）
+- 验证：`second_screw=0，单螺钉` → consistent
+- 验证：`second_screw=1，单螺钉` → blocked（矛盾）
+
+### 新增测试（16 项）
+
+`TestParserBoundaryFixes`：
+- Bug 1: `test_width_valid_plus_malformed_blocks`、`test_outer_d_valid_plus_malformed_blocks`、`test_width_valid_plus_malformed_blocks_via_service`
+- Bug 2: `test_screw_len_not_mistaken_for_screw_d`、`test_single_screw_not_mistaken_for_screw_d`、`test_screw_d_explicit_still_works`、`test_screw_d_alias_still_works`、`test_screw_d_keyword_without_value_still_blocks`、`test_screw_len_no_screw_d_error_via_service`
+- Bug 3: `test_second_screw_zero_vs_double_screw_ambiguous`、`test_second_screw_one_vs_double_screw_consistent`、`test_second_screw_zero_vs_single_screw_consistent`、`test_second_screw_one_vs_single_screw_ambiguous`、`test_second_screw_zero_vs_double_screw_blocks_via_service`、`test_second_screw_one_vs_double_screw_needs_confirmation`
+- 既有行为保留：`test_equivalent_units_width_still_passes`
+
+### 验证结果（sandbox Python 3.10.12）
+
+```
+tests.retrieval.test_ret005_pool         Ran 76 tests  OK (1 skip)
+tests.integration.test_ret005_pool_runner  Ran 55 tests  OK (1 skip)
+tests.demo.test_ret005_pool_server         Ran 28 tests  OK
+合计: Ran 159 tests in 3.2s — OK (skipped=1)
+```
+
+受影响现有测试：
+```
+tests.integration.test_ret004_paired_runner  24/24  OK
+tests.retrieval.test_retrieval_baseline      28/28  OK
+tests.schema.test_set_screw_shaft_collar     17/17  OK
+tests.demo.test_product_live_ui              36/36  OK
+tests.llm.test_runner                        73/73  OK
+```
+
+**py_compile**: 2 个改文件全部通过
+**git diff --check**: clean
+
+### 不变量
+
+| 检查项 | 结果 |
+|--------|------|
+| `FORMAL_EVALUATION_ALLOWED` | False，不变 |
+| `PROMPT_VERSION` | app001-extraction.v5，不变 |
+| `CONTRACT_VERSION` | app001-io.v1，不变 |
+| RET-001 manifest sha256 | b7b6c737…，不变 |
+| RET-002 config sha256 | 424322f5…，不变 |
+| evaluator-labels.json | 未读取、未暴露 |
+| 正式 batch / credentials | 未创建，未读取 |
+| 真实模型请求 | 无 |
+
+### 判别性断言（本轮）
+
+| 输入 | 预期 | 实测 |
+|------|------|------|
+| `width=14 mm，width= mm`（合法+malformed） | `blocked`，`EXPLICIT_PARAM_PARSE_ERROR_WIDTH`，pipeline=0 | ✓ |
+| `outer_d=40mm，外径= mm`（合法+malformed） | `blocked`，`EXPLICIT_PARAM_PARSE_ERROR_OUTER_D`，pipeline=0 | ✓ |
+| `螺钉长度=12 mm`（不触发 screw_d 误报） | `ok`，`screw_len=12`，无 screw_d 错误 | ✓ |
+| `单螺钉`（不触发 screw_d 误报） | `ok`，`second_screw=0`，无 screw_d 错误 | ✓ |
+| `second_screw=0，双螺钉`（矛盾） | `blocked`，`EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW`，pipeline=0 | ✓ |
+| `second_screw=1，双螺钉`（一致） | `needs_confirmation`，pipeline=0 | ✓ |
+| `width=1.4 cm，width=14 mm`（等价重复） | `ok`，`width=14` | ✓ |
+| `bore_d=20, width=14`（清晰一致） | `needs_confirmation`，pipeline=0 | ✓ |
+
+### 限制
+
+- sandbox Python 3.10.12，非 3.11.18；固定 CAD venv 验证待 Codex 中枢独立复核。
+- `second_screw=1` + `双螺钉` 一致性测试使用 `bore_d=80`（Schema 仅允许 bore_d≥80 时 second_screw=1）。
+
+### 下一步
+
+状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch、不申请 live 执行授权、不修改正式 gate。

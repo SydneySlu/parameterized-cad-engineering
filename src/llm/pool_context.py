@@ -108,7 +108,7 @@ _WIDTH_RE = _re.compile(
     _re.IGNORECASE,
 )
 _SCREW_D_RE = _re.compile(
-    r"(?:screw_d\s*[=是：:]\s*|螺钉(?:直径)?\s*[=是：:为]?\s*)"
+    r"(?:screw_d\s*[=是：:]\s*|螺钉直径\s*[=是：:为]?\s*)"
     r"(\d+(?:\.\d+)?)\s*(mm|cm|毫米|厘米)?",
     _re.IGNORECASE,
 )
@@ -136,7 +136,7 @@ _WIDTH_KW_RE = _re.compile(
     _re.IGNORECASE,
 )
 _SCREW_D_KW_RE = _re.compile(
-    r"(?:screw_d\s*[=是：:]|螺钉(?:直径)?\s*[=是：:]?)",
+    r"(?:screw_d\s*[=是：:]|螺钉直径\s*[=是：:]?)",
     _re.IGNORECASE,
 )
 _SCREW_LEN_KW_RE = _re.compile(
@@ -402,6 +402,13 @@ def _extract_mm_field_multi(
 
     Duplicate values that normalise to the same mm value are treated as
     consistent (not an error).
+
+    Malformed duplicate detection
+    -----------------------------
+    If the number of keyword occurrences exceeds the number of parseable
+    value matches, at least one keyword occurrence has no corresponding
+    value.  This is a malformed declaration and must fail-closed, even if
+    other occurrences of the same field had valid values.
     """
     # Find all value matches
     value_matches = list(value_pattern.finditer(text))
@@ -419,6 +426,20 @@ def _extract_mm_field_multi(
             "message": (
                 f"field {field_name!r} keyword found in user text but no "
                 f"parseable numeric value; fail-closed"
+            ),
+        })
+
+    # Bug fix 1: if keyword occurrence count exceeds value match count,
+    # at least one keyword has no corresponding value → malformed
+    if len(keyword_matches) > len(value_matches):
+        return (None, {
+            "code": f"EXPLICIT_PARAM_PARSE_ERROR_{field_name.upper()}",
+            "field": field_name,
+            "message": (
+                f"field {field_name!r} has {len(keyword_matches)} keyword "
+                f"occurrences but only {len(value_matches)} parseable "
+                f"value(s); at least one declaration is missing a value; "
+                f"fail-closed"
             ),
         })
 
@@ -484,6 +505,13 @@ def _extract_second_screw_multi(
 
     Returns ``(value, error)`` tuple, same convention as
     ``_extract_mm_field_multi``.
+
+    Consistency checking
+    --------------------
+    Explicit numeric values (``second_screw=0`` or ``=1``) and Chinese natural
+    language hints (``双螺钉``/``两个螺钉`` → 1, ``单螺钉``/``一个螺钉`` → 0)
+    must all agree.  If they contradict (e.g. ``second_screw=0，双螺钉``),
+    an ambiguity error is returned.
     """
     value_matches = list(_SECOND_SCREW_RE.finditer(text))
     keyword_matches = list(_SECOND_SCREW_KW_RE.finditer(text))
@@ -529,11 +557,41 @@ def _extract_second_screw_multi(
                     ),
                 })
 
-    # If we have explicit matches, use them
+    # Determine the value implied by Chinese hints
+    hint_value: int | None = None
+    if double_hints and single_hints:
+        return (None, {
+            "code": "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
+            "field": "second_screw",
+            "message": (
+                "second_screw has both double-screw and single-screw hints; "
+                "fail-closed"
+            ),
+        })
+    if double_hints:
+        hint_value = 1
+    elif single_hints:
+        hint_value = 0
+
+    # Cross-check explicit numeric values against Chinese hints
+    if parsed_values and hint_value is not None:
+        if parsed_values[0] != hint_value:
+            return (None, {
+                "code": "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
+                "field": "second_screw",
+                "message": (
+                    f"second_screw explicit value {parsed_values[0]} "
+                    f"contradicts natural-language hint "
+                    f"({'双螺钉' if hint_value == 1 else '单螺钉'} → "
+                    f"{hint_value}); fail-closed"
+                ),
+            })
+
+    # If we have explicit matches and they agree with hints (or no hints)
     if parsed_values:
         return (parsed_values[0], None)
 
-    # No explicit matches; check keyword-only or Chinese hints
+    # No explicit matches; check keyword-only or use Chinese hints
     if keyword_matches:
         # keyword present but no valid value
         return (None, {
@@ -545,20 +603,9 @@ def _extract_second_screw_multi(
             ),
         })
 
-    # Chinese hints only (no ambiguity possible with a single hint type)
-    if double_hints and single_hints:
-        return (None, {
-            "code": "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
-            "field": "second_screw",
-            "message": (
-                "second_screw has both double-screw and single-screw hints; "
-                "fail-closed"
-            ),
-        })
-    if double_hints:
-        return (1, None)
-    if single_hints:
-        return (0, None)
+    # Chinese hints only (already checked for double+single conflict above)
+    if hint_value is not None:
+        return (hint_value, None)
 
     return (None, None)
 
