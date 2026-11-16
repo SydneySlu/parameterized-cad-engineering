@@ -83,7 +83,7 @@
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
 - [x] `APP-003-LIVE-PREFLIGHT-20261114-02`：冻结 scope 已获批，formal preflight 与单独 live execution approval 均有记录；4/12 次真实请求完成，独立复核 `pass`，batch 只读；报告见 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`
 - [x] 完成技术验收与交付记录（APP-004）：固定 CAD venv 下 LLM 933 通过、8 项既有 skip（共运行 941 项），Integration 527、Demo 219、Schema 17、CAD compilation 13；合计 1,709 通过、8 skip（共 1,717 项）。正式结论限于单族轻量技术演示和已批准的受控运行范围，详见 [`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`](../agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md)。后续稳定性/部署、真实语言效果或跨族扩展需分别确定目标与范围。
-- [ ] APP-004-LIVE-WEB-DEMO：已完成获批 batch `app004-live-web-demo-20261116-01`。formal preflight 通过；D01/D02 各 1 次真实 DeepSeek `deepseek-flash`/C0 HTTP。D01 抽取 `bore_d=24`，经负责人后续明确推进后确认并生成 STEP，FreeCAD 已打开；D02 的 `anodizing` 被拒绝，未进入 CAD。账本共 2/4 HTTP，正常关闭后 batch=`complete`。已定位并修复未来运行的 summary 元数据丢失：确认阶段新状态原先未继承 raw metadata；固定环境专项 27/27 通过。历史 batch 只读保留，D01 summary 的 raw path/hash 仍缺失，不补写；任务待独立复核并合入后才可标记完成。窄批次不证明跨族能力或生产就绪，`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- [ ] APP-004-LIVE-WEB-DEMO：已完成获批 batch `app004-live-web-demo-20261116-01`。formal preflight 通过；D01/D02 各 1 次真实 DeepSeek `deepseek-flash`/C0 HTTP。D01 抽取 `bore_d=24`，经负责人后续明确推进后确认并生成 STEP，FreeCAD 已打开；D02 的 `anodizing` 被拒绝，未进入 CAD。账本共 2/4 HTTP，正常关闭后 batch=`complete`。已定位并修复未来运行的 summary 元数据丢失；独立复核提交 `3cda56e` 为 pass，固定环境专项 27/27。历史 batch 只读保留，D01 summary 的 raw path/hash 仍缺失，不补写；本地分支待快进合入后才标记完成。窄批次不证明跨族能力或生产就绪，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 
 ## APP-001 v5 收束与独立研究
 

@@ -113,3 +113,12 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Test correction: the mocked confirmation result now explicitly sets `raw_retention_meta=None` and `raw_retention_path=None`; the test asserts the precondition, then verifies `service.confirm()` restores the extraction metadata in the final summary. It covers both confirmed success and rejected confirmation, with the confirmation function mocked so no CAD executes.
 - The production preservation remains intentionally applied to both outcomes because audit metadata describes the prior model response regardless of whether CAD confirmation is accepted.
 - Next: rerun fixed-environment APP-004 tests and submit this correction for a fresh read-only review. Historical batch remains untouched and raw response bodies remain unread.
+
+### Independent re-review — 2026-11-16
+
+- Reviewer verdict: `pass` for `1ac9342920d3aea31c44d34f0f0eb89d3c0b4dff..3cda56ee8f8611cc259fc3e598ebc390723f7a13`; target branch/worktree were correct and clean.
+- The reviewer confirmed the mocked confirmation result explicitly lacks both raw metadata fields and that both accepted and rejected confirmation paths preserve retained flag, hash, and path in final summary. `confirm_product_live_run()` was mocked; no CAD, batch, model, network, preflight, or raw-body read occurred.
+- Fixed CAD venv Python 3.11.18: `py_compile` passed; `tests.integration.test_app004_live_web -q` **27/27 passed**; diff and commit checks passed.
+- Scope/boundary: no authorization expansion; `FORMAL_EVALUATION_ALLOWED=False`. Historical batch remains untouched and its D01 summary metadata gap remains unresolved by design.
+- Review status: `pass`; task remains `review` until branch commits are merged into `main`. Branch `codex/APP-004-LIVE-WEB-DEMO` is a fast-forward descendant of current `main` (`d0355c0`).
+- Next: fast-forward merge into `main`; preserve historical batch read-only. After merge, mark this work unit done and discuss the project's next direction separately.

@@ -3423,3 +3423,10 @@ commit=待提交
 - 修复：mock 确认函数返回的全新状态明确将 `raw_retention_meta`、`raw_retention_path` 设为 `None`；再断言 `service.confirm()` 将抽取状态中的 raw metadata 写回最终 summary。测试覆盖确认成功和用户拒绝两种结果，确认函数全程 mock，不运行 CAD。
 - 范围：仅改进未来运行回归测试和注释/交接记录；历史 summary/raw 不变，不读取 raw 正文，不创建 batch、不调用凭据、模型、网络或 CAD。
 - 状态：`review`，待固定环境复验并再次只读复核；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / independent re-review pass / 2026-11-16
+
+- 复核范围：独立 reviewer 只读检查 `1ac9342..3cda56ee8f8611cc259fc3e598ebc390723f7a13`，确认模拟确认结果中的 raw 字段显式为空，且成功/拒绝确认后 summary 均恢复 raw retained、path 和 SHA-256；确认函数已 mock，无 CAD 调用。
+- 结果：`verdict=pass`。固定 CAD venv Python 3.11.18 下 `py_compile` 通过、APP-004 专项 27/27、diff check 和 show check 通过；工作区干净。
+- 边界：未读取历史 batch/raw 正文，未运行 preflight、模型、网络或 CAD；`FORMAL_EVALUATION_ALLOWED=False`。历史 summary 的 D01 metadata 缺口保留，不回填。
+- 状态：独立复核通过，任务仍 `review`，因为提交尚未合入 `main`。当前分支是 `main=d0355c0` 的 fast-forward 后代；下一步合入后再标 `done`，然后讨论后续路线。
