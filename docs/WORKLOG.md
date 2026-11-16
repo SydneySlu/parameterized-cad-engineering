@@ -3462,4 +3462,5 @@ commit=待提交
 - 安全门：Formal path 在凭据和 batch/ledger/transport 初始化前完成精确 authorization/approval 校验及只读 artifact/runtime preflight；labels 仅绑定固定 hash、不由 runner 读取。C0/C1 同对提示除 `reference_context` 外逐字一致；R01 条件分别确认，R02 hard CAD-deny。离线 FakeTransport 无 CAD 通路；confirmation 要求真实 bool、拒绝已变更运行状态；test-only approval 被 formal 路径拒绝。
 - 验证（固定 CAD venv Python 3.11.18）：RET-004 + conditions/retry/retrieval **76/76**；全 LLM **945 passed, 8 个既有 skip**；受影响 Product Live、APP-004、Product Live UI、pipeline/schema-to-IR **253/253**。目标文件 `py_compile` 与 `git diff --check` 通过；仅有依赖弃用警告及既有 socket ResourceWarning。
 - 结果边界：这些结果只证明离线组装、授权/预算/隔离/失败门和既有本地后续链路准备正确，不证明检索改善真实模型抽取。未运行正式 scope preflight，未创建 batch/ledger，未读取 `.env`/凭据/labels/raw 正文，未调用模型、网络或 CAD；`FORMAL_EVALUATION_ALLOWED=False`。
+- 提交：实现候选 `da8e6de`（基于 RET-004 协议提交 `98f28c5`，后者基于本地 `main=b5f5d45`）；本轮仅提交本地分支，未 push/merge。
 - 状态：实现候选待独立只读复核；scope 仍为 proposed。下一步先完成独立复核，再请负责人接受精确 scope/hash；随后 formal preflight，并另行申请唯一 batch 的真实 DeepSeek 执行授权。
