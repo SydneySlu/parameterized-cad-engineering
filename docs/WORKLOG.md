@@ -3509,3 +3509,9 @@ commit=待提交
 - 验证：标准库只读审计确认 summary `complete`、planned runs=4、ledger 4 次尝试、两条 R01 `step_readback` success、STEP 哈希与 summary/index 一致、R02 无 CAD 产物；`git diff --check` 在本次文档提交前通过。
 - 复核关注：runner 没有跨进程恢复待确认对象的正式接口；前序执行者通过 `RET004PairedService.__new__` 从 summary 重建临时服务对象后确认。该执行恢复路径需要独立复核，不应视为已实现的持久化恢复接口。
 - 状态/下一步：RET-004 保持 `review`，等待独立只读收束复核和合入；历史 batch 只读保留。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / independent review and merge closeout / 2026-11-16
+
+- 动作：完成独立只读收束复核并核对合入后的本地 `main`。复核结论为 `pass`；未修改历史 batch、未重跑模型或 CAD、未读取 raw 正文或凭据。
+- 结果：复核确认 4/4 logical run 终态、ledger 4/8 HTTP、R01 C0/C1 STEP 哈希一致、R02 无 CAD/STEP，文档与实际 batch 状态一致。临时 `__new__` 恢复仅记录为未来持久化恢复能力限制，不影响本次历史 batch 证据结论。
+- 收束：RET-004 已合入本地 `main`，状态由 `review` 更新为 `done`。后续如需扩大检索样本或实现正式恢复接口，必须建立新的工作单元、scope、preflight 和授权；本历史 batch 保持只读。

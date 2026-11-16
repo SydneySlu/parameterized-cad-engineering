@@ -1,7 +1,7 @@
 # RET-004 checkpoint
 
 - Task: `RET-004-PAIRED-LIVE-20261116-01`
-- Current status: `review` — exact scope accepted, authorized C0/C1 extraction completed, both approved R01 runs completed CAD/STEP readback, and R02 remained CAD-denied. Awaiting independent closeout review and merge.
+- Current status: `done` — exact scope accepted, authorized C0/C1 extraction completed, both approved R01 runs completed CAD/STEP readback, R02 remained CAD-denied, independent closeout review passed, and the documentation closeout is merged into local `main`.
 - Base: `main` at `b5f5d45ef7635062afe8952b1483e2c068a90fb2` (local main was 14 commits ahead of origin at start).
 - Branch: `codex/RET-004-PAIRED-LIVE-PROTOCOL`.
 
@@ -106,5 +106,5 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - Recovery limitation for independent review: the runner has no supported cross-process resume API for pending confirmations. The prior execution reconstructed an ephemeral `RET004PairedService` with `__new__` from summary state, then called the existing confirmation method after checking the binding/result evidence. This was not a persisted recovery interface; review the reconstruction and confirmation binding carefully. No recovery API was added in this closeout.
 - Verification: a read-only Python standard-library audit inspected the batch summary, ledger, pipeline summaries/indexes, and STEP file hashes. It confirmed four ledger attempts, `complete`, two successful `step_readback` runs, exact summary/index/file hash agreement, and no R02 CAD artifacts. `git diff --check` passed before the documentation closeout commit.
 - Boundaries: no new HTTP request, credential read, preflight, or batch mutation occurred during closeout. No raw body or evaluator labels were read. `FORMAL_EVALUATION_ALLOWED=False` remains unchanged. This two-input paired result is descriptive evidence only; it does not establish statistical retrieval benefit, broad language generalization, production readiness, or manufacturing certification.
-- Result: both owner-confirmed R01 conditions completed CAD/STEP readback; R02 remained permanently denied by scope. Task remains `review` pending independent read-only closeout review and merge.
-- Next gate: independently verify the final batch/STEP evidence and documentation, then merge through the project workflow. Do not rerun or modify the historical batch.
+- Result: both owner-confirmed R01 conditions completed CAD/STEP readback; R02 remained permanently denied by scope. Independent read-only closeout review returned `pass`, and the closeout is merged into local `main`.
+- Next gate: no further RET-004 execution is required. Any future retrieval study must use a new scope, preflight, batch, and authorization. Do not rerun or modify this historical batch.
