@@ -3381,3 +3381,11 @@ commit=待提交
 - 边界：未执行 formal preflight，未创建 batch/ledger，未读取 `.env`/密钥/evaluator-label 内容，未调用模型/网络或真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 不变。
 - 窄修提交：`0addfc2`（`fix: bind APP-004 artifacts and sanitize approval audit [APP-004-LIVE-WEB-DEMO]`）。
 - 下一步：请求独立只读复核 `173636b..0addfc2`；通过后仍需负责人另行授权精确 batch 的 formal preflight/live 请求。
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / approval mutation fail-closed repair / 2026-11-16
+
+- 动作：修复独立复核在 `ed629822000f13c6495c3c5d3ba982f64167c997` 发现的审批字段篡改绕过执行门问题。
+- 修复：`validate_app004_approval_binding()` 在正式 preflight 前重新运行 approval 完整构造校验；审批作用域字段做严格类型比较，`approval_record_ref` 限定为 `None` 或字符串，`is_test_only` 要求精确布尔值。非法审批在凭据、batch 目录和 BudgetLedger 等副作用之前拒绝。
+- 回归：新增低层篡改 `approval_record_ref`、approver、时间、statement、`is_test_only` 的测试；每种情形断言 offline preflight、credential loader、`Path.mkdir` 和 `BudgetLedger` 均未调用。
+- 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项 26/26、Product Live/UI 145/145、C1/C2/C3 demo 183/183、pipeline/schema 81/81；目标 py_compile 与 `git diff --check` 通过。兼容套件出现既有 ResourceWarning，无失败。
+- 边界：未运行 formal preflight、未创建 batch/ledger、未读 `.env`/凭据/evaluator-label 内容、未调用 DeepSeek/网络或真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 提交：`2451a47`（实现与回归）；checkpoint/计划/状态同步随后提交。任务状态保持 `review`，待独立只读复核。

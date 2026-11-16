@@ -68,3 +68,13 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Status: `review`; no formal preflight, batch creation, credentials, network, model or live CAD use. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
 - Narrow-fix commit: `0addfc2` (`fix: bind APP-004 artifacts and sanitize approval audit [APP-004-LIVE-WEB-DEMO]`).
 - Next: request an independent read-only re-review of `173636b..0addfc2`.
+
+### Approval mutation gate fix — 2026-11-16
+
+- Finding: independent review of `ed629822000f13c6495c3c5d3ba982f64167c997` found that `validate_app004_approval_binding()` did not revalidate `approval_record_ref` and other free approval fields after low-level mutation. A malformed approval could pass the gate and fail later during summary generation, after preflight, credential loading, and batch/ledger setup.
+- Fix: the execution gate now reruns all `App004LiveWebApproval` constructor invariants before preflight. It strictly checks exact types for frozen scope fields, optional `approval_record_ref`, and boolean `is_test_only`; malformed approval fields are rejected with `App004ApprovalValidationError` before side effects.
+- Regression: new test mutates `approval_record_ref`, `approver`, timestamp, statement, and `is_test_only`; each case asserts preflight, credential loader, `Path.mkdir`, and `BudgetLedger` are never called.
+- Verification in fixed CAD venv Python 3.11.18: target `py_compile` PASS; `tests.integration.test_app004_live_web` **26/26 PASS**; Product Live/UI **145/145 PASS**; C1/C2/C3 demo **183/183 PASS**; pipeline/schema **81/81 PASS**; `git diff --check` PASS. Existing ResourceWarnings appeared in compatibility suites; no test failures.
+- Boundaries: no formal preflight, batch/ledger creation, `.env` or credential read, evaluator-label content read, DeepSeek/network request, or real CAD execution. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
+- Status: `review`; this fix awaits independent read-only review. Any formal execution remains subject to separate exact-batch owner authorization.
+- Implementation commit: `2451a47` (`fix: revalidate APP-004 approval at execution gate [APP-004-LIVE-WEB-DEMO]`).

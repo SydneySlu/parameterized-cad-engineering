@@ -83,7 +83,7 @@
 - [x] 审阅并批准 APP-003-LIVE-SCOPE 草案；为新建 CC 对话框生成独立实现工作单
 - [x] `APP-003-LIVE-PREFLIGHT-20261114-02`：冻结 scope 已获批，formal preflight 与单独 live execution approval 均有记录；4/12 次真实请求完成，独立复核 `pass`，batch 只读；报告见 `agent-work/integration/APP-003-LIVE-PREFLIGHT-20261114-02/independent-review.md`
 - [x] 完成技术验收与交付记录（APP-004）：固定 CAD venv 下 LLM 933 通过、8 项既有 skip（共运行 941 项），Integration 527、Demo 219、Schema 17、CAD compilation 13；合计 1,709 通过、8 skip（共 1,717 项）。正式结论限于单族轻量技术演示和已批准的受控运行范围，详见 [`agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md`](../agent-work/reviews/APP-004-TECHNICAL-ACCEPTANCE.md)。后续稳定性/部署、真实语言效果或跨族扩展需分别确定目标与范围。
-- [ ] APP-004-LIVE-WEB-DEMO：负责人已接受冻结 `app004-live-web-demo.v1`（D01 合法 bore24、D02 阳极氧化边界；DeepSeek `deepseek-flash`/C0；最多 4 HTTP）。首轮独立复核发现的 prompt/contract hash 绑定与审批自由文本 summary 泄漏已窄修并完成专项、兼容回归；当前待复核修复后的提交。之后再由负责人决定是否批准精确 batch formal preflight/真实请求；当前未创建 batch、未读凭据、未触网，`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- [ ] APP-004-LIVE-WEB-DEMO：负责人已接受冻结 `app004-live-web-demo.v1`（D01 合法 bore24、D02 阳极氧化边界；DeepSeek `deepseek-flash`/C0；最多 4 HTTP）。prompt/contract hash、审批摘要脱敏及 approval 执行门自由字段重验问题均已窄修；固定 CAD venv 专项 26/26、兼容回归通过。当前待独立只读复核修复提交。之后再由负责人决定是否批准精确 batch formal preflight/真实请求；当前未创建 batch、未读凭据、未触网，`FORMAL_EVALUATION_ALLOWED=False` 保持。
 
 ## APP-001 v5 收束与独立研究
 
