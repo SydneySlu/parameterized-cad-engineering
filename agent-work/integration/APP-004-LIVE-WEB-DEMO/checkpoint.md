@@ -106,3 +106,10 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Historical boundary: the approved batch and its `batch_summary.json` remain untouched. D01 raw bytes still exist and their previously recorded SHA-256 remains evidence, but the historical summary's D01 path/hash/retained fields remain absent. No raw response content was read. No new preflight, batch, credential read, model/network request, or CAD run occurred; `FORMAL_EVALUATION_ALLOWED=False` remains.
 - Status: `review`; future-run behavior is fixed, but historical audit metadata remains absent from the summary. The task still requires independent review and merge before `done`.
 - Next: independent read-only review of this narrow fix; after merge, discuss project direction separately. Do not reuse the historical batch or issue extra requests.
+
+### Regression test discrimination follow-up — 2026-11-16
+
+- Independent review of commit `1ac9342` returned `review` because the new test used `dataclasses.replace(state, ...)`, which inherited raw fields and could pass without the production copy.
+- Test correction: the mocked confirmation result now explicitly sets `raw_retention_meta=None` and `raw_retention_path=None`; the test asserts the precondition, then verifies `service.confirm()` restores the extraction metadata in the final summary. It covers both confirmed success and rejected confirmation, with the confirmation function mocked so no CAD executes.
+- The production preservation remains intentionally applied to both outcomes because audit metadata describes the prior model response regardless of whether CAD confirmation is accepted.
+- Next: rerun fixed-environment APP-004 tests and submit this correction for a fresh read-only review. Historical batch remains untouched and raw response bodies remain unread.

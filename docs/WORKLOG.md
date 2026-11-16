@@ -3416,3 +3416,10 @@ commit=待提交
 - 验证：固定 CAD venv 下目标文件 `py_compile` 通过；`tests.integration.test_app004_live_web -q` **27/27**；`git diff --check` 通过。没有调用模型、网络或 CAD。
 - 历史边界：batch `app004-live-web-demo-20261116-01` 的 summary 和 raw 文件均保持原样，D01 summary 字段缺口不回填；D01 raw 只核对既有哈希，不读正文。没有新 preflight、batch 或凭据读取；`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 状态：`review`，等待独立只读复核与后续合入；APP-004 实际运行证据仍限于冻结单族两条样本。下一步在收束后再与负责人讨论项目方向。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / regression test discrimination fix / 2026-11-16
+
+- 动作：响应独立复核对 `1ac9342` 的 P2 发现。原测试通过 `dataclasses.replace(state, ...)` 复制了 raw 字段，不能证明生产代码确实转移元数据。
+- 修复：mock 确认函数返回的全新状态明确将 `raw_retention_meta`、`raw_retention_path` 设为 `None`；再断言 `service.confirm()` 将抽取状态中的 raw metadata 写回最终 summary。测试覆盖确认成功和用户拒绝两种结果，确认函数全程 mock，不运行 CAD。
+- 范围：仅改进未来运行回归测试和注释/交接记录；历史 summary/raw 不变，不读取 raw 正文，不创建 batch、不调用凭据、模型、网络或 CAD。
+- 状态：`review`，待固定环境复验并再次只读复核；`FORMAL_EVALUATION_ALLOWED=False` 保持。

@@ -316,38 +316,50 @@ class TestApp004OfflineService(unittest.TestCase):
     def test_confirmation_preserves_raw_retention_metadata_in_summary(self):
         from dataclasses import replace
 
-        transport = FakeTransport()
-        transport.queue_response(TransportResponse(status=200, body=_envelope()))
-        service = App004LiveWebService.from_fake_transport(transport)
-        state = service.extract("D01-collar-bore24")
-        state.raw_retention_meta = {
-            "retained": True,
-            "body_sha256": "a" * 64,
-        }
-        state.raw_retention_path = (
-            "work/app001-runs/test-batch/raw/D01-response.txt"
-        )
-        service._summary = {"runs": {}}
-        confirmed_state = replace(
-            state,
-            product_status="succeeded",
-            pipeline_status="success",
-        )
+        for confirmed, status, pipeline_status in (
+            (True, "succeeded", "success"),
+            (False, "blocked", None),
+        ):
+            with self.subTest(confirmed=confirmed):
+                transport = FakeTransport()
+                transport.queue_response(TransportResponse(status=200, body=_envelope()))
+                service = App004LiveWebService.from_fake_transport(transport)
+                state = service.extract("D01-collar-bore24")
+                state.raw_retention_meta = {
+                    "retained": True,
+                    "body_sha256": "a" * 64,
+                }
+                state.raw_retention_path = (
+                    "work/app001-runs/test-batch/raw/D01-response.txt"
+                )
+                service._summary = {"runs": {}}
+                returned_state = replace(
+                    state,
+                    product_status=status,
+                    pipeline_status=pipeline_status,
+                    raw_retention_meta=None,
+                    raw_retention_path=None,
+                )
+                # Model confirm_product_live_run()'s behavior: it returns a
+                # fresh state that does not carry the extraction audit fields.
+                self.assertIsNone(returned_state.raw_retention_meta)
+                self.assertIsNone(returned_state.raw_retention_path)
 
-        with patch(
-            "integration.app004_live_web_runner.confirm_product_live_run",
-            return_value=confirmed_state,
-        ), patch.object(service, "_write_summary"):
-            result = service.confirm(state.logical_run_id, True)
+                with patch(
+                    "integration.app004_live_web_runner.confirm_product_live_run",
+                    return_value=returned_state,
+                ) as confirm, patch.object(service, "_write_summary"):
+                    result = service.confirm(state.logical_run_id, confirmed)
 
-        self.assertIs(result, confirmed_state)
-        summary_run = service._summary["runs"][state.logical_run_id]
-        self.assertTrue(summary_run["raw_retained"])
-        self.assertEqual(summary_run["raw_sha256"], "a" * 64)
-        self.assertEqual(
-            summary_run["raw_retention_path"],
-            "work/app001-runs/test-batch/raw/D01-response.txt",
-        )
+                confirm.assert_called_once()
+                self.assertIs(result, returned_state)
+                summary_run = service._summary["runs"][state.logical_run_id]
+                self.assertTrue(summary_run["raw_retained"])
+                self.assertEqual(summary_run["raw_sha256"], "a" * 64)
+                self.assertEqual(
+                    summary_run["raw_retention_path"],
+                    "work/app001-runs/test-batch/raw/D01-response.txt",
+                )
 
     def test_arbitrary_input_rejected_without_transport_send(self):
         transport = FakeTransport()

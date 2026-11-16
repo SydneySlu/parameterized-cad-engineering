@@ -427,7 +427,7 @@ class App004LiveWebService:
             )
             # Confirmation returns a new ProductLiveRunState. Preserve the
             # extraction audit metadata so the summary update cannot erase
-            # the raw-response retention record for a successfully confirmed run.
+            # the raw-response retention record for confirmed or rejected runs.
             result.raw_retention_meta = state.raw_retention_meta
             result.raw_retention_path = state.raw_retention_path
             self._runs[logical_run_id] = result
