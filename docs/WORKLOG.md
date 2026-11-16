@@ -3397,3 +3397,13 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项 26/26、Product Live/UI 145/145、C1/C2/C3 demo 183/183、pipeline/schema 81/81；目标 `py_compile` 与 `git diff --check` 通过。兼容回归有既有 ResourceWarning，无失败。
 - 边界：未运行 formal preflight、创建 batch/ledger、读取凭据/evaluator-label 内容或调用网络、模型、真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 提交：`58382d5`（实现与回归）；checkpoint/WORKLOG 记录随后提交。状态保持 `review`，待独立只读复核。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / approved live batch closeout / 2026-11-16
+
+- 动作：按负责人批准的精确 batch `app004-live-web-demo-20261116-01` 执行 formal preflight、D01/D02 真实抽取，并收束 D01 确认后的 CAD/STEP 路径。profile=`app004-live-web-demo.v1`，DeepSeek `deepseek-flash` / C0 / 无检索；仅冻结 D01、D02；每条最多 2 次、全批最多 4 次 HTTP。
+- 结果：preflight 通过。D01 一次 HTTP 返回 `answer`、`bore_d=24`，经负责人后续明确推进后确认；CAD 流程 `step_readback` 成功，STEP SHA-256=`e0f23e1a16885e97f153b7d12fafafa0d18da6e7ac039c877841a5fbfdfd1fe7`、148393 bytes，并在 FreeCAD 1.1.4 中打开检查。D02 一次 HTTP 返回 `refuse`，unsupported=`anodizing`，状态 `blocked`，无 CAD/STEP。
+- 预算/收束：ledger 共 2 次 HTTP（D01 1、D02 1；DeepSeek 2），无重试；服务正常关闭后 summary=`complete`，finished=`2026-11-16T07:21:04Z`，ledger lock 已释放。`FORMAL_EVALUATION_ALLOWED=False` 未改变。未读取 raw 正文。
+- 故障与恢复：同步 `HTTPServer` 被一个未完整发送请求的 Codex NetworkService 连接阻塞在 request-line 读取阶段，导致浏览器/curl 等待。负责人在活动监视器结束该网络服务进程后，现有 Python 服务恢复；未重启服务、未重建 batch、未重跑模型。
+- 收尾发现：D01 raw 文件存在，SHA-256=`ea65f31d782e23be413f577c5c1a87bfc9c4d62112c3e2d59f2d9c3e25ee107f`，但最终 summary 未保留 D01 的 raw path/hash metadata；D02 raw 路径/hash 与 summary 相符。没有改写 summary/raw。此审计记录缺口保留为后续 review 项，APP-004-LIVE-WEB-DEMO 状态不提前标为 done。
+- 结论边界：本轮证明两条冻结输入上的真实 LLM 抽取，以及 D01 单族既有确定性链路生成和回读 STEP；不能据此声称广泛语言覆盖、任意零件或跨族能力、生产就绪或制造认证。
+- 下一步：只读评估 D01 raw metadata 丢失的原因和是否需要代码修复，不触碰历史 batch 文件；之后与负责人另行讨论项目后续方向。
