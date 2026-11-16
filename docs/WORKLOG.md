@@ -3472,3 +3472,4 @@ commit=待提交
 - 验证（固定 CAD venv Python 3.11.18）：RET-004 + conditions/retry/retrieval **82/82**；受影响 Product Live、APP-004、UI、pipeline/schema-to-IR **253/253**。目标 `py_compile` 通过；LLM 全量此前为 945 pass、8 个既有 skip。
 - 边界：仅离线 FakeTransport/既有本地集成测试；没有 formal preflight、batch/ledger 创建、凭据读取、网络/model 调用或 RET-004 CAD/STEP。候选 scope 仍 proposed；离线结果不证明检索收益，`FORMAL_EVALUATION_ALLOWED=False`。
 - 下一步：修复提交完成 diff check 后，交由独立 Codex 复核本 follow-up，再由负责人接受精确 scope/hash；之后 formal preflight，并单独请求真实 batch 执行授权。
+- 提交：修复 commit `36926de`（父提交 `a87734c`）；工作区本轮已提交，尚未 push/merge。
