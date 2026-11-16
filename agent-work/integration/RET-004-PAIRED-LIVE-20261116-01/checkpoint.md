@@ -80,3 +80,10 @@ Offline checks verify linkage and fail-closed behavior only. They are not retrie
 - Accepted binding: profile `ret004-paired-live.v1`, batch candidate `ret004-paired-live-20261116-01`, the frozen inputs/labels/prompt/contract/RET-001 manifest/RET-002 config hashes recorded above, DeepSeek `deepseek-flash`, C0/C1, four logical runs, maximum eight HTTP attempts.
 - Review status: independent read-only review is `pass` at `c212e03`; the scope is accepted, but no formal preflight or live execution has occurred.
 - Next gate: run `run_ret004_offline_preflight()` in the fixed CAD venv. This gate must not read credentials, create a batch/ledger, call the network, or run CAD; only a passing preflight permits requesting separate exact-batch live approval.
+
+## Formal preflight result
+
+- Command: `PYTHONPATH=src:. work/benchcad-output/venv/bin/python -c 'from integration.ret004_paired_runner import run_ret004_offline_preflight; ...'`.
+- Result: `ok=true`; all bound artifact hashes match; `batch_dir_exists=false`; planned runs `4`; max attempts per run `2`; max batch HTTP `8`; `evaluator_labels_read=false`; `evaluator_labels_sha256_bound=true`; `formal_evaluation_allowed=false`.
+- CAD runtime: `cadquery=2.3.0`, `ocp=7.9.3.0`, `jsonschema=4.26.0`, draft 2020-12 supported.
+- Boundary: preflight did not load credentials, create batch/ledger/raw directories, call network/model, or run CAD/STEP. Exact-batch live execution remains separately unauthorized until the owner approves it.

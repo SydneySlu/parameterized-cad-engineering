@@ -48,7 +48,7 @@
 | CAD-005/006 | Typed CAD IR 编译器与几何/STEP 验证器 | 原 CAD-005/006 Agent + Codex | done | `df78f4f` 修复 canonical input 绑定和错误 `node_ids`；中枢独立重跑 CAD 13 项、Schema 17 项、IR 契约/轴向 5 项及 `py_compile`，全部通过；审查记录已同步到主线 |
 | RET-001 | 单族检索样本 manifest | DSH + CC + Codex | done | 15/15 目录行通过 Schema、IR、CAD 构造、native 重复和 STEP 回读；manifest 825 项、tracked-only 660 项校验通过；split 为 provisional_small_n |
 | RET-003 | 单族检索诊断与下游收益评测 | Codex + CC | deferred | C1 检索级诊断已验收；12-run 下游收益研究离线关口已通过，真实执行暂缓（ADR-0020），不阻塞 CAD 集成；收益仍 not_measured，不预设正收益 |
-| RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | review | 独立复核与 summary confirmation-status 窄修均已通过；固定 CAD venv 下 RET-004 83 项与受影响 product-live/app004/pipeline/schema 253 项通过，LLM 全量 945 项/8 个既有 skip。负责人已于 2026-11-16 13:20:20 UTC 接受 exact scope/hash；当前进入 formal preflight，尚未创建 batch/ledger、读取凭据或触网。真实执行仍需单独 batch 授权。 |
+| RET-004-PAIRED-LIVE-20261116-01 | 两输入 C0/C1 真实端到端检索对照 | Codex + CC | review | 独立复核与 summary confirmation-status 窄修均已通过；负责人已接受 exact scope/hash，formal preflight 已通过：冻结 hash 全部匹配、CadQuery 2.3.0/OCP 7.9.3.0 可用、4 logical runs/最多 8 HTTP、batch 目录未占用。尚未读取凭据、创建 batch/ledger 或触网；下一步需单独批准 exact batch 的真实 DeepSeek 请求。 |
 | APP-001-PREP | 模型基线、输入输出契约与小型验收集冻结 | LLM Agent + Codex + 用户 | done | 最终中枢验收通过，详见 `agent-work/reviews/APP-001-PREP-FINAL-ACCEPTANCE.md` |
 | APP-001-ADAPTER | 双基线执行适配器与分阶段运行记录 | CC + Codex | done | R3-FIX 经中枢独立验收通过，详见 `agent-work/reviews/APP-001-ADAPTER-R3-FIX-codex-review.md` |
 | APP-001-RUNNER | 第一阶段受控运行入口、预算和模型身份边界 | CC + Codex | done | R2-R6 修复已合入 `main`（`9d83219`，状态文档 `53f6c49`）；中枢独立复核在 Python 3.11.18 下确认 389 项 LLM 测试通过、8 项环境限制跳过，17 项 Schema 测试通过。详见 `agent-work/reviews/APP-001-RUNNER-R6-codex-review.md` |
@@ -102,7 +102,7 @@
 ## 下一步
 
 - APP-004 技术验收与交付记录已完成：固定 CAD venv 下相关套件共 1,717 项，1,709 通过、8 项既有 skip；验收报告已整理。A/B/C 主链与单族轻量演示在限定范围内完成。
-- 当前下一步为 RET-004 formal preflight：负责人已接受精确 scope/hash，先验证冻结产物、运行时和未占用 batch；preflight 通过后再单独申请 `ret004-paired-live-20261116-01` 的真实 DeepSeek 执行授权。离线验证只证明链路准备，不证明检索有效。
+- 当前下一步为 RET-004 exact-batch live approval：formal preflight 已通过，等待负责人单独批准 `ret004-paired-live-20261116-01` 的真实 DeepSeek `deepseek-flash` 请求（4 logical runs、最多 8 次 HTTP）。离线/preflight 结果只证明链路准备，不证明检索有效。
 
 ## APP-003 语言样本 scope 当前状态
 

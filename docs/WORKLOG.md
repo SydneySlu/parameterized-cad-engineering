@@ -3486,3 +3486,10 @@ commit=待提交
 - 动作：负责人 Wang sikai 接受 RET-004 精确 scope/hash，接受时间 `2026-11-16T13:20:20Z`；接受记录引用 `conversation:RET-004-PAIRED-LIVE-20261116-01-scope-acceptance`。
 - 接受范围：profile `ret004-paired-live.v1`、候选 batch `ret004-paired-live-20261116-01`、两条冻结输入 × C0/C1、DeepSeek `deepseek-flash`、最多 8 次 HTTP，以及已绑定的 inputs/labels/prompt/contract/RET-001/RET-002 hashes。
 - 结果：独立复核 `pass`，允许进入 formal preflight；尚未创建 batch/ledger、读取凭据、调用网络/模型或运行 RET-004 CAD/STEP。`FORMAL_EVALUATION_ALLOWED=False` 保持。preflight 通过后仍需单独申请 exact-batch 真实请求授权。
+
+### RET-004-PAIRED-LIVE-20261116-01 / Codex / formal preflight / 2026-11-16
+
+- 动作：负责人接受 exact scope/hash 后执行只读 formal preflight。
+- 结果：`ok=true`；inputs、prompt、contract、RET-001 manifest、RET-002 config hash 全部匹配；batch `ret004-paired-live-20261116-01` 目录不存在；4 logical runs、每 run 最多 2 次、全批最多 8 次 HTTP；labels 未读取；`FORMAL_EVALUATION_ALLOWED=False`。
+- 运行时：固定 CAD venv 检测通过，CadQuery 2.3.0、OCP 7.9.3.0、jsonschema 4.26.0，draft 2020-12 支持。
+- 边界：未读取凭据、`.env` 或 raw 正文，未创建 batch/ledger/raw 目录，未调用网络/模型或运行 CAD/STEP。下一步等待负责人对该 exact batch 的真实 DeepSeek 请求单独授权。
