@@ -61,6 +61,12 @@ POOL_MAX_SIZE: int = 5
 POOL_VERSION: str = "ret-005.pool.v1"
 MANIFEST_REL_PATH = "agent-work/data/RET-001-retrieval-manifest/manifest-v0.jsonl"
 
+# Only ``retrieval_source`` role samples may enter a reference pool.
+# ``development`` and ``heldout_evaluation`` roles are rejected at construction
+# time to prevent held-out truth or evaluator-only data from leaking into the
+# model context.  This is a boundary check, not a UI-level filter.
+ALLOWED_POOL_ROLE: str = "retrieval_source"
+
 
 # ---------------------------------------------------------------------------
 # Pool error codes (extend RetrievalError with pool-specific codes)
@@ -348,6 +354,45 @@ class ReferencePool:
                     "missing": missing_ids,
                     "available_count": len(all_records),
                     "hint": "only manifest-validated sample_ids may be added to a pool",
+                },
+            )
+
+        # --- Role check: only retrieval_source samples may enter a pool ---
+        # development and heldout_evaluation roles are rejected here, at the
+        # construction boundary, so held-out truth can never leak into the model
+        # context even if the caller passes those sample_ids.
+        wrong_role_ids: list[dict[str, Any]] = []
+        for sid in ids:
+            record = all_records[sid]
+            split = record.get("split")
+            if not isinstance(split, dict):
+                wrong_role_ids.append({
+                    "sample_id": sid,
+                    "reason": "split block missing or not a dict",
+                })
+                continue
+            role = split.get("role")
+            if not isinstance(role, str) or not role:
+                wrong_role_ids.append({
+                    "sample_id": sid,
+                    "reason": "split.role missing or not a string",
+                })
+                continue
+            if role != ALLOWED_POOL_ROLE:
+                wrong_role_ids.append({
+                    "sample_id": sid,
+                    "role": role,
+                    "reason": f"role {role!r} is not allowed; only {ALLOWED_POOL_ROLE!r} samples may enter a pool",
+                })
+        if wrong_role_ids:
+            raise PoolError(
+                "POOL_SAMPLE_ROLE_NOT_ALLOWED",
+                "one or more requested sample_ids have a split role that is not "
+                f"{ALLOWED_POOL_ROLE!r}; development and heldout_evaluation "
+                "samples are rejected at the pool boundary",
+                details={
+                    "rejected": wrong_role_ids,
+                    "allowed_role": ALLOWED_POOL_ROLE,
                 },
             )
 

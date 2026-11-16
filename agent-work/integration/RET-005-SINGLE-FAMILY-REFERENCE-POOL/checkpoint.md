@@ -115,3 +115,73 @@ tests.llm.test_runner                         73/73  OK
 **范围和边界**：未调用真实模型或网络，未读取凭据、evaluator-labels 正文或历史 raw，未创建 batch，未修改 RET-004 证据；`FORMAL_EVALUATION_ALLOWED=False` 保持。固定环境 CAD pipeline mock 验证与现有 pipeline regression 均通过，但不能覆盖上述确认对象篡改路径。
 
 **下一步**：针对 P1 窄修并补判别性回归；清理 checkpoint 尾随空格；同步状态后重新固定环境验收与独立复核。Web/UI 范围需在 RET-005 完成前交付，或经负责人明确拆分为单独后续工作。此复核不接受 ADR-0028，不冻结 held-out scope，不授权真实请求。
+
+---
+
+## CC 修复轮 / cc/RET-005-POOL-FIXES / 2026-11-17
+
+**基线**：`daf8cc1`（main），分支 `cc/RET-005-POOL-FIXES`
+
+### P1a：held-out 泄露修复
+
+- `src/retrieval/pool.py`：新增 `ALLOWED_POOL_ROLE = "retrieval_source"` 常量
+- `from_manifest()` 在 allowlist 检查后新增 role 校验：拒绝 `development`、`heldout_evaluation`、未知/缺失 role 和格式错误记录，错误码 `POOL_SAMPLE_ROLE_NOT_ALLOWED`
+- 该检查在 manifest 加载完成后、任何 transport 或 context 组装前执行（construct-time, fail closed）
+- 新增 `TestPoolRoleEnforcement`（7 项）：含 transport.call_count==0 断言、held-out ID 不出现在请求正文
+
+### P1b：确认状态篡改修复
+
+- `src/integration/ret005_pool_runner.py`：`Ret005PoolService` 新增 `_state_fingerprint()` 和 `_frozen_copy()`
+- `extract()` 保存内部状态（服务私有），记录 fingerprint，对外返回 deepcopy
+- `confirm()` 验证 run_id、拒绝重复确认（`CONFIRMATION_ALREADY_USED`）、核对 fingerprint（`CONFIRMATION_STATE_CHANGED`）、re-validate 显式参数
+- `get()` 也返回副本
+- 新增 `TestConfirmationStateTampering`（4 项）：mutation 不影响 pipeline 参数、正常确认仅调用一次、重复确认被拒
+
+### P1c：FakeTransport 子类绕过修复
+
+- 将 `isinstance(transport, FakeTransport)` 改为 `type(transport) is not FakeTransport`
+- 新增 `TestFakeTransportSubclassBypass`（3 项）：子类构造时 TypeError、send() 调用数为 0
+
+### P2：Web/UI 接入
+
+- `src/demo/server.py`：新增 `_build_pool_html()`（OFFLINE 离线演示页面）、`POOL_HTML_BYTES`、`_sanitize_pool_state_for_http()`
+- `make_handler_class()` 新增 `pool_service` 参数，`run_server()` 同步更新
+- 新增路由：`GET /pool`、`GET /api/pool/samples`、`POST /api/pool/create`、`POST /api/pool/confirm/<run_id>`、`GET /api/pool/<run_id>`、`GET /pool-download/<run_id>`
+- 新增 `tests/demo/test_ret005_pool_server.py`（25 项）：HTML、samples（仅 retrieval_source、无禁止字段）、create/confirm/download、跨 run 隔离
+
+### 验证结果（sandbox Python 3.10.12）
+
+```
+tests.retrieval.test_ret005_pool         Ran 39 tests  OK (1 skip)
+tests.integration.test_ret005_pool_runner  Ran 55 tests  OK (1 skip)
+tests.demo.test_ret005_pool_server         Ran 25 tests  OK
+合计: Ran 112 tests in 3.2s — OK (skipped=1)
+```
+
+受影响现有测试：
+```
+tests.integration.test_ret004_paired_runner  24/24  OK
+tests.retrieval.test_retrieval_baseline      28/28  OK
+tests.schema.test_set_screw_shaft_collar     17/17  OK
+tests.demo.test_product_live_ui              36/36  OK
+```
+
+**py_compile**: 7 个新/改文件全部通过
+**git diff --check**: clean
+
+### 不变量
+
+| 检查项 | 结果 |
+|--------|------|
+| `FORMAL_EVALUATION_ALLOWED` | False，不变 |
+| v5 prompt / contract version | 不变 |
+| RET-001 manifest sha256 | 不变 |
+| RET-002 retrieval-config | 不变 |
+| evaluator-labels.json | 未读取、未暴露 |
+| CAD 调用 | 仅在 `confirm_pool_run()` 内，确认后才触发 |
+| 正式 batch / credentials | 未创建，未读取 |
+| 真实模型请求 | 无 |
+
+### 下一步
+
+状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。

@@ -58,7 +58,7 @@ from llm.pool_context import (
 from llm.prompt_loader import load_frozen_prompt
 from llm.transport import FakeTransport, TransportResponse
 from retrieval.config import REPO_ROOT
-from retrieval.pool import ReferencePool, PoolError, MANIFEST_REL_PATH
+from retrieval.pool import ReferencePool, PoolError, MANIFEST_REL_PATH, ALLOWED_POOL_ROLE
 
 
 # ---------------------------------------------------------------------------
@@ -733,6 +733,10 @@ class Ret005PoolService:
     - Each confirmed run writes to its own isolated directory.
     - No other run's STEP file is returned.
     - FORMAL_EVALUATION_ALLOWED is never changed.
+    - extract() returns a frozen copy; callers cannot mutate the internal state.
+    - confirm() re-validates the state fingerprint before calling run_pipeline.
+    - Duplicate confirmations are rejected.
+    - Only exact FakeTransport (not subclasses) is accepted.
     """
 
     def __init__(
@@ -742,10 +746,12 @@ class Ret005PoolService:
         output_root: Path | None = None,
         repo_root: Path | None = None,
     ) -> None:
-        if not isinstance(transport, FakeTransport):
+        # P1c: exact type check — subclasses that override send() must not bypass
+        if type(transport) is not FakeTransport:
             raise TypeError(
-                "Ret005PoolService requires a FakeTransport; "
-                "formal live transport is not yet authorized for RET-005"
+                "Ret005PoolService requires an exact FakeTransport instance; "
+                "subclasses that override send() are not permitted.  "
+                "Formal live transport is not yet authorized for RET-005."
             )
         self._transport = transport
         self._output_root = Path(output_root) if output_root else (
@@ -753,6 +759,43 @@ class Ret005PoolService:
         )
         self._repo_root: Path | None = Path(repo_root) if repo_root else None
         self._runs: dict[str, PoolRunState] = {}
+        self._confirmable_fingerprints: dict[str, str] = {}
+        self._confirmed: set[str] = set()
+
+    @staticmethod
+    def _state_fingerprint(state: PoolRunState) -> str:
+        """Compute a stable fingerprint over the extraction state.
+
+        This is used to detect any mutation between extract() and confirm().
+        The fingerprint covers all fields that affect the confirmation decision:
+        product_status, extracted_parameters, explicit_parameters, decision,
+        missing_fields, unsupported_requests, conflicts, errors,
+        reference_context_sha256, and the run_id.
+        """
+        payload = json.dumps({
+            "run_id": state.run_id,
+            "product_status": state.product_status,
+            "decision": state.decision,
+            "extracted_parameters": state.extracted_parameters,
+            "explicit_parameters": state.explicit_parameters,
+            "missing_fields": state.missing_fields,
+            "unsupported_requests": state.unsupported_requests,
+            "conflicts": state.conflicts,
+            "reference_context_sha256": state.reference_context_sha256,
+        }, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _frozen_copy(state: PoolRunState) -> PoolRunState:
+        """Return a copy of the state that callers cannot mutate to affect
+        the internal service state.
+
+        The returned object is a new PoolRunState with deep-copied dict/list
+        fields.  Even if the caller mutates the returned copy, the service's
+        internal state (stored separately) is unaffected.
+        """
+        import copy as _copy
+        return _copy.deepcopy(state)
 
     def extract(
         self,
@@ -763,6 +806,8 @@ class Ret005PoolService:
         """Run extraction for one (request, pool, condition) combination.
 
         Never calls run_pipeline — only confirm() does that.
+        Returns a frozen copy of the state; the internal copy is stored
+        separately so callers cannot tamper with it.
         """
         run_id = uuid.uuid4().hex
         prompt = load_frozen_prompt()
@@ -775,36 +820,159 @@ class Ret005PoolService:
             prompt=prompt,
             repo_root=self._repo_root,
         )
+        # Store internal state — callers never get a reference to this object
         self._runs[run_id] = state
-        return state
+        # Record the fingerprint for confirmation validation
+        if state.product_status == POOL_STATUS_NEEDS_CONFIRMATION:
+            self._confirmable_fingerprints[run_id] = self._state_fingerprint(state)
+        # Return a deep copy so callers cannot mutate the internal state
+        return self._frozen_copy(state)
 
     def confirm(self, run_id: str, confirmed: bool) -> PoolRunState | None:
         """Confirm a pending extraction result and optionally run the CAD pipeline.
 
         Returns None if run_id is unknown.  Calls confirm_pool_run() — the only
         path to run_pipeline() for pool runs.
+
+        Security checks:
+        - run_id must exist in the internal registry.
+        - The run must not have already been confirmed (duplicate rejection).
+        - The internal state fingerprint must match the one recorded at
+          extraction time.  Any mutation (e.g. caller changes bore_d) is
+          detected and the confirmation is rejected.
+        - The state must still be needs_confirmation.
+        - User explicit parameters are re-checked against extracted parameters.
         """
         if not isinstance(confirmed, bool):
             raise TypeError("confirmed must be a bool")
         state = self._runs.get(run_id)
         if state is None:
             return None
+
+        # Reject duplicate confirmations
+        if run_id in self._confirmed:
+            return PoolRunState(
+                run_id=run_id,
+                condition_id=state.condition_id,
+                llm_status=state.llm_status,
+                product_status=POOL_STATUS_BLOCKED,
+                decision=state.decision,
+                extracted_parameters=dict(state.extracted_parameters),
+                explicit_parameters=dict(state.explicit_parameters),
+                missing_fields=list(state.missing_fields),
+                unsupported_requests=list(state.unsupported_requests),
+                questions=list(state.questions),
+                conflicts=list(state.conflicts),
+                errors=[{"code": "CONFIRMATION_ALREADY_USED",
+                         "message": "this run has already been confirmed; "
+                                    "duplicate confirmation is rejected"}],
+                pool_sample_ids=list(state.pool_sample_ids),
+                reference_context_sha256=state.reference_context_sha256,
+                candidate_source_ids=list(state.candidate_source_ids),
+                llm_meta=dict(state.llm_meta),
+                request_text=state.request_text,
+            )
+
+        # Validate state fingerprint — detect any mutation between extract and confirm
+        expected_fingerprint = self._confirmable_fingerprints.get(run_id)
+        if expected_fingerprint is None:
+            # Not a confirmable run (was never needs_confirmation)
+            return PoolRunState(
+                run_id=run_id,
+                condition_id=state.condition_id,
+                llm_status=state.llm_status,
+                product_status=POOL_STATUS_BLOCKED,
+                decision=state.decision,
+                extracted_parameters=dict(state.extracted_parameters),
+                explicit_parameters=dict(state.explicit_parameters),
+                missing_fields=list(state.missing_fields),
+                unsupported_requests=list(state.unsupported_requests),
+                questions=list(state.questions),
+                conflicts=list(state.conflicts),
+                errors=[{"code": "NOT_CONFIRMABLE",
+                         "message": f"run is in status={state.product_status!r}; "
+                                    "only needs_confirmation runs can be confirmed"}],
+                pool_sample_ids=list(state.pool_sample_ids),
+                reference_context_sha256=state.reference_context_sha256,
+                candidate_source_ids=list(state.candidate_source_ids),
+                llm_meta=dict(state.llm_meta),
+                request_text=state.request_text,
+            )
+
+        actual_fingerprint = self._state_fingerprint(state)
+        if actual_fingerprint != expected_fingerprint:
+            # State was mutated between extract() and confirm() — reject
+            return PoolRunState(
+                run_id=run_id,
+                condition_id=state.condition_id,
+                llm_status=state.llm_status,
+                product_status=POOL_STATUS_BLOCKED,
+                decision=state.decision,
+                extracted_parameters=dict(state.extracted_parameters),
+                explicit_parameters=dict(state.explicit_parameters),
+                missing_fields=list(state.missing_fields),
+                unsupported_requests=list(state.unsupported_requests),
+                questions=list(state.questions),
+                conflicts=list(state.conflicts),
+                errors=[{"code": "CONFIRMATION_STATE_CHANGED",
+                         "message": "extraction state was mutated between extract "
+                                    "and confirm; confirmation rejected to prevent "
+                                    "tampering with user explicit parameters"}],
+                pool_sample_ids=list(state.pool_sample_ids),
+                reference_context_sha256=state.reference_context_sha256,
+                candidate_source_ids=list(state.candidate_source_ids),
+                llm_meta=dict(state.llm_meta),
+                request_text=state.request_text,
+            )
+
+        # Re-validate user explicit parameters vs model extracted parameters
+        param_conflicts = check_user_param_priority(
+            state.explicit_parameters, state.extracted_parameters,
+        )
+        if param_conflicts:
+            return PoolRunState(
+                run_id=run_id,
+                condition_id=state.condition_id,
+                llm_status=state.llm_status,
+                product_status=POOL_STATUS_BLOCKED,
+                decision=state.decision,
+                extracted_parameters=dict(state.extracted_parameters),
+                explicit_parameters=dict(state.explicit_parameters),
+                missing_fields=list(state.missing_fields),
+                unsupported_requests=list(state.unsupported_requests),
+                questions=list(state.questions),
+                conflicts=param_conflicts,
+                errors=[{"code": "USER_PARAM_CONFLICT",
+                         "conflicts": param_conflicts,
+                         "message": "model extracted parameters conflict with user "
+                                    "explicit text at confirmation time"}],
+                pool_sample_ids=list(state.pool_sample_ids),
+                reference_context_sha256=state.reference_context_sha256,
+                candidate_source_ids=list(state.candidate_source_ids),
+                llm_meta=dict(state.llm_meta),
+                request_text=state.request_text,
+            )
+
+        # All checks passed — mark as confirmed and call pipeline
+        self._confirmed.add(run_id)
         new_state = confirm_pool_run(
             state,
             confirmed=confirmed,
             output_root=self._output_root,
         )
-        # Store confirmed result under a separate key to prevent the original
-        # extraction state from being overwritten (run isolation).
+        # Store confirmed result under a separate key (run isolation)
         self._runs[run_id + "__confirmed"] = new_state
-        return new_state
+        return self._frozen_copy(new_state)
 
     def get(self, run_id: str) -> PoolRunState | None:
-        """Return the latest state for a run_id."""
-        return (
+        """Return the latest state for a run_id (frozen copy)."""
+        state = (
             self._runs.get(run_id + "__confirmed")
             or self._runs.get(run_id)
         )
+        if state is None:
+            return None
+        return self._frozen_copy(state)
 
     def get_step_bytes_secure(self, run_id: str) -> bytes | None:
         """Return STEP bytes for a succeeded confirmed run with 5-layer security.
@@ -841,3 +1009,55 @@ class Ret005PoolService:
         if hashlib.sha256(content).hexdigest() != expected_sha256:
             return None
         return content
+
+
+def list_eligible_pool_samples() -> list[dict[str, Any]]:
+    """List all manifest samples eligible for the reference pool (retrieval_source only).
+
+    Returns a list of safe display dicts with sample_id, family_id,
+    parameters_normalized, validation status, and source summary.
+    Never includes evaluator labels, IR content, STEP content, or held-out truth.
+    """
+    manifest_path = _REPO_ROOT / MANIFEST_REL_PATH
+    if not manifest_path.is_file():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in manifest_path.read_text().strip().split("\n"):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        split = record.get("split", {})
+        if not isinstance(split, dict):
+            continue
+        role = split.get("role")
+        if role != ALLOWED_POOL_ROLE:
+            continue
+        entry = _safe_pool_entry_for_api(record)
+        records.append(entry)
+    return records
+
+
+def _safe_pool_entry_for_api(record: dict[str, Any]) -> dict[str, Any]:
+    """Build a safe API-facing dict from a manifest record.
+
+    Only contains: sample_id, family_id, sample_kind, parameters_normalized,
+    validation_status, validation_is_valid, source_repository, source_family_path,
+    source_release_qualified, split_role.
+    """
+    from retrieval.pool import _safe_pool_entry
+    entry = _safe_pool_entry(record)
+    return {
+        "sample_id": entry.sample_id,
+        "family_id": entry.family_id,
+        "sample_kind": entry.sample_kind,
+        "parameters_normalized": dict(entry.parameters_normalized),
+        "validation_status": entry.validation_status,
+        "validation_is_valid": entry.validation_is_valid,
+        "source_repository": entry.source_repository,
+        "source_family_path": entry.source_family_path,
+        "source_release_qualified": entry.source_release_qualified,
+        "split_role": entry.split_role,
+    }

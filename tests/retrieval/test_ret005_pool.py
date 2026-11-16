@@ -28,8 +28,16 @@ from retrieval.config import PARAMETER_ORDER, CONTINUOUS_FIELDS, REPO_ROOT
 
 # These are the actual sample_ids from the RET-001 manifest.
 # The manifest has 15 records: 3 retrieval_source, 9 development, 3 heldout_evaluation.
+# Only retrieval_source IDs may be used in pools (P1a fix enforces this).
 _ALL_MANIFEST_IDS: list[str] = []
 _MANIFEST_PATH = REPO_ROOT / MANIFEST_REL_PATH
+
+# Only retrieval_source role samples may enter a pool
+_RETRIEVAL_SOURCE_IDS = [
+    "set_screw_shaft_collar/catalog-bore-006",
+    "set_screw_shaft_collar/catalog-bore-020",
+    "set_screw_shaft_collar/catalog-bore-050",
+]
 
 
 def _load_all_manifest_ids() -> list[str]:
@@ -43,12 +51,12 @@ def _load_all_manifest_ids() -> list[str]:
 
 
 _ALL_MANIFEST_IDS = _load_all_manifest_ids()
-_HAVE_MANIFEST = len(_ALL_MANIFEST_IDS) >= POOL_MIN_SIZE
+_HAVE_MANIFEST = len(_RETRIEVAL_SOURCE_IDS) >= POOL_MIN_SIZE and _MANIFEST_PATH.is_file()
 
 
 def _pool_ids(n: int = 3) -> list[str]:
-    """Return n sample_ids from the manifest (or as many as available)."""
-    return _ALL_MANIFEST_IDS[:n]
+    """Return n retrieval_source sample_ids from the manifest."""
+    return _RETRIEVAL_SOURCE_IDS[:n]
 
 
 # ---------------------------------------------------------------------------
@@ -66,10 +74,10 @@ class TestReferencePoolAllowlist(unittest.TestCase):
 
     @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
     def test_all_manifest_ids_valid_up_to_max(self):
-        """Any 3-5 manifest sample_ids should build a pool."""
+        """Any 3-5 retrieval_source sample_ids should build a pool."""
         for n in range(POOL_MIN_SIZE, POOL_MAX_SIZE + 1):
-            if len(_ALL_MANIFEST_IDS) >= n:
-                pool = ReferencePool.from_manifest(_ALL_MANIFEST_IDS[:n])
+            if len(_RETRIEVAL_SOURCE_IDS) >= n:
+                pool = ReferencePool.from_manifest(_RETRIEVAL_SOURCE_IDS[:n])
                 self.assertEqual(pool.candidate_count, n)
 
     def test_non_manifest_id_raises_pool_not_in_allowlist(self):
@@ -501,6 +509,138 @@ class TestUserParamPriority(unittest.TestCase):
             {"bore_d": 24.0 + 1e-12},  # within tolerance
         )
         self.assertEqual(conflicts, [])
+
+
+# ---------------------------------------------------------------------------
+# 7. Pool role enforcement (P1a security fix)
+# ---------------------------------------------------------------------------
+
+_HELDOUT_IDS = [
+    "set_screw_shaft_collar/catalog-bore-012",
+    "set_screw_shaft_collar/catalog-bore-035",
+    "set_screw_shaft_collar/catalog-bore-080",
+]
+_DEV_IDS = [
+    "set_screw_shaft_collar/catalog-bore-005",
+    "set_screw_shaft_collar/catalog-bore-008",
+    "set_screw_shaft_collar/catalog-bore-010",
+]
+_RET_IDS = [
+    "set_screw_shaft_collar/catalog-bore-006",
+    "set_screw_shaft_collar/catalog-bore-020",
+    "set_screw_shaft_collar/catalog-bore-050",
+]
+
+
+class TestPoolRoleEnforcement(unittest.TestCase):
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_heldout_sample_ids_blocked_at_construction(self):
+        """heldout_evaluation samples must be rejected at pool construction."""
+        with self.assertRaises(PoolError) as ctx:
+            ReferencePool.from_manifest(_HELDOUT_IDS)
+        self.assertEqual(ctx.exception.code, "POOL_SAMPLE_ROLE_NOT_ALLOWED")
+        # The error must name the rejected role
+        details = ctx.exception.details
+        rejected = details.get("rejected", [])
+        self.assertTrue(len(rejected) > 0)
+        for item in rejected:
+            self.assertIn(item["role"], ("heldout_evaluation",))
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_heldout_blocked_before_transport_zero_calls(self):
+        """Passing held-out sample IDs must block before any transport call."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        from llm.transport import FakeTransport, TransportResponse
+        from llm.contract import CONTRACT_VERSION, PROMPT_VERSION
+        import json
+
+        transport = FakeTransport()
+        # Queue a response — it must NOT be consumed because pool creation fails first
+        envelope = json.dumps({
+            "contract_version": CONTRACT_VERSION,
+            "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 24.0},
+            "unsupported_requests": [],
+            "evidence": [],
+            "missing_fields": [],
+            "questions": [],
+            "confidence": None,
+        })
+        transport.queue_response(TransportResponse(status=200, body=envelope))
+
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _HELDOUT_IDS, "C1")
+
+        # Pool construction must fail before transport is touched
+        self.assertEqual(transport.call_count, 0,
+                         "transport must not be called when held-out IDs are used")
+        self.assertEqual(state.product_status, "blocked")
+        codes = [e["code"] for e in state.errors]
+        self.assertIn("POOL_SAMPLE_ROLE_NOT_ALLOWED", codes,
+                      f"expected POOL_SAMPLE_ROLE_NOT_ALLOWED, got {codes}")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_heldout_parameters_not_in_model_input(self):
+        """Held-out parameters must not appear in any transport request body."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        from llm.transport import FakeTransport, TransportResponse
+        from llm.contract import CONTRACT_VERSION, PROMPT_VERSION
+        import json
+
+        transport = FakeTransport()
+        envelope = json.dumps({
+            "contract_version": CONTRACT_VERSION,
+            "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 24.0},
+            "unsupported_requests": [],
+            "evidence": [],
+            "missing_fields": [],
+            "questions": [],
+            "confidence": None,
+        })
+        transport.queue_response(TransportResponse(status=200, body=envelope))
+
+        service = Ret005PoolService(transport=transport)
+        service.extract("bore_d=24 mm 轴环", _HELDOUT_IDS, "C1")
+
+        # Verify no call was made
+        self.assertEqual(transport.call_count, 0)
+        # Even if calls were somehow made, check that held-out IDs are not in them
+        for call in transport.calls:
+            call_str = json.dumps(call.body, ensure_ascii=False)
+            for hid in _HELDOUT_IDS:
+                self.assertNotIn(hid, call_str,
+                                 f"held-out ID {hid!r} found in transport request body")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_development_sample_ids_blocked(self):
+        """development role samples must be rejected at pool construction."""
+        with self.assertRaises(PoolError) as ctx:
+            ReferencePool.from_manifest(_DEV_IDS)
+        self.assertEqual(ctx.exception.code, "POOL_SAMPLE_ROLE_NOT_ALLOWED")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_retrieval_source_still_accepted(self):
+        """retrieval_source samples must be accepted."""
+        pool = ReferencePool.from_manifest(_RET_IDS)
+        self.assertEqual(pool.candidate_count, 3)
+        self.assertEqual(set(pool.sample_ids), set(_RET_IDS))
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_mixed_valid_and_heldout_all_blocked(self):
+        """Even one held-out sample in a valid-sized pool must reject the whole pool."""
+        mixed = _RET_IDS[:2] + [_HELDOUT_IDS[0]]
+        with self.assertRaises(PoolError) as ctx:
+            ReferencePool.from_manifest(mixed)
+        self.assertEqual(ctx.exception.code, "POOL_SAMPLE_ROLE_NOT_ALLOWED")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_allowed_role_constant_is_retrieval_source(self):
+        """ALLOWED_POOL_ROLE constant must be 'retrieval_source'."""
+        from retrieval.pool import ALLOWED_POOL_ROLE
+        self.assertEqual(ALLOWED_POOL_ROLE, "retrieval_source")
 
 
 if __name__ == "__main__":

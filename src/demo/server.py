@@ -1026,6 +1026,277 @@ APP004_LIVE_HTML_CONTENT = _build_app004_live_html()
 APP004_LIVE_HTML_BYTES = APP004_LIVE_HTML_CONTENT.encode("utf-8")
 
 
+def _build_pool_html() -> str:
+    """RET-005 参考池离线演示页面（FakeTransport，无真实模型调用）。"""
+    return """<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RET-005 参考池演示 — 离线 / FakeTransport</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'PingFang SC',system-ui,sans-serif;background:#f5f5f5;color:#222;padding:1.5rem}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:1.3rem;font-weight:600;margin-bottom:.3rem}
+h2{font-size:1.05rem;font-weight:600;margin-bottom:.6rem}
+.banner-warn{display:inline-block;background:#fffbe6;border:1px solid #d4b106;color:#876800;
+  padding:.3rem .8rem;border-radius:4px;font-size:.82rem;margin-bottom:1rem}
+.card{background:#fff;border:1px solid #d9d9d9;border-radius:6px;padding:1.2rem;margin-bottom:1rem}
+label{display:block;font-weight:500;margin-bottom:.4rem;font-size:.88rem}
+textarea,input{width:100%;padding:.45rem .65rem;border:1px solid #ccc;border-radius:4px;font-size:.88rem}
+textarea{resize:vertical;height:70px;font-family:inherit}
+button{padding:.5rem 1.2rem;background:#1677ff;color:#fff;border:none;border-radius:4px;
+  cursor:pointer;font-size:.88rem;margin-top:.7rem;margin-right:.4rem}
+button:disabled{background:#a0c4ff;cursor:not-allowed}
+button.red{background:#cf1322}
+button.green{background:#27823b}
+.samples-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.6rem;margin-top:.5rem}
+.sample-card{border:1px solid #d9d9d9;border-radius:5px;padding:.6rem .8rem;cursor:pointer;
+  font-size:.82rem;background:#fafafa;transition:border-color .15s}
+.sample-card:hover{border-color:#1677ff}
+.sample-card.selected{border-color:#1677ff;background:#e6f4ff}
+.sample-card .sid{font-weight:600;font-size:.85rem;color:#1677ff}
+.sample-card .role-tag{display:inline-block;padding:.05rem .3rem;border-radius:3px;
+  font-size:.72rem;background:#f6ffed;color:#389e0d;border:1px solid #b7eb8f;margin-left:.3rem}
+.params-mini{margin-top:.35rem;color:#555;font-size:.78rem}
+.sel-counter{font-size:.82rem;color:#555;margin-top:.5rem}
+.sel-counter .ok{color:#389e0d;font-weight:600}
+.sel-counter .err{color:#cf1322;font-weight:600}
+table.param-tbl{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:.4rem}
+table.param-tbl th,table.param-tbl td{border:1px solid #e0e0e0;padding:.25rem .5rem}
+table.param-tbl th{background:#f0f0f0}
+.status-badge{display:inline-block;padding:.15rem .6rem;border-radius:4px;font-weight:600;font-size:.82rem}
+.s-needs_confirmation{background:#fff7e6;border:1px solid #ffd591;color:#d46b08}
+.s-succeeded{background:#f6ffed;border:1px solid #b7eb8f;color:#389e0d}
+.s-blocked,.s-error{background:#fff2f0;border:1px solid #ffccc7;color:#cf1322}
+.s-failed{background:#fff2f0;border:1px solid #ffccc7;color:#cf1322}
+.err-list{font-size:.82rem;color:#cf1322;margin-top:.35rem}
+.meta-row{font-size:.8rem;color:#666;margin:.2rem 0}
+.cand-block{margin-top:.4rem;font-size:.8rem;background:#f9f9f9;border:1px solid #eee;
+  border-radius:4px;padding:.4rem .6rem}
+.distance-row{font-size:.78rem;color:#888;margin-top:.15rem}
+#condSelect{width:auto;padding:.35rem .6rem;margin-top:.3rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="banner-warn">
+  <b>OFFLINE 离线演示</b>：本页使用 FakeTransport，不调用真实 DeepSeek / Ollama，不读取 API key。
+  参考池仅限 <code>retrieval_source</code> 样本；held-out / development 样本在服务端构造时阻断。
+  STEP 文件仅在确认后当前 run 可下载。
+</div>
+<h1>RET-005 单族受控参考池演示</h1>
+<div class="card">
+  <h2>第一步：选择参考池样本（3–5 个）</h2>
+  <div id="samples-loading">加载中…</div>
+  <div class="samples-grid" id="samples-grid" style="display:none"></div>
+  <div class="sel-counter" id="sel-counter"></div>
+</div>
+<div class="card">
+  <h2>第二步：输入需求并选择条件</h2>
+  <label for="reqText">自然语言需求（建议包含 bore_d=N mm）</label>
+  <textarea id="reqText" placeholder="例：生成一个 bore_d=24 mm 的轴环"></textarea>
+  <label style="margin-top:.5rem">检索条件
+    <select id="condSelect">
+      <option value="C1">C1（池内检索上下文）</option>
+      <option value="C0">C0（无参考上下文）</option>
+    </select>
+  </label>
+  <button onclick="doCreate()">提交抽取</button>
+</div>
+<div class="card" id="extract-card" style="display:none">
+  <h2>抽取结果</h2>
+  <div id="extract-body"></div>
+  <div id="confirm-area"></div>
+</div>
+<div class="card" id="result-card" style="display:none">
+  <h2>CAD / STEP 结果</h2>
+  <div id="result-body"></div>
+</div>
+</div>
+<script>
+const esc=s=>s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+let selectedIds=new Set(), allSamples=[], activeRunId=null;
+
+async function loadSamples(){
+  try{
+    const r=await fetch('/api/pool/samples');
+    if(!r.ok){document.getElementById('samples-loading').textContent='无法加载样本（服务未配置）';return;}
+    const d=await r.json();
+    allSamples=d.samples||[];
+    renderSamples();
+  }catch(e){document.getElementById('samples-loading').textContent='加载样本失败: '+esc(String(e));}
+}
+
+function renderSamples(){
+  const g=document.getElementById('samples-grid');
+  const ldr=document.getElementById('samples-loading');
+  if(!allSamples.length){ldr.textContent='无可用 retrieval_source 样本';return;}
+  ldr.style.display='none'; g.style.display='grid';
+  g.innerHTML='';
+  allSamples.forEach(s=>{
+    const p=s.parameters_normalized||{};
+    const pStr=`bore_d=${esc(p.bore_d)} outer_d=${esc(p.outer_d)} width=${esc(p.width)}`;
+    const div=document.createElement('div');
+    div.className='sample-card';
+    div.dataset.id=s.sample_id;
+    div.innerHTML=`<span class="sid">${esc(s.sample_id)}</span><span class="role-tag">${esc(s.split_role)}</span>
+      <div class="params-mini">${esc(pStr)}</div>
+      <div class="params-mini">验证: ${esc(s.validation_status)} / valid=${esc(s.validation_is_valid)}</div>`;
+    div.addEventListener('click',()=>toggleSample(s.sample_id,div));
+    g.appendChild(div);
+  });
+  updateCounter();
+}
+
+function toggleSample(id,el){
+  if(selectedIds.has(id)){selectedIds.delete(id);el.classList.remove('selected');}
+  else{selectedIds.add(id);el.classList.add('selected');}
+  updateCounter();
+}
+
+function updateCounter(){
+  const n=selectedIds.size;
+  const c=document.getElementById('sel-counter');
+  if(n<3)c.innerHTML=`<span class="err">已选 ${n} 个（需 3–5 个）</span>`;
+  else if(n>5)c.innerHTML=`<span class="err">已选 ${n} 个（最多 5 个）</span>`;
+  else c.innerHTML=`<span class="ok">已选 ${n} 个 ✓</span>`;
+}
+
+async function doCreate(){
+  const txt=document.getElementById('reqText').value.trim();
+  if(!txt){alert('请输入需求文本');return;}
+  if(selectedIds.size<3||selectedIds.size>5){alert('请选择 3–5 个样本');return;}
+  const cond=document.getElementById('condSelect').value;
+  const btn=document.querySelector('button[onclick="doCreate()"]');
+  btn.disabled=true;
+  resetResultCard();
+  try{
+    const r=await fetch('/api/pool/create',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({request_text:txt,pool_sample_ids:[...selectedIds],condition_id:cond})});
+    const d=await r.json();
+    if(!r.ok){showExtractError(d);return;}
+    activeRunId=d.run_id;
+    renderExtraction(d);
+  }catch(e){showExtractError({error:{code:'REQUEST_FAILED',message:String(e)}});}
+  finally{btn.disabled=false;}
+}
+
+function renderExtraction(d){
+  const card=document.getElementById('extract-card');
+  card.style.display='block';
+  const body=document.getElementById('extract-body');
+  const badge=`<span class="status-badge s-${esc(d.product_status)}">${esc(d.product_status)}</span>`;
+  let h=`<div class="meta-row"><b>run_id:</b> ${esc(d.run_id)}</div>`;
+  h+=`<div class="meta-row"><b>状态:</b> ${badge} &nbsp;<b>决策:</b> ${esc(d.decision)}</div>`;
+  h+=`<div class="meta-row"><b>条件:</b> ${esc(d.condition_id)} &nbsp;<b>bore_d 查询:</b> ${esc(d.bore_d_used_for_query)}</div>`;
+  h+=`<div class="meta-row"><b>用户显式参数:</b> ${esc(JSON.stringify(d.explicit_parameters||{}))}</div>`;
+  h+=`<div class="meta-row"><b>抽取参数:</b> ${esc(JSON.stringify(d.extracted_parameters||{}))}</div>`;
+  if((d.candidate_source_ids||[]).length){
+    h+=`<div class="cand-block"><b>池内 top-k 候选 (C1):</b> ${d.candidate_source_ids.map(esc).join(', ')}</div>`;
+  }
+  if(d.reference_context_sha256){
+    h+=`<div class="meta-row"><b>上下文 sha256:</b> <code>${esc(d.reference_context_sha256.slice(0,16))}…</code></div>`;
+  }
+  if((d.errors||[]).length){
+    h+=`<div class="err-list"><b>错误:</b><br>${d.errors.map(e=>esc(e.code||'')+': '+esc(e.message||'')).join('<br>')}</div>`;
+  }
+  body.innerHTML=h;
+  const area=document.getElementById('confirm-area');
+  area.innerHTML='';
+  if(d.product_status==='needs_confirmation'){
+    area.innerHTML=`<p style="margin-top:.6rem;font-size:.88rem">所有检查通过。请确认抽取参数后生成 STEP：</p>
+      <button class="green" onclick="doConfirm(true)">确认并生成 STEP</button>
+      <button class="red" onclick="doConfirm(false)">拒绝</button>`;
+  }
+}
+
+function showExtractError(d){
+  const card=document.getElementById('extract-card');
+  card.style.display='block';
+  document.getElementById('extract-body').innerHTML=
+    `<div class="err-list">${esc(d.error?.code||'ERROR')}: ${esc(d.error?.message||'请求失败')}</div>`;
+  document.getElementById('confirm-area').innerHTML='';
+}
+
+async function doConfirm(confirmed){
+  if(!activeRunId)return;
+  document.querySelectorAll('#confirm-area button').forEach(b=>b.disabled=true);
+  try{
+    const r=await fetch('/api/pool/confirm/'+encodeURIComponent(activeRunId),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({confirmed})});
+    const d=await r.json();
+    renderResult(d);
+  }catch(e){renderResult({product_status:'error',errors:[{code:'CONFIRM_FAILED',message:String(e)}]});}
+}
+
+function renderResult(d){
+  const rc=document.getElementById('result-card');
+  rc.style.display='block';
+  const badge=`<span class="status-badge s-${esc(d.product_status)}">${esc(d.product_status)}</span>`;
+  let h=`<div class="meta-row"><b>最终状态:</b> ${badge} &nbsp;<b>pipeline:</b> ${esc(d.pipeline_status||'—')}</div>`;
+  if(d.ir_index?.step_sha256)h+=`<div class="meta-row"><b>STEP SHA-256:</b> <code>${esc(d.ir_index.step_sha256)}</code></div>`;
+  if((d.errors||[]).length){
+    h+=`<div class="err-list">${d.errors.map(e=>esc(e.code||'')+': '+esc(e.message||'')).join('<br>')}</div>`;
+  }
+  if(d.product_status==='succeeded'){
+    h+=`<div style="margin-top:.7rem"><a href="/pool-download/${encodeURIComponent(activeRunId)}">
+      <button class="green">下载 STEP 文件</button></a></div>`;
+  }
+  document.getElementById('result-body').innerHTML=h;
+}
+
+function resetResultCard(){
+  document.getElementById('result-card').style.display='none';
+  document.getElementById('result-body').innerHTML='';
+  document.getElementById('extract-card').style.display='none';
+  document.getElementById('extract-body').innerHTML='';
+  document.getElementById('confirm-area').innerHTML='';
+}
+
+loadSamples();
+</script>
+</body>
+</html>"""
+
+
+POOL_HTML_CONTENT = _build_pool_html()
+POOL_HTML_BYTES = POOL_HTML_CONTENT.encode("utf-8")
+
+
+def _sanitize_pool_state_for_http(state: "Any") -> dict:
+    """Convert a PoolRunState to a safe HTTP response dict.
+
+    - Never exposes step_path (absolute internal path).
+    - Never exposes pipeline_run_dir as absolute path.
+    - Never exposes raw body, secrets, evaluator labels, or other run data.
+    - Only includes safe, well-defined fields suitable for browser consumption.
+    """
+    d = state.as_dict()
+    # Remove absolute internal step path — downloads only via /pool-download/
+    d.pop("step_path", None)
+    # Normalise pipeline_run_dir to repo-relative if available
+    if d.get("pipeline_run_dir") and _PRODUCT_LIVE_AVAILABLE:
+        d["pipeline_run_dir"] = _to_repo_relative_path(d["pipeline_run_dir"])
+    else:
+        d.pop("pipeline_run_dir", None)
+    # Normalise ir_index step_path
+    if isinstance(d.get("ir_index"), dict):
+        idx = dict(d["ir_index"])
+        if "step_path" in idx and _PRODUCT_LIVE_AVAILABLE:
+            idx["step_path"] = _to_repo_relative_path(idx["step_path"])
+        elif "step_path" in idx:
+            idx.pop("step_path", None)
+        d["ir_index"] = idx
+    # Remove any internal fields that must not reach the browser
+    for key in ("request_text",):
+        d.pop(key, None)
+    return d
+
+
 def _get_product_live_step_bytes_secure(state: "Any") -> bytes | None:
     """6-layer security check for product live STEP download.
 
@@ -1114,6 +1385,7 @@ def make_handler_class(
     product_live_handler: dict | None = None,
     product_live_service: "Any | None" = None,
     app004_live_service: "Any | None" = None,
+    pool_service: "Any | None" = None,
 ):
     """Return a request handler class bound to the given handler instances.
 
@@ -1123,6 +1395,12 @@ def make_handler_class(
     The older ``product_live_handler`` dict interface is kept for backward
     compatibility but is superseded by ``product_live_service``.
 
+    ``pool_service`` is an optional :class:`Ret005PoolService` instance
+    (from ``integration.ret005_pool_runner``).  When supplied it is used by
+    the /pool/* routes.  When None, /api/pool/create returns 503.
+    The /pool HTML page is always served (shows the form; API calls will 503
+    gracefully if no service is configured).
+
     Default (both None): product live routes return ``PRODUCT_LIVE_DISABLED``.
     """
 
@@ -1130,6 +1408,7 @@ def make_handler_class(
     _product_live = product_live_handler  # dict with 'runs' and 'output_root' (legacy)
     _pl_service = product_live_service    # ProductLiveService instance (preferred)
     _app004_live = app004_live_service
+    _pool_service = pool_service          # Ret005PoolService instance
 
     class _Handler(BaseHTTPRequestHandler):
         _demo = demo_handler
@@ -1229,6 +1508,26 @@ def make_handler_class(
                 self._handle_product_live_download(run_id)
                 return
 
+            # RET-005 pool routes (GET)
+            if path == "/pool" or path == "/pool/":
+                self._handle_pool_ui()
+                return
+
+            if path == "/api/pool/samples":
+                self._handle_pool_samples()
+                return
+
+            if path.startswith("/pool-download/"):
+                run_id = path[len("/pool-download/"):]
+                self._handle_pool_download(run_id)
+                return
+
+            if path.startswith("/api/pool/"):
+                run_id = path[len("/api/pool/"):]
+                if run_id and "/" not in run_id:
+                    self._handle_pool_get(run_id)
+                    return
+
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
 
         def do_POST(self) -> None:
@@ -1263,6 +1562,16 @@ def make_handler_class(
 
             if path.startswith("/api/app004-live/confirm/"):
                 self._handle_app004_confirm(path[len("/api/app004-live/confirm/"):])
+                return
+
+            # RET-005 pool routes (POST)
+            if path == "/api/pool/create":
+                self._handle_pool_create()
+                return
+
+            if path.startswith("/api/pool/confirm/"):
+                run_id = path[len("/api/pool/confirm/"):]
+                self._handle_pool_confirm(run_id)
                 return
 
             self._send_error_json(404, "NOT_FOUND", f"Path not found: {path}")
@@ -1774,6 +2083,186 @@ def make_handler_class(
                                       "STEP file unavailable or failed integrity check")
                 return
             filename = f"product-live-{run_id[:16]}.step"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(step_bytes)))
+            self.end_headers()
+            self.wfile.write(step_bytes)
+
+        # ------------------------------------------------------------------
+        # RET-005 pool handlers
+        # ------------------------------------------------------------------
+
+        def _handle_pool_ui(self) -> None:
+            """GET /pool — RET-005 reference pool offline demo page."""
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(POOL_HTML_BYTES)))
+            self.end_headers()
+            self.wfile.write(POOL_HTML_BYTES)
+
+        def _handle_pool_samples(self) -> None:
+            """GET /api/pool/samples — list eligible retrieval_source samples.
+
+            Only returns samples with split.role == retrieval_source.
+            Never returns evaluator labels, IR content, STEP content, or held-out truth.
+            Returns 503 if pool service is not configured.
+            """
+            if _pool_service is None:
+                self._send_error_json(503, "POOL_SERVICE_DISABLED",
+                                      "Pool service not configured; pass pool_service to make_handler_class")
+                return
+            try:
+                from integration.ret005_pool_runner import list_eligible_pool_samples
+                samples = list_eligible_pool_samples()
+                self._send_json(200, {"samples": samples, "count": len(samples),
+                                      "allowed_role": "retrieval_source"})
+            except Exception as exc:
+                self._send_error_json(500, "POOL_SAMPLES_ERROR",
+                                      f"failed to load eligible samples: {type(exc).__name__}")
+
+        def _handle_pool_create(self) -> None:
+            """POST /api/pool/create — run pool extraction for a user request.
+
+            Request body: {
+                request_text: str,
+                pool_sample_ids: list[str],   -- 3-5 retrieval_source sample_ids
+                condition_id: "C0"|"C1"       -- default "C1"
+            }
+
+            Only retrieval_source samples may be in the pool; held-out / development
+            sample_ids are rejected at the pool construction boundary before any
+            transport call.
+
+            Never calls run_pipeline — that only happens after confirm().
+            """
+            if _pool_service is None:
+                self._send_error_json(503, "POOL_SERVICE_DISABLED",
+                                      "Pool service not configured")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            request_text = body.get("request_text", "")
+            if not isinstance(request_text, str) or not request_text.strip():
+                self._send_error_json(400, "MISSING_REQUEST_TEXT",
+                                      "request_text is required and must be non-empty")
+                return
+            pool_ids = body.get("pool_sample_ids")
+            if not isinstance(pool_ids, list):
+                self._send_error_json(400, "INVALID_POOL_SAMPLE_IDS",
+                                      "pool_sample_ids must be a JSON array of strings")
+                return
+            if not all(isinstance(sid, str) for sid in pool_ids):
+                self._send_error_json(400, "INVALID_POOL_SAMPLE_IDS",
+                                      "each pool_sample_id must be a string")
+                return
+            condition_id = body.get("condition_id", "C1")
+            if condition_id not in ("C0", "C1"):
+                self._send_error_json(400, "INVALID_CONDITION_ID",
+                                      "condition_id must be 'C0' or 'C1'")
+                return
+            try:
+                state = _pool_service.extract(
+                    request_text.strip(),
+                    pool_ids,
+                    condition_id=condition_id,
+                )
+                resp = _sanitize_pool_state_for_http(state)
+                self._send_json(200, resp)
+            except Exception as exc:
+                code = getattr(exc, "code", None)
+                if isinstance(code, str):
+                    self._send_error_json(400, code, str(exc.message if hasattr(exc, "message") else exc))
+                else:
+                    self._send_error_json(500, "POOL_CREATE_ERROR",
+                                          f"{type(exc).__name__}: pool create failed")
+
+        def _handle_pool_confirm(self, run_id: str) -> None:
+            """POST /api/pool/confirm/<run_id> — confirm and trigger CAD pipeline.
+
+            Request body: {confirmed: bool}
+
+            Only needs_confirmation runs can be confirmed.  confirmed=false returns
+            CONFIRMATION_REJECTED.  Duplicate confirmations, state tampering, and
+            held-out / development sample IDs are rejected before run_pipeline is called.
+
+            Only the confirmed run's own STEP file is accessible via /pool-download/.
+            """
+            if _pool_service is None:
+                self._send_error_json(503, "POOL_SERVICE_DISABLED",
+                                      "Pool service not configured")
+                return
+            if not run_id or not isinstance(run_id, str):
+                self._send_error_json(400, "INVALID_RUN_ID", "run_id must be non-empty")
+                return
+            body = self._read_json_body()
+            if body is None:
+                return
+            confirmed_raw = body.get("confirmed")
+            if confirmed_raw is None:
+                self._send_error_json(400, "MISSING_CONFIRMED", "confirmed is required")
+                return
+            if not isinstance(confirmed_raw, bool):
+                self._send_error_json(400, "INVALID_CONFIRMED_TYPE",
+                                      "confirmed must be a JSON boolean (true or false), "
+                                      f"got {type(confirmed_raw).__name__!r}")
+                return
+            try:
+                new_state = _pool_service.confirm(run_id, confirmed_raw)
+            except TypeError as exc:
+                self._send_error_json(400, "INVALID_CONFIRMED_TYPE", str(exc))
+                return
+            if new_state is None:
+                self._send_error_json(404, "RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found in pool registry")
+                return
+            resp = _sanitize_pool_state_for_http(new_state)
+            self._send_json(200, resp)
+
+        def _handle_pool_get(self, run_id: str) -> None:
+            """GET /api/pool/<run_id> — get pool run status."""
+            if _pool_service is None:
+                self._send_error_json(503, "POOL_SERVICE_DISABLED",
+                                      "Pool service not configured")
+                return
+            state = _pool_service.get(run_id)
+            if state is None:
+                self._send_error_json(404, "RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found")
+                return
+            resp = _sanitize_pool_state_for_http(state)
+            self._send_json(200, resp)
+
+        def _handle_pool_download(self, run_id: str) -> None:
+            """GET /pool-download/<run_id> — STEP download for pool run.
+
+            Only the confirmed+succeeded run with matching run_id may be downloaded.
+            Path containment and SHA-256 verification are enforced.
+            Returns 403 for non-succeeded runs; 404 for unknown run_ids.
+            Never exposes other run STEP files.
+            """
+            if _pool_service is None:
+                self._send_error_json(503, "POOL_SERVICE_DISABLED",
+                                      "Pool service not configured")
+                return
+            state = _pool_service.get(run_id)
+            if state is None:
+                self._send_error_json(404, "RUN_NOT_FOUND",
+                                      f"run_id {run_id!r} not found")
+                return
+            if state.product_status != "succeeded":
+                self._send_error_json(403, "RUN_NOT_SUCCESSFUL",
+                                      f"Run {run_id!r} has product_status={state.product_status!r}; "
+                                      "only succeeded runs can be downloaded")
+                return
+            step_bytes = _pool_service.get_step_bytes_secure(run_id)
+            if step_bytes is None:
+                self._send_error_json(403, "STEP_UNAVAILABLE",
+                                      "STEP file unavailable or failed integrity check")
+                return
+            filename = f"pool-{run_id[:16]}.step"
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Disposition", f'attachment; filename="{filename}"')

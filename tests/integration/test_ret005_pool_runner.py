@@ -54,6 +54,13 @@ def _pipeline_result(*, status="success", stage="step_export", run_dir="/tmp/fak
 
 _MANIFEST_PATH = REPO_ROOT / MANIFEST_REL_PATH
 
+# Only retrieval_source IDs may be used in pools (P1a fix enforces this)
+_RETRIEVAL_SOURCE_IDS = [
+    "set_screw_shaft_collar/catalog-bore-006",
+    "set_screw_shaft_collar/catalog-bore-020",
+    "set_screw_shaft_collar/catalog-bore-050",
+]
+
 
 def _load_all_manifest_ids() -> list[str]:
     if not _MANIFEST_PATH.is_file():
@@ -66,11 +73,12 @@ def _load_all_manifest_ids() -> list[str]:
 
 
 _ALL_IDS = _load_all_manifest_ids()
-_HAVE_MANIFEST = len(_ALL_IDS) >= POOL_MIN_SIZE
+_HAVE_MANIFEST = len(_RETRIEVAL_SOURCE_IDS) >= POOL_MIN_SIZE and _MANIFEST_PATH.is_file()
 
 
 def _pool_ids(n: int = 3) -> list[str]:
-    return _ALL_IDS[:n]
+    """Return n retrieval_source sample IDs (the only role allowed in pools)."""
+    return _RETRIEVAL_SOURCE_IDS[:n]
 
 
 def _envelope(*, bore: float = 24.0, decision: str = "answer", unsupported=None,
@@ -238,7 +246,7 @@ class TestPoolRunnerAllowlistAndCount(unittest.TestCase):
     @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
     def test_pool_too_large_blocks_extraction(self):
         from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_BLOCKED
-        if len(_ALL_IDS) < 6:
+        if len(_RETRIEVAL_SOURCE_IDS) < 6:
             self.skipTest("Need at least 6 manifest sample_ids")
         transport = _make_transport(_envelope())
         service = Ret005PoolService(transport=transport)
@@ -269,7 +277,7 @@ class TestPoolRunnerAllowlistAndCount(unittest.TestCase):
     @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
     def test_valid_pool_3_to_5_accepted(self):
         from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_NEEDS_CONFIRMATION
-        for n in range(POOL_MIN_SIZE, min(POOL_MAX_SIZE, len(_ALL_IDS)) + 1):
+        for n in range(POOL_MIN_SIZE, min(POOL_MAX_SIZE, len(_RETRIEVAL_SOURCE_IDS)) + 1):
             transport = _make_transport(_envelope())
             service = Ret005PoolService(transport=transport)
             state = service.extract(
@@ -727,6 +735,144 @@ class TestSharedContextAssembler(unittest.TestCase):
         a1 = assemble_pool_c1(case1, pool)
         a2 = assemble_pool_c1(case2, pool)
         self.assertEqual(a1.reference_context_sha256, a2.reference_context_sha256)
+
+
+# ---------------------------------------------------------------------------
+# 10. Confirmation state tampering (P1b security fix)
+# ---------------------------------------------------------------------------
+
+
+class TestConfirmationStateTampering(unittest.TestCase):
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_mutated_bore_d_blocks_confirmation_zero_cad_calls(self):
+        """Mutating extracted_parameters on the returned copy must NOT affect pipeline.
+
+        User text says bore_d=24. Model also returns bore_d=24 (no conflict).
+        Caller mutates the returned copy's extracted_parameters['bore_d'] to 20.
+        Because extract() returns a deepcopy, the internal state is unaffected.
+        confirm() uses the internal state, so pipeline receives bore_d=24, not 20.
+        The mutation on the returned copy must NOT reach run_pipeline.
+        """
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = _make_transport(_envelope(bore=24.0))
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        # state is a frozen copy — mutate it
+        state.extracted_parameters["bore_d"] = 20.0
+
+        with patch("integration.pipeline.run_pipeline") as cad:
+            cad.return_value = _pipeline_result()
+            result = service.confirm(state.run_id, confirmed=True)
+            # Pipeline IS called (internal state is fine), but must receive bore_d=24, not 20
+            cad.assert_called_once()
+            # Verify the pipeline received the correct bore_d from internal state
+            call_args = cad.call_args
+            envelope_str = call_args.kwargs.get("raw_envelope", "")
+            self.assertIn('"24.0"', envelope_str, "pipeline must receive bore_d=24.0 from internal state")
+            self.assertNotIn('"20.0"', envelope_str, "mutated bore_d=20.0 must not reach pipeline")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_normal_confirmation_calls_pipeline_exactly_once(self):
+        """Un-tampered extraction state must result in exactly one pipeline call."""
+        from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_NEEDS_CONFIRMATION
+        transport = _make_transport(_envelope(bore=24.0))
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        self.assertEqual(state.product_status, POOL_STATUS_NEEDS_CONFIRMATION)
+
+        with patch("integration.pipeline.run_pipeline") as cad:
+            cad.return_value = _pipeline_result()
+            service.confirm(state.run_id, confirmed=True)
+            self.assertEqual(cad.call_count, 1)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_duplicate_confirmation_rejected_pipeline_not_called_again(self):
+        """A second confirm() on the same run must be rejected without calling pipeline."""
+        from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_BLOCKED
+        transport = _make_transport(_envelope(bore=24.0))
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+
+        pipeline_call_count = 0
+        with patch("integration.pipeline.run_pipeline") as cad:
+            cad.return_value = _pipeline_result()
+            service.confirm(state.run_id, confirmed=True)
+            pipeline_call_count = cad.call_count  # should be 1
+
+        # Second confirmation — pipeline must not be called again
+        with patch("integration.pipeline.run_pipeline") as cad2:
+            result = service.confirm(state.run_id, confirmed=True)
+            cad2.assert_not_called()
+
+        self.assertEqual(pipeline_call_count, 1)
+        self.assertEqual(result.product_status, POOL_STATUS_BLOCKED)
+        codes = [e["code"] for e in result.errors]
+        self.assertIn("CONFIRMATION_ALREADY_USED", codes,
+                      f"expected CONFIRMATION_ALREADY_USED, got {codes}")
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_extract_returns_copy_not_internal_reference(self):
+        """extract() must return a copy; mutating it must not change internal state."""
+        from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_NEEDS_CONFIRMATION
+        transport = _make_transport(_envelope(bore=24.0))
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        internal_bore = state.extracted_parameters.get("bore_d")
+
+        # Mutate the returned copy
+        state.extracted_parameters["bore_d"] = 99999.0
+
+        # get() should return the unchanged internal state
+        internal = service.get(state.run_id)
+        self.assertIsNotNone(internal)
+        self.assertAlmostEqual(internal.extracted_parameters.get("bore_d"), internal_bore)
+        self.assertNotAlmostEqual(internal.extracted_parameters.get("bore_d"), 99999.0)
+
+
+# ---------------------------------------------------------------------------
+# 11. FakeTransport subclass bypass (P1c security fix)
+# ---------------------------------------------------------------------------
+
+
+class TestFakeTransportSubclassBypass(unittest.TestCase):
+    def test_subclass_with_override_send_rejected_at_construction(self):
+        """A FakeTransport subclass that overrides send() must be rejected.
+
+        The service must not accept a transport that could invoke arbitrary code
+        through a polymorphic send() method.  Rejection must happen at __init__,
+        before any send() call is possible.
+        """
+        from integration.ret005_pool_runner import Ret005PoolService
+
+        send_call_count = [0]
+
+        class _FakeSub(FakeTransport):
+            def send(self, request):
+                send_call_count[0] += 1
+                return super().send(request)
+
+        sub = _FakeSub()
+        with self.assertRaises(TypeError) as ctx:
+            Ret005PoolService(transport=sub)
+
+        # Construction must fail before any send() call
+        self.assertEqual(send_call_count[0], 0,
+                         "send() must not be called when subclass is rejected")
+        self.assertIn("FakeTransport", str(ctx.exception))
+
+    def test_exact_fake_transport_still_accepted(self):
+        """An exact FakeTransport (not a subclass) must still be accepted."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = FakeTransport()
+        # Must not raise
+        service = Ret005PoolService(transport=transport)
+        self.assertIsNotNone(service)
+
+    def test_non_transport_object_rejected(self):
+        """Non-FakeTransport objects must be rejected."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        with self.assertRaises(TypeError):
+            Ret005PoolService(transport=object())
 
 
 if __name__ == "__main__":

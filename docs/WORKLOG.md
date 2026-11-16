@@ -3552,3 +3552,15 @@ commit=待提交
 - 固定环境验证：Python 3.11.18 下 RET-005 专项 80/80；RET-004/retrieval/schema/LLM runner 142 通过、1 个既有 skip；CAD compilation 13/13；pipeline integration 39/39；`py_compile` 通过。
 - 发现：heldout_evaluation rows 未被 ReferencePool 排除，实测可将 held-out ID/参数注入模型请求；可变 PoolRunState 返回对象可在 confirm 前被修改并将冲突参数送入 pipeline；FakeTransport 子类可重写 send 并通过 `isinstance` 门；本交付未接入 Web/UI；候选 diff check 因 checkpoint 行尾空格失败。
 - 结论：`review`，不进入 held-out 实验 scope，不批准真实模型请求。修复前三项安全问题、处理 Web 范围并清理 whitespace 后再验收。`FORMAL_EVALUATION_ALLOWED=False` 保持；未读凭据、labels 正文或 raw，未创建 batch、未调用真实网络/模型。
+
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / review / 2026-11-17
+
+- 动作：在分支 `cc/RET-005-POOL-FIXES`（基线 `daf8cc1`/`main`）关闭 Codex 中枢独立复核发现的三项安全问题，并补齐 Web/UI 接入。
+- **P1a 修复（held-out 泄露）**：`src/retrieval/pool.py` 新增 `ALLOWED_POOL_ROLE = "retrieval_source"` 常量；`from_manifest()` 在 allowlist 检查后新增 role 校验——拒绝 development、heldout_evaluation、未知/缺失 role 和格式错误记录，错误码 `POOL_SAMPLE_ROLE_NOT_ALLOWED`；该检查在 manifest 加载完成后、任何 transport 或 context 组装前执行。
+- **P1b 修复（确认状态篡改）**：`src/integration/ret005_pool_runner.py` 新增 `_state_fingerprint()` 和 `_frozen_copy()` 静态方法；`extract()` 保存内部副本，记录 fingerprint，对外返回 deepcopy；`confirm()` 验证 run_id、拒绝重复确认、核对 fingerprint、re-validate 显式参数；`get()` 也返回副本。
+- **P1c 修复（FakeTransport 子类绕过）**：将 `isinstance(transport, FakeTransport)` 改为 `type(transport) is not FakeTransport`，确保子类在构造时拒绝、send() 调用数为 0。
+- **P2 补齐（Web/UI）**：`src/demo/server.py` 新增 `_build_pool_html()`、`POOL_HTML_BYTES`、`_sanitize_pool_state_for_http()`；`make_handler_class()` 新增 `pool_service` 参数；新增路由 `GET /pool`、`GET /api/pool/samples`、`POST /api/pool/create`、`POST /api/pool/confirm/<run_id>`、`GET /api/pool/<run_id>`、`GET /pool-download/<run_id>`；对应 handler 方法 6 个；`run_server()` 新增 `pool_service` 参数。
+- **新增/更新测试**：`tests/retrieval/test_ret005_pool.py` 新增 `TestPoolRoleEnforcement` (7 项，含 transport.call_count==0 断言)；`tests/integration/test_ret005_pool_runner.py` 新增 `TestConfirmationStateTampering` (4 项) 和 `TestFakeTransportSubclassBypass` (3 项)，更新 `_pool_ids()` 只返回 retrieval_source IDs；新增 `tests/demo/test_ret005_pool_server.py` (25 项，含 HTML、samples、create/confirm/download、跨 run 隔离)。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18，固定 CAD venv 验证待 Codex 独立复核）。
+- 验证：`py_compile` 7 个新/改文件全部通过；`git diff --check` clean；RET-005 专项（pool + runner + server）**112/112 → OK**（1 个既有 skip）；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、product_live_ui 36/36 → OK；`FORMAL_EVALUATION_ALLOWED=False` 不变；未读凭据/labels 正文/raw，未创建 batch，未调用真实模型。
+- 状态：`review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
