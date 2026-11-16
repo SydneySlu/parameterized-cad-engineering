@@ -78,3 +78,11 @@ The owner subsequently accepted and froze the scope recorded in ADR-0026. This a
 - Boundaries: no formal preflight, batch/ledger creation, `.env` or credential read, evaluator-label content read, DeepSeek/network request, or real CAD execution. `FORMAL_EVALUATION_ALLOWED=False` unchanged.
 - Status: `review`; this fix awaits independent read-only review. Any formal execution remains subject to separate exact-batch owner authorization.
 - Implementation commit: `2451a47` (`fix: revalidate APP-004 approval at execution gate [APP-004-LIVE-WEB-DEMO]`).
+
+### Approval string-subclass hardening — 2026-11-16
+
+- Review follow-up: a `str` subclass overriding `strip()` and `encode()` could pass the prior `isinstance(..., str)` check, then raise during approval audit hashing. This was reproduced without invoking the formal runner.
+- Fix: constructor and execution-gate checks now require exact `str` for `approver`, `approved_at_utc`, and `approval_statement`. Regression uses a malicious `str` subclass and verifies `prepare_formal()` rejects it before preflight, credential loading, directory creation, or ledger initialization.
+- Verification in fixed CAD venv Python 3.11.18: target `py_compile` PASS; APP-004 **26/26 PASS**; Product Live/UI **145/145 PASS**; C1/C2/C3 demo **183/183 PASS**; pipeline/schema **81/81 PASS**; `git diff --check` PASS. Existing compatibility `ResourceWarning`s appeared without failures.
+- No formal preflight, batch/ledger creation, credential/evaluator-label read, network/model call, or real CAD execution; `FORMAL_EVALUATION_ALLOWED=False` unchanged. Status remains `review`, pending independent re-review.
+- Code commit: `58382d5` (`fix: reject APP-004 approval string subclasses [APP-004-LIVE-WEB-DEMO]`).

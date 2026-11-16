@@ -3389,3 +3389,11 @@ commit=待提交
 - 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项 26/26、Product Live/UI 145/145、C1/C2/C3 demo 183/183、pipeline/schema 81/81；目标 py_compile 与 `git diff --check` 通过。兼容套件出现既有 ResourceWarning，无失败。
 - 边界：未运行 formal preflight、未创建 batch/ledger、未读 `.env`/凭据/evaluator-label 内容、未调用 DeepSeek/网络或真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。
 - 提交：`2451a47`（实现与回归）；checkpoint/计划/状态同步随后提交。任务状态保持 `review`，待独立只读复核。
+
+### APP-004-LIVE-WEB-DEMO / Codex 中枢 / approval string-subclass hardening / 2026-11-16
+
+- 动作：对独立复核复现的恶意 `str` 子类绕过进行第二轮窄修。
+- 修复：approval 的 `approver`、`approved_at_utc`、`approval_statement` 在构造与执行门均要求精确 `str`，避免自定义 `strip()`/`encode()` 在 summary 哈希流程中运行。
+- 验证：固定 CAD venv Python 3.11.18 下 APP-004 专项 26/26、Product Live/UI 145/145、C1/C2/C3 demo 183/183、pipeline/schema 81/81；目标 `py_compile` 与 `git diff --check` 通过。兼容回归有既有 ResourceWarning，无失败。
+- 边界：未运行 formal preflight、创建 batch/ledger、读取凭据/evaluator-label 内容或调用网络、模型、真实 CAD；`FORMAL_EVALUATION_ALLOWED=False` 保持。
+- 提交：`58382d5`（实现与回归）；checkpoint/WORKLOG 记录随后提交。状态保持 `review`，待独立只读复核。
