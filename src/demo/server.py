@@ -1194,8 +1194,21 @@ function renderExtraction(d){
   h+=`<div class="meta-row"><b>条件:</b> ${esc(d.condition_id)} &nbsp;<b>bore_d 查询:</b> ${esc(d.bore_d_used_for_query)}</div>`;
   h+=`<div class="meta-row"><b>用户显式参数:</b> ${esc(JSON.stringify(d.explicit_parameters||{}))}</div>`;
   h+=`<div class="meta-row"><b>抽取参数:</b> ${esc(JSON.stringify(d.extracted_parameters||{}))}</div>`;
-  if((d.candidate_source_ids||[]).length){
-    h+=`<div class="cand-block"><b>池内 top-k 候选 (C1):</b> ${d.candidate_source_ids.map(esc).join(', ')}</div>`;
+  if((d.pool_query_results||[]).length){
+    let qt='<div class="cand-block"><b>检索 top-k 结果：</b>';
+    qt+='<table class="param-tbl"><tr><th>rank</th><th>sample_id</th><th>bore_d</th><th>outer_d</th><th>width</th><th>distance</th><th>validation</th><th>source</th></tr>';
+    d.pool_query_results.forEach(c=>{
+      const p=c.parameters_normalized||{};
+      const dist=c.distance||{};
+      qt+=`<tr><td>${esc(c.rank)}</td><td>${esc(c.sample_id)}</td>`;
+      qt+=`<td>${esc(p.bore_d)}</td><td>${esc(p.outer_d)}</td><td>${esc(p.width)}</td>`;
+      qt+=`<td>${typeof dist.total==='number'?esc(dist.total.toFixed(4)):esc(dist.total)}</td>`;
+      qt+=`<td>${esc(c.validation_status)}</td><td>${esc(c.source_repository)}</td></tr>`;
+    });
+    qt+='</table></div>';
+    h+=qt;
+  } else if(d.candidate_source_ids&&d.candidate_source_ids.length){
+    h+=`<div class="cand-block"><b>候选 ID (C1):</b> ${d.candidate_source_ids.map(esc).join(', ')}</div>`;
   }
   if(d.reference_context_sha256){
     h+=`<div class="meta-row"><b>上下文 sha256:</b> <code>${esc(d.reference_context_sha256.slice(0,16))}…</code></div>`;
@@ -2278,7 +2291,8 @@ def make_handler_class(
 # ---------------------------------------------------------------------------
 
 def run_server(port: int = 8080, output_root: Path | None = None,
-               app004_live_service: Any | None = None) -> None:
+               app004_live_service: Any | None = None,
+               pool_service: Any | None = None) -> None:
     """Start the demo HTTP server on 127.0.0.1:<port>.
 
     Parameters
@@ -2290,11 +2304,42 @@ def run_server(port: int = 8080, output_root: Path | None = None,
     app004_live_service:
         Optional pre-authorized APP-004 service. The default server has no
         live service and never reads credentials or creates a formal batch.
+    pool_service:
+        Optional pre-configured RET-005 pool service.  When ``None`` (default),
+        an offline ``Ret005PoolService(FakeTransport)`` is instantiated so that
+        ``/api/pool/*`` routes are available through the standard startup path.
+        This FakeTransport has no queued responses — ``/api/pool/create`` will
+        return a transport error, which is the correct offline behaviour (no
+        real model calls, no credentials, no batch).  Pass an explicit
+        ``pool_service`` with queued FakeTransport responses for testing.
     """
     demo_handler = DemoHandler(output_root=output_root)
     product_handler = ProductFlowHandler(output_root=output_root)
+
+    # Auto-instantiate an offline pool service if none was provided.
+    # This makes /api/pool/* available through run_server() without requiring
+    # the caller to explicitly construct a service.
+    if pool_service is None:
+        try:
+            from llm.transport import FakeTransport as _FT
+            from integration.ret005_pool_runner import Ret005PoolService as _PS
+            _offline_transport = _FT()
+            pool_service = _PS(
+                transport=_offline_transport,
+                output_root=output_root,
+            )
+            print("[demo] Pool service: offline FakeTransport (no queued responses; "
+                  "/api/pool/create will return transport error until responses are queued)",
+                  file=sys.stderr)
+        except Exception as exc:
+            print(f"[demo] Pool service: unavailable ({type(exc).__name__}: {exc})",
+                  file=sys.stderr)
+            pool_service = None
+
     handler_class = make_handler_class(
-        demo_handler, product_handler, app004_live_service=app004_live_service
+        demo_handler, product_handler,
+        app004_live_service=app004_live_service,
+        pool_service=pool_service,
     )
     server = HTTPServer(("127.0.0.1", port), handler_class)
     print(f"[demo] Server started at http://127.0.0.1:{port}/", file=sys.stderr)

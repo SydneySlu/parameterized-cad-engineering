@@ -2,6 +2,19 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / 窄修轮 2 / review / 2026-11-17
+
+- 基线：`c3525be`（Codex 验收记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `ff030db`。
+- 修复 1（P1，Web 服务入口未接通）：`run_server()` 新增 `pool_service` 参数，`None` 时自动实例化离线 `Ret005PoolService(FakeTransport)`，使 `/api/pool/*` 在标准启动路径可用；自动实例化的 FakeTransport 无预加载响应，`/api/pool/create` 返回 transport error（正确离线行为）；不读凭据、不调用真实模型、不创建 batch。
+- 修复 2（P1，显式参数优先范围过窄）：`extract_explicit_parameters()` 从仅 `bore_d` 扩展到全部 6 个 CAD-003 字段（`bore_d`/`outer_d`/`width`/`screw_d`/`screw_len`/`second_screw`）；新增 `_extract_mm_field()` 单位归一化 + `_extract_second_screw()` 仅接受 0/1；判别性回归 `bore_d=24 mm，width=99 mm` + 模型 `width=14` → `USER_PARAM_CONFLICT_WIDTH` 阻断，pipeline 调用数为 0；用户值与模型值一致时放行到 `needs_confirmation`。
+- 修复 3（P2，检索 top-k 未展示）：`PoolRunState` 新增 `pool_query_results` 字段 + `_safe_query_results_for_state()` 辅助函数；`_run_extraction()` 在 C1 成功时捕获安全 top-k 摘要（rank/sample_id/parameters_normalized/distance/validation/source，无 evaluator labels/IR/STEP/raw）；页面 `renderExtraction()` 展示 top-k 表格；`_sanitize_pool_state_for_http` 已覆盖安全字段。
+- 新增测试 23 项：`TestExplicitParamExtraction`（13 项，含各字段提取和冲突）、`TestPoolQueryResultsInState`（5 项，含禁止字段断言）、`TestRunServerWiring`（2 项，签名和装配）、`TestPoolQueryResultsInAPI`（3 项，API 响应含 top-k 且无禁止字段）。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18，固定 CAD venv 验证待 Codex 独立复核）。
+- 验证：`py_compile` 6 个改文件 → OK；`git diff --check` → clean；RET-005 专项 pool+runner+server **135/135 → OK**（1 个既有 skip）；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、product_live_ui 36/36、llm runner 73/73 → OK；`FORMAL_EVALUATION_ALLOWED=False` 不变；manifest sha256 `b7b6c737…` 不变；config sha256 `424322f5…` 不变；未读凭据/labels/raw，未创建 batch，未调用真实模型。
+- 判别性断言：正常案例 `bore_d=24 mm` + 模型 `bore_d=24` → `needs_confirmation`，确认前 pipeline 调用数=0；失败案例 `bore_d=24 mm，width=99 mm` + 模型 `width=14` → `blocked`，`USER_PARAM_CONFLICT`，pipeline 调用数=0。
+- 限制：沙箱 Python 3.10.12 非 3.11.18；固定 CAD venv 全量验证待 Codex 中枢独立复核；未运行 pipeline integration（需 CadQuery venv）；`run_server()` 自动实例化的 FakeTransport 无预加载响应。
+- 状态：`review`，等待 Codex 固定 CAD venv 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
 ### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / review / 2026-11-17
 
 - 动作：在 `main=3d42f20` 基线实现 `set_screw_shaft_collar` 单族受控参考池产品闭环（RET-005），暂不创建 batch、读取凭据、调用真实模型或改变正式 gate。

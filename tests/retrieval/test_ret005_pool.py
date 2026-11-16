@@ -14,12 +14,14 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from retrieval.pool import (
     ReferencePool, PoolError, PoolEntry,
     POOL_MIN_SIZE, POOL_MAX_SIZE, MANIFEST_REL_PATH, _safe_pool_entry,
 )
 from retrieval.config import PARAMETER_ORDER, CONTINUOUS_FIELDS, REPO_ROOT
+from llm.contract import CONTRACT_VERSION, PROMPT_VERSION
 
 
 # ---------------------------------------------------------------------------
@@ -641,6 +643,118 @@ class TestPoolRoleEnforcement(unittest.TestCase):
         """ALLOWED_POOL_ROLE constant must be 'retrieval_source'."""
         from retrieval.pool import ALLOWED_POOL_ROLE
         self.assertEqual(ALLOWED_POOL_ROLE, "retrieval_source")
+
+
+# ---------------------------------------------------------------------------
+# 8. Explicit parameter extraction (fix 2)
+# ---------------------------------------------------------------------------
+
+
+class TestExplicitParamExtraction(unittest.TestCase):
+    """Unit tests for the extended extract_explicit_parameters() function."""
+
+    def _extract(self, text: str) -> dict:
+        from llm.pool_context import extract_explicit_parameters
+        return extract_explicit_parameters(text)
+
+    def test_bore_d_still_extracted(self):
+        result = self._extract("bore_d=24 mm 轴环")
+        self.assertAlmostEqual(result["bore_d"], 24.0)
+
+    def test_width_extracted_from_english(self):
+        result = self._extract("width=99 mm")
+        self.assertAlmostEqual(result["width"], 99.0)
+
+    def test_width_extracted_from_chinese(self):
+        result = self._extract("宽度=20 mm")
+        self.assertAlmostEqual(result["width"], 20.0)
+
+    def test_outer_d_extracted(self):
+        result = self._extract("outer_d=40 mm")
+        self.assertAlmostEqual(result["outer_d"], 40.0)
+
+    def test_screw_d_extracted(self):
+        result = self._extract("screw_d=5 mm")
+        self.assertAlmostEqual(result["screw_d"], 5.0)
+
+    def test_screw_len_extracted(self):
+        result = self._extract("screw_len=12 mm")
+        self.assertAlmostEqual(result["screw_len"], 12.0)
+
+    def test_second_screw_zero_extracted(self):
+        result = self._extract("second_screw=0")
+        self.assertEqual(result["second_screw"], 0)
+
+    def test_second_screw_one_extracted(self):
+        result = self._extract("second_screw=1")
+        self.assertEqual(result["second_screw"], 1)
+
+    def test_multiple_fields_extracted_together(self):
+        result = self._extract("bore_d=24 mm，width=99 mm")
+        self.assertAlmostEqual(result["bore_d"], 24.0)
+        self.assertAlmostEqual(result["width"], 99.0)
+
+    def test_no_params_returns_empty(self):
+        result = self._extract("需要一个轴环")
+        self.assertEqual(result, {})
+
+    def test_width_conflict_check_via_check_user_param_priority(self):
+        """bore_d=24, width=99 explicit vs model width=14 → conflict."""
+        from llm.pool_context import extract_explicit_parameters, check_user_param_priority
+        explicit = extract_explicit_parameters("bore_d=24 mm，width=99 mm")
+        self.assertAlmostEqual(explicit["width"], 99.0)
+        conflicts = check_user_param_priority(explicit, {"bore_d": 24.0, "width": 14.0})
+        codes = [c["code"] for c in conflicts]
+        self.assertIn("USER_PARAM_CONFLICT_WIDTH", codes)
+
+    def test_width_no_conflict_when_values_match(self):
+        """width=14 mm in text, model width=14 → no conflict."""
+        from llm.pool_context import extract_explicit_parameters, check_user_param_priority
+        explicit = extract_explicit_parameters("width=14 mm")
+        conflicts = check_user_param_priority(explicit, {"width": 14.0})
+        self.assertEqual(conflicts, [])
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_width_conflict_blocks_before_cad_via_service(self):
+        """bore_d=24 mm，width=99 mm + model width=14 → blocked; pipeline calls=0."""
+        from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_BLOCKED
+        from llm.transport import FakeTransport, TransportResponse
+        env = json.dumps({
+            "contract_version": PROMPT_VERSION,  # reuse any available version
+            "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 24.0, "width": 14.0},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "24 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport = FakeTransport()
+        transport.queue_response(TransportResponse(status=200, body=env))
+        service = Ret005PoolService(transport=transport)
+        # Import CONTRACT_VERSION for envelope
+        from llm.contract import CONTRACT_VERSION
+        env2 = json.dumps({
+            "contract_version": CONTRACT_VERSION,
+            "prompt_version": PROMPT_VERSION,
+            "decision": "answer",
+            "extracted_parameters": {"bore_d": 24.0, "width": 14.0},
+            "unsupported_requests": [],
+            "evidence": [{"field": "bore_d", "quote": "24 mm", "source": "user_input"}],
+            "missing_fields": [], "questions": [], "confidence": None,
+        })
+        transport2 = FakeTransport()
+        transport2.queue_response(TransportResponse(status=200, body=env2))
+        service2 = Ret005PoolService(transport=transport2)
+        with patch("integration.pipeline.run_pipeline") as cad:
+            state = service2.extract(
+                "bore_d=24 mm，width=99 mm",
+                pool_sample_ids=_pool_ids(3),
+                condition_id="C0",  # C0 so bore_d query not needed
+            )
+            cad.assert_not_called()
+        self.assertEqual(state.product_status, POOL_STATUS_BLOCKED)
+        codes = [e["code"] for e in state.errors]
+        self.assertIn("USER_PARAM_CONFLICT", codes)
 
 
 if __name__ == "__main__":

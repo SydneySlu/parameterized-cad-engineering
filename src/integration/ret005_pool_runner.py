@@ -103,6 +103,7 @@ class PoolRunState:
     reference_context_sha256: str | None = None
     candidate_source_ids: list[str] = field(default_factory=list)
     bore_d_used_for_query: float | None = None
+    pool_query_results: list[dict[str, Any]] = field(default_factory=list)
     # Confirmation state
     confirmed: bool = False
     confirmed_at: str | None = None
@@ -136,6 +137,7 @@ class PoolRunState:
             "reference_context_sha256": self.reference_context_sha256,
             "candidate_source_ids": self.candidate_source_ids,
             "bore_d_used_for_query": self.bore_d_used_for_query,
+            "pool_query_results": self.pool_query_results,
             "confirmed": self.confirmed,
             "confirmed_at": self.confirmed_at,
             "pipeline_status": self.pipeline_status,
@@ -171,6 +173,41 @@ def _load_pool(sample_ids: list[str], *, repo_root: Path | None = None) -> Refer
         manifest_path=manifest_path,
         repo_root=root,
     )
+
+
+def _safe_query_results_for_state(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Extract only safe fields from pool query results for PoolRunState storage.
+
+    Allowed fields per result entry:
+    - rank, sample_id, family_id, sample_kind, split_role
+    - parameters_normalized (all six fields)
+    - distance (policy_id, total, continuous_mean, discrete_term — no field breakdown)
+    - validation_status, validation_is_valid
+    - source_repository, source_release_qualified
+
+    Never includes: evaluator labels, IR content, STEP content, raw, held-out truth,
+    absolute paths, or distance field-level breakdown (which would contain candidate
+    values that duplicate parameters_normalized in a less readable form).
+    """
+    safe = []
+    for entry in results:
+        safe.append({
+            "rank": entry.get("rank"),
+            "sample_id": entry.get("sample_id"),
+            "family_id": entry.get("family_id"),
+            "sample_kind": entry.get("sample_kind"),
+            "split_role": entry.get("split_role"),
+            "parameters_normalized": dict(entry.get("parameters_normalized") or {}),
+            "distance": {
+                k: v for k, v in (entry.get("distance") or {}).items()
+                if k in ("policy_id", "total", "continuous_mean", "discrete_term")
+            },
+            "validation_status": entry.get("validation_status"),
+            "validation_is_valid": entry.get("validation_is_valid"),
+            "source_repository": entry.get("source_repository"),
+            "source_release_qualified": entry.get("source_release_qualified"),
+        })
+    return safe
 
 
 def _run_extraction(
@@ -220,6 +257,7 @@ def _run_extraction(
     reference_context_sha256: str | None = None
     candidate_source_ids: tuple = ()
     bore_d_used: float | None = None
+    pool_query_results: list[dict[str, Any]] = []
 
     if condition_id == CONDITION_C1:
         try:
@@ -238,6 +276,23 @@ def _run_extraction(
                 reference_context_sha256 = assembled.reference_context_sha256
                 candidate_source_ids = assembled.candidate_source_ids or ()
                 bore_d_used = assembled.bore_d_used_for_query
+                # Capture safe top-k query results for state display
+                from llm.contract import SCHEMA_VERSION as _SV
+                from schema.set_screw_shaft_collar import validate_parameters as _vp
+                _envelope = {
+                    "schema_version": _SV, "family_id": pool.family_id,
+                    "parameters": {"bore_d": bore_d_used},
+                }
+                _vr = _vp(_envelope)
+                if _vr.ok and _vr.normalized is not None:
+                    try:
+                        _pr = pool.query(parameters=_vr.normalized,
+                                          top_k=min(3, pool.candidate_count))
+                        pool_query_results = _safe_query_results_for_state(
+                            _pr.get("results", [])
+                        )
+                    except Exception:
+                        pool_query_results = []
     else:
         # C0: no pool context
         case = ProjectedCase(run_id, request_text, None, ("bore_d",))
@@ -508,6 +563,7 @@ def _run_extraction(
         reference_context_sha256=reference_context_sha256,
         candidate_source_ids=list(candidate_source_ids),
         bore_d_used_for_query=bore_d_used,
+        pool_query_results=pool_query_results,
         llm_meta=llm_meta, request_text=request_text,
     )
 

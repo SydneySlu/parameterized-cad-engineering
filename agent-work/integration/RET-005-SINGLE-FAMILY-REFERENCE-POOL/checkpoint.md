@@ -200,3 +200,73 @@ tests.demo.test_product_live_ui              36/36  OK
 4. **P2，项目状态文档过时。** `docs/PROJECT_STATUS.md` 仍描述 `148e62d` 待窄修且尚无 Web/UI，与 `ff030db` 事实不符；本次已同步为当前 review 和未解决事项。
 
 **边界**：未调用模型或外网，未读取凭据、labels 正文或历史 raw，未创建 batch，未运行 RET-005 CAD/STEP；未修改代码和实验产物。`FORMAL_EVALUATION_ALLOWED=False`、v5 prompt、Schema/IR、RET-001 manifest 与 RET-002 配置保持不变。需 CC 对以上事项做最小修复后重新固定环境验收；当前不接受合入，不批准 held-out 实验或真实请求。
+
+---
+
+## CC 窄修轮 2 / cc/RET-005-POOL-FIXES / 2026-11-17
+
+**基线**：`c3525be`（Codex 验收记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `ff030db`
+
+### 修复 1：接通标准 Web 服务入口（P1）
+
+- `src/demo/server.py` `run_server()` 新增 `pool_service` 参数；当传入 `None` 时自动实例化离线 `Ret005PoolService(FakeTransport)`，使 `/api/pool/*` 在标准启动路径下可用
+- 自动实例化的 FakeTransport 无预加载响应，`/api/pool/create` 会返回 transport error（正确的离线行为）
+- 新增 `TestRunServerWiring`（2 项）：签名检查 + handler 装配验证
+
+### 修复 2：扩展用户显式参数优先保护（P1）
+
+- `src/llm/pool_context.py` `extract_explicit_parameters()` 从仅提取 `bore_d` 扩展到全部 6 个 CAD-003 字段：`bore_d`、`outer_d`、`width`、`screw_d`、`screw_len`、`second_screw`
+- 新增 `_extract_mm_field()` 辅助函数（单位归一化到 mm，fail-closed）和 `_extract_second_screw()`（仅接受 0 或 1）
+- 判别性回归：`bore_d=24 mm，width=99 mm` + 模型 `width=14` → `USER_PARAM_CONFLICT_WIDTH` 阻断，pipeline 调用数为 0
+- 新增 `TestExplicitParamExtraction`（13 项）：各字段提取、冲突检测、一致时放行
+
+### 修复 3：展示检索 top-k 结果（P2）
+
+- `src/integration/ret005_pool_runner.py` `PoolRunState` 新增 `pool_query_results` 字段和 `_safe_query_results_for_state()` 辅助函数
+- `_run_extraction()` 在 C1 成功时捕获安全 top-k 摘要（rank/sample_id/parameters_normalized/distance/validation/source）
+- `src/demo/server.py` 页面 `renderExtraction()` 展示 top-k 表格
+- 新增 `TestPoolQueryResultsInState`（5 项）+ `TestPoolQueryResultsInAPI`（3 项）
+
+### 验证结果（sandbox Python 3.10.12）
+
+```
+tests.retrieval.test_ret005_pool         Ran 52 tests  OK (1 skip)
+tests.integration.test_ret005_pool_runner  Ran 60 tests  OK (1 skip)
+tests.demo.test_ret005_pool_server         Ran 28 tests  OK
+合计: Ran 135 tests in 3.2s — OK (skipped=1)
+```
+
+受影响现有测试：
+```
+tests.integration.test_ret004_paired_runner  24/24  OK
+tests.retrieval.test_retrieval_baseline      28/28  OK
+tests.schema.test_set_screw_shaft_collar     17/17  OK
+tests.demo.test_product_live_ui              36/36  OK
+tests.llm.test_runner                        73/73  OK
+```
+
+**py_compile**: 6 个改文件全部通过
+**git diff --check**: clean
+
+### 不变量
+
+| 检查项 | 结果 |
+|--------|------|
+| `FORMAL_EVALUATION_ALLOWED` | False，不变 |
+| `PROMPT_VERSION` | app001-extraction.v5，不变 |
+| `CONTRACT_VERSION` | app001-io.v1，不变 |
+| RET-001 manifest sha256 | b7b6c737…，不变 |
+| RET-002 config sha256 | 424322f5…，不变 |
+| evaluator-labels.json | 未读取、未暴露 |
+| 正式 batch / credentials | 未创建，未读取 |
+| 真实模型请求 | 无 |
+
+### 判别性断言
+
+**正常案例**：`bore_d=24 mm` + 模型 `bore_d=24` → `needs_confirmation`，pipeline 调用数为 0（确认前）
+
+**失败案例**：`bore_d=24 mm，width=99 mm` + 模型 `width=14` → `blocked`，错误码 `USER_PARAM_CONFLICT`，pipeline 调用数为 0
+
+### 下一步
+
+状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。

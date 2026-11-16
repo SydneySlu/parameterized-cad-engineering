@@ -875,5 +875,77 @@ class TestFakeTransportSubclassBypass(unittest.TestCase):
             Ret005PoolService(transport=object())
 
 
+# ---------------------------------------------------------------------------
+# 10. Pool query results in state (fix 3: display top-k)
+# ---------------------------------------------------------------------------
+
+
+class TestPoolQueryResultsInState(unittest.TestCase):
+    """Verify that pool_query_results is captured and safe for display."""
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_c1_state_has_pool_query_results(self):
+        """C1 extraction state must contain pool_query_results."""
+        from integration.ret005_pool_runner import Ret005PoolService, POOL_STATUS_NEEDS_CONFIRMATION
+        transport = _make_transport(_envelope())
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        self.assertEqual(state.product_status, POOL_STATUS_NEEDS_CONFIRMATION)
+        self.assertTrue(len(state.pool_query_results) > 0)
+        entry = state.pool_query_results[0]
+        self.assertIn("rank", entry)
+        self.assertIn("sample_id", entry)
+        self.assertIn("parameters_normalized", entry)
+        self.assertIn("distance", entry)
+        self.assertIn("validation_status", entry)
+        self.assertIn("source_repository", entry)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_pool_query_results_no_forbidden_fields(self):
+        """pool_query_results must not contain forbidden fields."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = _make_transport(_envelope())
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        results_str = json.dumps(state.pool_query_results, ensure_ascii=False)
+        self.assertNotIn("evaluator", results_str.lower())
+        self.assertNotIn("held_out", results_str.lower())
+        self.assertNotIn("step_body", results_str.lower())
+        self.assertNotIn("ir_path", results_str.lower())
+        self.assertNotIn("raw", results_str.lower())
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_c0_state_has_empty_pool_query_results(self):
+        """C0 extraction state must have empty pool_query_results."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = _make_transport(_envelope())
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C0")
+        self.assertEqual(state.pool_query_results, [])
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_pool_query_results_in_as_dict(self):
+        """as_dict() must include pool_query_results."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = _make_transport(_envelope())
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        d = state.as_dict()
+        self.assertIn("pool_query_results", d)
+        self.assertTrue(len(d["pool_query_results"]) > 0)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_pool_query_results_distance_has_no_field_breakdown(self):
+        """Distance dict should only have summary keys, not field-level breakdown."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        transport = _make_transport(_envelope())
+        service = Ret005PoolService(transport=transport)
+        state = service.extract("bore_d=24 mm 轴环", _pool_ids(3), "C1")
+        for entry in state.pool_query_results:
+            dist = entry.get("distance", {})
+            self.assertNotIn("fields", dist)
+            self.assertIn("total", dist)
+
+
 if __name__ == "__main__":
     unittest.main()

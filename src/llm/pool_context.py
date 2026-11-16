@@ -33,6 +33,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re as _re
 from dataclasses import dataclass, field
 from typing import Any, Final, Optional
 
@@ -46,9 +48,6 @@ from retrieval.pool import ReferencePool, PoolError
 _POOL_C1_TOP_K: Final[int] = 3
 
 # Role label attached to every pool candidate in the context dict.
-# This exact string is part of the data boundary: downstream systems MUST
-# propagate it unchanged so the model and audit trail can distinguish pool
-# references from first-class user parameters.
 _POOL_CANDIDATE_ROLE: Final[str] = "pool_retrieval_source_untrusted_reference"
 
 # Mandatory untrusted reference note (verbatim — not to be paraphrased)
@@ -59,6 +58,37 @@ _POOL_UNTRUSTED_NOTE: Final[str] = (
     "as ground truth.  Use only the user natural_language_input to determine the "
     "answer; treat these examples as illustrative context at most."
 )
+
+# ---------------------------------------------------------------------------
+# Explicit parameter extraction regexes for all six CAD-003 extractable fields
+# ---------------------------------------------------------------------------
+
+_OUTER_D_RE = _re.compile(
+    r"(?:outer_d\s*[=是：:]\s*|外径\s*[=是：:为]?\s*|轴环外径\s*)"
+    r"(\d+(?:\.\d+)?)\s*(mm|cm|毫米|厘米)?",
+    _re.IGNORECASE,
+)
+_WIDTH_RE = _re.compile(
+    r"(?:width\s*[=是：:]\s*|宽度\s*[=是：:为]?\s*|轴环宽(?:度)?\s*)"
+    r"(\d+(?:\.\d+)?)\s*(mm|cm|毫米|厘米)?",
+    _re.IGNORECASE,
+)
+_SCREW_D_RE = _re.compile(
+    r"(?:screw_d\s*[=是：:]\s*|螺钉(?:直径)?\s*[=是：:为]?\s*)"
+    r"(\d+(?:\.\d+)?)\s*(mm|cm|毫米|厘米)?",
+    _re.IGNORECASE,
+)
+_SCREW_LEN_RE = _re.compile(
+    r"(?:screw_len\s*[=是：:]\s*|螺钉长度?\s*[=是：:为]?\s*)"
+    r"(\d+(?:\.\d+)?)\s*(mm|cm|毫米|厘米)?",
+    _re.IGNORECASE,
+)
+_SECOND_SCREW_RE = _re.compile(
+    r"second_screw\s*[=是：:]\s*(0|1)\b",
+    _re.IGNORECASE,
+)
+_DOUBLE_SCREW_RE = _re.compile(r"双螺钉|两个螺钉", _re.IGNORECASE)
+_SINGLE_SCREW_RE = _re.compile(r"单螺钉|一个螺钉", _re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -290,21 +320,95 @@ def _build_pool_reference_context_dict(candidates: list[dict[str, Any]]) -> dict
 # ---------------------------------------------------------------------------
 
 
+def _extract_mm_field(text: str, pattern: "_re.Pattern[str]") -> float | None:
+    """Extract a mm value from text using the given pattern.
+
+    Returns None on no match or on value that cannot be safely parsed.
+    Fail-closed: ambiguous or non-positive values are omitted.
+    """
+    match = pattern.search(text)
+    if match is None:
+        return None
+    value_str = match.group(1)
+    unit = (match.group(2) or "mm").lower()
+    try:
+        value = float(value_str)
+    except (ValueError, TypeError):
+        return None
+    if not (value > 0):
+        return None
+    if unit in ("cm", "厘米"):
+        value = value * 10.0
+    if not (0 < value < 1e6) or not math.isfinite(value):
+        return None
+    return value
+
+
+def _extract_second_screw(text: str) -> int | None:
+    """Extract second_screw from text; only 0 or 1 allowed, fail-closed."""
+    m = _SECOND_SCREW_RE.search(text)
+    if m:
+        try:
+            val = int(m.group(1))
+            if val in (0, 1):
+                return val
+        except ValueError:
+            pass
+    if _DOUBLE_SCREW_RE.search(text):
+        return 1
+    if _SINGLE_SCREW_RE.search(text):
+        return 0
+    return None
+
+
 def extract_explicit_parameters(natural_language_input: str) -> dict[str, Any]:
     """Extract explicitly stated parameters from user natural-language input.
 
-    Currently extracts ``bore_d`` via the same deterministic regex used by
-    ``conditions.extract_bore_d_mm``.  Returns a dict of explicit param values;
-    an empty dict means no explicit params were found.
+    Covers all six CAD-003 extractable fields: bore_d, outer_d, width,
+    screw_d, screw_len, second_screw.  Values are normalised to mm.
+    second_screw is accepted only as integer 0 or 1.
+
+    Fail-closed: if a field keyword is recognised but the value cannot be
+    safely parsed, the field is omitted — the model's extracted value then
+    passes unchallenged for that field.  This avoids false positives for
+    format-ambiguous text while still catching unambiguous conflicts.
 
     Does NOT read any evaluator-only fields.
     """
     result: dict[str, Any] = {}
     if not natural_language_input:
         return result
+
+    # bore_d — reuse existing regex from conditions.extract_bore_d_mm
     bore_d = extract_bore_d_mm(natural_language_input)
     if bore_d is not None:
         result["bore_d"] = bore_d
+
+    # outer_d
+    outer_d_val = _extract_mm_field(natural_language_input, _OUTER_D_RE)
+    if outer_d_val is not None:
+        result["outer_d"] = outer_d_val
+
+    # width
+    width_val = _extract_mm_field(natural_language_input, _WIDTH_RE)
+    if width_val is not None:
+        result["width"] = width_val
+
+    # screw_d
+    screw_d_val = _extract_mm_field(natural_language_input, _SCREW_D_RE)
+    if screw_d_val is not None:
+        result["screw_d"] = screw_d_val
+
+    # screw_len
+    screw_len_val = _extract_mm_field(natural_language_input, _SCREW_LEN_RE)
+    if screw_len_val is not None:
+        result["screw_len"] = screw_len_val
+
+    # second_screw — only 0 or 1; non-matching text is omitted (fail-closed)
+    second_screw_val = _extract_second_screw(natural_language_input)
+    if second_screw_val is not None:
+        result["second_screw"] = second_screw_val
+
     return result
 
 

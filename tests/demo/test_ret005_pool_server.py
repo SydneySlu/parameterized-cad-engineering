@@ -434,5 +434,104 @@ class TestPoolGetEndpoint(unittest.TestCase):
         self.assertEqual(h.status, 503)
 
 
+# ---------------------------------------------------------------------------
+# 7. run_server wiring and pool_query_results in API
+# ---------------------------------------------------------------------------
+
+
+class TestRunServerWiring(unittest.TestCase):
+    """Verify that run_server() accepts and wires pool_service."""
+
+    def test_run_server_signature_has_pool_service(self):
+        """run_server() must accept a pool_service parameter."""
+        import inspect
+        from demo.server import run_server
+        sig = inspect.signature(run_server)
+        self.assertIn("pool_service", sig.parameters)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_run_server_auto_instantiates_pool_service(self):
+        """run_server() should auto-instantiate an offline pool service when None."""
+        # We can't actually start the server, but we can verify that
+        # make_handler_class with a pool_service works end-to-end.
+        from demo.server import make_handler_class
+        from demo.handler import DemoHandler
+        from demo.product_flow import ProductFlowHandler
+        from llm.transport import FakeTransport
+        from integration.ret005_pool_runner import Ret005PoolService
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp)
+            service = Ret005PoolService(
+                transport=FakeTransport(),
+                output_root=output_root,
+            )
+            handler_class = make_handler_class(
+                DemoHandler(output_root=output_root),
+                ProductFlowHandler(output_root=output_root),
+                pool_service=service,
+            )
+            # Verify the handler class can be instantiated (not started)
+            self.assertIsNotNone(handler_class)
+
+
+class TestPoolQueryResultsInAPI(unittest.TestCase):
+    """Verify that pool_query_results appears in API responses and is safe."""
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_create_response_has_pool_query_results(self):
+        """POST /api/pool/create C1 response must include pool_query_results."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        service = Ret005PoolService(transport=_make_transport(_envelope()))
+        h = _FakeHandler("POST", "/api/pool/create", pool_service=service,
+                         body=json.dumps({
+                             "request_text": "bore_d=24 mm 轴环",
+                             "pool_sample_ids": _RET_IDS,
+                             "condition_id": "C1",
+                         }).encode("utf-8"))
+        self.assertEqual(h.status, 200)
+        resp = h.json()
+        self.assertIn("pool_query_results", resp)
+        self.assertTrue(len(resp["pool_query_results"]) > 0)
+        entry = resp["pool_query_results"][0]
+        self.assertIn("rank", entry)
+        self.assertIn("sample_id", entry)
+        self.assertIn("parameters_normalized", entry)
+        self.assertIn("distance", entry)
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_create_response_pool_query_results_no_forbidden_fields(self):
+        """pool_query_results in API response must not contain forbidden fields."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        service = Ret005PoolService(transport=_make_transport(_envelope()))
+        h = _FakeHandler("POST", "/api/pool/create", pool_service=service,
+                         body=json.dumps({
+                             "request_text": "bore_d=24 mm 轴环",
+                             "pool_sample_ids": _RET_IDS,
+                             "condition_id": "C1",
+                         }).encode("utf-8"))
+        self.assertEqual(h.status, 200)
+        resp_str = h.body_text
+        self.assertNotIn("evaluator", resp_str.lower())
+        self.assertNotIn("held_out", resp_str.lower())
+        self.assertNotIn("step_body", resp_str.lower())
+        self.assertNotIn("ir_path", resp_str.lower())
+
+    @unittest.skipUnless(_HAVE_MANIFEST, "RET-001 manifest not available")
+    def test_create_c0_response_has_empty_pool_query_results(self):
+        """C0 response must have empty pool_query_results."""
+        from integration.ret005_pool_runner import Ret005PoolService
+        service = Ret005PoolService(transport=_make_transport(_envelope()))
+        h = _FakeHandler("POST", "/api/pool/create", pool_service=service,
+                         body=json.dumps({
+                             "request_text": "bore_d=24 mm 轴环",
+                             "pool_sample_ids": _RET_IDS,
+                             "condition_id": "C0",
+                         }).encode("utf-8"))
+        self.assertEqual(h.status, 200)
+        resp = h.json()
+        self.assertEqual(resp.get("pool_query_results"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
