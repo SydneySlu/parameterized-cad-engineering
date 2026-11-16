@@ -286,3 +286,99 @@ tests.llm.test_runner                        73/73  OK
 ### 下一步
 
 状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
+---
+
+## CC 窄修轮 3（显式参数歧义 fail-closed）/ cc/RET-005-POOL-FIXES / 2026-11-17
+
+**基线**：`94dbbdb`（Codex 复核记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `46f1043`
+
+### 问题
+
+`extract_explicit_parameters()` 对每个字段使用 `regex.search()` 只取首次匹配：
+- `width=14 mm，width=99 mm` → 静默返回首值 `14`，不报歧义
+- `width= mm` → 静默省略，模型值无约束进入确认
+- 单位归一后等价的重复值（`1.4 cm，14 mm`）本应视为一致，但无区分机制
+
+不符合 ADR-0028 要求：显式参数歧义或无法可靠解析时，必须在 CAD 前 fail-closed。
+
+### 修复内容
+
+**`src/llm/pool_context.py`**（主要变更）：
+
+1. 新增 `ExplicitParamResult` frozen dataclass（`values: dict`、`errors: list`、`ok: bool`），区分「未提及」「成功解析」「解析错误/歧义」三种状态。
+2. 新增「关键词专属 regex」（`_OUTER_D_KW_RE`、`_WIDTH_KW_RE`、`_SCREW_D_KW_RE`、`_SCREW_LEN_KW_RE`、`_SECOND_SCREW_KW_RE`、`_BORE_D_KW_RE`），用于检测「关键词出现但无可解析数值」（malformed）。
+3. 新增 `_extract_mm_field_multi(text, value_pattern, keyword_pattern, field_name)`：用 `finditer` 收集所有匹配，检测歧义（不同归一值 → `EXPLICIT_PARAM_AMBIGUOUS_*`）和格式错误（关键词有但值无法解析 → `EXPLICIT_PARAM_PARSE_ERROR_*`）；等价重复值视为一致通过。
+4. 新增 `_extract_second_screw_multi(text)`：同等多值检测。
+5. `extract_explicit_parameters()` 改为返回 `ExplicitParamResult`（破坏性 API 变更，更新了所有调用点）。
+6. 保留 `_extract_mm_field`（原单值版本），`check_user_param_priority` 接受 `dict`（`ExplicitParamResult.values`）不变。
+
+**`src/integration/ret005_pool_runner.py`**：
+
+- 导入 `ExplicitParamResult`。
+- `_run_extraction()` 中：先检查 `explicit_result.errors`，非空则返回 `blocked`，错误码 `EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`，pipeline 不调用。
+- `confirm()` 中：增加对 `state.conflicts` 的 `EXPLICIT_PARAM_*` 错误码二次检查，确认时仍 fail-closed。
+
+**`tests/retrieval/test_ret005_pool.py`**：
+
+- 更新 `TestExplicitParamExtraction` 和 `TestUserParamPriority` 中使用 `extract_explicit_parameters` 的测试，改为访问 `.values`/`.errors`/`.ok`。
+- 更新现有 `test_width_conflict_blocks_before_cad_via_service` 使用 `CONTRACT_VERSION`。
+- 新增 `TestExplicitParamFailClosedViaService`（6 项）：走完整 `Ret005PoolService.extract()` 路径，均断言 `run_pipeline` 调用数为 0：
+  - `test_ambiguous_width_blocks_before_cad` — `width=14 mm，width=99 mm` → `EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`
+  - `test_malformed_width_blocks_before_cad` — `width= mm` → `EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`
+  - `test_equivalent_units_width_no_conflict_needs_confirmation` — `width=1.4 cm，width=14 mm` → `needs_confirmation`
+  - `test_normal_width_match_needs_confirmation` — `bore_d=20, width=14` 一致 → `needs_confirmation`
+  - `test_width_conflict_blocks_before_cad` — `width=99 mm` vs 模型 `width=14` → `USER_PARAM_CONFLICT`
+
+### 验证结果（sandbox Python 3.10.12）
+
+```
+tests.retrieval.test_ret005_pool         Ran 60 tests  OK (1 skip)
+tests.integration.test_ret005_pool_runner  Ran 55 tests  OK (1 skip)
+tests.demo.test_ret005_pool_server         Ran 28 tests  OK
+合计: Ran 143 tests in 3.2s — OK (skipped=1)
+```
+
+受影响现有测试：
+```
+tests.integration.test_ret004_paired_runner  24/24  OK
+tests.retrieval.test_retrieval_baseline      28/28  OK
+tests.schema.test_set_screw_shaft_collar     17/17  OK
+tests.demo.test_product_live_ui              36/36  OK
+tests.llm.test_runner                        73/73  OK
+```
+
+**py_compile**: 3 个改文件全部通过
+**git diff --check**: clean
+
+### 不变量
+
+| 检查项 | 结果 |
+|--------|------|
+| `FORMAL_EVALUATION_ALLOWED` | False，不变 |
+| `PROMPT_VERSION` | app001-extraction.v5，不变 |
+| `CONTRACT_VERSION` | app001-io.v1，不变 |
+| RET-001 manifest sha256 | b7b6c737…，不变 |
+| RET-002 config sha256 | 424322f5…，不变 |
+| evaluator-labels.json | 未读取、未暴露 |
+| 正式 batch / credentials | 未创建，未读取 |
+| 真实模型请求 | 无 |
+
+### 判别性断言（本轮）
+
+| 输入 | 预期 | 实测 |
+|------|------|------|
+| `width=14 mm，width=99 mm`（歧义） | `blocked`，`EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`，pipeline=0 | ✓ |
+| `width= mm`（格式不完整） | `blocked`，`EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`，pipeline=0 | ✓ |
+| `width=1.4 cm，width=14 mm`（等价） | `needs_confirmation`，pipeline=0 | ✓ |
+| `bore_d=20, width=14`（一致） | `needs_confirmation`，pipeline=0 | ✓ |
+| `width=99 mm` vs 模型 `width=14`（冲突） | `blocked`，`USER_PARAM_CONFLICT`，pipeline=0 | ✓ |
+
+### 限制
+
+- sandbox Python 3.10.12，非 3.11.18；固定 CAD venv 验证待 Codex 中枢独立复核。
+- `extract_explicit_parameters()` 是 API 破坏性变更：返回类型从 `dict` 变为 `ExplicitParamResult`；已更新本模块所有调用点。外部调用者（如 demo/server 中间的 runner 路径）通过 runner 层处理，无直接暴露。
+
+### 下一步
+
+状态保持 `review`，等待 Codex 固定 CAD venv (Python 3.11.18 / CadQuery 2.3.0) 验证和独立只读复核。合入前不创建正式 batch、不申请 live 执行授权、不修改正式 gate。

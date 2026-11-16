@@ -2,6 +2,20 @@
 
 本文件只追加。每次工作完成后记录实际动作、结果、验证和下一步；聊天中的口头进展不作为唯一记录。
 
+### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / 窄修轮 3（显式参数歧义 fail-closed）/ review / 2026-11-17
+
+- 基线：`94dbbdb`（Codex 复核记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `46f1043`。
+- 问题：`extract_explicit_parameters()` 对每个字段用 `regex.search()` 只取首次匹配；`width=14 mm，width=99 mm` 静默返回首值 `14`，不报歧义；`width= mm` 静默省略，模型值无约束进入确认。不符合 ADR-0028 fail-closed 要求。
+- 修复内容：
+  - `src/llm/pool_context.py`：新增 `ExplicitParamResult` frozen dataclass（`values`/`errors`/`ok`），区分「未提及」「成功解析」「解析错误/歧义」；新增「关键词专属 regex」（`_WIDTH_KW_RE` 等 6 个），检测「关键词出现但值无法解析」；新增 `_extract_mm_field_multi()` 和 `_extract_second_screw_multi()` 用 `finditer` 收集所有匹配，检测歧义（不同归一值 → `EXPLICIT_PARAM_AMBIGUOUS_*`）和格式错误（关键词有但无值 → `EXPLICIT_PARAM_PARSE_ERROR_*`）；等价重复值（如 `1.4 cm，14 mm`）视为一致通过。`extract_explicit_parameters()` 改为返回 `ExplicitParamResult`（API 破坏性变更，已更新所有调用点）。
+  - `src/integration/ret005_pool_runner.py`：`_run_extraction()` 中先检查 `explicit_result.errors`，非空则返回 `blocked`，错误码 `EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`，pipeline 不调用；`confirm()` 中增加对 `state.conflicts` 的 `EXPLICIT_PARAM_*` 错误码二次检查，确认时仍 fail-closed。
+  - `tests/retrieval/test_ret005_pool.py`：更新 `TestExplicitParamExtraction` 和 `TestUserParamPriority` 中使用 `extract_explicit_parameters` 的测试为 `.values`/`.errors`/`.ok`；新增 `TestExplicitParamFailClosedViaService`（6 项），走完整 `Ret005PoolService.extract()` 路径并断言 `run_pipeline` 调用数为 0。
+- 执行环境：sandbox Python 3.10.12（非固定 3.11.18，固定 CAD venv 验证待 Codex 独立复核）。
+- 验证：`py_compile` 3 个改文件 → OK；`git diff --check` → clean；RET-005 专项 pool+runner+server **143/143 → OK**（1 个既有 skip）；RET-004 paired 24/24、retrieval baseline 28/28、Schema 17/17、product_live_ui 36/36、llm runner 73/73 → OK；`FORMAL_EVALUATION_ALLOWED=False` 不变；manifest sha256 `b7b6c737…` 不变；config sha256 `424322f5…` 不变；未读凭据/labels/raw，未创建 batch，未调用真实模型。
+- 判别性断言（通过完整服务路径）：（1）`width=14 mm，width=99 mm`（歧义）→ `blocked`，`EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR`，pipeline=0；（2）`width= mm`（格式不完整）→ `blocked`，同错误码，pipeline=0；（3）`width=1.4 cm，width=14 mm`（等价）→ `needs_confirmation`，pipeline=0；（4）`bore_d=20, width=14`（一致）→ `needs_confirmation`，pipeline=0；（5）`width=99 mm` vs 模型 `width=14`（冲突）→ `blocked`，`USER_PARAM_CONFLICT`，pipeline=0。
+- 限制：sandbox Python 3.10.12 非 3.11.18；`extract_explicit_parameters()` 是 API 破坏性变更（返回类型 `dict` → `ExplicitParamResult`），已更新本模块所有调用点；固定 CAD venv 全量验证待 Codex 中枢独立复核。
+- 状态：`review`，等待 Codex 固定 CAD venv 验证和独立只读复核。合入前不创建正式 batch，不申请 live 执行授权，不修改正式 gate。
+
 ### RET-005-SINGLE-FAMILY-REFERENCE-POOL / CC / 窄修轮 2 / review / 2026-11-17
 
 - 基线：`c3525be`（Codex 验收记录），分支 `cc/RET-005-POOL-FIXES`，生产代码基线 `ff030db`。

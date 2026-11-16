@@ -59,6 +59,40 @@ _POOL_UNTRUSTED_NOTE: Final[str] = (
     "answer; treat these examples as illustrative context at most."
 )
 
+
+# ---------------------------------------------------------------------------
+# Explicit parameter extraction — result type
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ExplicitParamResult:
+    """Outcome of explicit-parameter extraction from user text.
+
+    ``values`` holds the fields that were unambiguously parsed (each key maps
+    to a normalised mm / int value).  ``errors`` holds per-field parse errors
+    (ambiguity, malformed value, etc.).  When ``errors`` is non-empty the
+    caller MUST treat the extraction as failed-closed and block before CAD.
+
+    A field can appear in *either* ``values`` or ``errors``, never both.
+    If a field is neither mentioned nor errored, it is simply absent.
+    """
+
+    values: dict[str, Any] = field(default_factory=dict)
+    errors: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        """True when no parse errors were encountered."""
+        return not self.errors
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "values": dict(self.values),
+            "errors": list(self.errors),
+            "ok": self.ok,
+        }
+
 # ---------------------------------------------------------------------------
 # Explicit parameter extraction regexes for all six CAD-003 extractable fields
 # ---------------------------------------------------------------------------
@@ -89,6 +123,37 @@ _SECOND_SCREW_RE = _re.compile(
 )
 _DOUBLE_SCREW_RE = _re.compile(r"双螺钉|两个螺钉", _re.IGNORECASE)
 _SINGLE_SCREW_RE = _re.compile(r"单螺钉|一个螺钉", _re.IGNORECASE)
+
+# Keyword-only patterns: match the field keyword/alias followed by a separator
+# but do NOT require a numeric value.  If a keyword matches but the
+# corresponding value regex does not, the input is malformed (fail-closed).
+_OUTER_D_KW_RE = _re.compile(
+    r"(?:outer_d\s*[=是：:]|外径\s*[=是：:]|轴环外径\s*[=是：:]?)",
+    _re.IGNORECASE,
+)
+_WIDTH_KW_RE = _re.compile(
+    r"(?:width\s*[=是：:]|宽度\s*[=是：:]|轴环宽(?:度)?\s*[=是：:]?)",
+    _re.IGNORECASE,
+)
+_SCREW_D_KW_RE = _re.compile(
+    r"(?:screw_d\s*[=是：:]|螺钉(?:直径)?\s*[=是：:]?)",
+    _re.IGNORECASE,
+)
+_SCREW_LEN_KW_RE = _re.compile(
+    r"(?:screw_len\s*[=是：:]|螺钉长度?\s*[=是：:]?)",
+    _re.IGNORECASE,
+)
+_SECOND_SCREW_KW_RE = _re.compile(
+    r"second_screw\s*[=是：:]",
+    _re.IGNORECASE,
+)
+# bore_d keyword-only pattern (covers English and Chinese aliases)
+_BORE_D_KW_RE = _re.compile(
+    r"(?:bore_d\s*[=是：:]|轴孔(?:直径|孔径)?\s*[=是：:]?)",
+    _re.IGNORECASE,
+)
+# Import the full bore_d value regex from conditions for multi-match
+from llm.conditions import _BORE_D_RE as _BORE_D_VALUE_RE  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -320,96 +385,274 @@ def _build_pool_reference_context_dict(candidates: list[dict[str, Any]]) -> dict
 # ---------------------------------------------------------------------------
 
 
-def _extract_mm_field(text: str, pattern: "_re.Pattern[str]") -> float | None:
-    """Extract a mm value from text using the given pattern.
+def _extract_mm_field_multi(
+    text: str,
+    value_pattern: "_re.Pattern[str]",
+    keyword_pattern: "_re.Pattern[str]",
+    field_name: str,
+) -> tuple[float | None, dict[str, Any] | None]:
+    """Extract a mm value from text, detecting duplicates and malformed inputs.
 
-    Returns None on no match or on value that cannot be safely parsed.
-    Fail-closed: ambiguous or non-positive values are omitted.
+    Returns a tuple ``(value, error)``:
+    - ``(value, None)`` — unambiguous parse succeeded.
+    - ``(None, None)`` — field not mentioned at all.
+    - ``(None, error_dict)`` — field keyword found but value is malformed,
+      ambiguous (multiple different normalised values), or otherwise
+      unparseable.  ``error_dict`` has ``code`` and ``field`` keys.
+
+    Duplicate values that normalise to the same mm value are treated as
+    consistent (not an error).
     """
-    match = pattern.search(text)
-    if match is None:
-        return None
-    value_str = match.group(1)
-    unit = (match.group(2) or "mm").lower()
-    try:
-        value = float(value_str)
-    except (ValueError, TypeError):
-        return None
-    if not (value > 0):
-        return None
-    if unit in ("cm", "厘米"):
-        value = value * 10.0
-    if not (0 < value < 1e6) or not math.isfinite(value):
-        return None
-    return value
+    # Find all value matches
+    value_matches = list(value_pattern.finditer(text))
+    keyword_matches = list(keyword_pattern.finditer(text))
+
+    if not value_matches and not keyword_matches:
+        # Field not mentioned at all
+        return (None, None)
+
+    if not value_matches and keyword_matches:
+        # Keyword present but no parseable value → malformed
+        return (None, {
+            "code": f"EXPLICIT_PARAM_PARSE_ERROR_{field_name.upper()}",
+            "field": field_name,
+            "message": (
+                f"field {field_name!r} keyword found in user text but no "
+                f"parseable numeric value; fail-closed"
+            ),
+        })
+
+    # Parse all matches, normalising to mm
+    normalised_values: list[float] = []
+    for match in value_matches:
+        value_str = match.group(1)
+        unit = (match.group(2) or "mm").lower()
+        try:
+            value = float(value_str)
+        except (ValueError, TypeError):
+            return (None, {
+                "code": f"EXPLICIT_PARAM_PARSE_ERROR_{field_name.upper()}",
+                "field": field_name,
+                "message": (
+                    f"field {field_name!r} has unparseable numeric value "
+                    f"{value_str!r}; fail-closed"
+                ),
+            })
+        if not (value > 0) or not math.isfinite(value):
+            return (None, {
+                "code": f"EXPLICIT_PARAM_PARSE_ERROR_{field_name.upper()}",
+                "field": field_name,
+                "message": (
+                    f"field {field_name!r} has non-positive or non-finite "
+                    f"value {value!r}; fail-closed"
+                ),
+            })
+        if unit in ("cm", "厘米"):
+            value = value * 10.0
+        if not (0 < value < 1e6) or not math.isfinite(value):
+            return (None, {
+                "code": f"EXPLICIT_PARAM_PARSE_ERROR_{field_name.upper()}",
+                "field": field_name,
+                "message": (
+                    f"field {field_name!r} normalised value {value!r} out of "
+                    f"range; fail-closed"
+                ),
+            })
+        normalised_values.append(value)
+
+    # Check for ambiguity: all normalised values must be equal (within tolerance)
+    if len(normalised_values) > 1:
+        first = normalised_values[0]
+        for v in normalised_values[1:]:
+            if not math.isclose(first, v, rel_tol=0.0, abs_tol=1e-9):
+                return (None, {
+                    "code": f"EXPLICIT_PARAM_AMBIGUOUS_{field_name.upper()}",
+                    "field": field_name,
+                    "message": (
+                        f"field {field_name!r} has multiple conflicting "
+                        f"explicit values after normalisation; fail-closed"
+                    ),
+                })
+
+    return (normalised_values[0], None)
 
 
-def _extract_second_screw(text: str) -> int | None:
-    """Extract second_screw from text; only 0 or 1 allowed, fail-closed."""
-    m = _SECOND_SCREW_RE.search(text)
-    if m:
+def _extract_second_screw_multi(
+    text: str,
+) -> tuple[int | None, dict[str, Any] | None]:
+    """Extract second_screw from text; only 0 or 1 allowed.
+
+    Returns ``(value, error)`` tuple, same convention as
+    ``_extract_mm_field_multi``.
+    """
+    value_matches = list(_SECOND_SCREW_RE.finditer(text))
+    keyword_matches = list(_SECOND_SCREW_KW_RE.finditer(text))
+    double_hints = bool(_DOUBLE_SCREW_RE.search(text))
+    single_hints = bool(_SINGLE_SCREW_RE.search(text))
+
+    if not value_matches and not keyword_matches and not double_hints and not single_hints:
+        return (None, None)  # Not mentioned
+
+    # Parse all explicit second_screw=N matches
+    parsed_values: list[int] = []
+    for m in value_matches:
         try:
             val = int(m.group(1))
             if val in (0, 1):
-                return val
+                parsed_values.append(val)
+            else:
+                return (None, {
+                    "code": "EXPLICIT_PARAM_PARSE_ERROR_SECOND_SCREW",
+                    "field": "second_screw",
+                    "message": (
+                        f"second_screw value {val!r} is not 0 or 1; fail-closed"
+                    ),
+                })
         except ValueError:
-            pass
-    if _DOUBLE_SCREW_RE.search(text):
-        return 1
-    if _SINGLE_SCREW_RE.search(text):
-        return 0
-    return None
+            return (None, {
+                "code": "EXPLICIT_PARAM_PARSE_ERROR_SECOND_SCREW",
+                "field": "second_screw",
+                "message": "second_screw value unparseable; fail-closed",
+            })
+
+    # Check for ambiguity among explicit matches
+    if len(parsed_values) > 1:
+        first = parsed_values[0]
+        for v in parsed_values[1:]:
+            if v != first:
+                return (None, {
+                    "code": "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
+                    "field": "second_screw",
+                    "message": (
+                        "second_screw has multiple conflicting explicit "
+                        "values; fail-closed"
+                    ),
+                })
+
+    # If we have explicit matches, use them
+    if parsed_values:
+        return (parsed_values[0], None)
+
+    # No explicit matches; check keyword-only or Chinese hints
+    if keyword_matches:
+        # keyword present but no valid value
+        return (None, {
+            "code": "EXPLICIT_PARAM_PARSE_ERROR_SECOND_SCREW",
+            "field": "second_screw",
+            "message": (
+                "second_screw keyword found but no valid 0/1 value; "
+                "fail-closed"
+            ),
+        })
+
+    # Chinese hints only (no ambiguity possible with a single hint type)
+    if double_hints and single_hints:
+        return (None, {
+            "code": "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
+            "field": "second_screw",
+            "message": (
+                "second_screw has both double-screw and single-screw hints; "
+                "fail-closed"
+            ),
+        })
+    if double_hints:
+        return (1, None)
+    if single_hints:
+        return (0, None)
+
+    return (None, None)
 
 
-def extract_explicit_parameters(natural_language_input: str) -> dict[str, Any]:
+def extract_explicit_parameters(
+    natural_language_input: str,
+) -> "ExplicitParamResult":
     """Extract explicitly stated parameters from user natural-language input.
 
     Covers all six CAD-003 extractable fields: bore_d, outer_d, width,
     screw_d, screw_len, second_screw.  Values are normalised to mm.
     second_screw is accepted only as integer 0 or 1.
 
-    Fail-closed: if a field keyword is recognised but the value cannot be
-    safely parsed, the field is omitted — the model's extracted value then
-    passes unchallenged for that field.  This avoids false positives for
-    format-ambiguous text while still catching unambiguous conflicts.
+    Fail-closed behaviour
+    ----------------------
+    - If a field keyword is recognised but the value cannot be safely parsed,
+      an error is recorded in ``result.errors`` and the field is NOT placed
+      in ``result.values``.
+    - If the same field appears with multiple different normalised values,
+      an ``EXPLICIT_PARAM_AMBIGUOUS_*`` error is recorded.
+    - Duplicate values that normalise to the same mm value are treated as
+      consistent.
+    - When ``result.errors`` is non-empty, callers MUST block before CAD.
 
     Does NOT read any evaluator-only fields.
+
+    Returns
+    -------
+    ExplicitParamResult
+        ``values`` dict holds unambiguously parsed fields; ``errors`` list
+        holds per-field parse/ambiguity errors.
     """
-    result: dict[str, Any] = {}
+    result = ExplicitParamResult()
     if not natural_language_input:
         return result
 
-    # bore_d — reuse existing regex from conditions.extract_bore_d_mm
-    bore_d = extract_bore_d_mm(natural_language_input)
-    if bore_d is not None:
-        result["bore_d"] = bore_d
+    values: dict[str, Any] = {}
+    errors: list[dict[str, Any]] = []
+
+    # bore_d — use the conditions module's regex via multi-match
+    bore_d_val, bore_d_err = _extract_mm_field_multi(
+        natural_language_input, _BORE_D_VALUE_RE, _BORE_D_KW_RE, "bore_d",
+    )
+    if bore_d_err is not None:
+        errors.append(bore_d_err)
+    elif bore_d_val is not None:
+        values["bore_d"] = bore_d_val
 
     # outer_d
-    outer_d_val = _extract_mm_field(natural_language_input, _OUTER_D_RE)
-    if outer_d_val is not None:
-        result["outer_d"] = outer_d_val
+    outer_d_val, outer_d_err = _extract_mm_field_multi(
+        natural_language_input, _OUTER_D_RE, _OUTER_D_KW_RE, "outer_d",
+    )
+    if outer_d_err is not None:
+        errors.append(outer_d_err)
+    elif outer_d_val is not None:
+        values["outer_d"] = outer_d_val
 
     # width
-    width_val = _extract_mm_field(natural_language_input, _WIDTH_RE)
-    if width_val is not None:
-        result["width"] = width_val
+    width_val, width_err = _extract_mm_field_multi(
+        natural_language_input, _WIDTH_RE, _WIDTH_KW_RE, "width",
+    )
+    if width_err is not None:
+        errors.append(width_err)
+    elif width_val is not None:
+        values["width"] = width_val
 
     # screw_d
-    screw_d_val = _extract_mm_field(natural_language_input, _SCREW_D_RE)
-    if screw_d_val is not None:
-        result["screw_d"] = screw_d_val
+    screw_d_val, screw_d_err = _extract_mm_field_multi(
+        natural_language_input, _SCREW_D_RE, _SCREW_D_KW_RE, "screw_d",
+    )
+    if screw_d_err is not None:
+        errors.append(screw_d_err)
+    elif screw_d_val is not None:
+        values["screw_d"] = screw_d_val
 
     # screw_len
-    screw_len_val = _extract_mm_field(natural_language_input, _SCREW_LEN_RE)
-    if screw_len_val is not None:
-        result["screw_len"] = screw_len_val
+    screw_len_val, screw_len_err = _extract_mm_field_multi(
+        natural_language_input, _SCREW_LEN_RE, _SCREW_LEN_KW_RE, "screw_len",
+    )
+    if screw_len_err is not None:
+        errors.append(screw_len_err)
+    elif screw_len_val is not None:
+        values["screw_len"] = screw_len_val
 
-    # second_screw — only 0 or 1; non-matching text is omitted (fail-closed)
-    second_screw_val = _extract_second_screw(natural_language_input)
-    if second_screw_val is not None:
-        result["second_screw"] = second_screw_val
+    # second_screw
+    second_screw_val, second_screw_err = _extract_second_screw_multi(
+        natural_language_input,
+    )
+    if second_screw_err is not None:
+        errors.append(second_screw_err)
+    elif second_screw_val is not None:
+        values["second_screw"] = second_screw_val
 
-    return result
+    return ExplicitParamResult(values=values, errors=errors)
 
 
 def check_user_param_priority(

@@ -49,6 +49,7 @@ from llm.contract import (
 )
 from llm.input_projection import ProjectedCase
 from llm.pool_context import (
+    ExplicitParamResult,
     assemble_pool_c0,
     assemble_pool_c1,
     check_user_param_priority,
@@ -486,7 +487,36 @@ def _run_extraction(
         )
 
     # --- User parameter priority check (before Schema/CAD) ---
-    explicit_params = extract_explicit_parameters(request_text)
+    # extract_explicit_parameters now returns an ExplicitParamResult.
+    # If it found parse errors (malformed values, ambiguous duplicates), block
+    # immediately — before any CAD is considered.
+    explicit_result: ExplicitParamResult = extract_explicit_parameters(request_text)
+    if explicit_result.errors:
+        return PoolRunState(
+            run_id=run_id, condition_id=condition_id,
+            llm_status="blocked", product_status=POOL_STATUS_BLOCKED,
+            decision=decision, extracted_parameters=extracted,
+            explicit_parameters=explicit_result.values,
+            missing_fields=missing_fields, unsupported_requests=unsupported,
+            questions=questions, conflicts=explicit_result.errors,
+            errors=[{
+                "code": "EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR",
+                "fields": [e["field"] for e in explicit_result.errors],
+                "details": [{"code": e["code"], "field": e["field"]}
+                            for e in explicit_result.errors],
+                "message": (
+                    "user text contains explicit parameter values that could "
+                    "not be reliably parsed or are ambiguous; fail-closed "
+                    "before confirmation and CAD"
+                ),
+            }],
+            pool_sample_ids=list(pool_sample_ids),
+            reference_context_sha256=reference_context_sha256,
+            candidate_source_ids=list(candidate_source_ids),
+            bore_d_used_for_query=bore_d_used,
+            llm_meta=llm_meta, request_text=request_text,
+        )
+    explicit_params = explicit_result.values
     param_conflicts = check_user_param_priority(explicit_params, extracted)
     if param_conflicts:
         return PoolRunState(
@@ -982,6 +1012,52 @@ class Ret005PoolService:
             )
 
         # Re-validate user explicit parameters vs model extracted parameters
+        # at confirmation time.  state.explicit_parameters is a dict (values
+        # only — parse errors would have blocked at extract time).  We
+        # re-extract from the original request_text to catch any parse
+        # errors that were present at extraction time (they were stored in
+        # state.conflicts as EXPLICIT_PARAM_* errors).
+        if state.conflicts:
+            # At extraction time, conflicts list may contain EXPLICIT_PARAM_*
+            # errors.  If so, block here too (fail-closed at confirm).
+            parse_error_codes = {
+                "EXPLICIT_PARAM_PARSE_ERROR_WIDTH",
+                "EXPLICIT_PARAM_AMBIGUOUS_WIDTH",
+                "EXPLICIT_PARAM_PARSE_ERROR_BORE_D",
+                "EXPLICIT_PARAM_AMBIGUOUS_BORE_D",
+                "EXPLICIT_PARAM_PARSE_ERROR_OUTER_D",
+                "EXPLICIT_PARAM_AMBIGUOUS_OUTER_D",
+                "EXPLICIT_PARAM_PARSE_ERROR_SCREW_D",
+                "EXPLICIT_PARAM_AMBIGUOUS_SCREW_D",
+                "EXPLICIT_PARAM_PARSE_ERROR_SCREW_LEN",
+                "EXPLICIT_PARAM_AMBIGUOUS_SCREW_LEN",
+                "EXPLICIT_PARAM_PARSE_ERROR_SECOND_SCREW",
+                "EXPLICIT_PARAM_AMBIGUOUS_SECOND_SCREW",
+            }
+            for c in state.conflicts:
+                if isinstance(c, dict) and c.get("code") in parse_error_codes:
+                    return PoolRunState(
+                        run_id=run_id,
+                        condition_id=state.condition_id,
+                        llm_status=state.llm_status,
+                        product_status=POOL_STATUS_BLOCKED,
+                        decision=state.decision,
+                        extracted_parameters=dict(state.extracted_parameters),
+                        explicit_parameters=dict(state.explicit_parameters),
+                        missing_fields=list(state.missing_fields),
+                        unsupported_requests=list(state.unsupported_requests),
+                        questions=list(state.questions),
+                        conflicts=list(state.conflicts),
+                        errors=[{"code": "EXPLICIT_PARAM_PARSE_OR_AMBIGUITY_ERROR",
+                                 "message": "explicit parameter parse error or "
+                                            "ambiguity detected; confirmation "
+                                            "blocked"}],
+                        pool_sample_ids=list(state.pool_sample_ids),
+                        reference_context_sha256=state.reference_context_sha256,
+                        candidate_source_ids=list(state.candidate_source_ids),
+                        llm_meta=dict(state.llm_meta),
+                        request_text=state.request_text,
+                    )
         param_conflicts = check_user_param_priority(
             state.explicit_parameters, state.extracted_parameters,
         )
